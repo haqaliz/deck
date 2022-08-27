@@ -1,0 +1,14 @@
+#!/bin/bash
+
+monitors=`xrandr | grep -sw 'connected' | wc -l`
+
+if [[ $monitors = 1 ]]; then
+	conky --xinerama-head=0 -c /home/aliz/.conky/right.conkyrc &
+	conky --xinerama-head=0 -c /home/aliz/.conky/left.conkyrc &
+else
+	conky --xinerama-head=0 -c /home/aliz/.conky/right.conkyrc &
+	conky --xinerama-head=1 -c /home/aliz/.conky/right.conkyrc &
+
+	conky --xinerama-head=0 -c /home/aliz/.conky/left.conkyrc &
+	conky --xinerama-head=1 -c /home/aliz/.conky/left.conkyrc &
+fi
