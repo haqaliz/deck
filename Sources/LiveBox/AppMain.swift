@@ -1,6 +1,12 @@
 import AppKit
 import SwiftUI
 
+/// Borderless widget panel that can always become key, so SwiftUI text
+/// fields receive focus on click (plain borderless panels never become key).
+final class WidgetPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+}
+
 enum Corner: String, CaseIterable {
     case topLeft = "tl"
     case topRight = "tr"
@@ -99,6 +105,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // status SwiftUI text fields can't receive input.
                 self?.widgetPanel?.makeKey()
             },
+            onCloseSettings: { [weak self] in
+                // Hand keyboard focus back to the previously active app.
+                self?.widgetPanel?.resignKey()
+                NSApp.deactivate()
+            },
             onHeightChange: { [weak self] height in
                 self?.setWidgetHeight(height)
             }
@@ -107,7 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hostingView.sizingOptions = .standardBounds
         let size = hostingView.fittingSize
 
-        let panel = NSPanel(
+        let panel = WidgetPanel(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -120,7 +131,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.isFloatingPanel = true
         panel.level = .normal
         panel.hidesOnDeactivate = false
-        panel.becomesKeyOnlyIfNeeded = true
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false
