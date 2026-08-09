@@ -20,22 +20,18 @@ struct CodableColor: Codable, Equatable {
     }
 }
 
-struct WidgetSettings: Codable {
+struct NetBoxSettings: Codable {
     var showChart = true
-    var showCPU = true
-    var showMEM = true
-    var showDisk = true
-    var showProcesses = true
-    var processCount = 3
-    var cpuColor = CodableColor(.green)
-    var memColor = CodableColor(.cyan)
-    var diskColor = CodableColor(.orange)
+    var showInterfaces = true
+    var interfaceCount = 3
+    var upColor = CodableColor(.green)
+    var downColor = CodableColor(.cyan)
     var launchAtLogin = false
 }
 
 @MainActor
 final class SettingsStore: ObservableObject {
-    @Published var settings: WidgetSettings {
+    @Published var settings: NetBoxSettings {
         didSet { save() }
     }
 
@@ -50,11 +46,11 @@ final class SettingsStore: ObservableObject {
     init() {
         if
             let data = try? Data(contentsOf: Self.fileURL),
-            let decoded = try? JSONDecoder().decode(WidgetSettings.self, from: data)
+            let decoded = try? JSONDecoder().decode(NetBoxSettings.self, from: data)
         {
             settings = decoded
         } else {
-            settings = WidgetSettings()
+            settings = NetBoxSettings()
         }
         settings.launchAtLogin = Self.launchAgentExists
     }

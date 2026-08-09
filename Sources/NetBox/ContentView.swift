@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import NetBoxCore
 
 struct ContentView: View {
     @StateObject private var settings: SettingsStore
@@ -7,7 +8,6 @@ struct ContentView: View {
     private let onOpenSettings: () -> Void
     private let onCloseSettings: () -> Void
     private let onHeightChange: (CGFloat) -> Void
-    @State private var processMode: ProcessMode = .cpu
     @State private var showSettings = CommandLine.arguments.contains("--debug-flip")
     @State private var frontHeight: CGFloat = 300
     @State private var panelHeight: CGFloat = 358
@@ -25,7 +25,7 @@ struct ContentView: View {
         self.onHeightChange = onHeightChange
     }
 
-    private var settingsValue: WidgetSettings { settings.settings }
+    private var settingsValue: NetBoxSettings { settings.settings }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -89,9 +89,9 @@ struct ContentView: View {
             if settingsValue.showChart {
                 chart
             }
-            if settingsValue.showProcesses {
+            if settingsValue.showInterfaces {
                 Divider().overlay(.secondary.opacity(0.15))
-                processList
+                interfaceList
             }
         }
         .frame(width: 340)
@@ -109,15 +109,8 @@ struct ContentView: View {
     private var header: some View {
         HStack(spacing: 14) {
             if settingsValue.showChart {
-                if settingsValue.showCPU {
-                    MetricLabel(title: "CPU", value: store.cpu, color: settingsValue.cpuColor.color)
-                }
-                if settingsValue.showMEM {
-                    MetricLabel(title: "MEM", value: store.mem, color: settingsValue.memColor.color)
-                }
-                if settingsValue.showDisk {
-                    MetricLabel(title: "DISK", value: store.disk, color: settingsValue.diskColor.color)
-                }
+                RateLabel(title: "UP", value: store.header?.up ?? 0, color: settingsValue.upColor.color)
+                RateLabel(title: "DOWN", value: store.header?.down ?? 0, color: settingsValue.downColor.color)
             }
             Spacer(minLength: 0)
             Button {
@@ -137,111 +130,90 @@ struct ContentView: View {
 
     private var chart: some View {
         Chart(Array(store.history.enumerated()), id: \.offset) { index, sample in
-            if settingsValue.showCPU {
-                LineMark(
-                    x: .value("Time", index),
-                    y: .value("CPU", sample.cpu),
-                    series: .value("Metric", "CPU")
-                )
-                .foregroundStyle(settingsValue.cpuColor.color)
-                .lineStyle(StrokeStyle(lineWidth: 1.5))
-                .interpolationMethod(.catmullRom)
-            }
+            LineMark(
+                x: .value("Time", index),
+                y: .value("UP", sample.up),
+                series: .value("Metric", "UP")
+            )
+            .foregroundStyle(settingsValue.upColor.color)
+            .lineStyle(StrokeStyle(lineWidth: 1.5))
+            .interpolationMethod(.catmullRom)
 
-            if settingsValue.showMEM {
-                LineMark(
-                    x: .value("Time", index),
-                    y: .value("MEM", sample.mem),
-                    series: .value("Metric", "MEM")
-                )
-                .foregroundStyle(settingsValue.memColor.color)
-                .lineStyle(StrokeStyle(lineWidth: 1.5))
-                .interpolationMethod(.catmullRom)
-            }
-
-            if settingsValue.showDisk {
-                LineMark(
-                    x: .value("Time", index),
-                    y: .value("DISK", sample.disk),
-                    series: .value("Metric", "DISK")
-                )
-                .foregroundStyle(settingsValue.diskColor.color)
-                .lineStyle(StrokeStyle(lineWidth: 1.5))
-                .interpolationMethod(.catmullRom)
-            }
+            LineMark(
+                x: .value("Time", index),
+                y: .value("DOWN", sample.down),
+                series: .value("Metric", "DOWN")
+            )
+            .foregroundStyle(settingsValue.downColor.color)
+            .lineStyle(StrokeStyle(lineWidth: 1.5))
+            .interpolationMethod(.catmullRom)
         }
         .chartXAxis(.hidden)
         .chartYAxis {
-            AxisMarks(position: .trailing, values: [0, 50, 100]) { _ in
+            AxisMarks(position: .trailing, values: [0, store.peak / 2, store.peak]) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
                     .foregroundStyle(Color(white: 0.45).opacity(0.35))
-                AxisValueLabel()
-                    .foregroundStyle(Color(white: 0.78))
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                AxisValueLabel {
+                    if let rate = value.as(Double.self) {
+                        Text(NetBoxFormatters.formatRate(rate))
+                            .foregroundStyle(Color(white: 0.78))
+                            .font(.system(size: 9, weight: .medium, design: .rounded))
+                            .monospacedDigit()
+                    }
+                }
             }
         }
-        .chartYScale(domain: 0...100)
+        .chartYScale(domain: 0...max(1, store.peak))
         .frame(height: 100)
         .animation(.linear(duration: 0.4), value: store.history.count)
     }
 
-    private var processList: some View {
+    private var interfaceList: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("TOP PROCESSES")
+                Text("INTERFACES")
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundStyle(.secondary)
                     .tracking(1)
                 Spacer()
-                ProcessTab(mode: $processMode)
             }
             .padding(.bottom, 4)
             CustomScrollView {
                 VStack(alignment: .leading, spacing: 6) {
-                    ForEach(Array(currentProcesses.enumerated()), id: \.offset) { _, process in
+                    ForEach(Array(visibleInterfaces.enumerated()), id: \.offset) { _, iface in
                         HStack(spacing: 8) {
-                            Text(process.name)
+                            Text(iface.name)
                                 .font(.system(size: 12, weight: .medium, design: .rounded))
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                             Spacer()
-                            Text(String(format: "%.1f%%", process.cpuPercent))
+                            Text("↑ " + NetBoxFormatters.formatRate(iface.up))
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                                 .monospacedDigit()
-                                .foregroundStyle(
-                                    processMode == .cpu
-                                        ? settingsValue.cpuColor.color
-                                        : .secondary.opacity(0.8)
-                                )
-                            Text(String(format: "%.1f%%", process.memPercent))
+                                .foregroundStyle(settingsValue.upColor.color)
+                            Text("↓ " + NetBoxFormatters.formatRate(iface.down))
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                                 .monospacedDigit()
-                                .foregroundStyle(
-                                    processMode == .memory
-                                        ? settingsValue.memColor.color
-                                        : .secondary.opacity(0.8)
-                                )
+                                .foregroundStyle(settingsValue.downColor.color)
                         }
                     }
                 }
                 .frame(maxWidth: .infinity)
             }
-            .frame(height: processListHeight)
-            .animation(.easeOut(duration: 0.2), value: processListHeight)
+            .frame(height: interfaceListHeight)
+            .animation(.easeOut(duration: 0.2), value: interfaceListHeight)
         }
     }
 
-    private var currentProcesses: [TopProcess] {
-        switch processMode {
-        case .cpu: return store.processesByCPU
-        case .memory: return store.processesByMemory
-        }
+    private var visibleInterfaces: [InterfaceRates] {
+        let count = max(1, min(10, settingsValue.interfaceCount))
+        return Array(store.interfaces.prefix(count))
     }
 
     /// Grows with the row count but never shows more than 5 rows (~110pt) at once.
-    private var processListHeight: CGFloat {
-        let rows = CGFloat(max(1, currentProcesses.count))
+    private var interfaceListHeight: CGFloat {
+        let rows = CGFloat(max(1, visibleInterfaces.count))
         return min(rows * 23 + 6, 110)
     }
 
@@ -301,11 +273,6 @@ private struct PanelHeightKey: PreferenceKey {
     }
 }
 
-enum ProcessMode {
-    case cpu
-    case memory
-}
-
 /// Reaches into the backing NSScrollView to slim the native scrollbar
 /// (thin overlay scroller with a light knob).
 private struct ScrollViewStyler: NSViewRepresentable {
@@ -349,40 +316,7 @@ private extension NSView {
     }
 }
 
-private struct ProcessTab: View {
-    @Binding var mode: ProcessMode
-
-    var body: some View {
-        HStack(spacing: 2) {
-            tabButton("CPU", .cpu)
-            tabButton("MEM", .memory)
-        }
-        .padding(2)
-        .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(.primary.opacity(0.08))
-        )
-    }
-
-    private func tabButton(_ title: String, _ target: ProcessMode) -> some View {
-        Button {
-            withAnimation(.easeOut(duration: 0.15)) { mode = target }
-        } label: {
-            Text(title)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(mode == target ? Color.black : .secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 3)
-                .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(mode == target ? .white : .clear)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct MetricLabel: View {
+private struct RateLabel: View {
     let title: String
     let value: Double
     let color: Color
@@ -394,7 +328,7 @@ private struct MetricLabel: View {
                 .frame(width: 7, height: 7)
             Text(title)
                 .foregroundStyle(.secondary)
-            Text(String(format: "%3.0f%%", value))
+            Text(NetBoxFormatters.formatRate(value))
                 .foregroundStyle(.primary)
         }
     }

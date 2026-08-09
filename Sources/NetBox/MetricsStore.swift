@@ -1,27 +1,25 @@
 import Foundation
 import Combine
+import NetBoxCore
 
-struct Sample {
-    let cpu: Double
-    let mem: Double
-    let disk: Double
+struct RateSample {
+    let up: Double
+    let down: Double
 }
 
 @MainActor
 final class MetricsStore: ObservableObject {
-    @Published private(set) var cpu: Double = 0
-    @Published private(set) var mem: Double = 0
-    @Published private(set) var disk: Double = 0
-    @Published private(set) var processesByCPU: [TopProcess] = []
-    @Published private(set) var processesByMemory: [TopProcess] = []
-
-    @Published private(set) var history: [Sample] = []
+    @Published private(set) var header: InterfaceRates?
+    @Published private(set) var interfaces: [InterfaceRates] = []
+    @Published private(set) var history: [RateSample] = []
+    /// Chart Y ceiling (0...peak) so a flat series never collapses the scale.
+    @Published private(set) var peak: Double = 0
 
     let historyCapacity = 90
     private let settings: SettingsStore
-    private var lastTicks: CpuTicks?
+    private var previous: [InterfaceSample]?
+    private var headerName: String?
     private var timer: Timer?
-    private var processTick = 0
 
     init(settings: SettingsStore) {
         self.settings = settings
@@ -29,7 +27,7 @@ final class MetricsStore: ObservableObject {
 
     func start() {
         guard timer == nil else { return }
-        lastTicks = CpuTicks.sample()
+        previous = NetworkMetricsLoader.sample()
         sample()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.sample() }
@@ -43,22 +41,32 @@ final class MetricsStore: ObservableObject {
     }
 
     private func sample() {
-        let (usage, ticks) = cpuUsagePercent(previous: lastTicks)
-        lastTicks = ticks
-        cpu = usage
-        mem = memoryUsagePercent()
-        disk = diskUsagePercent()
+        let current = NetworkMetricsLoader.sample()
+        guard let previous else {
+            self.previous = current
+            return
+        }
+        self.previous = current
 
-        history.append(Sample(cpu: usage, mem: mem, disk: disk))
+        let rates = previous.compactMap { p in
+            current.first { $0.name == p.name }
+                .map { NetworkMath.rates(previous: p, current: $0, interval: 1) }
+        }
+        .sorted { max($0.up, $0.down) > max($1.up, $1.down) }
+
+        interfaces = rates
+        guard let top = rates.first else { return }
+
+        header = top
+        if top.name != headerName {
+            // Never stitch two interfaces' series into one chart.
+            headerName = top.name
+            history.removeAll()
+        }
+        history.append(RateSample(up: top.up, down: top.down))
         if history.count > historyCapacity {
             history.removeFirst(history.count - historyCapacity)
         }
-
-        processTick += 1
-        if processTick % 2 == 0 {
-            let count = max(1, min(20, settings.settings.processCount))
-            processesByCPU = topProcesses(limit: count, sortBy: .cpu)
-            processesByMemory = topProcesses(limit: count, sortBy: .memory)
-        }
+        peak = history.map { max($0.up, $0.down) }.max() ?? 0
     }
 }

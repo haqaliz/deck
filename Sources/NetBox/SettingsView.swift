@@ -1,4 +1,5 @@
 import SwiftUI
+import NetBoxCore
 
 struct SettingsView: View {
     @ObservedObject var settings: SettingsStore
@@ -9,24 +10,23 @@ struct SettingsView: View {
 
             toggleRow("Show chart", isOn: $settings.settings.showChart)
 
-            metricRow(title: "CPU", color: colorBinding(\.cpuColor), isOn: $settings.settings.showCPU)
-            metricRow(title: "MEM", color: colorBinding(\.memColor), isOn: $settings.settings.showMEM)
-            metricRow(title: "DISK", color: colorBinding(\.diskColor), isOn: $settings.settings.showDisk)
+            metricRow(title: "UP", color: colorBinding(\.upColor), isOn: $settings.settings.showChart)
+            metricRow(title: "DOWN", color: colorBinding(\.downColor), isOn: $settings.settings.showChart)
 
             Divider().overlay(.secondary.opacity(0.15))
 
-            sectionTitle("PROCESSES")
+            sectionTitle("INTERFACES")
 
-            toggleRow("Show top processes", isOn: $settings.settings.showProcesses)
+            toggleRow("Show interfaces", isOn: $settings.settings.showInterfaces)
 
             Stepper(
-                "Count: \(settings.settings.processCount)",
-                value: $settings.settings.processCount,
-                in: 1...20
+                "Count: \(settings.settings.interfaceCount)",
+                value: $settings.settings.interfaceCount,
+                in: 1...10
             )
             .controlSize(.small)
-            .disabled(!settings.settings.showProcesses)
-            .opacity(settings.settings.showProcesses ? 1 : 0.4)
+            .disabled(!settings.settings.showInterfaces)
+            .opacity(settings.settings.showInterfaces ? 1 : 0.4)
 
             Divider().overlay(.secondary.opacity(0.15))
 
@@ -91,7 +91,7 @@ struct SettingsView: View {
         }
     }
 
-    private func colorBinding(_ keyPath: WritableKeyPath<WidgetSettings, CodableColor>) -> Binding<Color> {
+    private func colorBinding(_ keyPath: WritableKeyPath<NetBoxSettings, CodableColor>) -> Binding<Color> {
         Binding(
             get: { settings.settings[keyPath: keyPath].color },
             set: { settings.settings[keyPath: keyPath] = CodableColor($0) }
