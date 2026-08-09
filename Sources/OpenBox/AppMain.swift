@@ -13,7 +13,7 @@ struct OpenBoxMain {
     @MainActor
     static func main() {
         let args = CommandLine.arguments
-        var corner: Corner = .topLeft
+        var corner: Corner = .topRight
         var margin: CGFloat = 20
         var clickThrough = false
 
