@@ -17,6 +17,10 @@ struct SettingsView: View {
                     .frame(width: 150)
             }
 
+            Text("When set, usage loads over HTTP from this opencode server instead of the local database. Leave empty for local mode.")
+                .font(.system(size: 10, design: .rounded))
+                .foregroundStyle(.secondary.opacity(0.7))
+
             HStack {
                 Text("Server password")
                     .foregroundStyle(.primary)
@@ -26,6 +30,10 @@ struct SettingsView: View {
                     .controlSize(.small)
                     .frame(width: 150)
             }
+
+            Text("Password for the server (username is opencode). Start the server with `opencode serve` and OPENCODE_SERVER_PASSWORD set.")
+                .font(.system(size: 10, design: .rounded))
+                .foregroundStyle(.secondary.opacity(0.7))
 
             toggleRow("Show chart", isOn: $settings.settings.showChart)
             toggleRow("Show models", isOn: $settings.settings.showModels)

@@ -57,8 +57,12 @@ struct ContentView: View {
         }
         .onChange(of: showSettings) { _ in
             reportHeight()
+            if showSettings { onOpenSettings() }
         }
-        .onAppear { store.start() }
+        .onAppear {
+            store.start()
+            if showSettings { onOpenSettings() }
+        }
         .onDisappear { store.stop() }
     }
 
@@ -126,7 +130,6 @@ struct ContentView: View {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
                     showSettings = true
                 }
-                onOpenSettings()
             } label: {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 11, weight: .medium))
@@ -290,7 +293,10 @@ struct ContentView: View {
             .padding(.bottom, 10)
             .padding(.top, 32)
 
-            SettingsView(settings: settings)
+            CustomScrollView {
+                SettingsView(settings: settings)
+                    .padding(.bottom, 14)
+            }
         }
         .frame(width: 368, height: 358, alignment: .top)
         .background(cardStyle)
@@ -329,5 +335,48 @@ private struct MetricLabel: View {
             Text(value)
                 .foregroundStyle(.primary)
         }
+    }
+}
+
+/// Reaches into the backing NSScrollView to slim the native scrollbar
+/// (thin overlay scroller with a light knob).
+private struct ScrollViewStyler: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        view.setAccessibilityElement(false)
+        DispatchQueue.main.async { [weak view] in
+            guard let view, let scroll = view.enclosingScrollView else { return }
+            scroll.scrollerStyle = .overlay
+            scroll.scrollerKnobStyle = .light
+            scroll.verticalScroller?.controlSize = .small
+            scroll.horizontalScroller?.controlSize = .small
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+/// ScrollView wrapper with the native scrollbar stripped down.
+private struct CustomScrollView<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView {
+            content.background(ScrollViewStyler())
+        }
+    }
+}
+
+private extension NSView {
+    var enclosingScrollView: NSScrollView? {
+        var current = superview
+        while let view = current {
+            if let scroll = view as? NSScrollView {
+                return scroll
+            }
+            current = view.superview
+        }
+        return nil
     }
 }

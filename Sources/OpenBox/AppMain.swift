@@ -78,8 +78,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let contentView = ContentView(
             settings: settingsStore,
-            onOpenSettings: {
+            onOpenSettings: { [weak self] in
                 NSApp.activate(ignoringOtherApps: true)
+                // Borderless panels don't become key on their own; without key
+                // status SwiftUI text fields can't receive input.
+                self?.widgetPanel?.makeKey()
             },
             onHeightChange: { [weak self] height in
                 self?.setWidgetHeight(height)

@@ -59,8 +59,12 @@ struct ContentView: View {
         }
         .onChange(of: showSettings) { _ in
             reportHeight()
+            if showSettings { onOpenSettings() }
         }
-        .onAppear { store.start() }
+        .onAppear {
+            store.start()
+            if showSettings { onOpenSettings() }
+        }
         .onDisappear { store.stop() }
     }
 
@@ -113,7 +117,6 @@ struct ContentView: View {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
                     showSettings = true
                 }
-                onOpenSettings()
             } label: {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 11, weight: .medium))
