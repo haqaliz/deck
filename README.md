@@ -43,6 +43,25 @@ swift run OpenBox --corner tl
 Options: `--corner tl|tr|bl|br`, `--margin N`, `--click-through`.
 Settings persist to `~/Library/Application Support/OpenBox/settings.json`.
 
+## NetBox — network monitor
+
+Same shell, showing **live per-interface network rates** read from the local
+system counters (`getifaddrs`):
+
+- **Header** — UP / DOWN rates for the most active interface
+- **Chart** — rolling up/down speed lines (last 90 seconds, 1s updates)
+- **Interfaces** — top interfaces by traffic (name, ↑ up / ↓ down), virtual
+  interfaces (utun, awdl, lo, …) excluded
+- Flip card settings: show chart/interfaces, interface count, up/down colors,
+  launch at login
+
+```bash
+swift run NetBox
+```
+
+Options: `--corner tl|tr|bl|br`, `--margin N`, `--click-through`, `--debug-flip`.
+Settings persist to `~/Library/Application Support/NetBox/settings.json`.
+
 ## Shared behavior
 
 - Native material look (`.ultraThinMaterial`), 22pt rounded corners, hairline border
@@ -70,10 +89,11 @@ self-signed/ad-hoc widget extensions — `pluginkit` won't register them):
 ## Development
 
 ```bash
-swift build               # build both widgets
+swift build               # build all widgets
 swift build -c release    # release build
 swift run LiveBox         # run the system monitor
 swift run OpenBox         # run the opencode usage widget
+swift run NetBox          # run the network monitor widget
 ```
 
 Both widgets share the same window/panel plumbing (see `Sources/*/AppMain.swift`).
