@@ -49,11 +49,43 @@ struct NetBoxMain {
             renderDebugPNG(path: args[i + 1])
             exit(0)
         }
+        if let i = args.firstIndex(of: "--debug-front"), i + 1 < args.count {
+            renderFrontPNG(path: args[i + 1])
+            exit(0)
+        }
         let delegate = AppDelegate(corner: corner, margin: margin, clickThrough: clickThrough)
         app.delegate = delegate
         app.setActivationPolicy(.accessory)
         app.run()
     }
+}
+
+@MainActor
+private func renderFrontPNG(path: String) {
+    let settings = SettingsStore()
+    let store = MetricsStore(settings: settings)
+    store.start()
+    RunLoop.main.run(until: Date().addingTimeInterval(2.5))
+    store.stop()
+    let contentView = ContentView(
+        settings: settings,
+        store: store,
+        onOpenSettings: {},
+        onHeightChange: { _ in }
+    )
+    let renderer = ImageRenderer(
+        content: contentView
+            .frame(width: 368, height: 358, alignment: .top)
+            .background(Color.black.opacity(0.85))
+    )
+    renderer.scale = 2
+    guard
+        let img = renderer.nsImage,
+        let tiff = img.tiffRepresentation,
+        let rep = NSBitmapImageRep(data: tiff),
+        let png = rep.representation(using: .png, properties: [:])
+    else { return }
+    try? png.write(to: URL(fileURLWithPath: path))
 }
 
 @MainActor

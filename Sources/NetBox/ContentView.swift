@@ -25,6 +25,20 @@ struct ContentView: View {
         self.onHeightChange = onHeightChange
     }
 
+    init(
+        settings: SettingsStore,
+        store: MetricsStore,
+        onOpenSettings: @escaping () -> Void,
+        onCloseSettings: @escaping () -> Void = {},
+        onHeightChange: @escaping (CGFloat) -> Void
+    ) {
+        _settings = StateObject(wrappedValue: settings)
+        _store = StateObject(wrappedValue: store)
+        self.onOpenSettings = onOpenSettings
+        self.onCloseSettings = onCloseSettings
+        self.onHeightChange = onHeightChange
+    }
+
     private var settingsValue: NetBoxSettings { settings.settings }
 
     var body: some View {
@@ -58,6 +72,10 @@ struct ContentView: View {
         }
         .onPreferenceChange(PanelHeightKey.self) { height in
             frontHeight = height
+            if ProcessInfo.processInfo.environment["NETBOX_DEBUG"] != nil {
+                print("NETBOX_DEBUG measured frontHeight=\(height)")
+                fflush(stdout)
+            }
             reportHeight()
         }
         .onChange(of: showSettings) { _ in
@@ -153,18 +171,11 @@ struct ContentView: View {
             AxisMarks(position: .trailing, values: [0, store.peak / 2, store.peak]) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
                     .foregroundStyle(Color(white: 0.45).opacity(0.35))
-                AxisValueLabel {
-                    if let rate = value.as(Double.self) {
-                        Text(NetBoxFormatters.formatRate(rate))
-                            .foregroundStyle(Color(white: 0.78))
-                            .font(.system(size: 9, weight: .medium, design: .rounded))
-                            .monospacedDigit()
-                    }
-                }
+                AxisValueLabel()
             }
         }
         .chartYScale(domain: 0...max(1, store.peak))
-        .frame(height: 100)
+        .frame(height: 130)
         .animation(.linear(duration: 0.4), value: store.history.count)
     }
 
@@ -211,10 +222,10 @@ struct ContentView: View {
         return Array(store.interfaces.prefix(count))
     }
 
-    /// Grows with the row count but never shows more than 5 rows (~110pt) at once.
+    /// Grows with the row count but never shows more than 6 rows (~140pt) at once.
     private var interfaceListHeight: CGFloat {
         let rows = CGFloat(max(1, visibleInterfaces.count))
-        return min(rows * 23 + 6, 110)
+        return min(rows * 23 + 6, 140)
     }
 
     // MARK: - Back face (settings)
