@@ -34,7 +34,7 @@ only add a data source + a layout.
 ### M2 — Polish & installability
 - [ ] Native widget signed + installable (document Xcode team step; verify `pluginkit`)
 - [ ] Launch at login for both widgets verified end-to-end
-- [ ] OpenBox remote server mode (token + URL → HTTP metrics instead of local DB)
+- [x] OpenBox remote server mode (token + URL → HTTP metrics instead of local DB)
 - [ ] Crash/robustness pass: run 24h, no leaks, settings schema migration
 - [ ] Tests: add an XCTest target for metrics parsing (ModelParser, formatters, DB SQL)
 

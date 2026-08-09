@@ -26,9 +26,15 @@ database (`opencode db`):
 - **Header** — today's INPUT / OUTPUT tokens and COST
 - **Chart** — daily input/output tokens over the last 14 days
 - **Models** — top 3 models by cost, parsed into provider / id / variant with a badge
-- **Footer** — all-time totals
-- Flip card settings: opencode **token** (defaults to `OPENCODE_TOKEN` env;
-  only needed for remote servers), refresh interval (5/10/30/60s), colors
+- **Footer** — all-time totals (local) or 14-day window totals (remote)
+- Flip card settings: **Server URL** + **Server password** (basic auth,
+  username `opencode`; password defaults to `OPENCODE_TOKEN` env), refresh
+  interval (5/10/30/60s), colors
+
+**Remote mode:** set a Server URL (e.g. `http://host:4096`) and OpenBox fetches
+usage over HTTP from an `opencode serve` instance instead of the local DB —
+set `OPENCODE_SERVER_PASSWORD` when starting the server, then enter the same
+password in the widget. Remote mode shows 14-day window totals (`14D` label).
 
 ```bash
 swift run OpenBox --corner tl

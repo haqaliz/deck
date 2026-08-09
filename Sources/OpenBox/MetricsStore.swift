@@ -1,3 +1,4 @@
+import OpenBoxCore
 import Foundation
 import Combine
 
@@ -6,6 +7,7 @@ final class MetricsStore: ObservableObject {
     @Published private(set) var metrics: OpenCodeMetrics?
     @Published private(set) var lastUpdated: Date?
     @Published private(set) var error: String?
+    @Published private(set) var isRemote = false
 
     private let settings: SettingsStore
     private var timer: Timer?
@@ -30,6 +32,33 @@ final class MetricsStore: ObservableObject {
     }
 
     func refresh() {
+        guard let serverURL = settings.settings.serverURL?
+            .trimmingCharacters(in: .whitespaces), !serverURL.isEmpty
+        else {
+            isRemote = false
+            loadLocal()
+            return
+        }
+
+        isRemote = true
+        let password = settings.settings.token
+        Task {
+            do {
+                guard let url = URL(string: serverURL) else {
+                    throw RemoteLoadError.invalidURL
+                }
+                let loader = RemoteOpenCodeMetricsLoader(url: url, password: password)
+                let loaded = try await loader.load()
+                metrics = loaded
+                lastUpdated = Date()
+                error = nil
+            } catch {
+                self.error = "Could not reach opencode server at \(serverURL).\nCheck URL and password."
+            }
+        }
+    }
+
+    private func loadLocal() {
         if let loaded = OpenCodeMetricsLoader.load() {
             metrics = loaded
             lastUpdated = Date()
