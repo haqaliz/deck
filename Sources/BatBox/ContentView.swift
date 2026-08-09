@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 import BatBoxCore
 
 struct ContentView: View {
@@ -103,6 +104,13 @@ struct ContentView: View {
     private var frontFace: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
+            if settingsValue.showChart && hasBattery {
+                chart
+            }
+            if settingsValue.showStatus && hasBattery {
+                Divider().overlay(.secondary.opacity(0.15))
+                statusList
+            }
         }
         .frame(width: 340)
         .padding(.top, 28)
@@ -114,6 +122,10 @@ struct ContentView: View {
             }
         )
         .background(cardStyle)
+    }
+
+    private var hasBattery: Bool {
+        store.snapshot?.isPresent ?? false
     }
 
     private var header: some View {
@@ -136,6 +148,76 @@ struct ContentView: View {
         }
         .font(.system(size: 12, weight: .semibold, design: .rounded))
         .monospacedDigit()
+    }
+
+    private var chart: some View {
+        Chart(Array(store.history.enumerated()), id: \.offset) { index, level in
+            LineMark(
+                x: .value("Time", index),
+                y: .value("LEVEL", level)
+            )
+            .foregroundStyle(settingsValue.levelColor.color)
+            .lineStyle(StrokeStyle(lineWidth: 1.5))
+            .interpolationMethod(.catmullRom)
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis {
+            AxisMarks(position: .trailing, values: [0, 50, 100]) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
+                    .foregroundStyle(Color(white: 0.45).opacity(0.35))
+                AxisValueLabel()
+            }
+        }
+        .chartYScale(domain: 0...100)
+        .frame(height: 130)
+        .animation(.linear(duration: 0.4), value: store.history.count)
+    }
+
+    private var statusList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("STATUS")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .tracking(1)
+                Spacer()
+            }
+            .padding(.bottom, 4)
+            statusRow(title: "State", value: stateText)
+            statusRow(title: "Time", value: timeText)
+            statusRow(title: "Cycles", value: BatteryFormatters.formatCycles(store.snapshot?.cycleCount))
+        }
+    }
+
+    private func statusRow(title: String, value: String) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.primary)
+            Spacer()
+            Text(value)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(settingsValue.levelColor.color)
+        }
+    }
+
+    private var stateText: String {
+        guard let snapshot = store.snapshot else { return "—" }
+        return BatteryFormatters.formatState(
+            isCharging: snapshot.isCharging,
+            isCharged: snapshot.isCharged,
+            powerSource: snapshot.powerSource
+        )
+    }
+
+    private var timeText: String {
+        guard let snapshot = store.snapshot else { return "—" }
+        if snapshot.isCharged { return "Full" }
+        if snapshot.isCharging {
+            return BatteryFormatters.formatTime(minutes: snapshot.timeToFullMinutes)
+        }
+        return BatteryFormatters.formatTime(minutes: snapshot.timeToEmptyMinutes)
     }
 
     // MARK: - Back face (settings)
@@ -204,7 +286,7 @@ private struct LevelLabel: View {
                 .frame(width: 7, height: 7)
             Text("LEVEL")
                 .foregroundStyle(.secondary)
-            Text(BatteryFormatters.formatPercent(level ?? 0))
+            Text(level.map(BatteryFormatters.formatPercent) ?? "—")
                 .foregroundStyle(.primary)
         }
     }

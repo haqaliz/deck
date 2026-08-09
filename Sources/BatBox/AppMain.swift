@@ -75,7 +75,7 @@ private func renderFrontPNG(path: String) {
     )
     let renderer = ImageRenderer(
         content: contentView
-            .frame(width: 368, height: 358, alignment: .top)
+            .frame(width: 368, height: 320, alignment: .top)
             .background(Color.black.opacity(0.85))
     )
     renderer.scale = 2
