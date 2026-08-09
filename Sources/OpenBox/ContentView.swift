@@ -1,3 +1,4 @@
+import OpenBoxCore
 import SwiftUI
 import Charts
 
@@ -102,17 +103,17 @@ struct ContentView: View {
             if let metrics = store.metrics {
                 MetricLabel(
                     title: "IN",
-                    value: OpenCodeMetricsLoader.formatTokens(metrics.todayInput),
+                    value: OpenCodeFormatters.formatTokens(metrics.todayInput),
                     color: settingsValue.inputColor.color
                 )
                 MetricLabel(
                     title: "OUT",
-                    value: OpenCodeMetricsLoader.formatTokens(metrics.todayOutput),
+                    value: OpenCodeFormatters.formatTokens(metrics.todayOutput),
                     color: settingsValue.outputColor.color
                 )
                 MetricLabel(
                     title: "COST",
-                    value: OpenCodeMetricsLoader.formatCost(metrics.todayCost),
+                    value: OpenCodeFormatters.formatCost(metrics.todayCost),
                     color: settingsValue.costColor.color
                 )
             } else {
@@ -143,7 +144,7 @@ struct ContentView: View {
             .max() ?? 1
         return Chart(metrics.daily) { day in
             LineMark(
-                x: .value("Day", OpenCodeMetricsLoader.shortDay(day.day)),
+                x: .value("Day", OpenCodeFormatters.shortDay(day.day)),
                 y: .value("Input", day.input),
                 series: .value("Series", "Input")
             )
@@ -152,7 +153,7 @@ struct ContentView: View {
             .interpolationMethod(.catmullRom)
 
             LineMark(
-                x: .value("Day", OpenCodeMetricsLoader.shortDay(day.day)),
+                x: .value("Day", OpenCodeFormatters.shortDay(day.day)),
                 y: .value("Output", day.output),
                 series: .value("Series", "Output")
             )
@@ -173,7 +174,7 @@ struct ContentView: View {
                     .foregroundStyle(Color(white: 0.45).opacity(0.35))
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
-                        Text(OpenCodeMetricsLoader.formatTokens(Int64(v)))
+                        Text(OpenCodeFormatters.formatTokens(Int64(v)))
                             .foregroundStyle(Color(white: 0.78))
                             .font(.system(size: 8, weight: .medium, design: .rounded))
                     }
@@ -220,11 +221,11 @@ struct ContentView: View {
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 1) {
-                        Text(OpenCodeMetricsLoader.formatCost(model.cost))
+                        Text(OpenCodeFormatters.formatCost(model.cost))
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(settingsValue.costColor.color)
-                        Text("\(OpenCodeMetricsLoader.formatTokens(model.input)) / \(OpenCodeMetricsLoader.formatTokens(model.output))")
+                        Text("\(OpenCodeFormatters.formatTokens(model.input)) / \(OpenCodeFormatters.formatTokens(model.output))")
                             .font(.system(size: 9, weight: .medium, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
@@ -236,7 +237,7 @@ struct ContentView: View {
 
     private func footer(_ metrics: OpenCodeMetrics) -> some View {
         HStack {
-            Text("All time: \(OpenCodeMetricsLoader.formatTokens(metrics.input)) in · \(OpenCodeMetricsLoader.formatTokens(metrics.output)) out · \(OpenCodeMetricsLoader.formatCost(metrics.cost))")
+            Text("All time: \(OpenCodeFormatters.formatTokens(metrics.input)) in · \(OpenCodeFormatters.formatTokens(metrics.output)) out · \(OpenCodeFormatters.formatCost(metrics.cost))")
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
