@@ -1,22 +1,23 @@
-# BatBox — inline brief
+# GitBox — inline brief
 
-Source: `deck-next` handoff (2026-08-09), pick: `batbox`.
+Source: `deck-next` handoff (2026-08-10), pick: `gitbox`.
 
-Build BatBox, a battery monitor widget — M3 candidate in ROADMAP.md:43. Copy
-the LiveBox/NetBox shell wholesale (`Sources/<Widget>/*`: AppMain, Settings,
-SettingsStore, MetricsStore, ContentView, SettingsView) and add one pure loader
-via IOKit/pmset for level, time remaining, cycle count, and charging state.
-Front face mirrors NetBox: header metrics, rolling charge-level chart, and a
-short status list; back face uses the standard toggles/colors. Keep every panel
-invariant from CLAUDE.md (level `.normal`, 22pt rounded mask, dynamic height via
-PanelHeightKey, material-as-background card style) and register in
-README/ROADMAP/Package.swift.
+Build GitBox, the M3 pending widget (ROADMAP.md:45) that shows today's git
+activity across local repos: header with today's commit count + current streak,
+a per-day commit chart (last 14 days), and a per-repo list with commit counts.
+Copy the NetBox/BatBox shell wholesale (AppMain, Settings, SettingsStore,
+MetricsStore, ContentView, SettingsView) and add a pure GitBoxCore loader
+(git log / rev-list --count --since) with tests following the
+BatBoxCore/NetBoxCore pattern. Resolve the repo-enumeration caveat in the PRD:
+a settings path list (defaulting to a ~/dev scan) plus timezone-normalized
+streak math. Keep every panel invariant from CLAUDE.md (level .normal, 22pt
+rounded mask, PanelHeightKey dynamic height, material-as-background card style)
+and register in README/ROADMAP/Package.swift.
 
 ## Constraints from the pick
 
 - Shell untouched in behavior: panel invariants in CLAUDE.md (level `.normal`,
   rounded mask, dynamic height via PanelHeightKey, card style).
 - Pure loaders, stores own timers, views own layout.
-- Caveat to resolve in the PRD: there is no system battery-history API —
-  history must be self-sampled (seeds at launch), and define the
-  desktop-no-battery empty state up front.
+- Caveat to resolve in the PRD: repo enumeration — settings path list
+  (defaulting to a `~/dev` scan) and timezone-normalized streak math.

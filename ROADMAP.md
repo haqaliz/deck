@@ -42,7 +42,8 @@ only add a data source + a layout.
 - [x] **NetBox** — network: up/down speed + history, current interfaces (en0…)
 - [x] **BatBox** — battery: level, time remaining, cycle count, charge history
   (history is self-sampled from launch — no system battery-history API)
-- [ ] **GitBox** — today's git activity across repos (commits per repo, streak)
+- [x] **GitBox** — today's git activity: today count + streak, 14-day commit
+  chart, active repos list (git log across configured paths, default ~/dev)
 - [ ] **DevBox** — open ports/processes, Docker containers (docker stats)
 - [ ] **HomeBox** — weather + timezones (wttr.in), always-on
 - [ ] **ClipBox** — clipboard history with previews (local only)

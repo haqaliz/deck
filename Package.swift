@@ -19,6 +19,10 @@ let package = Package(
             name: "BatBoxCore",
             targets: ["BatBoxCore"]
         ),
+        .library(
+            name: "GitBoxCore",
+            targets: ["GitBoxCore"]
+        ),
     ],
     targets: [
         .target(
@@ -32,6 +36,10 @@ let package = Package(
         .target(
             name: "BatBoxCore",
             path: "Sources/BatBoxCore"
+        ),
+        .target(
+            name: "GitBoxCore",
+            path: "Sources/GitBoxCore"
         ),
         .executableTarget(
             name: "LiveBox",
@@ -52,6 +60,11 @@ let package = Package(
             dependencies: ["OpenBoxCore"],
             path: "Sources/OpenBox"
         ),
+        .executableTarget(
+            name: "GitBox",
+            dependencies: ["GitBoxCore"],
+            path: "Sources/GitBox"
+        ),
         .testTarget(
             name: "OpenBoxCoreTests",
             dependencies: ["OpenBoxCore"],
@@ -66,6 +79,11 @@ let package = Package(
             name: "BatBoxCoreTests",
             dependencies: ["BatBoxCore"],
             path: "Tests/BatBoxCoreTests"
+        ),
+        .testTarget(
+            name: "GitBoxCoreTests",
+            dependencies: ["GitBoxCore"],
+            path: "Tests/GitBoxCoreTests"
         ),
     ]
 )

@@ -81,6 +81,26 @@ swift run BatBox
 Options: `--corner tl|tr|bl|br`, `--margin N`, `--click-through`, `--debug-flip`.
 Settings persist to `~/Library/Application Support/BatBox/settings.json`.
 
+## GitBox — git activity
+
+Same shell, showing **today's git activity** across local repos (read from
+`git log` in each repo):
+
+- **Header** — TODAY (commits made today) and STREAK (consecutive days with a
+  commit; an empty today doesn't break the run)
+- **Chart** — commits per day, last 14 days (today's bar highlighted)
+- **Repos** — active repos today, sorted by commit count
+- Flip card settings: show chart/repos, bar + today colors, repo count,
+  scan depth, repo paths (default: scan `~/dev`), refresh 10/30/60s, launch
+  at login
+
+```bash
+swift run GitBox
+```
+
+Options: `--corner tl|tr|bl|br`, `--margin N`, `--click-through`, `--debug-flip`.
+Settings persist to `~/Library/Application Support/GitBox/settings.json`.
+
 ## Shared behavior
 
 - Native material look (`.ultraThinMaterial`), 22pt rounded corners, hairline border
@@ -114,6 +134,7 @@ swift run LiveBox         # run the system monitor
 swift run OpenBox         # run the opencode usage widget
 swift run NetBox          # run the network monitor widget
 swift run BatBox          # run the battery monitor widget
+swift run GitBox          # run the git activity widget
 ```
 
 ### Quick start / stop
@@ -122,7 +143,7 @@ swift run BatBox          # run the battery monitor widget
 ./run.sh NetBox               # build + start a widget in the background
 ./run.sh OpenBox --corner tl  # extra args are passed through
 ./stop.sh NetBox              # stop a running widget
-./run-all.sh                  # start LiveBox, OpenBox, NetBox, and BatBox
+./run-all.sh                  # start LiveBox, OpenBox, NetBox, BatBox, and GitBox
 ./stop-all.sh                 # stop all running widgets
 ```
 
