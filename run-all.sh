@@ -6,7 +6,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 
 swift build -c release --package-path "$DIR" >/dev/null
 
-for WIDGET in LiveBox OpenBox NetBox; do
+for WIDGET in LiveBox OpenBox NetBox BatBox; do
   if pgrep -x "$WIDGET" >/dev/null; then
     echo "$WIDGET already running — skipping"
     continue

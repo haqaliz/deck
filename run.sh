@@ -1,8 +1,8 @@
 #!/bin/bash
 # Start a deck widget in the background.
-# Usage: ./run.sh <LiveBox|OpenBox|NetBox> [widget args...]
+# Usage: ./run.sh <LiveBox|OpenBox|NetBox|BatBox> [widget args...]
 #   ./run.sh NetBox --corner tl --margin 20
-# Stop with: ./stop.sh <LiveBox|OpenBox|NetBox>
+# Stop with: ./stop.sh <LiveBox|OpenBox|NetBox|BatBox>
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -10,8 +10,8 @@ WIDGET="${1:-LiveBox}"
 shift || true
 
 case "$WIDGET" in
-  LiveBox|OpenBox|NetBox) ;;
-  *) echo "Unknown widget: $WIDGET (expected LiveBox, OpenBox, or NetBox)" >&2; exit 1 ;;
+  LiveBox|OpenBox|NetBox|BatBox) ;;
+  *) echo "Unknown widget: $WIDGET (expected LiveBox, OpenBox, NetBox, or BatBox)" >&2; exit 1 ;;
 esac
 
 if pgrep -x "$WIDGET" >/dev/null; then

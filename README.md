@@ -62,6 +62,25 @@ swift run NetBox
 Options: `--corner tl|tr|bl|br`, `--margin N`, `--click-through`, `--debug-flip`.
 Settings persist to `~/Library/Application Support/NetBox/settings.json`.
 
+## BatBox — battery monitor
+
+Same shell, showing **live battery state** read from IOKit power-source
+counters (cycle count from `ioreg`):
+
+- **Header** — LEVEL % (dot shifts green→amber→red by charge) and TIME
+  remaining (or "to full" while charging)
+- **Chart** — rolling level % line (last 90 seconds, 1s updates)
+- **Status** — State (charging/discharging/full/AC), time, and cycle count
+- Flip card settings: show chart/status, level color, launch at login
+- Desktops without a battery show a clean empty-state card
+
+```bash
+swift run BatBox
+```
+
+Options: `--corner tl|tr|bl|br`, `--margin N`, `--click-through`, `--debug-flip`.
+Settings persist to `~/Library/Application Support/BatBox/settings.json`.
+
 ## Shared behavior
 
 - Native material look (`.ultraThinMaterial`), 22pt rounded corners, hairline border
@@ -94,6 +113,7 @@ swift build -c release    # release build
 swift run LiveBox         # run the system monitor
 swift run OpenBox         # run the opencode usage widget
 swift run NetBox          # run the network monitor widget
+swift run BatBox          # run the battery monitor widget
 ```
 
 ### Quick start / stop
@@ -102,7 +122,7 @@ swift run NetBox          # run the network monitor widget
 ./run.sh NetBox               # build + start a widget in the background
 ./run.sh OpenBox --corner tl  # extra args are passed through
 ./stop.sh NetBox              # stop a running widget
-./run-all.sh                  # start LiveBox, OpenBox, and NetBox
+./run-all.sh                  # start LiveBox, OpenBox, NetBox, and BatBox
 ./stop-all.sh                 # stop all running widgets
 ```
 

@@ -15,6 +15,10 @@ let package = Package(
             name: "NetBoxCore",
             targets: ["NetBoxCore"]
         ),
+        .library(
+            name: "BatBoxCore",
+            targets: ["BatBoxCore"]
+        ),
     ],
     targets: [
         .target(
@@ -25,6 +29,10 @@ let package = Package(
             name: "NetBoxCore",
             path: "Sources/NetBoxCore"
         ),
+        .target(
+            name: "BatBoxCore",
+            path: "Sources/BatBoxCore"
+        ),
         .executableTarget(
             name: "LiveBox",
             path: "Sources/LiveBox"
@@ -33,6 +41,11 @@ let package = Package(
             name: "NetBox",
             dependencies: ["NetBoxCore"],
             path: "Sources/NetBox"
+        ),
+        .executableTarget(
+            name: "BatBox",
+            dependencies: ["BatBoxCore"],
+            path: "Sources/BatBox"
         ),
         .executableTarget(
             name: "OpenBox",
@@ -48,6 +61,11 @@ let package = Package(
             name: "NetBoxCoreTests",
             dependencies: ["NetBoxCore"],
             path: "Tests/NetBoxCoreTests"
+        ),
+        .testTarget(
+            name: "BatBoxCoreTests",
+            dependencies: ["BatBoxCore"],
+            path: "Tests/BatBoxCoreTests"
         ),
     ]
 )
