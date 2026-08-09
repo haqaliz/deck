@@ -60,6 +60,11 @@ let package = Package(
             dependencies: ["OpenBoxCore"],
             path: "Sources/OpenBox"
         ),
+        .executableTarget(
+            name: "GitBox",
+            dependencies: ["GitBoxCore"],
+            path: "Sources/GitBox"
+        ),
         .testTarget(
             name: "OpenBoxCoreTests",
             dependencies: ["OpenBoxCore"],
