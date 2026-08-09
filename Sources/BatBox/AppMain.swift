@@ -67,15 +67,18 @@ private func renderFrontPNG(path: String) {
     store.start()
     RunLoop.main.run(until: Date().addingTimeInterval(2.5))
     store.stop()
+    var renderedHeight: CGFloat = 320
     let contentView = ContentView(
         settings: settings,
         store: store,
         onOpenSettings: {},
-        onHeightChange: { _ in }
+        onHeightChange: { height in
+            renderedHeight = height
+        }
     )
     let renderer = ImageRenderer(
         content: contentView
-            .frame(width: 368, height: 320, alignment: .top)
+            .frame(width: 368, height: renderedHeight, alignment: .top)
             .background(Color.black.opacity(0.85))
     )
     renderer.scale = 2
