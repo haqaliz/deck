@@ -278,7 +278,10 @@ struct ContentView: View {
             .padding(.bottom, 10)
             .padding(.top, 28)
 
-            SettingsView(settings: settings)
+            CustomScrollView {
+                SettingsView(settings: settings)
+                    .padding(.bottom, 14)
+            }
         }
         .frame(width: 368, height: 358, alignment: .top)
         .background(cardStyle)
