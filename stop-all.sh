@@ -2,7 +2,7 @@
 # Stop every running deck widget.
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-for WIDGET in LiveBox OpenBox NetBox; do
+for WIDGET in LiveBox OpenBox NetBox BatBox; do
   if pgrep -x "$WIDGET" >/dev/null; then
     pkill -x "$WIDGET"
     echo "$WIDGET stopped"
