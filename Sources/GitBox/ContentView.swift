@@ -122,7 +122,7 @@ struct ContentView: View {
             }
         }
         .frame(width: 340)
-        .padding(.top, 28)
+        .padding(.top, 36)
         .padding(.horizontal, 14)
         .padding(.bottom, 14)
         .background(
@@ -184,6 +184,11 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
                     .tracking(1)
                 Spacer()
+                Text("TODAY")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .tracking(1)
+                    .frame(width: countColumnWidth, alignment: .trailing)
             }
             .padding(.bottom, 4)
             if visibleRepos.isEmpty {
@@ -206,6 +211,7 @@ struct ContentView: View {
                                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                                     .monospacedDigit()
                                     .foregroundStyle(settingsValue.todayColor.color)
+                                    .frame(width: countColumnWidth, alignment: .trailing)
                             }
                         }
                     }
@@ -223,6 +229,9 @@ struct ContentView: View {
         let names = GitFormatters.disambiguatedNames(repos: active)
         return Array(zip(names, active.map(\.todayCount)))
     }
+
+    /// Fixed width for the per-repo commit count column so the header and rows align.
+    private var countColumnWidth: CGFloat { 32 }
 
     /// Grows with the row count but never shows more than 6 rows (~140pt) at once.
     private var repoListHeight: CGFloat {
