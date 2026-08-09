@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var processMode: ProcessMode = .cpu
     @State private var showSettings = CommandLine.arguments.contains("--debug-flip")
     @State private var frontHeight: CGFloat = 300
+    @State private var panelHeight: CGFloat = 358
 
     init(
         settings: SettingsStore,
@@ -43,10 +44,13 @@ struct ContentView: View {
                 .opacity(showSettings ? 1 : 0)
                 .allowsHitTesting(showSettings)
         }
+        .frame(width: 368, height: panelHeight)
         .animation(.spring(response: 0.5, dampingFraction: 0.85), value: showSettings)
         .contextMenu {
-            Button("Close", role: .destructive) {
-                NSApp.terminate(nil)
+            if !NativeWidgetDetector.isRegistered() {
+                Button("Close", role: .destructive) {
+                    NSApp.terminate(nil)
+                }
             }
         }
         .onPreferenceChange(PanelHeightKey.self) { height in
@@ -61,7 +65,8 @@ struct ContentView: View {
     }
 
     private func reportHeight() {
-        let target = showSettings ? 358.0 : max(frontHeight, 300.0)
+        let target = showSettings ? 358.0 : max(frontHeight, 200.0)
+        panelHeight = target
         onHeightChange(target)
     }
 
@@ -78,14 +83,16 @@ struct ContentView: View {
                 processList
             }
         }
-        .frame(width: 340, alignment: .top)
-        .padding(14)
-        .background(cardStyle)
+        .frame(width: 340)
+        .padding(.top, 28)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 14)
         .background(
             GeometryReader { geo in
                 Color.clear.preference(key: PanelHeightKey.self, value: geo.size.height)
             }
         )
+        .background(cardStyle)
     }
 
     private var header: some View {
@@ -257,7 +264,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 10)
-            .padding(.top, 14)
+            .padding(.top, 28)
 
             SettingsView(settings: settings)
         }
@@ -267,10 +274,12 @@ struct ContentView: View {
 
     private var cardStyle: some View {
         RoundedRectangle(cornerRadius: 22, style: .continuous)
-            .fill(.ultraThinMaterial)
+            .fill(.clear)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
+                    .strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
             )
     }
 }

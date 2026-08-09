@@ -101,6 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         )
         let hostingView = NSHostingView(rootView: contentView)
+        hostingView.sizingOptions = .standardBounds
         let size = hostingView.fittingSize
 
         let panel = NSPanel(
@@ -110,6 +111,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
         panel.contentView = hostingView
+        hostingView.wantsLayer = true
+        hostingView.layer?.cornerRadius = 22
+        hostingView.layer?.masksToBounds = true
         panel.isFloatingPanel = true
         panel.level = .normal
         panel.hidesOnDeactivate = false

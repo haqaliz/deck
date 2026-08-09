@@ -39,6 +39,20 @@ struct OpenBoxMain {
         }
 
         let app = NSApplication.shared
+        if let i = args.firstIndex(of: "--debug-render"), i + 1 < args.count {
+            let store = SettingsStore()
+            let view = SettingsView(settings: store)
+                .frame(width: 368)
+            let renderer = ImageRenderer(content: view)
+            renderer.scale = 1
+            if let img = renderer.nsImage,
+               let tiff = img.tiffRepresentation,
+               let rep = NSBitmapImageRep(data: tiff),
+               let png = rep.representation(using: .png, properties: [:]) {
+                try? png.write(to: URL(fileURLWithPath: args[i + 1]))
+            }
+            exit(0)
+        }
         let delegate = AppDelegate(corner: corner, margin: margin, clickThrough: clickThrough)
         app.delegate = delegate
         app.setActivationPolicy(.accessory)
@@ -72,6 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         )
         let hostingView = NSHostingView(rootView: contentView)
+        hostingView.sizingOptions = .standardBounds
         let size = hostingView.fittingSize
 
         let panel = NSPanel(
@@ -81,6 +96,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
         panel.contentView = hostingView
+        hostingView.wantsLayer = true
+        hostingView.layer?.cornerRadius = 22
+        hostingView.layer?.masksToBounds = true
         panel.isFloatingPanel = true
         panel.level = .normal
         panel.hidesOnDeactivate = false

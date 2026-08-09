@@ -30,13 +30,15 @@ struct SettingsView: View {
 
             Divider().overlay(.secondary.opacity(0.15))
 
-            sectionTitle("STARTUP")
+            if !NativeWidgetDetector.isRegistered() {
+                sectionTitle("STARTUP")
 
-            toggleRow("Open at startup", isOn: launchAtLoginBinding)
+                toggleRow("Open at startup", isOn: launchAtLoginBinding)
 
-            Text("Creates a LaunchAgent; takes effect on next login.")
-                .font(.system(size: 10, design: .rounded))
-                .foregroundStyle(.secondary.opacity(0.7))
+                Text("Creates a LaunchAgent; takes effect on next login.")
+                    .font(.system(size: 10, design: .rounded))
+                    .foregroundStyle(.secondary.opacity(0.7))
+            }
         }
         .padding(.horizontal, 14)
         .frame(maxWidth: .infinity, alignment: .leading)

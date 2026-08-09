@@ -6,8 +6,9 @@ struct ContentView: View {
     @StateObject private var store: MetricsStore
     private let onOpenSettings: () -> Void
     private let onHeightChange: (CGFloat) -> Void
-    @State private var showSettings = false
+    @State private var showSettings = CommandLine.arguments.contains("--debug-flip")
     @State private var frontHeight: CGFloat = 300
+    @State private var panelHeight: CGFloat = 358
 
     init(
         settings: SettingsStore,
@@ -42,6 +43,7 @@ struct ContentView: View {
                 .opacity(showSettings ? 1 : 0)
                 .allowsHitTesting(showSettings)
         }
+        .frame(width: 368, height: panelHeight)
         .animation(.spring(response: 0.5, dampingFraction: 0.85), value: showSettings)
         .contextMenu {
             Button("Close", role: .destructive) {
@@ -60,7 +62,8 @@ struct ContentView: View {
     }
 
     private func reportHeight() {
-        let target = showSettings ? 358.0 : max(frontHeight, 300.0)
+        let target = showSettings ? 358.0 : max(frontHeight, 200.0)
+        panelHeight = target
         onHeightChange(target)
     }
 
@@ -82,26 +85,28 @@ struct ContentView: View {
                 errorView
             }
         }
-        .frame(width: 340, alignment: .top)
-        .padding(14)
-        .background(cardStyle)
+        .frame(width: 340)
+        .padding(.top, 32)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 14)
         .background(
             GeometryReader { geo in
                 Color.clear.preference(key: PanelHeightKey.self, value: geo.size.height)
             }
         )
+        .background(cardStyle)
     }
 
     private var header: some View {
         HStack(spacing: 14) {
             if let metrics = store.metrics {
                 MetricLabel(
-                    title: "INPUT",
+                    title: "IN",
                     value: OpenCodeMetricsLoader.formatTokens(metrics.todayInput),
                     color: settingsValue.inputColor.color
                 )
                 MetricLabel(
-                    title: "OUTPUT",
+                    title: "OUT",
                     value: OpenCodeMetricsLoader.formatTokens(metrics.todayOutput),
                     color: settingsValue.outputColor.color
                 )
@@ -282,7 +287,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 10)
-            .padding(.top, 14)
+            .padding(.top, 32)
 
             SettingsView(settings: settings)
         }
@@ -295,8 +300,9 @@ struct ContentView: View {
             .fill(.ultraThinMaterial)
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
+                    .strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
             )
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 

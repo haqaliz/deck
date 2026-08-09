@@ -28,6 +28,7 @@ struct OpenBoxSettings: Codable {
     var inputColor = CodableColor(.cyan)
     var outputColor = CodableColor(.green)
     var costColor = CodableColor(.orange)
+    var launchAtLogin = false
 }
 
 @MainActor
@@ -52,6 +53,50 @@ final class SettingsStore: ObservableObject {
             settings = decoded
         } else {
             settings = OpenBoxSettings()
+        }
+        settings.launchAtLogin = Self.launchAgentExists
+    }
+
+    private static var launchAgentURL: URL {
+        let dir = FileManager.default.urls(
+            for: .libraryDirectory,
+            in: .userDomainMask
+        ).first ?? FileManager.default.homeDirectoryForCurrentUser
+        return dir.appendingPathComponent("LaunchAgents/com.openbox.widget.plist")
+    }
+
+    private static var launchAgentExists: Bool {
+        FileManager.default.fileExists(atPath: launchAgentURL.path)
+    }
+
+    private var executablePath: String {
+        if let path = Bundle.main.executablePath { return path }
+        let raw = CommandLine.arguments[0]
+        return URL(fileURLWithPath: raw).absoluteURL.standardizedFileURL.path
+    }
+
+    /// Enables/disables launch at login by creating or removing a LaunchAgent plist.
+    func setLaunchAtLogin(_ enabled: Bool) {
+        settings.launchAtLogin = enabled
+        let url = Self.launchAgentURL
+        if enabled {
+            let args = [executablePath] + Array(CommandLine.arguments.dropFirst())
+            let plist: [String: Any] = [
+                "Label": "com.openbox.widget",
+                "ProgramArguments": args,
+                "RunAtLoad": true,
+                "ProcessType": "Interactive",
+            ]
+            guard
+                let data = try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+            else { return }
+            try? FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try? data.write(to: url)
+        } else {
+            try? FileManager.default.removeItem(at: url)
         }
     }
 

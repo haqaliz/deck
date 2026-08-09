@@ -4,7 +4,7 @@ struct SettingsView: View {
     @ObservedObject var settings: SettingsStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             sectionTitle("OPENCODE")
 
             HStack {
@@ -16,10 +16,6 @@ struct SettingsView: View {
                     .controlSize(.small)
                     .frame(width: 150)
             }
-
-            Text("Used for remote opencode servers. Local usage needs no token.")
-                .font(.system(size: 10, design: .rounded))
-                .foregroundStyle(.secondary.opacity(0.7))
 
             toggleRow("Show chart", isOn: $settings.settings.showChart)
             toggleRow("Show models", isOn: $settings.settings.showModels)
@@ -41,6 +37,12 @@ struct SettingsView: View {
 
             Divider().overlay(.secondary.opacity(0.15))
 
+            sectionTitle("STARTUP")
+
+            toggleRow("Open at startup", isOn: launchAtLoginBinding)
+
+            Divider().overlay(.secondary.opacity(0.15))
+
             sectionTitle("COLORS")
 
             metricRow(title: "Input", color: colorBinding(\.inputColor))
@@ -51,6 +53,13 @@ struct SettingsView: View {
         .padding(.bottom, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .font(.system(size: 12, design: .rounded))
+    }
+
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { settings.settings.launchAtLogin },
+            set: { settings.setLaunchAtLogin($0) }
+        )
     }
 
     private func sectionTitle(_ title: String) -> some View {
