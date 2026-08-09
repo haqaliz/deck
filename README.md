@@ -96,4 +96,12 @@ swift run OpenBox         # run the opencode usage widget
 swift run NetBox          # run the network monitor widget
 ```
 
+### Quick start / stop
+
+```bash
+./run.sh NetBox               # build + start a widget in the background
+./run.sh OpenBox --corner tl  # extra args are passed through
+./stop.sh NetBox              # stop a running widget
+```
+
 Both widgets share the same window/panel plumbing (see `Sources/*/AppMain.swift`).
