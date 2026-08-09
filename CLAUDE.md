@@ -12,6 +12,10 @@ native desktop widgets. Each widget is a card you can flip to configure.
 - **LiveBox** — system monitor: live CPU / MEM / DISK chart + top processes.
 - **OpenBox** — opencode usage: today's in/out tokens + cost, 14-day chart,
   top models (parsed from the opencode DB).
+- **NetBox** — network monitor: per-interface up/down rates + history,
+  top interfaces (getifaddrs counters).
+- **BatBox** — battery monitor: level, time remaining, cycle count,
+  charge-state (IOKit power source + `ioreg` cycle count).
 
 Plus a WidgetKit extension (`native/`) for a true system widget.
 
@@ -49,10 +53,12 @@ ContentView.swift    # front face (header + chart + list) + back face (settings)
 ## Commands
 
 ```bash
-swift build                      # build both widgets
+swift build                      # build all widgets
 swift build -c release           # release
 swift run LiveBox                # system monitor (options: --corner tl|tr|bl|br, --margin, --click-through, --debug-flip, --debug-render)
 swift run OpenBox                # opencode usage (defaults top-right)
+swift run NetBox                 # network monitor
+swift run BatBox                 # battery monitor
 ```
 
 - `--debug-flip` starts on the settings face (screenshot/debug).
