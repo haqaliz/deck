@@ -22,6 +22,10 @@ let package = Package(
             path: "Sources/LiveBox"
         ),
         .executableTarget(
+            name: "NetBox",
+            path: "Sources/NetBox"
+        ),
+        .executableTarget(
             name: "OpenBox",
             dependencies: ["OpenBoxCore"],
             path: "Sources/OpenBox"
