@@ -8,10 +8,20 @@ struct SettingsView: View {
             sectionTitle("OPENCODE")
 
             HStack {
-                Text("Token")
+                Text("Server URL")
                     .foregroundStyle(.primary)
                 Spacer()
-                TextField("OPENCODE_TOKEN", text: $settings.settings.token)
+                TextField("http://host:4096", text: serverURLBinding)
+                    .textFieldStyle(.roundedBorder)
+                    .controlSize(.small)
+                    .frame(width: 150)
+            }
+
+            HStack {
+                Text("Server password")
+                    .foregroundStyle(.primary)
+                Spacer()
+                TextField("OPENCODE_SERVER_PASSWORD", text: $settings.settings.token)
                     .textFieldStyle(.roundedBorder)
                     .controlSize(.small)
                     .frame(width: 150)
@@ -59,6 +69,13 @@ struct SettingsView: View {
         Binding(
             get: { settings.settings.launchAtLogin },
             set: { settings.setLaunchAtLogin($0) }
+        )
+    }
+
+    private var serverURLBinding: Binding<String> {
+        Binding(
+            get: { settings.settings.serverURL ?? "" },
+            set: { settings.settings.serverURL = $0.isEmpty ? nil : $0 }
         )
     }
 

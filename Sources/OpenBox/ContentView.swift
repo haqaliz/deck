@@ -237,7 +237,7 @@ struct ContentView: View {
 
     private func footer(_ metrics: OpenCodeMetrics) -> some View {
         HStack {
-            Text("All time: \(OpenCodeFormatters.formatTokens(metrics.input)) in · \(OpenCodeFormatters.formatTokens(metrics.output)) out · \(OpenCodeFormatters.formatCost(metrics.cost))")
+            Text("\(store.isRemote ? "14D" : "All time"): \(OpenCodeFormatters.formatTokens(metrics.input)) in · \(OpenCodeFormatters.formatTokens(metrics.output)) out · \(OpenCodeFormatters.formatCost(metrics.cost))")
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

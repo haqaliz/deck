@@ -22,6 +22,8 @@ struct CodableColor: Codable, Equatable {
 
 struct OpenBoxSettings: Codable {
     var token: String = ProcessInfo.processInfo.environment["OPENCODE_TOKEN"] ?? ""
+    /// Non-empty → remote server mode (auto-switch); empty → local DB.
+    var serverURL: String?
     var refreshInterval: Int = 5
     var showChart = true
     var showModels = true
