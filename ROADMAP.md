@@ -39,7 +39,7 @@ only add a data source + a layout.
 - [ ] Tests: add an XCTest target for metrics parsing (ModelParser, formatters, DB SQL)
 
 ### M3 — More widgets (candidates, pick via deck-next)
-- [ ] **NetBox** — network: up/down speed + history, current interfaces (en0…)
+- [x] **NetBox** — network: up/down speed + history, current interfaces (en0…)
 - [ ] **BatBox** — battery: level, time remaining, cycle count, charge history
 - [ ] **GitBox** — today's git activity across repos (commits per repo, streak)
 - [ ] **DevBox** — open ports/processes, Docker containers (docker stats)
@@ -68,6 +68,11 @@ OpenBox:
 - [ ] Cost-per-day chart (stacked by model)
 - [ ] Session list with drill-down (top sessions by tokens)
 - [ ] Tool usage stats (bash/edit/read counts from the DB)
+
+NetBox:
+- [ ] Network interface picker (manual override of the auto "most active" pick)
+- [ ] Per-interface packet counts / error counters
+- [ ] Threshold coloring on rates
 
 ## Planning workflow
 
