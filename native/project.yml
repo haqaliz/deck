@@ -1,0 +1,55 @@
+name: LiveBox
+options:
+  bundleIdPrefix: com.livebox
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+targets:
+  LiveBoxApp:
+    type: application
+    platform: macOS
+    sources:
+      - LiveBoxApp
+    dependencies:
+      - target: LiveBoxWidget
+        embed: true
+    info:
+      path: LiveBoxApp/Info.plist
+      properties:
+        CFBundleDisplayName: LiveBox
+        LSMinimumSystemVersion: "15.0"
+        NSHighResolutionCapable: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.livebox.app
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: NO
+        SWIFT_VERSION: "5.10"
+        GENERATE_INFOPLIST_FILE: NO
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+  LiveBoxWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - LiveBoxWidget
+    info:
+      path: LiveBoxWidget/Info.plist
+      properties:
+        CFBundleDisplayName: LiveBox Widget
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        LSMinimumSystemVersion: "15.0"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.livebox.app.widget
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: NO
+        SWIFT_VERSION: "5.10"
+        GENERATE_INFOPLIST_FILE: NO
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks"
