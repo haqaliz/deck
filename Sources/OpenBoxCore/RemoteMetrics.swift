@@ -16,13 +16,39 @@ public struct RemoteTime: Codable, Equatable {
     }
 }
 
+public struct RemoteModel: Codable, Equatable {
+    public let id: String
+    public let providerID: String?
+    public let variant: String?
+
+    public init(id: String, providerID: String?, variant: String?) {
+        self.id = id
+        self.providerID = providerID
+        self.variant = variant
+    }
+}
+
 public struct RemoteSession: Codable, Equatable {
     public let id: String
     public let time: RemoteTime
+    /// Present on servers that expose session-level usage (v1.18.15+);
+    /// absent on older ones → fall back to per-message aggregation.
+    public let cost: Double?
+    public let tokens: RemoteTokens?
+    public let model: RemoteModel?
 
-    public init(id: String, time: RemoteTime) {
+    public init(
+        id: String,
+        time: RemoteTime,
+        cost: Double? = nil,
+        tokens: RemoteTokens? = nil,
+        model: RemoteModel? = nil
+    ) {
         self.id = id
         self.time = time
+        self.cost = cost
+        self.tokens = tokens
+        self.model = model
     }
 }
 
@@ -103,7 +129,89 @@ public enum RemoteMetrics {
     private static let messageWindow: TimeInterval = 13 * daySeconds
     private static let todayWindow: TimeInterval = daySeconds
 
-    /// Aggregates server sessions + messages into widget metrics.
+    /// Aggregates session-level usage (servers that expose `cost`/`tokens`
+    /// on `/session`, v1.18.15+). Mirrors the local SQL over the `session`
+    /// table: window = last 13 days, today = last 24h, buckets by UTC day of
+    /// `time.created`.
+    public static func aggregate(sessions: [RemoteSession], now: Date) -> OpenCodeMetrics {
+        let nowMilliseconds = now.timeIntervalSince1970 * 1000
+        let sessionCutoff = nowMilliseconds - sessionWindow * 1000
+        let messageCutoff = nowMilliseconds - messageWindow * 1000
+        let todayCutoff = nowMilliseconds - todayWindow * 1000
+
+        var metrics = OpenCodeMetrics()
+        var dayTotals: [String: (input: Int64, output: Int64)] = [:]
+        var modelTotals: [String: (cost: Double, input: Int64, output: Int64)] = [:]
+        var modelInfo: [String: (provider: String, id: String, variant: String?)] = [:]
+        var todaySessionIDs = Set<String>()
+
+        for remoteSession in sessions {
+            guard
+                remoteSession.time.updated >= sessionCutoff,
+                remoteSession.time.created >= messageCutoff
+            else { continue }
+
+            let input = Int64(remoteSession.tokens?.input ?? 0)
+            let output = Int64(remoteSession.tokens?.output ?? 0)
+            let cacheRead = Int64(remoteSession.tokens?.cache.read ?? 0)
+            let cacheWrite = Int64(remoteSession.tokens?.cache.write ?? 0)
+            let cost = remoteSession.cost ?? 0
+
+            metrics.sessions += 1
+            metrics.input += input
+            metrics.output += output
+            metrics.cacheRead += cacheRead
+            metrics.cacheWrite += cacheWrite
+            metrics.cost += cost
+
+            let day = utcDayString(from: remoteSession.time.created)
+            dayTotals[day, default: (0, 0)].input += input
+            dayTotals[day, default: (0, 0)].output += output
+
+            let modelKey = modelKey(for: remoteSession.model)
+            modelTotals[modelKey, default: (0, 0, 0)].cost += cost
+            modelTotals[modelKey, default: (0, 0, 0)].input += input
+            modelTotals[modelKey, default: (0, 0, 0)].output += output
+            modelInfo[modelKey] = modelFields(for: remoteSession.model)
+
+            if remoteSession.time.created >= todayCutoff {
+                metrics.todayInput += input
+                metrics.todayOutput += output
+                metrics.todayCost += cost
+                todaySessionIDs.insert(remoteSession.id)
+            }
+        }
+
+        metrics.todaySessions = todaySessionIDs.count
+        metrics.cost = (metrics.cost * 10_000).rounded() / 10_000
+        metrics.daily = dayTotals.keys.sorted().compactMap { day in
+            guard let totals = dayTotals[day] else { return nil }
+            return DayUsage(day: day, input: totals.input, output: totals.output)
+        }
+        metrics.models = modelTotals.keys
+            .sorted { modelTotals[$0]!.cost > modelTotals[$1]!.cost }
+            .prefix(3)
+            .compactMap { key in
+                guard
+                    let totals = modelTotals[key],
+                    let info = modelInfo[key]
+                else { return nil }
+                return ModelUsage(
+                    model: "\(info.provider)/\(info.id)",
+                    provider: info.provider,
+                    modelID: info.id,
+                    variant: info.variant,
+                    cost: (totals.cost * 10_000).rounded() / 10_000,
+                    input: totals.input,
+                    output: totals.output
+                )
+            }
+
+        return metrics
+    }
+
+    /// Aggregates per-message usage (fallback for servers without
+    /// session-level usage fields).
     ///
     /// Mirrors the local SQL queries:
     /// - sessions must have been updated within the last 14 days;
@@ -181,7 +289,32 @@ public enum RemoteMetrics {
             return DayUsage(day: day, input: totals.input, output: totals.output)
         }
 
-        metrics.models = modelTotals.keys
+        metrics.models = models(from: modelTotals)
+
+        return metrics
+    }
+
+    private static func modelKey(for message: RemoteMessage) -> String {
+        let provider = message.providerID ?? "local"
+        let id = message.modelID ?? "unknown"
+        return "\(provider)/\(id)"
+    }
+
+    private static func modelKey(for model: RemoteModel?) -> String {
+        guard let model else { return "local/unknown" }
+        let provider = model.providerID ?? "local"
+        let variant = model.variant ?? ""
+        return "\(provider)|\(model.id)|\(variant)"
+    }
+
+    private static func modelFields(for model: RemoteModel?) -> (provider: String, id: String, variant: String?) {
+        guard let model else { return ("local", "unknown", nil) }
+        let variant = model.variant
+        return (model.providerID ?? "local", model.id, variant?.isEmpty == true ? nil : variant)
+    }
+
+    private static func models(from modelTotals: [String: (cost: Double, input: Int64, output: Int64)]) -> [ModelUsage] {
+        modelTotals.keys
             .sorted { modelTotals[$0]!.cost > modelTotals[$1]!.cost }
             .prefix(3)
             .compactMap { key in
@@ -197,14 +330,6 @@ public enum RemoteMetrics {
                     output: totals.output
                 )
             }
-
-        return metrics
-    }
-
-    private static func modelKey(for message: RemoteMessage) -> String {
-        let provider = message.providerID ?? "local"
-        let id = message.modelID ?? "unknown"
-        return "\(provider)/\(id)"
     }
 
     private static func utcDayString(from epochMilliseconds: Double) -> String {

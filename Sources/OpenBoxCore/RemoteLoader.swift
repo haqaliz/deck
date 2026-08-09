@@ -29,6 +29,10 @@ public struct RemoteOpenCodeMetricsLoader {
         let cutoff = Date().timeIntervalSince1970 * 1000 - 14 * 86_400 * 1000
         let recent = sessions.filter { $0.time.updated >= cutoff }
 
+        if recent.contains(where: { $0.cost != nil || $0.tokens != nil }) {
+            return RemoteMetrics.aggregate(sessions: recent, now: Date())
+        }
+
         var messages: [RemoteMessage] = []
         for remoteSession in recent {
             let envelopes = try await get(

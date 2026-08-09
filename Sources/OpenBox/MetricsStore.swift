@@ -44,15 +44,11 @@ final class MetricsStore: ObservableObject {
         let password = settings.settings.token
         Task {
             do {
-                let loaded = try await Task.detached {
-                    guard let url = URL(string: serverURL) else {
-                        throw RemoteLoadError.invalidURL
-                    }
-                    return try await RemoteOpenCodeMetricsLoader(
-                        url: url,
-                        password: password
-                    ).load()
-                }.value
+                guard let url = URL(string: serverURL) else {
+                    throw RemoteLoadError.invalidURL
+                }
+                let loader = RemoteOpenCodeMetricsLoader(url: url, password: password)
+                let loaded = try await loader.load()
                 metrics = loaded
                 lastUpdated = Date()
                 error = nil

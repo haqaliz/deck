@@ -133,6 +133,32 @@ final class RemoteLoaderTests: XCTestCase {
         XCTAssertEqual(messageFetches, ["/session/s1/message"])
     }
 
+    func testUsesSessionLevelUsageWithoutMessageFetches() async throws {
+        let updated = Date().timeIntervalSince1970 * 1000 - 60 * 1000
+        let created = Date().timeIntervalSince1970 * 1000 - 3_600 * 1000
+        let body = #"""
+        [{"id":"s1","time":{"created":\#(created),"updated":\#(updated)},
+        "cost":0.02,"tokens":{"input":100,"output":50,"cache":{"read":30,"write":0}},
+        "model":{"id":"deepseek-v4-flash","providerID":"opencode-go","variant":"max"}}]
+        """#
+        var messageFetches: [String] = []
+        MockURLProtocol.handler = { request in
+            if request.url?.path == "/session" { return self.jsonResponse(200, body) }
+            messageFetches.append(request.url!.path)
+            return self.jsonResponse(404, "{}")
+        }
+
+        let metrics = try await loader().load()
+
+        XCTAssertEqual(messageFetches, [])
+        XCTAssertEqual(metrics.input, 100)
+        XCTAssertEqual(metrics.output, 50)
+        XCTAssertEqual(metrics.cacheRead, 30)
+        XCTAssertEqual(metrics.todayInput, 100)
+        XCTAssertEqual(metrics.models.first?.modelID, "deepseek-v4-flash")
+        XCTAssertEqual(metrics.models.first?.variant, "max")
+    }
+
     func testUnauthorizedThrows() async {
         MockURLProtocol.handler = { _ in self.jsonResponse(401, #"{"name":"BadRequest"}"#) }
 
