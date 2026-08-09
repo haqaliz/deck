@@ -102,6 +102,8 @@ swift run NetBox          # run the network monitor widget
 ./run.sh NetBox               # build + start a widget in the background
 ./run.sh OpenBox --corner tl  # extra args are passed through
 ./stop.sh NetBox              # stop a running widget
+./run-all.sh                  # start LiveBox, OpenBox, and NetBox
+./stop-all.sh                 # stop all running widgets
 ```
 
 Both widgets share the same window/panel plumbing (see `Sources/*/AppMain.swift`).
