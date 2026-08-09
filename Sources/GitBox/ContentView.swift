@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 import GitBoxCore
 
 struct ContentView: View {
@@ -106,8 +107,18 @@ struct ContentView: View {
     private var frontFace: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
-            if store.isLoaded, !store.hasRepos {
-                emptyState
+            if store.isLoaded {
+                if !store.hasRepos {
+                    emptyState
+                } else {
+                    if settingsValue.showChart {
+                        chart
+                    }
+                    if settingsValue.showRepos {
+                        Divider().overlay(.secondary.opacity(0.15))
+                        repoList
+                    }
+                }
             }
         }
         .frame(width: 340)
@@ -140,6 +151,87 @@ struct ContentView: View {
         }
         .font(.system(size: 12, weight: .semibold, design: .rounded))
         .monospacedDigit()
+    }
+
+    private var chart: some View {
+        Chart(store.dayCounts, id: \.day) { item in
+            BarMark(
+                x: .value("Day", item.day),
+                y: .value("Commits", item.count)
+            )
+            .foregroundStyle(
+                item.day == todayLabel ? settingsValue.todayColor.color : settingsValue.barColor.color
+            )
+            .cornerRadius(2)
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis {
+            AxisMarks(position: .trailing) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
+                    .foregroundStyle(Color(white: 0.45).opacity(0.35))
+                AxisValueLabel()
+            }
+        }
+        .frame(height: 130)
+        .animation(.linear(duration: 0.4), value: store.dayCounts)
+    }
+
+    private var repoList: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("REPOS")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .tracking(1)
+                Spacer()
+            }
+            .padding(.bottom, 4)
+            if visibleRepos.isEmpty {
+                Text("No commits today")
+                    .font(.system(size: 11, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 4)
+            } else {
+                CustomScrollView {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(visibleRepos.enumerated()), id: \.offset) { _, repo in
+                            HStack(spacing: 8) {
+                                Text(repo.name)
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                Spacer()
+                                Text(GitFormatters.commitCount(repo.count))
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundStyle(settingsValue.todayColor.color)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .frame(height: repoListHeight)
+                .animation(.easeOut(duration: 0.2), value: repoListHeight)
+            }
+        }
+    }
+
+    private var visibleRepos: [(name: String, count: Int)] {
+        let count = max(1, min(10, settingsValue.repoCount))
+        let active = Array(store.repos.prefix(count))
+        let names = GitFormatters.disambiguatedNames(repos: active)
+        return Array(zip(names, active.map(\.todayCount)))
+    }
+
+    /// Grows with the row count but never shows more than 6 rows (~140pt) at once.
+    private var repoListHeight: CGFloat {
+        let rows = CGFloat(max(1, visibleRepos.count))
+        return min(rows * 23 + 6, 140)
+    }
+
+    private var todayLabel: String {
+        GitMath.dayLabel(Date(), calendar: Calendar.current)
     }
 
     private var emptyState: some View {
@@ -226,5 +318,48 @@ private struct MetricLabel: View {
             Text(value)
                 .foregroundStyle(.primary)
         }
+    }
+}
+
+/// Reaches into the backing NSScrollView to slim the native scrollbar
+/// (thin overlay scroller with a light knob).
+private struct ScrollViewStyler: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        view.setAccessibilityElement(false)
+        DispatchQueue.main.async { [weak view] in
+            guard let view, let scroll = view.enclosingScrollView else { return }
+            scroll.scrollerStyle = .overlay
+            scroll.scrollerKnobStyle = .light
+            scroll.verticalScroller?.controlSize = .small
+            scroll.horizontalScroller?.controlSize = .small
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+/// ScrollView wrapper with the native scrollbar stripped down.
+private struct CustomScrollView<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView {
+            content.background(ScrollViewStyler())
+        }
+    }
+}
+
+private extension NSView {
+    var enclosingScrollView: NSScrollView? {
+        var current = superview
+        while let view = current {
+            if let scroll = view as? NSScrollView {
+                return scroll
+            }
+            current = view.superview
+        }
+        return nil
     }
 }

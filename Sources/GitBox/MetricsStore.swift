@@ -73,6 +73,10 @@ final class MetricsStore: ObservableObject {
                 self.streak = streak
                 self.repos = sorted
                 self.isLoaded = true
+                if ProcessInfo.processInfo.environment["GITBOX_DEBUG"] != nil {
+                    print("GITBOX_DEBUG today=\(self.todayCount) streak=\(self.streak) repos=\(self.repos.count) reposFound=\(repos.count) hasRepos=\(self.hasRepos) days=\(self.dayCounts.map(\.count))")
+                    fflush(stdout)
+                }
             }
         }
     }

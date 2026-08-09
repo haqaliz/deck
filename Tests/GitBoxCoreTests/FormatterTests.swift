@@ -24,4 +24,24 @@ final class GitFormatterTests: XCTestCase {
     func testCommitCountGroupsThousands() {
         XCTAssertEqual(GitFormatters.commitCount(1234), "1,234")
     }
+
+    func testDisambiguatedNamesUniqueStaysShort() {
+        let repos = [
+            RepoCommits(shortName: "deck", path: "/Users/aliz/dev/at/deck", todayCount: 3),
+            RepoCommits(shortName: "manifold", path: "/Users/aliz/dev/manifold/manifold", todayCount: 1),
+        ]
+        XCTAssertEqual(GitFormatters.disambiguatedNames(repos: repos), ["deck", "manifold"])
+    }
+
+    func testDisambiguatedNamesRepeatsGetTwoLevelName() {
+        let repos = [
+            RepoCommits(shortName: "deck", path: "/Users/aliz/dev/at/deck", todayCount: 3),
+            RepoCommits(shortName: "deck", path: "/Users/aliz/dev/manifold/deck", todayCount: 1),
+        ]
+        XCTAssertEqual(GitFormatters.disambiguatedNames(repos: repos), ["at/deck", "manifold/deck"])
+    }
+
+    func testDisambiguatedNamesEmpty() {
+        XCTAssertEqual(GitFormatters.disambiguatedNames(repos: []), [])
+    }
 }
