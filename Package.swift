@@ -43,6 +43,11 @@ let package = Package(
             path: "Sources/NetBox"
         ),
         .executableTarget(
+            name: "BatBox",
+            dependencies: ["BatBoxCore"],
+            path: "Sources/BatBox"
+        ),
+        .executableTarget(
             name: "OpenBox",
             dependencies: ["OpenBoxCore"],
             path: "Sources/OpenBox"
