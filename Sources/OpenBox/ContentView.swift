@@ -6,6 +6,7 @@ struct ContentView: View {
     @StateObject private var settings: SettingsStore
     @StateObject private var store: MetricsStore
     private let onOpenSettings: () -> Void
+    private let onCloseSettings: () -> Void
     private let onHeightChange: (CGFloat) -> Void
     @State private var showSettings = CommandLine.arguments.contains("--debug-flip")
     @State private var frontHeight: CGFloat = 300
@@ -14,11 +15,13 @@ struct ContentView: View {
     init(
         settings: SettingsStore,
         onOpenSettings: @escaping () -> Void,
+        onCloseSettings: @escaping () -> Void = {},
         onHeightChange: @escaping (CGFloat) -> Void
     ) {
         _settings = StateObject(wrappedValue: settings)
         _store = StateObject(wrappedValue: MetricsStore(settings: settings))
         self.onOpenSettings = onOpenSettings
+        self.onCloseSettings = onCloseSettings
         self.onHeightChange = onHeightChange
     }
 
@@ -57,7 +60,11 @@ struct ContentView: View {
         }
         .onChange(of: showSettings) { _ in
             reportHeight()
-            if showSettings { onOpenSettings() }
+            if showSettings {
+                onOpenSettings()
+            } else {
+                onCloseSettings()
+            }
         }
         .onAppear {
             store.start()
