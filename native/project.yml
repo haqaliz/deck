@@ -11,6 +11,8 @@ targets:
     sources:
       - DeckApp
       - Shared
+    resources:
+      - DeckApp/Resources
     dependencies:
       - target: DeckWidgets
         embed: true
@@ -24,6 +26,7 @@ targets:
       path: DeckApp/Info.plist
       properties:
         CFBundleDisplayName: Deck
+        CFBundleIconFile: AppIcon
         LSMinimumSystemVersion: "15.0"
         NSHighResolutionCapable: true
     settings:

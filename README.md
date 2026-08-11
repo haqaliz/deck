@@ -1,5 +1,9 @@
 # deck — macOS desktop widgets
 
+<p align="center">
+  <img src="docs/deck.svg" width="120" alt="Deck logo">
+</p>
+
 A collection of small, beautiful macOS desktop widgets, delivered as one native
 app — **Deck** — and added from the macOS **Widget Center** (right-click the
 desktop → **Edit Widgets…**, or click the clock in the menu bar). Real
