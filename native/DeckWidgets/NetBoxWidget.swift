@@ -161,7 +161,6 @@ struct NetBoxWidget: Widget {
         .configurationDisplayName("NetBox")
         .description("Per-interface up/down rates with the most active interfaces.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .containerBackgroundRemovable()
     }
 }
 
@@ -181,9 +180,6 @@ struct NetBoxWidgetEntryView: View {
             default:
                 largeView
             }
-        }
-        .containerBackground(for: .widget) {
-            Color.clear
         }
     }
 
@@ -247,6 +243,9 @@ struct NetBoxWidgetEntryView: View {
                     .font(.system(size: 11, design: .rounded))
                     .foregroundStyle(.secondary)
             }
+        }
+        .containerBackground(for: .widget) {
+            Color.clear
         }
     }
 

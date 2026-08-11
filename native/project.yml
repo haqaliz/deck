@@ -48,8 +48,8 @@ targets:
       path: DeckWidgets/Info.plist
       properties:
         CFBundleDisplayName: Deck Widgets
-        CFBundleShortVersionString: "1.1"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "1.2"
+        CFBundleVersion: "3"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         LSMinimumSystemVersion: "15.0"

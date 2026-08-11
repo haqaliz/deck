@@ -114,7 +114,6 @@ struct OpenBoxWidget: Widget {
         .configurationDisplayName("OpenBox")
         .description("Today's opencode tokens and cost with a 14-day chart and top models.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .containerBackgroundRemovable()
     }
 }
 
@@ -139,9 +138,6 @@ struct OpenBoxWidgetEntryView: View {
                 }
             }
         }
-        .containerBackground(for: .widget) {
-            Color.clear
-        }
     }
 
 
@@ -156,6 +152,9 @@ struct OpenBoxWidgetEntryView: View {
                 .font(.system(size: 11, design: .rounded))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
+        }
+        .containerBackground(for: .widget) {
+            Color.clear
         }
     }
 

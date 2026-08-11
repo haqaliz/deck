@@ -82,7 +82,6 @@ struct GitBoxWidget: Widget {
         .configurationDisplayName("GitBox")
         .description("Commits per day for the last 14 days with today's count, streak and active repos.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .containerBackgroundRemovable()
     }
 }
 

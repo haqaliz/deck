@@ -105,7 +105,6 @@ struct BatBoxWidget: Widget {
         .configurationDisplayName("BatBox")
         .description("Battery level, time remaining and charge state.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .containerBackgroundRemovable()
     }
 }
 
@@ -132,9 +131,6 @@ struct BatBoxWidgetEntryView: View {
                 }
             }
         }
-        .containerBackground(for: .widget) {
-            Color.clear
-        }
     }
 
 
@@ -146,6 +142,9 @@ struct BatBoxWidgetEntryView: View {
             Text("No battery")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
             Spacer(minLength: 0)
+        }
+        .containerBackground(for: .widget) {
+            Color.clear
         }
     }
 
@@ -289,43 +288,17 @@ struct BatBoxWidgetEntryView: View {
         return BatteryFormatters.formatTime(minutes: snapshot.timeToEmptyMinutes)
     }
 
-    /// Zooms into the top range when the battery is near full so a flat 100%
-    /// chart stays visible instead of hugging the top edge.
-    private var chartDomain: ClosedRange<Double> {
-        guard
-            let minimum = entry.history.min(),
-            minimum > 85
-        else { return 0...100 }
-        return 85...100
-    }
-
+    /// Custom bar sparkline (fixed 64pt) — deterministic sizing, no chart
+    /// framework quirks. At 100% the bars are full-height, like a level meter.
     private var chart: some View {
-        Chart(Array(entry.history.enumerated()), id: \.offset) { index, level in
-            AreaMark(
-                x: .value("Time", index),
-                y: .value("LEVEL", level)
-            )
-            .foregroundStyle(
-                LinearGradient(
-                    colors: [entry.settings.levelColor.color.opacity(0.35), entry.settings.levelColor.color.opacity(0.02)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .interpolationMethod(.catmullRom)
-
-            LineMark(
-                x: .value("Time", index),
-                y: .value("LEVEL", level)
-            )
-            .foregroundStyle(entry.settings.levelColor.color)
-            .lineStyle(StrokeStyle(lineWidth: 2))
-            .interpolationMethod(.catmullRom)
+        HStack(alignment: .bottom, spacing: 2) {
+            ForEach(Array(entry.history.enumerated()), id: \.offset) { index, level in
+                Rectangle()
+                    .fill(entry.settings.levelColor.color.opacity(0.55))
+                    .frame(width: 3, height: max(2, level / 100 * 60))
+            }
         }
-        .chartXAxis(.hidden)
-        .chartYAxis(.hidden)
-        .chartYScale(domain: chartDomain)
-        .frame(height: 70)
+        .frame(height: 64, alignment: .bottom)
     }
 
     private var level: Double { snapshot.levelPercent ?? 0 }

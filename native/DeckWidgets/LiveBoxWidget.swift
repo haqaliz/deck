@@ -165,7 +165,6 @@ struct LiveBoxWidget: Widget {
         .configurationDisplayName("LiveBox")
         .description("CPU, memory, disk usage with a live chart and top processes.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .containerBackgroundRemovable()
     }
 }
 
@@ -189,9 +188,6 @@ struct LiveBoxWidgetEntryView: View {
                 processes: LiveBoxSampler.processes(mode: entry.processMode),
                 history: LiveBoxSampler.history(appending: sample)
             )
-        }
-        .containerBackground(for: .widget) {
-            Color.clear
         }
     }
 }
@@ -258,6 +254,9 @@ struct LiveBoxFace: View {
             if settings.showChart && !history.isEmpty {
                 chart
             }
+        }
+        .containerBackground(for: .widget) {
+            Color.clear
         }
     }
 
