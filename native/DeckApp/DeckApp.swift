@@ -14,41 +14,36 @@ struct DeckApp: App {
 
 struct ContentView: View {
     @State private var settings = DeckSettings.load()
+    @State private var selection: DeckWidget = .livebox
     @State private var timer: Timer?
+    @State private var toolbarSweepTimer: Timer?
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "square.stack.3d.up.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(.secondary)
-                Text("Deck Widgets")
-                    .font(.title3.weight(.semibold))
-                Spacer()
-                Text("Same settings are available inside each widget (gear → flip).")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        NavigationSplitView(columnVisibility: .constant(.all)) {
+            List(selection: $selection) {
+                Label("General", systemImage: "gearshape")
+                    .tag(DeckWidget.general)
+                Section("Widgets") {
+                    ForEach(DeckWidget.allCases.filter { $0 != .general }) { widget in
+                        Label(widget.title, systemImage: widget.systemImage)
+                            .tag(widget)
+                    }
+                }
             }
-            .padding(.horizontal, 4)
-
-            Toggle("Refresh widgets in the background (launch at login)", isOn: $settings.agentAtLogin)
-
-            TabView {
-                LiveBoxSettingsView(settings: $settings.livebox)
-                    .tabItem { Label("LiveBox", systemImage: "cpu") }
-                OpenBoxSettingsView(settings: $settings.openbox)
-                    .tabItem { Label("OpenBox", systemImage: "arrow.left.arrow.right") }
-                NetBoxSettingsView(settings: $settings.netbox)
-                    .tabItem { Label("NetBox", systemImage: "network") }
-                BatBoxSettingsView(settings: $settings.batbox)
-                    .tabItem { Label("BatBox", systemImage: "battery.50percent") }
-                GitBoxSettingsView(settings: $settings.gitbox)
-                    .tabItem { Label("GitBox", systemImage: "chevron.left.forwardslash.chevron.right") }
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 190, ideal: 190, max: 190)
+        } detail: {
+            switch selection {
+            case .general: GeneralSettingsView(agentAtLogin: $settings.agentAtLogin)
+            case .livebox: LiveBoxSettingsView(settings: $settings.livebox)
+            case .openbox: OpenBoxSettingsView(settings: $settings.openbox)
+            case .netbox: NetBoxSettingsView(settings: $settings.netbox)
+            case .batbox: BatBoxSettingsView(settings: $settings.batbox)
+            case .gitbox: GitBoxSettingsView(settings: $settings.gitbox)
             }
-            .frame(height: 320)
         }
-        .padding(16)
-        .frame(width: 440)
+        .navigationSplitViewStyle(.balanced)
+        .frame(width: 640, height: 500)
         .onAppear {
             installAgentIfNeeded()
             Task { await refreshOpenCode() }
@@ -60,6 +55,12 @@ struct ContentView: View {
                 refreshGitBox()
             }
             WidgetCenter.shared.reloadAllTimelines()
+            toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
+                removeSidebarToggleFromWindow()
+            }
+        }
+        .onDisappear {
+            toolbarSweepTimer?.invalidate()
         }
         .onChange(of: settings) { _ in
             settings.save()
@@ -175,9 +176,65 @@ struct ContentView: View {
         try? process.run()
         try? FileManager.default.removeItem(at: agentPlistURL)
     }
+
+    private func removeSidebarToggleFromWindow() {
+        guard let toolbar = NSApp.windows.first(where: { $0.toolbar != nil })?.toolbar else { return }
+        for index in toolbar.items.indices.reversed() {
+            if toolbar.items[index].itemIdentifier.rawValue == "com.apple.SwiftUI.navigationSplitView.toggleSidebar" {
+                toolbar.removeItem(at: index)
+            }
+        }
+    }
+}
+
+// MARK: - Sidebar selection
+
+private enum DeckWidget: String, CaseIterable, Identifiable {
+    case general, livebox, openbox, netbox, batbox, gitbox
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: "General"
+        case .livebox: "LiveBox"
+        case .openbox: "OpenBox"
+        case .netbox: "NetBox"
+        case .batbox: "BatBox"
+        case .gitbox: "GitBox"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general: "gearshape"
+        case .livebox: "cpu"
+        case .openbox: "arrow.left.arrow.right"
+        case .netbox: "network"
+        case .batbox: "battery.50percent"
+        case .gitbox: "chevron.left.forwardslash.chevron.right"
+        }
+    }
 }
 
 // MARK: - Full-size settings (also reachable from each widget's gear)
+
+private struct GeneralSettingsView: View {
+    @Binding var agentAtLogin: Bool
+
+    var body: some View {
+        Form {
+            Section("Background refresh") {
+                Toggle("Refresh in background (launch at login)", isOn: $agentAtLogin)
+                Text("Runs the Deck agent at login to keep widget data fresh even when the app is closed.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+}
 
 private struct LiveBoxSettingsView: View {
     @Binding var settings: LiveBoxSettings
