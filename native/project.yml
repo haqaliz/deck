@@ -1,55 +1,84 @@
-name: LiveBox
+name: Deck
 options:
-  bundleIdPrefix: com.livebox
+  bundleIdPrefix: com.deck
   deploymentTarget:
     macOS: "15.0"
   createIntermediateGroups: true
 targets:
-  LiveBoxApp:
+  DeckApp:
     type: application
     platform: macOS
     sources:
-      - LiveBoxApp
+      - DeckApp
+      - Shared
     dependencies:
-      - target: LiveBoxWidget
+      - target: DeckWidgets
         embed: true
+      - target: DeckAgent
+    postBuildScripts:
+      - name: Embed DeckAgent
+        script: |
+          cp "$BUILT_PRODUCTS_DIR/DeckAgent" "$BUILT_PRODUCTS_DIR/Deck.app/Contents/MacOS/DeckAgent"
+          chmod +x "$BUILT_PRODUCTS_DIR/Deck.app/Contents/MacOS/DeckAgent"
     info:
-      path: LiveBoxApp/Info.plist
+      path: DeckApp/Info.plist
       properties:
-        CFBundleDisplayName: LiveBox
+        CFBundleDisplayName: Deck
         LSMinimumSystemVersion: "15.0"
         NSHighResolutionCapable: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.livebox.app
-        CODE_SIGN_IDENTITY: "-"
-        CODE_SIGN_STYLE: Manual
-        DEVELOPMENT_TEAM: ""
+        PRODUCT_BUNDLE_IDENTIFIER: com.deck.app
+        PRODUCT_NAME: Deck
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: K6X49DG8VF
         ENABLE_HARDENED_RUNTIME: NO
+        OTHER_LDFLAGS: "$(inherited) -lsqlite3"
         SWIFT_VERSION: "5.10"
         GENERATE_INFOPLIST_FILE: NO
         MACOSX_DEPLOYMENT_TARGET: "15.0"
-  LiveBoxWidget:
+  DeckWidgets:
     type: app-extension
     platform: macOS
     sources:
-      - LiveBoxWidget
+      - DeckWidgets
+      - Shared
     info:
-      path: LiveBoxWidget/Info.plist
+      path: DeckWidgets/Info.plist
       properties:
-        CFBundleDisplayName: LiveBox Widget
+        CFBundleDisplayName: Deck Widgets
+        CFBundleShortVersionString: "1.1"
+        CFBundleVersion: "2"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         LSMinimumSystemVersion: "15.0"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.livebox.app.widget
-        CODE_SIGN_IDENTITY: "-"
-        CODE_SIGN_STYLE: Manual
-        DEVELOPMENT_TEAM: ""
+        PRODUCT_BUNDLE_IDENTIFIER: com.deck.app.widgets
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: K6X49DG8VF
+        CODE_SIGN_ENTITLEMENTS: DeckWidgets/DeckWidgets.entitlements
         ENABLE_HARDENED_RUNTIME: NO
         SWIFT_VERSION: "5.10"
         GENERATE_INFOPLIST_FILE: NO
         MACOSX_DEPLOYMENT_TARGET: "15.0"
         SKIP_INSTALL: YES
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks"
+        OTHER_LDFLAGS: "$(inherited) -lsqlite3"
+  DeckAgent:
+    type: tool
+    platform: macOS
+    sources:
+      - DeckAgent
+      - Shared
+    settings:
+      base:
+        PRODUCT_NAME: DeckAgent
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: K6X49DG8VF
+        SWIFT_VERSION: "5.10"
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+        OTHER_LDFLAGS: "$(inherited) -lsqlite3"

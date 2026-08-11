@@ -1,69 +1,64 @@
 # Deck Roadmap
 
 Small, beautiful macOS desktop widgets that behave like native ones. The
-product value is the **shared shell** (one proven window/card/flip/settings
-pattern) plus **one metric story per widget**. New widgets reuse the shell and
-only add a data source + a layout.
+product value is **one WidgetKit extension** (five widgets in the Widget
+Center) plus **one metric story per widget**. New widgets reuse the widget
+shell and only add a data source + a layout.
 
 ## The widget blueprint (how to add a widget)
 
-1. **Copy the shell**: `Sources/<Widget>/` with AppMain, Settings, SettingsStore,
-   MetricsStore, ContentView, SettingsView (start from LiveBox; keep the panel
-   invariants in CLAUDE.md).
-2. **Data source**: a pure loader (mach APIs, `ps`, sqlite via `opencode db`,
-   HTTP, etc.) returning plain structs. No timers in the loader.
-3. **UI**: front face = header metrics + chart/list; back face = settings
-   (toggles pinned right, color pickers). Card style must match the shell.
-4. **Register**: README.md, ROADMAP.md, `Package.swift` executableTarget.
-5. **Verify**: `swift build -c release`, `swift run <Widget> --debug-flip`,
-   check window bounds = content height, corners rounded, sits behind windows.
+1. **Copy a widget**: `native/DeckWidgets/<Widget>Widget.swift` (start from
+   GitBox or NetBox) + register it in `DeckWidgets/DeckWidgets.swift`.
+2. **Data source**: sandbox-safe loaders (mach, getifaddrs, IOKit) run inside
+   the widget; anything else (subprocesses, other apps' data) goes through the
+   agent: add a snapshot model + store in `native/Shared/`, sample it in
+   `DeckAgent/main.swift`, render from the store in the widget.
+3. **Settings**: add a `<Widget>Settings` struct to `Shared/DeckSettings.swift`
+   and a tab in `DeckApp/DeckApp.swift`. Settings live in the app only.
+4. **Register**: README.md, ROADMAP.md, `DeckWidgets/DeckWidgets.swift`.
+5. **Verify**: build + install, re-add from the gallery, check all three sizes.
 6. **Plan artifacts**: `docs/planning/{slug}/prd.md` → `plan_*.md` via the
    `deck-prd` / `deck-plan` skills. Pick the next item with `deck-next`.
 
 ## Milestones
 
 ### M1 — Foundation (DONE)
-- [x] LiveBox (CPU/MEM/DISK chart + top processes, tabs CPU/MEM, up to 20, scroll)
-- [x] OpenBox (opencode tokens: in/out/cost, 14-day chart, top models parsed from JSON)
-- [x] Shared shell: material card, rounded window mask, flip settings, dynamic height,
-      behind-windows level, drag, right-click close, launch-at-login (LaunchAgent),
-      native-widget detection
-- [x] `native/` WidgetKit project (builds; needs Apple signing to register)
+- [x] LiveBox (CPU/MEM/DISK chart + top processes, CPU/MEM tabs)
+- [x] OpenBox (opencode tokens: in/out/cost, 14-day chart, top models parsed)
+- [x] Native WidgetKit project building with automatic signing
 - [x] Repo: deck, CLAUDE.md, skills, README
 
-### M2 — Polish & installability
-- [ ] Native widget signed + installable (document Xcode team step; verify `pluginkit`)
-- [ ] Launch at login for both widgets verified end-to-end
-- [x] OpenBox remote server mode (token + URL → HTTP metrics instead of local DB)
-- [ ] Crash/robustness pass: run 24h, no leaks, settings schema migration
-- [ ] Tests: add an XCTest target for metrics parsing (ModelParser, formatters, DB SQL)
+### M2 — Native Deck (DONE)
+- [x] Deck app + extension registered in the Widget Center (`pluginkit`)
+- [x] All five widgets in one bundle, small/medium/large sizes
+- [x] Agent pump (`DeckAgent` CLI + LaunchAgent): opencode snapshot, process
+      list, git snapshot — silent, embedded in Deck.app
+- [x] Settings window in Deck.app (tabs per widget, colors, counts, token/URL,
+      repo paths) applied to widgets instantly
+- [x] OpenBox remote server mode (token + URL → HTTP metrics)
+- [x] Non-native window widgets removed — Widget Center is the only surface
 
 ### M3 — More widgets (candidates, pick via deck-next)
-- [x] **NetBox** — network: up/down speed + history, current interfaces (en0…)
-- [x] **BatBox** — battery: level, time remaining, cycle count, charge history
-  (history is self-sampled from launch — no system battery-history API)
-- [x] **GitBox** — today's git activity: today count + streak, 14-day commit
-  chart, active repos list (git log across configured paths, default ~/dev)
+- [x] **NetBox** — network: up/down rates + history, interfaces
+- [x] **BatBox** — battery: level, time remaining, charge state
+- [x] **GitBox** — git activity: today + streak, 14-day chart, active repos
 - [ ] **DevBox** — open ports/processes, Docker containers (docker stats)
-- [ ] **HomeBox** — weather + timezones (wttr.in), always-on
+- [ ] **HomeBox** — weather + timezones (wttr.in)
 - [ ] **ClipBox** — clipboard history with previews (local only)
 - [ ] **ShipBox** — build/deploy status: GitHub Actions runs for a repo
 
-### M4 — Shell as a library
-- [ ] Extract the shell into a reusable SPM library (`DeckCore`): panel setup,
-      settings store, flip card, dynamic height — widgets become ~100 lines each
-- [ ] Widget templates (Xcode template or `deck new <Widget>` script)
-
-### M5 — Native parity
-- [ ] WidgetKit widget for OpenBox (gallery + desktop)
-- [ ] Shared data source package between window widgets and WidgetKit widgets
+### M4 — Polish
+- [ ] Crash/robustness pass: run 24h, no leaks, settings schema migration
+- [ ] Tests: XCTest target for the Shared parsers (GitLogParser, ModelParser,
+      formatters, DB SQL)
+- [ ] Share the agent data path for LiveBox processes on a tighter cadence
 
 ## Feature backlog (existing widgets)
 
 LiveBox:
 - [ ] Per-core CPU lines or per-core selection
 - [ ] Apple Silicon GPU/ANE usage, thermal state
-- [ ] Disk per-volume (multiple mounts), network interface picker
+- [ ] Disk per-volume (multiple mounts)
 - [ ] Threshold coloring (e.g. red when CPU > 90%)
 
 OpenBox:

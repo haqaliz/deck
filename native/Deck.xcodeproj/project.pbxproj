@@ -1,0 +1,671 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
+		0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */; };
+		15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
+		181D20A2D1C49B8ECF82CFFA /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
+		1967FF4D20A83BF47DDFFCB2 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
+		27DC4BBF55405C8CFB193051 /* OpenBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */; };
+		2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */; };
+		2D03E1C6AEAD755CE49CF9FD /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
+		38CA6F050AB3377F30390895 /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
+		41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
+		424DEB2DB806DD41871AE821 /* NetworkMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C7C7450F73A30B7B007FE7 /* NetworkMetrics.swift */; };
+		4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
+		4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
+		53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
+		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */; };
+		87E936C049D826980DD8F8C7 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B05E2B90DFEDC2F8CC1804F /* main.swift */; };
+		96B73870192265B41638143C /* NetBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */; };
+		A5E22A6827149E7194FB4E64 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
+		AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */; };
+		BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */; };
+		CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
+		D0E68887D6CF1F2F3EAFA435 /* DeckAgent in Resources */ = {isa = PBXBuildFile; fileRef = EA5EADBCA4E36B421CDE1542 /* DeckAgent */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */; };
+		D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
+		D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */; };
+		D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
+		E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		37884F2A47EACF4B3B131F60 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BDAD56553BA1FA8ECC4CDD4E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3B248A77C3846E785BA9F76D;
+			remoteInfo = DeckWidgets;
+		};
+		C0F8CBE0DFFB7C4B4177BD12 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BDAD56553BA1FA8ECC4CDD4E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DA0CEBB8193AB31545611EAD;
+			remoteInfo = DeckAgent;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9C63B0550E93F97460C3D0C6 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxWidget.swift; sourceTree = "<group>"; };
+		13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshot.swift; sourceTree = "<group>"; };
+		18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxWidget.swift; sourceTree = "<group>"; };
+		1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryMetrics.swift; sourceTree = "<group>"; };
+		1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSnapshot.swift; sourceTree = "<group>"; };
+		26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshot.swift; sourceTree = "<group>"; };
+		34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckWidgets.swift; sourceTree = "<group>"; };
+		37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeLoader.swift; sourceTree = "<group>"; };
+		42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxWidget.swift; sourceTree = "<group>"; };
+		4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckSettings.swift; sourceTree = "<group>"; };
+		46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetrics.swift; sourceTree = "<group>"; };
+		50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatBoxWidget.swift; sourceTree = "<group>"; };
+		7B2DB053937C24CBB649992B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxWidget.swift; sourceTree = "<group>"; };
+		B662E23A53ACAA091EAFA898 /* DeckApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeckApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeckWidgets.entitlements; sourceTree = "<group>"; };
+		D280CAAAC227082564309914 /* OpenCodeReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeReader.swift; sourceTree = "<group>"; };
+		EA5EADBCA4E36B421CDE1542 /* DeckAgent */ = {isa = PBXFileReference; includeInIndex = 0; path = DeckAgent; sourceTree = BUILT_PRODUCTS_DIR; };
+		F184F1820A5FC6758145DCAD /* DeckWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DeckWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3C7C7450F73A30B7B007FE7 /* NetworkMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMetrics.swift; sourceTree = "<group>"; };
+		F43C960DDF3AB3D1461849AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		155AFE11D196260105736FEC /* DeckApp */ = {
+			isa = PBXGroup;
+			children = (
+				FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */,
+				7B2DB053937C24CBB649992B /* Info.plist */,
+			);
+			path = DeckApp;
+			sourceTree = "<group>";
+		};
+		39404F96E0B2A7D51BED7847 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */,
+				13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */,
+				D280CAAAC227082564309914 /* OpenCodeReader.swift */,
+				1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */,
+				26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */,
+				37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		449BAD22FAAA834DAA8BED66 /* DeckAgent */ = {
+			isa = PBXGroup;
+			children = (
+				8B05E2B90DFEDC2F8CC1804F /* main.swift */,
+			);
+			path = DeckAgent;
+			sourceTree = "<group>";
+		};
+		5B4C6186FD2E4700749071F2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EA5EADBCA4E36B421CDE1542 /* DeckAgent */,
+				B662E23A53ACAA091EAFA898 /* DeckApp.app */,
+				F184F1820A5FC6758145DCAD /* DeckWidgets.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		77AD877F390CF0DABC304F1B /* Loaders */ = {
+			isa = PBXGroup;
+			children = (
+				1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */,
+				F3C7C7450F73A30B7B007FE7 /* NetworkMetrics.swift */,
+				46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */,
+			);
+			path = Loaders;
+			sourceTree = "<group>";
+		};
+		B5B1F6A761E8EBFFEE1B26F4 = {
+			isa = PBXGroup;
+			children = (
+				449BAD22FAAA834DAA8BED66 /* DeckAgent */,
+				155AFE11D196260105736FEC /* DeckApp */,
+				E562A923537B70436BFB9801 /* DeckWidgets */,
+				39404F96E0B2A7D51BED7847 /* Shared */,
+				5B4C6186FD2E4700749071F2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E562A923537B70436BFB9801 /* DeckWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */,
+				D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */,
+				34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */,
+				42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */,
+				F43C960DDF3AB3D1461849AC /* Info.plist */,
+				AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */,
+				18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */,
+				0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */,
+				77AD877F390CF0DABC304F1B /* Loaders */,
+			);
+			path = DeckWidgets;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3B248A77C3846E785BA9F76D /* DeckWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC0AF634BBFC9A1224CFE8B4 /* Build configuration list for PBXNativeTarget "DeckWidgets" */;
+			buildPhases = (
+				945711DB241FF29A00574A0A /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DeckWidgets;
+			packageProductDependencies = (
+			);
+			productName = DeckWidgets;
+			productReference = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		ABD76AF73B9C2D876980ACA8 /* DeckApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4ECADA9E1CDA8445AC164993 /* Build configuration list for PBXNativeTarget "DeckApp" */;
+			buildPhases = (
+				B76C857ADFEBAE3FEC666F8C /* Sources */,
+				1A0B3B70B91897F21A4D4637 /* Resources */,
+				9C63B0550E93F97460C3D0C6 /* Embed Foundation Extensions */,
+				EE7234FDF9F26715A32519B1 /* Embed DeckAgent */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A36FA53B57B7E0050504A3B1 /* PBXTargetDependency */,
+				ECAA886EF9F07D0839B22220 /* PBXTargetDependency */,
+			);
+			name = DeckApp;
+			packageProductDependencies = (
+			);
+			productName = DeckApp;
+			productReference = B662E23A53ACAA091EAFA898 /* DeckApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DA0CEBB8193AB31545611EAD /* DeckAgent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B2684F31532CA4F7896122D0 /* Build configuration list for PBXNativeTarget "DeckAgent" */;
+			buildPhases = (
+				BF94F62417832A9641BDF8F1 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DeckAgent;
+			packageProductDependencies = (
+			);
+			productName = DeckAgent;
+			productReference = EA5EADBCA4E36B421CDE1542 /* DeckAgent */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BDAD56553BA1FA8ECC4CDD4E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					3B248A77C3846E785BA9F76D = {
+						DevelopmentTeam = K6X49DG8VF;
+						ProvisioningStyle = Automatic;
+					};
+					ABD76AF73B9C2D876980ACA8 = {
+						DevelopmentTeam = K6X49DG8VF;
+						ProvisioningStyle = Automatic;
+					};
+					DA0CEBB8193AB31545611EAD = {
+						DevelopmentTeam = K6X49DG8VF;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 2062413B14B800A606CA7BCC /* Build configuration list for PBXProject "Deck" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = B5B1F6A761E8EBFFEE1B26F4;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 5B4C6186FD2E4700749071F2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				ABD76AF73B9C2D876980ACA8 /* DeckApp */,
+				3B248A77C3846E785BA9F76D /* DeckWidgets */,
+				DA0CEBB8193AB31545611EAD /* DeckAgent */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1A0B3B70B91897F21A4D4637 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0E68887D6CF1F2F3EAFA435 /* DeckAgent in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		EE7234FDF9F26715A32519B1 /* Embed DeckAgent */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed DeckAgent";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cp \"$BUILT_PRODUCTS_DIR/DeckAgent\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/MacOS/DeckAgent\"\nchmod +x \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/MacOS/DeckAgent\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		945711DB241FF29A00574A0A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */,
+				822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */,
+				53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */,
+				BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */,
+				D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */,
+				0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */,
+				AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */,
+				96B73870192265B41638143C /* NetBoxWidget.swift in Sources */,
+				424DEB2DB806DD41871AE821 /* NetworkMetrics.swift in Sources */,
+				27DC4BBF55405C8CFB193051 /* OpenBoxWidget.swift in Sources */,
+				181D20A2D1C49B8ECF82CFFA /* OpenCodeReader.swift in Sources */,
+				A5E22A6827149E7194FB4E64 /* OpenCodeSnapshot.swift in Sources */,
+				040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */,
+				E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */,
+				D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B76C857ADFEBAE3FEC666F8C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */,
+				EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */,
+				D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */,
+				38CA6F050AB3377F30390895 /* OpenCodeReader.swift in Sources */,
+				15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */,
+				CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */,
+				4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BF94F62417832A9641BDF8F1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */,
+				5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */,
+				41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */,
+				2D03E1C6AEAD755CE49CF9FD /* OpenCodeSnapshot.swift in Sources */,
+				1967FF4D20A83BF47DDFFCB2 /* ProcessSnapshot.swift in Sources */,
+				D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */,
+				87E936C049D826980DD8F8C7 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A36FA53B57B7E0050504A3B1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3B248A77C3846E785BA9F76D /* DeckWidgets */;
+			targetProxy = 37884F2A47EACF4B3B131F60 /* PBXContainerItemProxy */;
+		};
+		ECAA886EF9F07D0839B22220 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DA0CEBB8193AB31545611EAD /* DeckAgent */;
+			targetProxy = C0F8CBE0DFFB7C4B4177BD12 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		338A89F45D69E5AFAF170CC8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = K6X49DG8VF;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeckApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.deck.app;
+				PRODUCT_NAME = Deck;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+		935FC625ACB2A152437A99E9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = K6X49DG8VF;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.deck.DeckAgent;
+				PRODUCT_NAME = DeckAgent;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		C0DAC6007528F2B9CF7310B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = K6X49DG8VF;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.deck.DeckAgent;
+				PRODUCT_NAME = DeckAgent;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+		CD408A31B868E25C91C9AE4F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DeckWidgets/DeckWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = K6X49DG8VF;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeckWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.deck.app.widgets;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+		DE745609B6FD8FEE4F638C2C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DeckWidgets/DeckWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = K6X49DG8VF;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeckWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.deck.app.widgets;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		DFA704F8849790582B6E3DC5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = K6X49DG8VF;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeckApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.deck.app;
+				PRODUCT_NAME = Deck;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		E23DF288B50FF1BCB220C6AE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E40D3DE40D4C323CAB30FD74 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2062413B14B800A606CA7BCC /* Build configuration list for PBXProject "Deck" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E23DF288B50FF1BCB220C6AE /* Debug */,
+				E40D3DE40D4C323CAB30FD74 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4ECADA9E1CDA8445AC164993 /* Build configuration list for PBXNativeTarget "DeckApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DFA704F8849790582B6E3DC5 /* Debug */,
+				338A89F45D69E5AFAF170CC8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B2684F31532CA4F7896122D0 /* Build configuration list for PBXNativeTarget "DeckAgent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				935FC625ACB2A152437A99E9 /* Debug */,
+				C0DAC6007528F2B9CF7310B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CC0AF634BBFC9A1224CFE8B4 /* Build configuration list for PBXNativeTarget "DeckWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE745609B6FD8FEE4F638C2C /* Debug */,
+				CD408A31B868E25C91C9AE4F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BDAD56553BA1FA8ECC4CDD4E /* Project object */;
+}

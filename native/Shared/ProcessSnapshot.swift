@@ -1,0 +1,78 @@
+import Foundation
+
+// MARK: - Top processes snapshot
+//
+// The sandboxed widget extension cannot read other processes (ps is denied,
+// proc_listpids/proc_pidinfo get the process killed). The host app samples
+// processes and writes this snapshot into the container; the LiveBox widget
+// reads it.
+
+struct TopProcess: Codable, Equatable {
+    let name: String
+    let cpuPercent: Double
+    let memPercent: Double
+}
+
+struct ProcessSnapshot: Codable, Equatable {
+    var writtenAt: Date
+    var processes: [TopProcess]
+}
+
+enum ProcessSnapshotStore {
+    static var fileURL: URL {
+        DeckSettings.containerDirectory.appendingPathComponent("processes.json")
+    }
+
+    static func load() -> ProcessSnapshot? {
+        guard let data = try? Data(contentsOf: fileURL) else { return nil }
+        return try? JSONDecoder().decode(ProcessSnapshot.self, from: data)
+    }
+
+    static func save(_ snapshot: ProcessSnapshot) {
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        try? FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try? data.write(to: fileURL)
+    }
+}
+
+/// Top processes from `ps` — runs only in the unsandboxed host/agent.
+enum HostProcessSampler {
+    static func top(limit: Int) -> [TopProcess] {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/ps")
+        process.arguments = ["-Aceo", "comm=,%cpu=,%mem="]
+        process.standardOutput = pipe
+        process.standardError = nil
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return []
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let text = String(data: data, encoding: .utf8) else { return [] }
+
+        return text
+            .split(separator: "\n")
+            .compactMap { row -> TopProcess? in
+                let parts = row.split(whereSeparator: { $0 == " " }).filter { !$0.isEmpty }
+                guard parts.count >= 3 else { return nil }
+                let path = parts[0]
+                let cpu = Double(parts[1]) ?? 0
+                let mem = Double(parts[2]) ?? 0
+                return TopProcess(
+                    name: NSString(string: String(path)).lastPathComponent,
+                    cpuPercent: cpu,
+                    memPercent: mem
+                )
+            }
+            .sorted { $0.cpuPercent > $1.cpuPercent }
+            .prefix(limit)
+            .map { $0 }
+    }
+}
