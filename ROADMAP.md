@@ -42,7 +42,7 @@ shell and only add a data source + a layout.
 - [x] **NetBox** — network: up/down rates + history, interfaces
 - [x] **BatBox** — battery: level, time remaining, charge state
 - [x] **GitBox** — git activity: today + streak, 14-day chart, active repos
-- [ ] **DevBox** — open ports/processes, Docker containers (docker stats)
+- [x] **DevBox** — open ports/processes, Docker containers (docker stats)
 - [ ] **HomeBox** — weather + timezones (wttr.in)
 - [ ] **ClipBox** — clipboard history with previews (local only)
 - [ ] **ShipBox** — build/deploy status: GitHub Actions runs for a repo

@@ -9,5 +9,6 @@ struct DeckWidgetsBundle: WidgetBundle {
         NetBoxWidget()
         BatBoxWidget()
         GitBoxWidget()
+        DevBoxWidget()
     }
 }

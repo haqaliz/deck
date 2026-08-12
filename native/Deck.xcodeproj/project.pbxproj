@@ -12,6 +12,7 @@
 		15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
 		17266D39A2BF38493202D4A1 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = F44048FEBB8DD2831A60146B /* AppIcon.icns */; };
 		181D20A2D1C49B8ECF82CFFA /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
+		18600374BCF4CECC18E75B9B /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		1967FF4D20A83BF47DDFFCB2 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		27DC4BBF55405C8CFB193051 /* OpenBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */; };
 		2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */; };
@@ -26,6 +27,7 @@
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */; };
 		87E936C049D826980DD8F8C7 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B05E2B90DFEDC2F8CC1804F /* main.swift */; };
+		94F97F3C03EB1B33F5792A6C /* DevBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8410285538D08E9259413910 /* DevBoxWidget.swift */; };
 		96B73870192265B41638143C /* NetBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */; };
 		A5E22A6827149E7194FB4E64 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
 		AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */; };
@@ -33,12 +35,14 @@
 		CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		D0E68887D6CF1F2F3EAFA435 /* DeckAgent in Resources */ = {isa = PBXBuildFile; fileRef = EA5EADBCA4E36B421CDE1542 /* DeckAgent */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		D2669CB46930616C7A93FD65 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */; };
 		D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */; };
 		D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
+		F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,6 +78,7 @@
 
 /* Begin PBXFileReference section */
 		0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxWidget.swift; sourceTree = "<group>"; };
+		0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxSnapshot.swift; sourceTree = "<group>"; };
 		13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshot.swift; sourceTree = "<group>"; };
 		18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxWidget.swift; sourceTree = "<group>"; };
 		1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryMetrics.swift; sourceTree = "<group>"; };
@@ -86,6 +91,7 @@
 		46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetrics.swift; sourceTree = "<group>"; };
 		50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatBoxWidget.swift; sourceTree = "<group>"; };
 		7B2DB053937C24CBB649992B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxWidget.swift; sourceTree = "<group>"; };
 		B662E23A53ACAA091EAFA898 /* DeckApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeckApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -122,6 +128,7 @@
 			isa = PBXGroup;
 			children = (
 				4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */,
+				0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */,
 				13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */,
 				D280CAAAC227082564309914 /* OpenCodeReader.swift */,
 				1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */,
@@ -176,6 +183,7 @@
 				50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */,
 				D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */,
 				34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */,
+				8410285538D08E9259413910 /* DevBoxWidget.swift */,
 				42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */,
 				F43C960DDF3AB3D1461849AC /* Info.plist */,
 				AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */,
@@ -331,6 +339,8 @@
 				822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */,
 				53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */,
 				BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */,
+				D2669CB46930616C7A93FD65 /* DevBoxSnapshot.swift in Sources */,
+				94F97F3C03EB1B33F5792A6C /* DevBoxWidget.swift in Sources */,
 				D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */,
 				0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */,
 				AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */,
@@ -351,6 +361,7 @@
 			files = (
 				2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */,
 				EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */,
+				18600374BCF4CECC18E75B9B /* DevBoxSnapshot.swift in Sources */,
 				D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */,
 				38CA6F050AB3377F30390895 /* OpenCodeReader.swift in Sources */,
 				15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */,
@@ -364,6 +375,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */,
+				F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */,
 				5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */,
 				41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */,
 				2D03E1C6AEAD755CE49CF9FD /* OpenCodeSnapshot.swift in Sources */,

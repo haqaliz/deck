@@ -37,6 +37,7 @@ struct DeckSettings: Codable, Equatable {
     var netbox = NetBoxSettings()
     var batbox = BatBoxSettings()
     var gitbox = GitBoxSettings()
+    var devbox = DevBoxSettings()
     var agentAtLogin = true
 
     /// Settings live inside the widget extension's sandbox container so both
@@ -118,6 +119,15 @@ struct GitBoxSettings: Codable, Equatable {
     var repoPaths: [String] = []
     var barColor = RGBA(.blue)
     var todayColor = RGBA(.orange)
+}
+
+struct DevBoxSettings: Codable, Equatable {
+    var showPorts = true
+    var showContainers = true
+    var portCount = 5
+    var containerCount = 5
+    var portColor = RGBA(.teal)
+    var containerColor = RGBA(.mint)
 }
 
 // MARK: - ColorPicker binding helper

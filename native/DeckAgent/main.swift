@@ -33,6 +33,10 @@ Task {
         GitBoxSnapshotStore.save(gitbox)
     }
 
+    if let devbox = HostDevBoxSampler.snapshot(), devbox != DevBoxSnapshotStore.load() {
+        DevBoxSnapshotStore.save(devbox)
+    }
+
     semaphore.signal()
 }
 
