@@ -48,7 +48,8 @@ shell and only add a data source + a layout.
 - [ ] **ShipBox** — build/deploy status: GitHub Actions runs for a repo
 
 ### M4 — Polish
-- [ ] Crash/robustness pass: run 24h, no leaks, settings schema migration
+- [ ] Crash/robustness pass: run 24h, no leaks
+- [x] Settings schema migration (tolerant decode for all settings structs)
 - [ ] Tests: XCTest target for the Shared parsers (GitLogParser, ModelParser,
       formatters, DB SQL)
 - [ ] Share the agent data path for LiveBox processes on a tighter cadence
