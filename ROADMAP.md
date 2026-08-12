@@ -65,7 +65,7 @@ LiveBox:
 OpenBox:
 - [ ] Cost-per-day chart (stacked by model)
 - [ ] Session list with drill-down (top sessions by tokens)
-- [ ] Tool usage stats (bash/edit/read counts from the DB)
+- [x] Tool usage stats (bash/edit/read counts from the DB)
 
 NetBox:
 - [ ] Network interface picker (manual override of the auto "most active" pick)
