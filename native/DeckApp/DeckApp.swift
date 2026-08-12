@@ -49,10 +49,12 @@ struct ContentView: View {
             Task { await refreshOpenCode() }
             refreshProcesses()
             refreshGitBox()
+            refreshDevBox()
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshProcesses()
                 refreshGitBox()
+                refreshDevBox()
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -107,6 +109,16 @@ struct ContentView: View {
         ) else { return }
         if snapshot != GitBoxSnapshotStore.load() {
             GitBoxSnapshotStore.save(snapshot)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+
+    /// Sample open ports and Docker containers (host is unsandboxed) for the
+    /// DevBox widget.
+    private func refreshDevBox() {
+        guard let snapshot = HostDevBoxSampler.snapshot() else { return }
+        if snapshot != DevBoxSnapshotStore.load() {
+            DevBoxSnapshotStore.save(snapshot)
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
