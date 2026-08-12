@@ -52,6 +52,8 @@ enum OpenCodeReader {
             )
         }
 
+        let tools = mapToolRows(rows(db, toolsSQL))
+
         return OpenCodeSnapshot(
             writtenAt: Date(),
             sessions: today.int64("sessions") ?? 0,
@@ -60,6 +62,7 @@ enum OpenCodeReader {
             cost: today.double("cost") ?? 0,
             daily: daily,
             models: models,
+            tools: tools,
             totalInput: totals?.int64("input") ?? 0,
             totalOutput: totals?.int64("output") ?? 0,
             totalCost: totals?.double("cost") ?? 0
@@ -95,6 +98,23 @@ enum OpenCodeReader {
         FROM session WHERE model IS NOT NULL
         GROUP BY model ORDER BY cost DESC LIMIT 3
         """
+
+    private static let toolsSQL = """
+        SELECT json_extract(data,'$.tool') as tool, COUNT(*) as count
+        FROM part
+        WHERE json_extract(data,'$.type')='tool'
+        GROUP BY tool ORDER BY count DESC LIMIT 10
+        """
+
+    // MARK: - Tool rows (pure; tested in the OpenBoxToolsCore scratch package)
+
+    static func mapToolRows(_ rows: [[String: Any]]) -> [OpenCodeSnapshot.ToolCount] {
+        rows.compactMap { row -> OpenCodeSnapshot.ToolCount? in
+            guard let tool = row.string("tool") else { return nil }
+            return OpenCodeSnapshot.ToolCount(tool: tool, count: row.int64("count") ?? 0)
+        }
+        .sorted { $0.count > $1.count }
+    }
 
     // MARK: - SQLite plumbing
 
