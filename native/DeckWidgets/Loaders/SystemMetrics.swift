@@ -39,6 +39,48 @@ struct CpuTicks {
         }
         return ticks
     }
+
+    /// One `CpuTicks` per physical processor, in CPU index order.
+    static func sampleAll() -> [CpuTicks] {
+        var cpuInfo: processor_info_array_t?
+        var numCpuInfo: mach_msg_type_number_t = 0
+        var numCPUs: natural_t = 0
+
+        let result = host_processor_info(
+            mach_host_self(),
+            PROCESSOR_CPU_LOAD_INFO,
+            &numCPUs,
+            &cpuInfo,
+            &numCpuInfo
+        )
+        guard result == KERN_SUCCESS, let cpuInfo else { return [] }
+        defer {
+            vm_deallocate(mach_task_self_, vm_address_t(bitPattern: cpuInfo), vm_size_t(numCpuInfo))
+        }
+
+        let info = cpuInfo.withMemoryRebound(to: integer_t.self, capacity: Int(numCpuInfo)) { $0 }
+        return (0..<Int(numCPUs)).map { i in
+            let offset = Int(CPU_STATE_MAX) * i
+            return CpuTicks(
+                user: UInt64(info[offset + Int(CPU_STATE_USER)]),
+                system: UInt64(info[offset + Int(CPU_STATE_SYSTEM)]),
+                idle: UInt64(info[offset + Int(CPU_STATE_IDLE)]),
+                nice: UInt64(info[offset + Int(CPU_STATE_NICE)])
+            )
+        }
+    }
+}
+
+/// Per-core usage percent (0...100) between two tick samples, one entry per
+/// shared-prefix core. 0 when a core shows no delta. Counts that differ
+/// between samples are zip-safe (shared prefix only).
+func perCoreUsagePercents(previous: [CpuTicks], current: [CpuTicks]) -> [Double] {
+    zip(previous, current).map { prev, cur in
+        let deltaTotal = cur.total - prev.total
+        guard deltaTotal > 0 else { return 0 }
+        let deltaIdle = cur.idle - prev.idle
+        return Double(deltaTotal - deltaIdle) / Double(deltaTotal) * 100.0
+    }
 }
 
 /// CPU usage percent (0...100) since the previous sample.
