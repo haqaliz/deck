@@ -18,6 +18,7 @@ WidgetKit widgets with native colors, corners and materials.
 | **NetBox** | per-interface up/down rates, history chart, most active interfaces |
 | **BatBox** | battery level, time remaining, charge state, level chart |
 | **GitBox** | commits per day (14 days), today's count, streak, active repos |
+| **DevBox** | open TCP listening ports (process + port) and running Docker containers (CPU/mem) |
 
 All five come in **small / medium / large** sizes.
 
@@ -39,7 +40,7 @@ pluginkit -m -i com.deck.app.widgets   # verify the extension registered
 ```
 
 Then: right-click desktop → **Edit Widgets…** → search "Deck" → add
-LiveBox/OpenBox/NetBox/BatBox/GitBox.
+LiveBox/OpenBox/NetBox/BatBox/GitBox/DevBox.
 
 ## Settings
 

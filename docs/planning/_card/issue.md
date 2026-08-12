@@ -1,23 +1,35 @@
-# GitBox — inline brief
+# DevBox — inline brief
 
-Source: `deck-next` handoff (2026-08-10), pick: `gitbox`.
+Source: `deck-next` handoff (2026-08-12), pick: `devbox`.
 
-Build GitBox, the M3 pending widget (ROADMAP.md:45) that shows today's git
-activity across local repos: header with today's commit count + current streak,
-a per-day commit chart (last 14 days), and a per-repo list with commit counts.
-Copy the NetBox/BatBox shell wholesale (AppMain, Settings, SettingsStore,
-MetricsStore, ContentView, SettingsView) and add a pure GitBoxCore loader
-(git log / rev-list --count --since) with tests following the
-BatBoxCore/NetBoxCore pattern. Resolve the repo-enumeration caveat in the PRD:
-a settings path list (defaulting to a ~/dev scan) plus timezone-normalized
-streak math. Keep every panel invariant from CLAUDE.md (level .normal, 22pt
-rounded mask, PanelHeightKey dynamic height, material-as-background card style)
-and register in README/ROADMAP/Package.swift.
+Build DevBox, the last unblocked pending M3 widget (ROADMAP.md:45): a system
+dev-ops card showing **open TCP listening ports** (process + port) and
+**Docker containers** (name, image, status, CPU/mem from `docker stats`) —
+both sandbox-blocked, so they pump through `DeckAgent` exactly like the
+existing `ProcessSnapshot` path (`DeckAgent/main.swift:24` shows the pattern).
+
+Copy the GitBox widget shell wholesale (`GitBoxWidget.swift`,
+`GitBoxSnapshot.swift`, `GitBoxSettings`, `GitBoxSettingsView` tab) and add a
+pure `DevBoxCore`-style logic layer (lsof output parser, docker stats parser,
+formatters) following the GitLogParser/ProcessSnapshot split, with the pure
+parsers unit-tested.
+
+## Caveats to resolve in the PRD
+
+- **Docker is conditional**: the daemon may be absent, stopped, or have zero
+  containers. Define the degrade states — "Docker: unavailable" (daemon
+  unreachable), "no containers" (daemon up, empty), and the normal list — so
+  the card still renders ports/processes when Docker is missing.
+- `lsof` and `docker` are subprocesses — sandbox-blocked in the widget, so the
+  agent/host sampler only (never in the widget target).
+- `docker stats --no-stream --format` parsing must survive localized/missing
+  values; keep the format flag list explicit.
 
 ## Constraints from the pick
 
-- Shell untouched in behavior: panel invariants in CLAUDE.md (level `.normal`,
-  rounded mask, dynamic height via PanelHeightKey, card style).
-- Pure loaders, stores own timers, views own layout.
-- Caveat to resolve in the PRD: repo enumeration — settings path list
-  (defaulting to a `~/dev` scan) and timezone-normalized streak math.
+- Shell untouched in behavior: widget sandbox data paths, 60s agent cadence,
+  snapshot Codable/Equatable + store pattern, `DeckSettings.containerDirectory`.
+- Widgets render snapshots only; pure loaders, stores own timers, views own
+  layout (CLAUDE.md conventions).
+- Register in `DeckWidgets.swift`, `DeckSettings.swift`, `DeckApp.swift` tabs,
+  README and ROADMAP (mark M3 DevBox shipped).
