@@ -1,29 +1,26 @@
-# Settings schema migration — inline brief
+# OpenBox tool usage — inline brief
 
-Source: `deck-next` handoff (2026-08-12), pick: `settings-schema-migration`.
+Source: `deck-next` handoff (2026-08-12), pick: `openbox-tool-usage`.
 
-Harden the remaining settings structs (`OpenBoxSettings`, `NetBoxSettings`,
-`BatBoxSettings`, `GitBoxSettings`, `DevBoxSettings`) against missing-key
-decode resets: `DeckSettings.load()` falls back to all-defaults when decoding
-throws (DeckSettings.swift:61-64) and Swift's synthesized `Decodable` throws
-on a missing non-optional key — so every new settings field silently wipes
-all user settings for anyone with an older `settings.json`. The latent bug
-shipped with DevBox (48e386a) and was flagged as a follow-up in PR #7.
+Add a tool usage section to OpenBox: bash/edit/read counts per tool from the
+opencode DB, shown as a top-N list with a settings toggle (default on) and
+count stepper in the OpenBox tab. Follow the OpenCodeReader pattern exactly —
+one new prepared SELECT with the existing `rows()`/`int64()`/`string()`
+helpers (OpenCodeReader.swift:72-101), aggregation + top-N + formatting as
+pure functions TDD'd in a scratch SwiftPM package (DevBox precedent, removed
+pre-merge).
 
 ## Caveats to resolve in the PRD
 
-- **Preserve decode semantics**: values present in existing `settings.json`
-  must decode identically; only missing keys fall back to defaults. Verify
-  against the user's real `settings.json` (which now carries
-  `showPerCoreCores`).
-- **TDD**: decode logic tested in a scratch SwiftPM package first (mirror
-  structs; SwiftUI/AppKit imports are fine on macOS), then ported into
-  `native/Shared/DeckSettings.swift`.
+- **Schema verification**: confirm the real opencode DB has a queryable tool
+  column before planning — Phase 2 must run the SELECT against the actual DB.
+- **Remote mode degrade**: in remote server mode (OpenBox auto-switch, M2) tool
+  stats degrade to an empty section, never a broken widget.
+- Register in README/ROADMAP, OpenBox backlog item line 68.
 
 ## Constraints from the pick
 
-- Shell untouched in behavior: settings persistence path, container, widget
-  data paths unchanged.
-- Mark M4's "settings schema migration" checkbox (ROADMAP.md:51) when done.
-- Port the `LiveBoxSettings` `decodeIfPresent` custom `init(from:)` pattern
-  (PR #7, `DeckSettings.swift`) to each of the five structs.
+- Shell untouched in behavior: agent-pumped snapshot path (OpenBox snapshot
+  via DeckAgent), 60s cadence, settings via the tolerant-decode structs (PR #8).
+- Pure aggregation logic unit-tested in a scratch package, ported into
+  `native/Shared/`, removed pre-merge.
