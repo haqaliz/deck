@@ -116,6 +116,24 @@ struct OpenBoxSettings: Codable, Equatable {
     var inputColor = RGBA(.cyan)
     var outputColor = RGBA(.green)
     var costColor = RGBA(.orange)
+
+    /// Tolerant decode: missing keys keep the defaults instead of throwing
+    /// (the synthesized decoder throws, which would reset every setting via
+    /// `DeckSettings.load()`'s fallback when old settings.json files lack
+    /// newly added keys).
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+        serverURL = try c.decodeIfPresent(String.self, forKey: .serverURL)
+        refreshInterval = try c.decodeIfPresent(Int.self, forKey: .refreshInterval) ?? 60
+        showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
+        showModels = try c.decodeIfPresent(Bool.self, forKey: .showModels) ?? true
+        inputColor = try c.decodeIfPresent(RGBA.self, forKey: .inputColor) ?? RGBA(.cyan)
+        outputColor = try c.decodeIfPresent(RGBA.self, forKey: .outputColor) ?? RGBA(.green)
+        costColor = try c.decodeIfPresent(RGBA.self, forKey: .costColor) ?? RGBA(.orange)
+    }
 }
 
 struct NetBoxSettings: Codable, Equatable {
@@ -124,12 +142,32 @@ struct NetBoxSettings: Codable, Equatable {
     var interfaceCount = 3
     var upColor = RGBA(.green)
     var downColor = RGBA(.cyan)
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
+        showInterfaces = try c.decodeIfPresent(Bool.self, forKey: .showInterfaces) ?? true
+        interfaceCount = try c.decodeIfPresent(Int.self, forKey: .interfaceCount) ?? 3
+        upColor = try c.decodeIfPresent(RGBA.self, forKey: .upColor) ?? RGBA(.green)
+        downColor = try c.decodeIfPresent(RGBA.self, forKey: .downColor) ?? RGBA(.cyan)
+    }
 }
 
 struct BatBoxSettings: Codable, Equatable {
     var showChart = true
     var showStatus = true
     var levelColor = RGBA(.green)
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
+        showStatus = try c.decodeIfPresent(Bool.self, forKey: .showStatus) ?? true
+        levelColor = try c.decodeIfPresent(RGBA.self, forKey: .levelColor) ?? RGBA(.green)
+    }
 }
 
 struct GitBoxSettings: Codable, Equatable {
@@ -140,6 +178,19 @@ struct GitBoxSettings: Codable, Equatable {
     var repoPaths: [String] = []
     var barColor = RGBA(.blue)
     var todayColor = RGBA(.orange)
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
+        showRepos = try c.decodeIfPresent(Bool.self, forKey: .showRepos) ?? true
+        repoCount = try c.decodeIfPresent(Int.self, forKey: .repoCount) ?? 5
+        scanDepth = try c.decodeIfPresent(Int.self, forKey: .scanDepth) ?? 3
+        repoPaths = try c.decodeIfPresent([String].self, forKey: .repoPaths) ?? []
+        barColor = try c.decodeIfPresent(RGBA.self, forKey: .barColor) ?? RGBA(.blue)
+        todayColor = try c.decodeIfPresent(RGBA.self, forKey: .todayColor) ?? RGBA(.orange)
+    }
 }
 
 struct DevBoxSettings: Codable, Equatable {
@@ -149,6 +200,18 @@ struct DevBoxSettings: Codable, Equatable {
     var containerCount = 5
     var portColor = RGBA(.teal)
     var containerColor = RGBA(.mint)
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        showPorts = try c.decodeIfPresent(Bool.self, forKey: .showPorts) ?? true
+        showContainers = try c.decodeIfPresent(Bool.self, forKey: .showContainers) ?? true
+        portCount = try c.decodeIfPresent(Int.self, forKey: .portCount) ?? 5
+        containerCount = try c.decodeIfPresent(Int.self, forKey: .containerCount) ?? 5
+        portColor = try c.decodeIfPresent(RGBA.self, forKey: .portColor) ?? RGBA(.teal)
+        containerColor = try c.decodeIfPresent(RGBA.self, forKey: .containerColor) ?? RGBA(.mint)
+    }
 }
 
 // MARK: - ColorPicker binding helper
