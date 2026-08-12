@@ -40,6 +40,7 @@ struct ContentView: View {
             case .netbox: NetBoxSettingsView(settings: $settings.netbox)
             case .batbox: BatBoxSettingsView(settings: $settings.batbox)
             case .gitbox: GitBoxSettingsView(settings: $settings.gitbox)
+            case .devbox: DevBoxSettingsView(settings: $settings.devbox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -202,7 +203,7 @@ struct ContentView: View {
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, livebox, openbox, netbox, batbox, gitbox
+    case general, livebox, openbox, netbox, batbox, gitbox, devbox
 
     var id: String { rawValue }
 
@@ -214,6 +215,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .netbox: "NetBox"
         case .batbox: "BatBox"
         case .gitbox: "GitBox"
+        case .devbox: "DevBox"
         }
     }
 
@@ -225,6 +227,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .netbox: "network"
         case .batbox: "battery.50percent"
         case .gitbox: "chevron.left.forwardslash.chevron.right"
+        case .devbox: "server.rack"
         }
     }
 }
@@ -394,5 +397,30 @@ private struct GitBoxSettingsView: View {
                     .filter { !$0.isEmpty }
             }
         )
+    }
+}
+
+private struct DevBoxSettingsView: View {
+    @Binding var settings: DevBoxSettings
+
+    var body: some View {
+        Form {
+            Section("Ports") {
+                Toggle("Show ports", isOn: $settings.showPorts)
+                Stepper("Port count: \(settings.portCount)", value: $settings.portCount, in: 1...10)
+                    .disabled(!settings.showPorts)
+                ColorPicker("Port color", selection: $settings.portColor.color)
+                    .disabled(!settings.showPorts)
+            }
+            Section("Containers") {
+                Toggle("Show containers", isOn: $settings.showContainers)
+                Stepper("Container count: \(settings.containerCount)", value: $settings.containerCount, in: 1...10)
+                    .disabled(!settings.showContainers)
+                ColorPicker("Container color", selection: $settings.containerColor.color)
+                    .disabled(!settings.showContainers)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
     }
 }
