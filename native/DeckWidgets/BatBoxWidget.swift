@@ -290,9 +290,11 @@ struct BatBoxWidgetEntryView: View {
 
     /// Custom bar sparkline (fixed 64pt) — deterministic sizing, no chart
     /// framework quirks. At 100% the bars are full-height, like a level meter.
+    /// Last 48 bars only: 48 × 5pt = 240pt, so the sparkline never overflows
+    /// the large widget width (72 bars would be ~360pt and get clipped).
     private var chart: some View {
         HStack(alignment: .bottom, spacing: 2) {
-            ForEach(Array(entry.history.enumerated()), id: \.offset) { index, level in
+            ForEach(Array(entry.history.suffix(48).enumerated()), id: \.offset) { index, level in
                 Rectangle()
                     .fill(entry.settings.levelColor.color.opacity(0.55))
                     .frame(width: 3, height: max(2, level / 100 * 60))

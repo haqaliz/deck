@@ -262,7 +262,7 @@ struct OpenBoxWidgetEntryView: View {
                 .foregroundStyle(.secondary)
                 .tracking(1)
 
-            ForEach(entry.models, id: \.model) { model in
+            ForEach(entry.models.prefix(entry.settings.modelCount), id: \.model) { model in
                 let parsed = ModelParser.parse(model.model)
                 HStack(alignment: .center, spacing: 8) {
                     VStack(alignment: .leading, spacing: 1) {
@@ -352,7 +352,7 @@ struct OpenBoxWidgetEntryView: View {
         }
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
-        .frame(height: family == .systemMedium ? 62 : 82)
+        .frame(height: family == .systemMedium ? 62 : 56)
     }
 
     private func tokenRow(title: String, value: Int64, color: Color) -> some View {

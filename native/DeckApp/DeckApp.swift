@@ -307,10 +307,12 @@ private struct OpenBoxSettingsView: View {
             }
             Section("Models") {
                 Toggle("Show top models", isOn: $settings.showModels)
+                Stepper("Models: \(settings.modelCount)", value: $settings.modelCount, in: 1...3)
+                    .disabled(!settings.showModels)
             }
             Section("Tools") {
                 Toggle("Show tool usage", isOn: $settings.showTools)
-                Stepper("Tools: \(settings.toolCount)", value: $settings.toolCount, in: 1...10)
+                Stepper("Tools: \(settings.toolCount)", value: $settings.toolCount, in: 1...3)
                     .disabled(!settings.showTools)
             }
         }

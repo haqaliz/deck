@@ -79,7 +79,7 @@ struct LiveBoxSettings: Codable, Equatable {
     var showMEM = true
     var showDisk = true
     var showProcesses = true
-    var showPerCoreCores = true
+    var showPerCoreCores = false
     var processCount = 3
     var cpuColor = RGBA(.green)
     var memColor = RGBA(.cyan)
@@ -98,7 +98,7 @@ struct LiveBoxSettings: Codable, Equatable {
         showMEM = try c.decodeIfPresent(Bool.self, forKey: .showMEM) ?? true
         showDisk = try c.decodeIfPresent(Bool.self, forKey: .showDisk) ?? true
         showProcesses = try c.decodeIfPresent(Bool.self, forKey: .showProcesses) ?? true
-        showPerCoreCores = try c.decodeIfPresent(Bool.self, forKey: .showPerCoreCores) ?? true
+        showPerCoreCores = try c.decodeIfPresent(Bool.self, forKey: .showPerCoreCores) ?? false
         processCount = try c.decodeIfPresent(Int.self, forKey: .processCount) ?? 3
         cpuColor = try c.decodeIfPresent(RGBA.self, forKey: .cpuColor) ?? RGBA(.green)
         memColor = try c.decodeIfPresent(RGBA.self, forKey: .memColor) ?? RGBA(.cyan)
@@ -114,7 +114,8 @@ struct OpenBoxSettings: Codable, Equatable {
     var showChart = true
     var showModels = true
     var showTools = true
-    var toolCount = 5
+    var toolCount = 3
+    var modelCount = 3
     var inputColor = RGBA(.cyan)
     var outputColor = RGBA(.green)
     var costColor = RGBA(.orange)
@@ -133,7 +134,8 @@ struct OpenBoxSettings: Codable, Equatable {
         showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
         showModels = try c.decodeIfPresent(Bool.self, forKey: .showModels) ?? true
         showTools = try c.decodeIfPresent(Bool.self, forKey: .showTools) ?? true
-        toolCount = try c.decodeIfPresent(Int.self, forKey: .toolCount) ?? 5
+        toolCount = try c.decodeIfPresent(Int.self, forKey: .toolCount) ?? 3
+        modelCount = try c.decodeIfPresent(Int.self, forKey: .modelCount) ?? 3
         inputColor = try c.decodeIfPresent(RGBA.self, forKey: .inputColor) ?? RGBA(.cyan)
         outputColor = try c.decodeIfPresent(RGBA.self, forKey: .outputColor) ?? RGBA(.green)
         costColor = try c.decodeIfPresent(RGBA.self, forKey: .costColor) ?? RGBA(.orange)
