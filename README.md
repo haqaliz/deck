@@ -13,7 +13,7 @@ WidgetKit widgets with native colors, corners and materials.
 
 | Widget | Shows |
 |---|---|
-| **LiveBox** | CPU / MEM / DISK usage with a live chart and top processes (CPU/MEM tabs) |
+| **LiveBox** | CPU / MEM / DISK usage with a live chart (per-core CPU lines) and top processes (CPU/MEM tabs) |
 | **OpenBox** | opencode usage: today's in/out tokens + cost, 14-day chart, top models |
 | **NetBox** | per-interface up/down rates, history chart, most active interfaces |
 | **BatBox** | battery level, time remaining, charge state, level chart |

@@ -56,7 +56,7 @@ shell and only add a data source + a layout.
 ## Feature backlog (existing widgets)
 
 LiveBox:
-- [ ] Per-core CPU lines or per-core selection
+- [x] Per-core CPU lines (first 8 cores) or per-core selection
 - [ ] Apple Silicon GPU/ANE usage, thermal state
 - [ ] Disk per-volume (multiple mounts)
 - [ ] Threshold coloring (e.g. red when CPU > 90%)

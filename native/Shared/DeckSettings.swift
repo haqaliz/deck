@@ -79,10 +79,31 @@ struct LiveBoxSettings: Codable, Equatable {
     var showMEM = true
     var showDisk = true
     var showProcesses = true
+    var showPerCoreCores = true
     var processCount = 3
     var cpuColor = RGBA(.green)
     var memColor = RGBA(.cyan)
     var diskColor = RGBA(.orange)
+
+    /// Tolerant decode: missing keys keep the defaults instead of throwing
+    /// (the synthesized decoder throws, which would reset every setting via
+    /// `DeckSettings.load()`'s fallback when old settings.json files lack
+    /// newly added keys).
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
+        showCPU = try c.decodeIfPresent(Bool.self, forKey: .showCPU) ?? true
+        showMEM = try c.decodeIfPresent(Bool.self, forKey: .showMEM) ?? true
+        showDisk = try c.decodeIfPresent(Bool.self, forKey: .showDisk) ?? true
+        showProcesses = try c.decodeIfPresent(Bool.self, forKey: .showProcesses) ?? true
+        showPerCoreCores = try c.decodeIfPresent(Bool.self, forKey: .showPerCoreCores) ?? true
+        processCount = try c.decodeIfPresent(Int.self, forKey: .processCount) ?? 3
+        cpuColor = try c.decodeIfPresent(RGBA.self, forKey: .cpuColor) ?? RGBA(.green)
+        memColor = try c.decodeIfPresent(RGBA.self, forKey: .memColor) ?? RGBA(.cyan)
+        diskColor = try c.decodeIfPresent(RGBA.self, forKey: .diskColor) ?? RGBA(.orange)
+    }
 }
 
 struct OpenBoxSettings: Codable, Equatable {

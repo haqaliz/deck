@@ -258,6 +258,8 @@ private struct LiveBoxSettingsView: View {
         Form {
             Section("Chart") {
                 Toggle("Show chart", isOn: $settings.showChart)
+                Toggle("Per-core CPU lines", isOn: $settings.showPerCoreCores)
+                    .disabled(!settings.showChart)
                 ColorPicker("CPU color", selection: $settings.cpuColor.color)
                     .disabled(!settings.showChart)
                 ColorPicker("MEM color", selection: $settings.memColor.color)
