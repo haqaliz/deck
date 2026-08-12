@@ -1,31 +1,29 @@
-# LiveBox per-core CPU lines — inline brief
+# Settings schema migration — inline brief
 
-Source: `deck-next` handoff (2026-08-12), pick: `livebox-per-core-cpu`.
+Source: `deck-next` handoff (2026-08-12), pick: `settings-schema-migration`.
 
-Build per-core CPU lines for LiveBox: expose per-processor ticks from the
-existing `host_processor_info` sample in `SystemMetrics.swift` (currently summed
-in the loop at lines 33-39), compute per-core usage deltas as a pure,
-unit-tested function, and render thin per-core lines in the existing LiveBox
-chart with a small/medium cap (e.g. top 8) to avoid noise on 10-12 core
-machines.
-
-No agent or snapshot changes — the loader already runs sandbox-safe in-widget.
-Keep the total CPU line as the prominent one; per-core lines are secondary
-stroke.
+Harden the remaining settings structs (`OpenBoxSettings`, `NetBoxSettings`,
+`BatBoxSettings`, `GitBoxSettings`, `DevBoxSettings`) against missing-key
+decode resets: `DeckSettings.load()` falls back to all-defaults when decoding
+throws (DeckSettings.swift:61-64) and Swift's synthesized `Decodable` throws
+on a missing non-optional key — so every new settings field silently wipes
+all user settings for anyone with an older `settings.json`. The latent bug
+shipped with DevBox (48e386a) and was flagged as a follow-up in PR #7.
 
 ## Caveats to resolve in the PRD
 
-- **Cap/grouping**: multi-core machines (up to 12 lines on Apple Silicon) get
-  visually noisy — cap to N cores (e.g. 8) or group E/P-cores.
-- **Chart shape**: the shared chart view is currently single-line — it needs
-  thin multi-line strokes.
-- **Settings toggle**: decide whether a "per-core lines" toggle belongs in the
-  LiveBox settings tab (default on/off).
+- **Preserve decode semantics**: values present in existing `settings.json`
+  must decode identically; only missing keys fall back to defaults. Verify
+  against the user's real `settings.json` (which now carries
+  `showPerCoreCores`).
+- **TDD**: decode logic tested in a scratch SwiftPM package first (mirror
+  structs; SwiftUI/AppKit imports are fine on macOS), then ported into
+  `native/Shared/DeckSettings.swift`.
 
 ## Constraints from the pick
 
-- Shell untouched in behavior: sandbox-safe self-sampled loader path, 60s
-  cadence, no agent/snapshot/container changes.
-- Pure logic (per-core delta percent computation) unit-tested via the scratch
-  SwiftPM package precedent (DevBoxCore), ported into the widget target.
-- Register in README and ROADMAP (mark backlog item shipped).
+- Shell untouched in behavior: settings persistence path, container, widget
+  data paths unchanged.
+- Mark M4's "settings schema migration" checkbox (ROADMAP.md:51) when done.
+- Port the `LiveBoxSettings` `decodeIfPresent` custom `init(from:)` pattern
+  (PR #7, `DeckSettings.swift`) to each of the five structs.
