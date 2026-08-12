@@ -16,6 +16,7 @@ struct OpenBoxEntry: TimelineEntry {
     let cost: Double
     let daily: [OpenCodeSnapshot.Day]
     let models: [OpenCodeSnapshot.Model]
+    let tools: [OpenCodeSnapshot.ToolCount]
     let totalInput: Int64
     let totalOutput: Int64
     let totalCost: Double
@@ -48,6 +49,11 @@ struct OpenBoxProvider: TimelineProvider {
                 OpenCodeSnapshot.Model(model: "deepseek-v4-flash", cost: 0.21, input: 1_200_000, output: 150_000),
                 OpenCodeSnapshot.Model(model: "gpt-5.2", cost: 0.15, input: 800_000, output: 90_000),
             ],
+            tools: [
+                OpenCodeSnapshot.ToolCount(tool: "bash", count: 7186),
+                OpenCodeSnapshot.ToolCount(tool: "read", count: 4169),
+                OpenCodeSnapshot.ToolCount(tool: "edit", count: 2098),
+            ],
             totalInput: 48_000_000,
             totalOutput: 6_100_000,
             totalCost: 9.84,
@@ -78,6 +84,7 @@ struct OpenBoxProvider: TimelineProvider {
                 cost: 0,
                 daily: [],
                 models: [],
+                tools: [],
                 totalInput: 0,
                 totalOutput: 0,
                 totalCost: 0,
@@ -94,6 +101,7 @@ struct OpenBoxProvider: TimelineProvider {
             cost: snapshot.cost,
             daily: snapshot.daily,
             models: snapshot.models,
+            tools: snapshot.tools,
             totalInput: snapshot.totalInput,
             totalOutput: snapshot.totalOutput,
             totalCost: snapshot.totalCost,
@@ -231,6 +239,12 @@ struct OpenBoxWidgetEntryView: View {
                 modelsList
             }
 
+            if entry.settings.showTools && !entry.tools.isEmpty {
+                Divider()
+                    .padding(.top, 4)
+                toolsList
+            }
+
             Spacer(minLength: 0)
 
             Text("All time: \(OpenCodeFormatters.formatTokens(entry.totalInput)) in · \(OpenCodeFormatters.formatTokens(entry.totalOutput)) out · \(OpenCodeFormatters.formatCost(entry.totalCost))")
@@ -287,6 +301,30 @@ struct OpenBoxWidgetEntryView: View {
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
                     }
+                }
+            }
+        }
+    }
+
+    private var toolsList: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("TOOLS")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(.secondary)
+                .tracking(1)
+
+            ForEach(entry.tools.prefix(entry.settings.toolCount), id: \.tool) { tool in
+                HStack(spacing: 8) {
+                    Text(tool.tool)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer()
+                    Text("\(tool.count)")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(entry.settings.inputColor.color)
                 }
             }
         }
