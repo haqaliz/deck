@@ -83,15 +83,21 @@ func perCoreUsagePercents(previous: [CpuTicks], current: [CpuTicks]) -> [Double]
     }
 }
 
+/// CPU usage percent (0...100) between two tick samples.
+/// Pass `nil` for the first call to seed the baseline.
+func cpuUsagePercent(previous: CpuTicks?, current: CpuTicks) -> Double {
+    guard let previous else { return 0 }
+    let deltaTotal = current.total - previous.total
+    guard deltaTotal > 0 else { return 0 }
+    let deltaIdle = current.idle - previous.idle
+    return Double(deltaTotal - deltaIdle) / Double(deltaTotal) * 100.0
+}
+
 /// CPU usage percent (0...100) since the previous sample.
 /// Pass `nil` for the first call to seed the baseline.
 func cpuUsagePercent(previous: CpuTicks?) -> (usage: Double, current: CpuTicks) {
     let current = CpuTicks.sample()
-    guard let previous else { return (0, current) }
-    let deltaTotal = current.total - previous.total
-    guard deltaTotal > 0 else { return (0, current) }
-    let deltaIdle = current.idle - previous.idle
-    return (Double(deltaTotal - deltaIdle) / Double(deltaTotal) * 100.0, current)
+    return (cpuUsagePercent(previous: previous, current: current), current)
 }
 
 // MARK: - Memory

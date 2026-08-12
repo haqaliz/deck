@@ -12,6 +12,8 @@ struct Sample: Codable {
     let cpu: Double
     let mem: Double
     let disk: Double
+    /// Per-core CPU percents; nil for history written before per-core existed.
+    let perCore: [Double]?
 }
 
 enum HistoryStore {
@@ -58,11 +60,21 @@ struct LiveBoxEntry: TimelineEntry {
 
 enum LiveBoxSampler {
     private static var previousTicks: CpuTicks?
+    private static var previousPerCoreTicks: [CpuTicks]?
 
-    static func sample() -> (cpu: Double, mem: Double, disk: Double) {
-        let cpuDelta = cpuUsagePercent(previous: previousTicks)
-        previousTicks = cpuDelta.current
-        return (cpuDelta.usage, memoryUsagePercent(), diskUsagePercent())
+    static func sample() -> (cpu: Double, mem: Double, disk: Double, perCore: [Double]) {
+        let perCoreTicks = CpuTicks.sampleAll()
+        let aggregate = perCoreTicks.reduce(into: CpuTicks()) { acc, t in
+            acc.user += t.user
+            acc.system += t.system
+            acc.idle += t.idle
+            acc.nice += t.nice
+        }
+        let cpu = cpuUsagePercent(previous: previousTicks, current: aggregate)
+        previousTicks = aggregate
+        let perCore = perCoreUsagePercents(previous: previousPerCoreTicks ?? [], current: perCoreTicks)
+        previousPerCoreTicks = perCoreTicks
+        return (cpu, memoryUsagePercent(), diskUsagePercent(), perCore)
     }
 
     static func processes(mode: String) -> [TopProcess] {
@@ -75,9 +87,9 @@ enum LiveBoxSampler {
             : snapshot.processes
     }
 
-    static func history(appending sample: (cpu: Double, mem: Double, disk: Double)) -> [Sample] {
+    static func history(appending sample: (cpu: Double, mem: Double, disk: Double, perCore: [Double])) -> [Sample] {
         var history = HistoryStore.load()
-        history.append(Sample(cpu: sample.cpu, mem: sample.mem, disk: sample.disk))
+        history.append(Sample(cpu: sample.cpu, mem: sample.mem, disk: sample.disk, perCore: sample.perCore))
         if history.count > HistoryStore.capacity {
             history.removeFirst(history.count - HistoryStore.capacity)
         }
@@ -339,6 +351,22 @@ struct LiveBoxFace: View {
 
     private var chart: some View {
         Chart(Array(history.enumerated()), id: \.offset) { index, sample in
+            if settings.showCPU && settings.showPerCoreCores, let perCore = sample.perCore {
+                ForEach(
+                    Array(perCore.prefix(8).enumerated()),
+                    id: \.offset
+                ) { coreIndex, value in
+                    LineMark(
+                        x: .value("Time", index),
+                        y: .value("Core \(coreIndex)", value),
+                        series: .value("Core", "Core \(coreIndex)")
+                    )
+                    .foregroundStyle(settings.cpuColor.color.opacity(0.4))
+                    .lineStyle(StrokeStyle(lineWidth: 1.0))
+                    .interpolationMethod(.catmullRom)
+                }
+            }
+
             if settings.showCPU {
                 LineMark(
                     x: .value("Time", index),
