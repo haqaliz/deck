@@ -47,10 +47,13 @@ targets:
     sources:
       - DeckWidgets
       - Shared
+    resources:
+      - DeckWidgets/AppIcon.icns
     info:
       path: DeckWidgets/Info.plist
       properties:
         CFBundleDisplayName: Deck Widgets
+        CFBundleIconFile: AppIcon
         CFBundleShortVersionString: "1.2"
         CFBundleVersion: "3"
         NSExtension:
