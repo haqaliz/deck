@@ -113,6 +113,8 @@ struct OpenBoxSettings: Codable, Equatable {
     var refreshInterval = 60
     var showChart = true
     var showModels = true
+    var showTools = true
+    var toolCount = 5
     var inputColor = RGBA(.cyan)
     var outputColor = RGBA(.green)
     var costColor = RGBA(.orange)
@@ -130,6 +132,8 @@ struct OpenBoxSettings: Codable, Equatable {
         refreshInterval = try c.decodeIfPresent(Int.self, forKey: .refreshInterval) ?? 60
         showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
         showModels = try c.decodeIfPresent(Bool.self, forKey: .showModels) ?? true
+        showTools = try c.decodeIfPresent(Bool.self, forKey: .showTools) ?? true
+        toolCount = try c.decodeIfPresent(Int.self, forKey: .toolCount) ?? 5
         inputColor = try c.decodeIfPresent(RGBA.self, forKey: .inputColor) ?? RGBA(.cyan)
         outputColor = try c.decodeIfPresent(RGBA.self, forKey: .outputColor) ?? RGBA(.green)
         costColor = try c.decodeIfPresent(RGBA.self, forKey: .costColor) ?? RGBA(.orange)

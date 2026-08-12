@@ -308,6 +308,11 @@ private struct OpenBoxSettingsView: View {
             Section("Models") {
                 Toggle("Show top models", isOn: $settings.showModels)
             }
+            Section("Tools") {
+                Toggle("Show tool usage", isOn: $settings.showTools)
+                Stepper("Tools: \(settings.toolCount)", value: $settings.toolCount, in: 1...10)
+                    .disabled(!settings.showTools)
+            }
         }
         .formStyle(.grouped)
         .padding(.top, 4)
