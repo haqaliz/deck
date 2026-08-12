@@ -1,35 +1,31 @@
-# DevBox — inline brief
+# LiveBox per-core CPU lines — inline brief
 
-Source: `deck-next` handoff (2026-08-12), pick: `devbox`.
+Source: `deck-next` handoff (2026-08-12), pick: `livebox-per-core-cpu`.
 
-Build DevBox, the last unblocked pending M3 widget (ROADMAP.md:45): a system
-dev-ops card showing **open TCP listening ports** (process + port) and
-**Docker containers** (name, image, status, CPU/mem from `docker stats`) —
-both sandbox-blocked, so they pump through `DeckAgent` exactly like the
-existing `ProcessSnapshot` path (`DeckAgent/main.swift:24` shows the pattern).
+Build per-core CPU lines for LiveBox: expose per-processor ticks from the
+existing `host_processor_info` sample in `SystemMetrics.swift` (currently summed
+in the loop at lines 33-39), compute per-core usage deltas as a pure,
+unit-tested function, and render thin per-core lines in the existing LiveBox
+chart with a small/medium cap (e.g. top 8) to avoid noise on 10-12 core
+machines.
 
-Copy the GitBox widget shell wholesale (`GitBoxWidget.swift`,
-`GitBoxSnapshot.swift`, `GitBoxSettings`, `GitBoxSettingsView` tab) and add a
-pure `DevBoxCore`-style logic layer (lsof output parser, docker stats parser,
-formatters) following the GitLogParser/ProcessSnapshot split, with the pure
-parsers unit-tested.
+No agent or snapshot changes — the loader already runs sandbox-safe in-widget.
+Keep the total CPU line as the prominent one; per-core lines are secondary
+stroke.
 
 ## Caveats to resolve in the PRD
 
-- **Docker is conditional**: the daemon may be absent, stopped, or have zero
-  containers. Define the degrade states — "Docker: unavailable" (daemon
-  unreachable), "no containers" (daemon up, empty), and the normal list — so
-  the card still renders ports/processes when Docker is missing.
-- `lsof` and `docker` are subprocesses — sandbox-blocked in the widget, so the
-  agent/host sampler only (never in the widget target).
-- `docker stats --no-stream --format` parsing must survive localized/missing
-  values; keep the format flag list explicit.
+- **Cap/grouping**: multi-core machines (up to 12 lines on Apple Silicon) get
+  visually noisy — cap to N cores (e.g. 8) or group E/P-cores.
+- **Chart shape**: the shared chart view is currently single-line — it needs
+  thin multi-line strokes.
+- **Settings toggle**: decide whether a "per-core lines" toggle belongs in the
+  LiveBox settings tab (default on/off).
 
 ## Constraints from the pick
 
-- Shell untouched in behavior: widget sandbox data paths, 60s agent cadence,
-  snapshot Codable/Equatable + store pattern, `DeckSettings.containerDirectory`.
-- Widgets render snapshots only; pure loaders, stores own timers, views own
-  layout (CLAUDE.md conventions).
-- Register in `DeckWidgets.swift`, `DeckSettings.swift`, `DeckApp.swift` tabs,
-  README and ROADMAP (mark M3 DevBox shipped).
+- Shell untouched in behavior: sandbox-safe self-sampled loader path, 60s
+  cadence, no agent/snapshot/container changes.
+- Pure logic (per-core delta percent computation) unit-tested via the scratch
+  SwiftPM package precedent (DevBoxCore), ported into the widget target.
+- Register in README and ROADMAP (mark backlog item shipped).
