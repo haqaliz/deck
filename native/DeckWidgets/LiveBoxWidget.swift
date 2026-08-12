@@ -227,6 +227,9 @@ struct LiveBoxFace: View {
                 largeView
             }
         }
+        .containerBackground(for: .widget) {
+            Color.clear
+        }
     }
 
 
@@ -266,9 +269,6 @@ struct LiveBoxFace: View {
             if settings.showChart && !history.isEmpty {
                 chart
             }
-        }
-        .containerBackground(for: .widget) {
-            Color.clear
         }
     }
 

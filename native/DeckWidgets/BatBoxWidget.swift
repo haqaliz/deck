@@ -131,6 +131,9 @@ struct BatBoxWidgetEntryView: View {
                 }
             }
         }
+        .containerBackground(for: .widget) {
+            Color.clear
+        }
     }
 
 
@@ -142,9 +145,6 @@ struct BatBoxWidgetEntryView: View {
             Text("No battery")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
             Spacer(minLength: 0)
-        }
-        .containerBackground(for: .widget) {
-            Color.clear
         }
     }
 

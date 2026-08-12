@@ -146,6 +146,9 @@ struct OpenBoxWidgetEntryView: View {
                 }
             }
         }
+        .containerBackground(for: .widget) {
+            Color.clear
+        }
     }
 
 
@@ -160,9 +163,6 @@ struct OpenBoxWidgetEntryView: View {
                 .font(.system(size: 11, design: .rounded))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
-        }
-        .containerBackground(for: .widget) {
-            Color.clear
         }
     }
 

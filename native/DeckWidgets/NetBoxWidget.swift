@@ -181,6 +181,9 @@ struct NetBoxWidgetEntryView: View {
                 largeView
             }
         }
+        .containerBackground(for: .widget) {
+            Color.clear
+        }
     }
 
 
@@ -243,9 +246,6 @@ struct NetBoxWidgetEntryView: View {
                     .font(.system(size: 11, design: .rounded))
                     .foregroundStyle(.secondary)
             }
-        }
-        .containerBackground(for: .widget) {
-            Color.clear
         }
     }
 
