@@ -32,6 +32,9 @@ struct WeatherCondition: Codable, Equatable {
 struct WeatherDay: Codable, Equatable {
     /// Calendar day at the location, "yyyy-MM-dd".
     var date: String
+    /// Representative WW code for the day: the 1200 hourly slot, else the
+    /// first hourly code; nil when the payload has no hourly rows.
+    var code: Int?
     var maxTempC: Double?
     var maxTempF: Double?
     var minTempC: Double?
@@ -170,12 +173,23 @@ enum WttrParser {
     private static func day(from entry: [String: Any]) -> WeatherDay {
         WeatherDay(
             date: (entry["date"] as? String) ?? "",
+            code: representativeCode(in: entry),
             maxTempC: doubleValue(entry["maxtempC"]),
             maxTempF: doubleValue(entry["maxtempF"]),
             minTempC: doubleValue(entry["mintempC"]),
             minTempF: doubleValue(entry["mintempF"]),
             desc: trimmedString(entry["weatherDesc"])
         )
+    }
+
+    /// The day entry carries weatherCode only per hourly slot; prefer the
+    /// noon (1200) slot as the day's representative condition.
+    private static func representativeCode(in entry: [String: Any]) -> Int? {
+        let hourly = (entry["hourly"] as? [[String: Any]]) ?? []
+        if let noon = hourly.first(where: { ($0["time"] as? String) == "1200" }) {
+            return intValue(noon["weatherCode"])
+        }
+        return hourly.compactMap { intValue($0["weatherCode"]) }.first
     }
 
     /// The j1 shape wraps desc values in a list: weatherDesc[0].value.
