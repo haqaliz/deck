@@ -10,5 +10,6 @@ struct DeckWidgetsBundle: WidgetBundle {
         BatBoxWidget()
         GitBoxWidget()
         DevBoxWidget()
+        ClipBoxWidget()
     }
 }
