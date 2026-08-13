@@ -1,26 +1,29 @@
-# OpenBox tool usage — inline brief
+# ClipBox — inline brief
 
-Source: `deck-next` handoff (2026-08-12), pick: `openbox-tool-usage`.
+Source: `deck-next` handoff (2026-08-13), pick: `clipbox` (M3 candidate,
+ROADMAP.md:47).
 
-Add a tool usage section to OpenBox: bash/edit/read counts per tool from the
-opencode DB, shown as a top-N list with a settings toggle (default on) and
-count stepper in the OpenBox tab. Follow the OpenCodeReader pattern exactly —
-one new prepared SELECT with the existing `rows()`/`int64()`/`string()`
-helpers (OpenCodeReader.swift:72-101), aggregation + top-N + formatting as
-pure functions TDD'd in a scratch SwiftPM package (DevBox precedent, removed
-pre-merge).
+ClipBox: clipboard history widget with previews, local only. The unsandboxed
+DeckAgent reads NSPasteboard on its 60s tick (changeCount changed → snapshot
+current item), writes a ClipBox snapshot to the widget container; the widget
+reuses the GitBox/NetBox shell with text preview rows, history count and trim
+in settings. One metric story: history of copies.
 
 ## Caveats to resolve in the PRD
 
-- **Schema verification**: confirm the real opencode DB has a queryable tool
-  column before planning — Phase 2 must run the SELECT against the actual DB.
-- **Remote mode degrade**: in remote server mode (OpenBox auto-switch, M2) tool
-  stats degrade to an empty section, never a broken widget.
-- Register in README/ROADMAP, OpenBox backlog item line 68.
+- **60s granularity**: rapid consecutive copies within a minute collapse to the
+  newest pasteboard state (one snapshot per agent tick, deduped by
+  changeCount+content) — acceptable for v1, must be named in the PRD.
+- **Plaintext history**: history lives as plaintext in the widget container
+  (~/Library/Containers/com.deck.app.widgets/...); keep it local-only by
+  default (no sync), clearable in settings.
+- **Previews**: text items preview as truncated text; non-text items (images,
+  files) preview as a type label — confirm scope in the PRD interview.
 
 ## Constraints from the pick
 
-- Shell untouched in behavior: agent-pumped snapshot path (OpenBox snapshot
-  via DeckAgent), 60s cadence, settings via the tolerant-decode structs (PR #8).
-- Pure aggregation logic unit-tested in a scratch package, ported into
-  `native/Shared/`, removed pre-merge.
+- Shell untouched in behavior: agent-pumped snapshot path, 60s cadence,
+  settings via the tolerant-decode structs (PR #8).
+- Pure logic (pasteboard change detection, dedupe, trim, formatting) unit-tested
+  in a scratch SwiftPM package (DevBox/OpenBoxTools precedent, removed
+  pre-merge).

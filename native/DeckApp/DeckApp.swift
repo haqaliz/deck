@@ -41,6 +41,7 @@ struct ContentView: View {
             case .batbox: BatBoxSettingsView(settings: $settings.batbox)
             case .gitbox: GitBoxSettingsView(settings: $settings.gitbox)
             case .devbox: DevBoxSettingsView(settings: $settings.devbox)
+            case .clipbox: ClipBoxSettingsView(settings: $settings.clipbox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -51,11 +52,13 @@ struct ContentView: View {
             refreshProcesses()
             refreshGitBox()
             refreshDevBox()
+            refreshClipBox()
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshProcesses()
                 refreshGitBox()
                 refreshDevBox()
+                refreshClipBox()
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -120,6 +123,15 @@ struct ContentView: View {
         guard let snapshot = HostDevBoxSampler.snapshot() else { return }
         if snapshot != DevBoxSnapshotStore.load() {
             DevBoxSnapshotStore.save(snapshot)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+
+    /// Sample the clipboard (host is unsandboxed) for the ClipBox widget.
+    private func refreshClipBox() {
+        guard let snapshot = HostClipBoardSampler.snapshot(maxCount: settings.clipbox.historyCount) else { return }
+        if snapshot != ClipBoxSnapshotStore.load() {
+            ClipBoxSnapshotStore.save(snapshot)
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
@@ -203,7 +215,7 @@ struct ContentView: View {
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, livebox, openbox, netbox, batbox, gitbox, devbox
+    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
 
     var id: String { rawValue }
 
@@ -216,6 +228,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .batbox: "BatBox"
         case .gitbox: "GitBox"
         case .devbox: "DevBox"
+        case .clipbox: "ClipBox"
         }
     }
 
@@ -228,6 +241,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .batbox: "battery.50percent"
         case .gitbox: "chevron.left.forwardslash.chevron.right"
         case .devbox: "server.rack"
+        case .clipbox: "doc.on.clipboard"
         }
     }
 }
@@ -427,6 +441,32 @@ private struct DevBoxSettingsView: View {
                     .disabled(!settings.showContainers)
                 ColorPicker("Container color", selection: $settings.containerColor.color)
                     .disabled(!settings.showContainers)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+}
+
+private struct ClipBoxSettingsView: View {
+    @Binding var settings: ClipBoxSettings
+
+    var body: some View {
+        Form {
+            Section("History") {
+                Toggle("Show list", isOn: $settings.showList)
+                Stepper("History count: \(settings.historyCount)", value: $settings.historyCount, in: 3...20)
+                    .disabled(!settings.showList)
+                Button("Clear history", role: .destructive) {
+                    ClipBoxSnapshotStore.clear()
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
+            }
+            Section("Colors") {
+                ColorPicker("Text", selection: $settings.textColor.color)
+                ColorPicker("Image", selection: $settings.imageColor.color)
+                ColorPicker("File", selection: $settings.fileColor.color)
+                ColorPicker("Other", selection: $settings.otherColor.color)
             }
         }
         .formStyle(.grouped)

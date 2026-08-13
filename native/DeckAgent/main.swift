@@ -37,6 +37,12 @@ Task {
         DevBoxSnapshotStore.save(devbox)
     }
 
+    if let clipbox = HostClipBoardSampler.snapshot(maxCount: settings.clipbox.historyCount) {
+        // Always written: the sampler refreshes writtenAt every tick so the
+        // widget's staleness window stays honest on quiet days.
+        ClipBoxSnapshotStore.save(clipbox)
+    }
+
     semaphore.signal()
 }
 
