@@ -42,6 +42,7 @@ struct ContentView: View {
             case .gitbox: GitBoxSettingsView(settings: $settings.gitbox)
             case .devbox: DevBoxSettingsView(settings: $settings.devbox)
             case .clipbox: ClipBoxSettingsView(settings: $settings.clipbox)
+            case .homebox: HomeBoxSettingsView(settings: $settings.homebox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -53,12 +54,14 @@ struct ContentView: View {
             refreshGitBox()
             refreshDevBox()
             refreshClipBox()
+            Task { await refreshHomeBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshProcesses()
                 refreshGitBox()
                 refreshDevBox()
                 refreshClipBox()
+                Task { await refreshHomeBox() }
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -134,6 +137,14 @@ struct ContentView: View {
             ClipBoxSnapshotStore.save(snapshot)
             WidgetCenter.shared.reloadAllTimelines()
         }
+    }
+
+    /// Fetch weather (host is unsandboxed) for the HomeBox widget. Always
+    /// written on success so writtenAt drives the staleness windows.
+    private func refreshHomeBox() async {
+        guard let snapshot = try? await HostWeatherLoader.fetch(location: settings.homebox.location) else { return }
+        HomeBoxSnapshotStore.save(snapshot)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Install/remove the background refresh agent (launch at login) with the
@@ -215,7 +226,7 @@ struct ContentView: View {
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
+    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox, homebox
 
     var id: String { rawValue }
 
@@ -229,6 +240,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .gitbox: "GitBox"
         case .devbox: "DevBox"
         case .clipbox: "ClipBox"
+        case .homebox: "HomeBox"
         }
     }
 
@@ -242,6 +254,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .gitbox: "chevron.left.forwardslash.chevron.right"
         case .devbox: "server.rack"
         case .clipbox: "doc.on.clipboard"
+        case .homebox: "cloud.sun"
         }
     }
 }
@@ -447,6 +460,43 @@ private struct DevBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+    }
+}
+
+private struct HomeBoxSettingsView: View {
+    @Binding var settings: HomeBoxSettings
+
+    var body: some View {
+        Form {
+            Section("Weather") {
+                TextField("Location (city or lat,lon — empty = auto)", text: $settings.location)
+                Picker("Units", selection: $settings.unitsFahrenheit) {
+                    Text("°C").tag(false)
+                    Text("°F").tag(true)
+                }
+                .pickerStyle(.segmented)
+                Toggle("Show 3-day forecast", isOn: $settings.showForecast)
+            }
+            Section("World clock") {
+                Toggle("Show zones", isOn: $settings.showZones)
+                TextField("Zones (comma separated, local = current)", text: zonesBinding)
+                    .disabled(!settings.showZones)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+
+    private var zonesBinding: Binding<String> {
+        Binding(
+            get: { settings.timezoneIDs.joined(separator: ", ") },
+            set: {
+                settings.timezoneIDs = $0
+                    .split(separator: ",")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+            }
+        )
     }
 }
 
