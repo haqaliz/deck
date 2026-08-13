@@ -39,6 +39,7 @@ struct DeckSettings: Codable, Equatable {
     var gitbox = GitBoxSettings()
     var devbox = DevBoxSettings()
     var clipbox = ClipBoxSettings()
+    var homebox = HomeBoxSettings()
     var agentAtLogin = true
 
     /// Settings live inside the widget extension's sandbox container so both
@@ -241,6 +242,25 @@ struct ClipBoxSettings: Codable, Equatable {
         imageColor = try c.decodeIfPresent(RGBA.self, forKey: .imageColor) ?? RGBA(.pink)
         fileColor = try c.decodeIfPresent(RGBA.self, forKey: .fileColor) ?? RGBA(.blue)
         otherColor = try c.decodeIfPresent(RGBA.self, forKey: .otherColor) ?? RGBA(.gray)
+    }
+}
+
+struct HomeBoxSettings: Codable, Equatable {
+    var location = ""
+    var unitsFahrenheit = false
+    var timezoneIDs = ["local", "UTC"]
+    var showForecast = true
+    var showZones = true
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        location = try c.decodeIfPresent(String.self, forKey: .location) ?? ""
+        unitsFahrenheit = try c.decodeIfPresent(Bool.self, forKey: .unitsFahrenheit) ?? false
+        timezoneIDs = try c.decodeIfPresent([String].self, forKey: .timezoneIDs) ?? ["local", "UTC"]
+        showForecast = try c.decodeIfPresent(Bool.self, forKey: .showForecast) ?? true
+        showZones = try c.decodeIfPresent(Bool.self, forKey: .showZones) ?? true
     }
 }
 
