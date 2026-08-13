@@ -76,6 +76,17 @@ rm -f ~/Library/LaunchAgents/com.deck.agent.plist
 rm -rf /Applications/Deck.app
 ```
 
+## CI & Releases
+
+- **CI**: every push/PR runs the workflow in `.github/workflows/deck.yml` —
+  installs xcodegen, generates the project, and builds Release. With the signing
+  secrets configured it signs and auto-provisions; without them it builds
+  unsigned (compile check only — unsigned widgets can't register in `pluginkit`).
+- **Releases**: push a `v*` tag (e.g. `git tag v1.3 && git push origin v1.3`) to
+  build, sign, and upload `Deck-macos.zip` (with SHA256) to a GitHub Release.
+  Required secrets: `APPLE_CERT_P12_BASE64`, `APPLE_CERT_PASSWORD`, `APPLE_ID`,
+  `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (see the workflow header).
+
 ## Development
 
 ```bash
