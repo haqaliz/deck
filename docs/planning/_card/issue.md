@@ -1,29 +1,13 @@
-# ClipBox — inline brief
+# Inline brief: OpenBox cost-per-day chart (stacked by model)
 
-Source: `deck-next` handoff (2026-08-13), pick: `clipbox` (M3 candidate,
-ROADMAP.md:47).
+Source: deck-next handoff (2026-08-14).
 
-ClipBox: clipboard history widget with previews, local only. The unsandboxed
-DeckAgent reads NSPasteboard on its 60s tick (changeCount changed → snapshot
-current item), writes a ClipBox snapshot to the widget container; the widget
-reuses the GitBox/NetBox shell with text preview rows, history count and trim
-in settings. One metric story: history of copies.
+OpenBox's next slice: a cost-per-day chart stacked by model, alongside the
+existing 14-day token chart. The opencode DB already has per-model and per-day
+cost; the work is one new SQL grouping (day × model) in the agent reader, a
+snapshot field with tolerant decode, and a Chart face + settings toggle cloned
+from the openbox-tool-usage PR.
 
-## Caveats to resolve in the PRD
-
-- **60s granularity**: rapid consecutive copies within a minute collapse to the
-  newest pasteboard state (one snapshot per agent tick, deduped by
-  changeCount+content) — acceptable for v1, must be named in the PRD.
-- **Plaintext history**: history lives as plaintext in the widget container
-  (~/Library/Containers/com.deck.app.widgets/...); keep it local-only by
-  default (no sync), clearable in settings.
-- **Previews**: text items preview as truncated text; non-text items (images,
-  files) preview as a type label — confirm scope in the PRD interview.
-
-## Constraints from the pick
-
-- Shell untouched in behavior: agent-pumped snapshot path, 60s cadence,
-  settings via the tolerant-decode structs (PR #8).
-- Pure logic (pasteboard change detection, dedupe, trim, formatting) unit-tested
-  in a scratch SwiftPM package (DevBox/OpenBoxTools precedent, removed
-  pre-merge).
+Caveat: remote serve mode must produce the same breakdown, and old snapshots
+must decode without the new field. Tests follow the existing scratch-package
+parser pattern.
