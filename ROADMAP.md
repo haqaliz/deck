@@ -43,8 +43,8 @@ shell and only add a data source + a layout.
 - [x] **BatBox** — battery: level, time remaining, charge state
 - [x] **GitBox** — git activity: today + streak, 14-day chart, active repos
 - [x] **DevBox** — open ports/processes, Docker containers (docker stats)
+- [x] **ClipBox** — clipboard history with previews (local only)
 - [ ] **HomeBox** — weather + timezones (wttr.in)
-- [ ] **ClipBox** — clipboard history with previews (local only)
 - [ ] **ShipBox** — build/deploy status: GitHub Actions runs for a repo
 
 ### M4 — Polish

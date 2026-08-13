@@ -19,8 +19,10 @@ widget.
   (IOKit power source).
 - **GitBox** — git activity: commits per day for 14 days, today's count,
   streak, and active repos (scanned under `~/dev` by default).
+- **ClipBox** — clipboard history: recent copies with previews, local only
+  (sampled from NSPasteboard by the agent).
 
-All five ship in one WidgetKit extension: `Deck.app` (host + settings window)
+All six ship in one WidgetKit extension: `Deck.app` (host + settings window)
 → `DeckWidgets.appex`.
 
 ## Architecture
@@ -30,7 +32,7 @@ targets:
 
 ```
 DeckApp/        # host app: settings window (tabs per widget), agent installer
-DeckWidgets/    # WidgetKit extension: 5 widgets + Loaders/ (mach, getifaddrs, IOKit)
+DeckWidgets/    # WidgetKit extension: 6 widgets + Loaders/ (mach, getifaddrs, IOKit)
 DeckAgent/      # silent CLI: refreshes sandbox-blocked data snapshots, then exits
 Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
 ```
@@ -44,7 +46,7 @@ Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
    and reading other apps' data (opencode DB, `ps`/process info, `git log`).
    The unsandboxed `DeckAgent` (LaunchAgent `com.deck.agent`, every 60s) reads
    those and writes snapshots into the widget's container:
-   `~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox}.json`
+   `~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox}.json`
    The widgets render the snapshots.
 
 **Settings live in the Deck app window only** (per-widget tabs: show toggles,

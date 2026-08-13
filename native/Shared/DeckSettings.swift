@@ -38,6 +38,7 @@ struct DeckSettings: Codable, Equatable {
     var batbox = BatBoxSettings()
     var gitbox = GitBoxSettings()
     var devbox = DevBoxSettings()
+    var clipbox = ClipBoxSettings()
     var agentAtLogin = true
 
     /// Settings live inside the widget extension's sandbox container so both
@@ -220,8 +221,28 @@ struct DevBoxSettings: Codable, Equatable {
     }
 }
 
-// MARK: - ColorPicker binding helper
+struct ClipBoxSettings: Codable, Equatable {
+    var showList = true
+    var historyCount = 5
+    var textColor = RGBA(.indigo)
+    var imageColor = RGBA(.pink)
+    var fileColor = RGBA(.blue)
+    var otherColor = RGBA(.gray)
 
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
+        historyCount = try c.decodeIfPresent(Int.self, forKey: .historyCount) ?? 5
+        textColor = try c.decodeIfPresent(RGBA.self, forKey: .textColor) ?? RGBA(.indigo)
+        imageColor = try c.decodeIfPresent(RGBA.self, forKey: .imageColor) ?? RGBA(.pink)
+        fileColor = try c.decodeIfPresent(RGBA.self, forKey: .fileColor) ?? RGBA(.blue)
+        otherColor = try c.decodeIfPresent(RGBA.self, forKey: .otherColor) ?? RGBA(.gray)
+    }
+}
+
+// MARK: - ColorPicker binding helper
 extension Binding where Value == RGBA {
     var color: Binding<Color> {
         Binding<Color>(
