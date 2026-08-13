@@ -16,6 +16,7 @@ struct OpenCodeSnapshot: Codable, Equatable {
     var daily: [Day]
     var models: [Model]
     var tools: [ToolCount]
+    var costDaily: [CostDay]
     var totalInput: Int64
     var totalOutput: Int64
     var totalCost: Double
@@ -38,10 +39,17 @@ struct OpenCodeSnapshot: Codable, Equatable {
         let count: Int64
     }
 
+    struct CostDay: Codable, Equatable {
+        let day: String
+        let model: String
+        let cost: Double
+    }
+
     /// Tolerant decode: `tools` is newer than the first snapshots — missing
     /// key falls back to [] instead of throwing (PR #8 pattern).
     init(writtenAt: Date, sessions: Int64, input: Int64, output: Int64, cost: Double,
          daily: [Day], models: [Model], tools: [ToolCount],
+         costDaily: [CostDay],
          totalInput: Int64, totalOutput: Int64, totalCost: Double) {
         self.writtenAt = writtenAt
         self.sessions = sessions
@@ -51,6 +59,7 @@ struct OpenCodeSnapshot: Codable, Equatable {
         self.daily = daily
         self.models = models
         self.tools = tools
+        self.costDaily = costDaily
         self.totalInput = totalInput
         self.totalOutput = totalOutput
         self.totalCost = totalCost
@@ -66,6 +75,7 @@ struct OpenCodeSnapshot: Codable, Equatable {
         daily = try c.decode([Day].self, forKey: .daily)
         models = try c.decode([Model].self, forKey: .models)
         tools = try c.decodeIfPresent([ToolCount].self, forKey: .tools) ?? []
+        costDaily = try c.decodeIfPresent([CostDay].self, forKey: .costDaily) ?? []
         totalInput = try c.decode(Int64.self, forKey: .totalInput)
         totalOutput = try c.decode(Int64.self, forKey: .totalOutput)
         totalCost = try c.decode(Double.self, forKey: .totalCost)

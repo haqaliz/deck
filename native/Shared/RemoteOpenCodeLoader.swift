@@ -104,6 +104,7 @@ enum RemoteOpenCodeLoader {
         var totalOutput: Int64 = 0
         var totalCost = 0.0
         var dayTotals: [String: (Int64, Int64)] = [:]
+        var dayModelCosts: [String: [String: Double]] = [:]
         var modelTotals: [String: (cost: Double, input: Int64, output: Int64)] = [:]
         var todaySessionIDs = Set<String>()
 
@@ -122,6 +123,7 @@ enum RemoteOpenCodeLoader {
             dayTotals[day, default: (0, 0)].1 += output
 
             let key = modelKey(for: remoteSession.model)
+            dayModelCosts[day, default: [:]][key, default: 0] += cost
             let totals = modelTotals[key] ?? (0, 0, 0)
             modelTotals[key] = (totals.cost + cost, totals.input + input, totals.output + output)
 
@@ -145,6 +147,7 @@ enum RemoteOpenCodeLoader {
             daily: daily(from: dayTotals),
             models: models(from: modelTotals),
             tools: [],
+            costDaily: costDaily(from: dayModelCosts),
             totalInput: totalInput,
             totalOutput: totalOutput,
             totalCost: round4(totalCost)
@@ -165,6 +168,7 @@ enum RemoteOpenCodeLoader {
         var totalOutput: Int64 = 0
         var totalCost = 0.0
         var dayTotals: [String: (Int64, Int64)] = [:]
+        var dayModelCosts: [String: [String: Double]] = [:]
         var modelTotals: [String: (cost: Double, input: Int64, output: Int64)] = [:]
         var todaySessionIDs = Set<String>()
         var countedSessionIDs = Set<String>()
@@ -185,6 +189,7 @@ enum RemoteOpenCodeLoader {
             dayTotals[day, default: (0, 0)].1 += output
 
             let key = "\(message.providerID ?? "local")/\(message.modelID ?? "unknown")"
+            dayModelCosts[day, default: [:]][key, default: 0] += cost
             let totals = modelTotals[key] ?? (0, 0, 0)
             modelTotals[key] = (totals.cost + cost, totals.input + input, totals.output + output)
 
@@ -212,6 +217,7 @@ enum RemoteOpenCodeLoader {
             daily: daily(from: dayTotals),
             models: models(from: modelTotals),
             tools: [],
+            costDaily: costDaily(from: dayModelCosts),
             totalInput: totalInput,
             totalOutput: totalOutput,
             totalCost: round4(totalCost)
@@ -257,6 +263,16 @@ enum RemoteOpenCodeLoader {
                     output: totals.output
                 )
             }
+    }
+
+    private static func costDaily(from dayModelCosts: [String: [String: Double]]) -> [OpenCodeSnapshot.CostDay] {
+        var rows: [OpenCodeSnapshot.CostDay] = []
+        for day in dayModelCosts.keys.sorted() {
+            for (model, cost) in dayModelCosts[day]! {
+                rows.append(OpenCodeSnapshot.CostDay(day: day, model: model, cost: round4(cost)))
+            }
+        }
+        return rows.sorted { $0.day == $1.day ? $0.cost > $1.cost : $0.day < $1.day }
     }
 
     private static func utcDayString(from epochMilliseconds: Double) -> String {

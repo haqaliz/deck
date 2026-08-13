@@ -54,6 +54,15 @@ enum OpenCodeReader {
 
         let tools = mapToolRows(rows(db, toolsSQL))
 
+        let costDaily = rows(db, costDailySQL).compactMap { row -> OpenCodeSnapshot.CostDay? in
+            guard let day = row.string("day"), let model = row.string("model") else { return nil }
+            return OpenCodeSnapshot.CostDay(
+                day: day,
+                model: model,
+                cost: row.double("cost") ?? 0
+            )
+        }
+
         return OpenCodeSnapshot(
             writtenAt: Date(),
             sessions: today.int64("sessions") ?? 0,
@@ -63,6 +72,7 @@ enum OpenCodeReader {
             daily: daily,
             models: models,
             tools: tools,
+            costDaily: costDaily,
             totalInput: totals?.int64("input") ?? 0,
             totalOutput: totals?.int64("output") ?? 0,
             totalCost: totals?.double("cost") ?? 0
@@ -104,6 +114,15 @@ enum OpenCodeReader {
         FROM part
         WHERE json_extract(data,'$.type')='tool'
         GROUP BY tool ORDER BY count DESC LIMIT 10
+        """
+
+    private static let costDailySQL = """
+        SELECT date(time_created/1000,'unixepoch') as day, model,
+               ROUND(SUM(cost), 4) as cost
+        FROM session
+        WHERE time_created > (strftime('%s','now','-13 days')*1000)
+          AND model IS NOT NULL
+        GROUP BY day, model ORDER BY day
         """
 
     // MARK: - Tool rows (pure; tested in the OpenBoxToolsCore scratch package)
