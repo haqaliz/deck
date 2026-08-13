@@ -113,6 +113,7 @@ struct OpenBoxSettings: Codable, Equatable {
     var serverURL: String?
     var refreshInterval = 60
     var showChart = true
+    var showCostChart = false
     var showModels = true
     var showTools = true
     var toolCount = 3
@@ -133,6 +134,7 @@ struct OpenBoxSettings: Codable, Equatable {
         serverURL = try c.decodeIfPresent(String.self, forKey: .serverURL)
         refreshInterval = try c.decodeIfPresent(Int.self, forKey: .refreshInterval) ?? 60
         showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
+        showCostChart = try c.decodeIfPresent(Bool.self, forKey: .showCostChart) ?? false
         showModels = try c.decodeIfPresent(Bool.self, forKey: .showModels) ?? true
         showTools = try c.decodeIfPresent(Bool.self, forKey: .showTools) ?? true
         toolCount = try c.decodeIfPresent(Int.self, forKey: .toolCount) ?? 3

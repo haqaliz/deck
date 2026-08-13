@@ -14,7 +14,7 @@ WidgetKit widgets with native colors, corners and materials.
 | Widget | Shows |
 |---|---|
 | **LiveBox** | CPU / MEM / DISK usage with a live chart (per-core CPU lines) and top processes (CPU/MEM tabs) |
-| **OpenBox** | opencode usage: today's in/out tokens + cost, 14-day chart, top models, tool usage counts |
+| **OpenBox** | opencode usage: today's in/out tokens + cost, 14-day chart (tokens or cost-per-day stacked by model), top models, tool usage counts |
 | **NetBox** | per-interface up/down rates, history chart, most active interfaces |
 | **BatBox** | battery level, time remaining, charge state, level chart |
 | **GitBox** | commits per day (14 days), today's count, streak, active repos |
@@ -51,7 +51,9 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 
 - **OpenBox remote mode:** set a Server URL (e.g. `http://host:4096`) + token
   and OpenBox fetches usage over HTTP from an `opencode serve` instance instead
-  of the local database (basic auth, username `opencode`).
+  of the local database (basic auth, username `opencode`). The chart can switch
+  between token lines and a cost-per-day view stacked by model (OpenBox tab →
+  "Cost-per-day chart", off by default).
 - **GitBox** scans `~/dev` by default; add comma-separated paths in settings.
 - **ClipBox** history lives local-only in the widget container (plaintext, up
   to 20 items); clear it from the ClipBox settings tab.

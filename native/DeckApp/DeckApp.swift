@@ -312,6 +312,8 @@ private struct OpenBoxSettingsView: View {
             }
             Section("Chart") {
                 Toggle("Show 14-day chart", isOn: $settings.showChart)
+                Toggle("Cost-per-day chart (stacked by model)", isOn: $settings.showCostChart)
+                    .disabled(!settings.showChart)
                 ColorPicker("IN color", selection: $settings.inputColor.color)
                     .disabled(!settings.showChart)
                 ColorPicker("OUT color", selection: $settings.outputColor.color)

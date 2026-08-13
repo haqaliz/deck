@@ -63,7 +63,7 @@ LiveBox:
 - [ ] Threshold coloring (e.g. red when CPU > 90%)
 
 OpenBox:
-- [ ] Cost-per-day chart (stacked by model)
+- [x] Cost-per-day chart (stacked by model)
 - [ ] Session list with drill-down (top sessions by tokens)
 - [x] Tool usage stats (bash/edit/read counts from the DB)
 

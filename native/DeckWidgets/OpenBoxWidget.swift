@@ -17,6 +17,7 @@ struct OpenBoxEntry: TimelineEntry {
     let daily: [OpenCodeSnapshot.Day]
     let models: [OpenCodeSnapshot.Model]
     let tools: [OpenCodeSnapshot.ToolCount]
+    let costDaily: [OpenCodeSnapshot.CostDay]
     let totalInput: Int64
     let totalOutput: Int64
     let totalCost: Double
@@ -54,6 +55,11 @@ struct OpenBoxProvider: TimelineProvider {
                 OpenCodeSnapshot.ToolCount(tool: "read", count: 4169),
                 OpenCodeSnapshot.ToolCount(tool: "edit", count: 2098),
             ],
+            costDaily: [
+                OpenCodeSnapshot.CostDay(day: "day0", model: "deepseek-v4-flash", cost: 0.21),
+                OpenCodeSnapshot.CostDay(day: "day1", model: "deepseek-v4-flash", cost: 0.15),
+                OpenCodeSnapshot.CostDay(day: "day1", model: "gpt-5.2", cost: 0.06),
+            ],
             totalInput: 48_000_000,
             totalOutput: 6_100_000,
             totalCost: 9.84,
@@ -85,6 +91,7 @@ struct OpenBoxProvider: TimelineProvider {
                 daily: [],
                 models: [],
                 tools: [],
+                costDaily: [],
                 totalInput: 0,
                 totalOutput: 0,
                 totalCost: 0,
@@ -102,6 +109,7 @@ struct OpenBoxProvider: TimelineProvider {
             daily: snapshot.daily,
             models: snapshot.models,
             tools: snapshot.tools,
+            costDaily: snapshot.costDaily,
             totalInput: snapshot.totalInput,
             totalOutput: snapshot.totalOutput,
             totalCost: snapshot.totalCost,
@@ -204,7 +212,11 @@ struct OpenBoxWidgetEntryView: View {
             .monospacedDigit()
 
             if entry.settings.showChart && !entry.daily.isEmpty {
-                chart
+                if entry.settings.showCostChart && !entry.costDaily.isEmpty {
+                    costChart
+                } else {
+                    chart
+                }
             }
         }
     }
@@ -229,8 +241,17 @@ struct OpenBoxWidgetEntryView: View {
             .monospacedDigit()
 
             if entry.settings.showChart && !entry.daily.isEmpty {
-                chart
-                    .padding(.top, 6)
+                if entry.settings.showCostChart && !entry.costDaily.isEmpty {
+                    costChart
+                        .padding(.top, 6)
+                    if family == .systemLarge {
+                        costLegend
+                            .padding(.top, 4)
+                    }
+                } else {
+                    chart
+                        .padding(.top, 6)
+                }
             }
 
             if entry.settings.showModels && !entry.models.isEmpty {
@@ -355,6 +376,58 @@ struct OpenBoxWidgetEntryView: View {
         .frame(height: family == .systemMedium ? 62 : 56)
     }
 
+    private var costChart: some View {
+        let series = CostSeries.buildSeries(from: entry.costDaily)
+        let colors = costSeriesColors(count: series.count)
+        let points = CostSeries.points(from: series)
+        return Chart {
+            ForEach(points) { point in
+                BarMark(
+                    x: .value("Day", point.day),
+                    y: .value("Cost", point.cost)
+                )
+                .foregroundStyle(by: .value("Model", point.model))
+            }
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartForegroundStyleScale(
+            domain: series.map(\.model),
+            range: colors
+        )
+        .frame(height: family == .systemMedium ? 62 : 56)
+    }
+
+    private var costLegend: some View {
+        let series = CostSeries.buildSeries(from: entry.costDaily)
+        let colors = costSeriesColors(count: series.count)
+        return HStack(spacing: 10) {
+            ForEach(Array(series.enumerated()), id: \.element.model) { index, s in
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(colors[index])
+                        .frame(width: 6, height: 6)
+                    Text(CostSeries.displayID(of: s.model))
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func costSeriesColors(count: Int) -> [Color] {
+        let palette: [Color] = [
+            entry.settings.costColor.color,
+            Color(red: 0.35, green: 0.78, blue: 0.78),
+            Color(red: 0.95, green: 0.55, blue: 0.65),
+            Color.gray,
+        ]
+        return Array(palette.prefix(count))
+    }
+
     private func tokenRow(title: String, value: Int64, color: Color) -> some View {
         HStack(spacing: 4) {
             Circle()
@@ -422,6 +495,95 @@ private enum ModelParser {
             id: idTokens.joined(separator: "-"),
             variant: variantTokens.isEmpty ? nil : variantTokens.joined(separator: " ")
         )
+    }
+}
+
+private enum CostSeries {
+    struct Series {
+        let model: String
+        let costs: [Double]
+    }
+
+    struct Point: Identifiable {
+        let id = UUID()
+        let model: String
+        let day: Int
+        let cost: Double
+    }
+
+    /// One value per day per model, top-N models by total cost (ties keep
+    /// first-appearance order), the rest merged into an "other" series.
+    static func buildSeries(from costDays: [OpenCodeSnapshot.CostDay], topN: Int = 3) -> [Series] {
+        guard !costDays.isEmpty else { return [] }
+
+        let days = orderedDays(in: costDays)
+        var totals: [String: Double] = [:]
+        for day in costDays { totals[day.model, default: 0] += day.cost }
+
+        var appearance: [String: Int] = [:]
+        var index = 0
+        for day in costDays where appearance[day.model] == nil {
+            appearance[day.model] = index
+            index += 1
+        }
+
+        let top = totals.keys
+            .sorted {
+                if totals[$0]! != totals[$1]! { return totals[$0]! > totals[$1]! }
+                return appearance[$0]! < appearance[$1]!
+            }
+            .prefix(topN)
+
+        var series = top.map { model in
+            Series(model: model, costs: costs(for: model, days: days, from: costDays))
+        }
+
+        let other = totals.keys.filter { !top.contains($0) }
+        if !other.isEmpty {
+            series.append(Series(model: "other", costs: days.map { day in
+                other.reduce(0.0) { sum, model in
+                    sum + (costDays.first { $0.day == day && $0.model == model }?.cost ?? 0)
+                }
+            }))
+        }
+        return series
+    }
+
+    /// Flattens series into day-aligned chart points (x = day index).
+    static func points(from series: [Series]) -> [Point] {
+        series.enumerated().flatMap { _, s in
+            s.costs.enumerated().map { day, cost in
+                Point(model: s.model, day: day, cost: cost)
+            }
+        }
+    }
+
+    /// Short label for the legend: JSON-object model strings resolve to their
+    /// `id`, `provider/id` strings to the last `/`-segment.
+    static func displayID(of raw: String) -> String {
+        if let data = raw.data(using: .utf8),
+           let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+           let id = obj["id"] as? String {
+            return id
+        }
+        if let slash = raw.lastIndex(of: "/") {
+            return String(raw[raw.index(after: slash)...])
+        }
+        return raw
+    }
+
+    private static func orderedDays(in costDays: [OpenCodeSnapshot.CostDay]) -> [String] {
+        var days: [String] = []
+        for day in costDays where !days.contains(day.day) {
+            days.append(day.day)
+        }
+        return days
+    }
+
+    private static func costs(for model: String, days: [String], from costDays: [OpenCodeSnapshot.CostDay]) -> [Double] {
+        days.map { day in
+            costDays.first { $0.day == day && $0.model == model }?.cost ?? 0
+        }
     }
 }
 
