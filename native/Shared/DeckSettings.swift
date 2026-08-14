@@ -40,6 +40,7 @@ struct DeckSettings: Codable, Equatable {
     var devbox = DevBoxSettings()
     var clipbox = ClipBoxSettings()
     var homebox = HomeBoxSettings()
+    var shipbox = ShipBoxSettings()
     var agentAtLogin = true
 
     /// Settings live inside the widget extension's sandbox container so both
@@ -261,6 +262,33 @@ struct HomeBoxSettings: Codable, Equatable {
         timezoneIDs = try c.decodeIfPresent([String].self, forKey: .timezoneIDs) ?? ["local", "UTC"]
         showForecast = try c.decodeIfPresent(Bool.self, forKey: .showForecast) ?? true
         showZones = try c.decodeIfPresent(Bool.self, forKey: .showZones) ?? true
+    }
+}
+
+struct ShipBoxSettings: Codable, Equatable {
+    /// "owner/repo" — empty → agent skips the fetch.
+    var repo = ""
+    /// GitHub personal access token — required; no default is ever sent.
+    var token = ""
+    var showList = true
+    var runCount = 4
+    var queuedColor = RGBA(.orange)
+    var runningColor = RGBA(.yellow)
+    var successColor = RGBA(.green)
+    var failureColor = RGBA(.red)
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        repo = try c.decodeIfPresent(String.self, forKey: .repo) ?? ""
+        token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+        showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
+        runCount = try c.decodeIfPresent(Int.self, forKey: .runCount) ?? 4
+        queuedColor = try c.decodeIfPresent(RGBA.self, forKey: .queuedColor) ?? RGBA(.orange)
+        runningColor = try c.decodeIfPresent(RGBA.self, forKey: .runningColor) ?? RGBA(.yellow)
+        successColor = try c.decodeIfPresent(RGBA.self, forKey: .successColor) ?? RGBA(.green)
+        failureColor = try c.decodeIfPresent(RGBA.self, forKey: .failureColor) ?? RGBA(.red)
     }
 }
 
