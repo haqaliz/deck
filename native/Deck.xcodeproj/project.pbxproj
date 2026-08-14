@@ -24,6 +24,7 @@
 		424DEB2DB806DD41871AE821 /* NetworkMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C7C7450F73A30B7B007FE7 /* NetworkMetrics.swift */; };
 		4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		4D29DC5858E1A5667D21B72A /* HomeBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E1012194CD52DAFA3C04BA7 /* HomeBoxWidget.swift */; };
 		5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -45,7 +46,10 @@
 		D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */; };
 		D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
+		D9DAC20F67AF8B1BE5D1F292 /* HomeBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */; };
 		E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		E6D839C9A24374E64BFEF87B /* HomeBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */; };
+		E92B0312841C61D01E21A06B /* HomeBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */; };
 		EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 /* End PBXBuildFile section */
@@ -95,6 +99,8 @@
 		4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckSettings.swift; sourceTree = "<group>"; };
 		46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetrics.swift; sourceTree = "<group>"; };
 		50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatBoxWidget.swift; sourceTree = "<group>"; };
+		51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBoxSnapshot.swift; sourceTree = "<group>"; };
+		5E1012194CD52DAFA3C04BA7 /* HomeBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBoxWidget.swift; sourceTree = "<group>"; };
 		7B2DB053937C24CBB649992B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxSnapshot.swift; sourceTree = "<group>"; };
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
@@ -139,6 +145,7 @@
 				4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */,
 				0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */,
 				13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */,
+				51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */,
 				D280CAAAC227082564309914 /* OpenCodeReader.swift */,
 				1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */,
 				26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */,
@@ -196,6 +203,7 @@
 				34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */,
 				8410285538D08E9259413910 /* DevBoxWidget.swift */,
 				42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */,
+				5E1012194CD52DAFA3C04BA7 /* HomeBoxWidget.swift */,
 				F43C960DDF3AB3D1461849AC /* Info.plist */,
 				AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */,
 				18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */,
@@ -365,6 +373,8 @@
 				94F97F3C03EB1B33F5792A6C /* DevBoxWidget.swift in Sources */,
 				D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */,
 				0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */,
+				E6D839C9A24374E64BFEF87B /* HomeBoxSnapshot.swift in Sources */,
+				4D29DC5858E1A5667D21B72A /* HomeBoxWidget.swift in Sources */,
 				AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */,
 				96B73870192265B41638143C /* NetBoxWidget.swift in Sources */,
 				424DEB2DB806DD41871AE821 /* NetworkMetrics.swift in Sources */,
@@ -386,6 +396,7 @@
 				EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */,
 				18600374BCF4CECC18E75B9B /* DevBoxSnapshot.swift in Sources */,
 				D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */,
+				E92B0312841C61D01E21A06B /* HomeBoxSnapshot.swift in Sources */,
 				38CA6F050AB3377F30390895 /* OpenCodeReader.swift in Sources */,
 				15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */,
 				CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */,
@@ -401,6 +412,7 @@
 				4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */,
 				F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */,
 				5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */,
+				D9DAC20F67AF8B1BE5D1F292 /* HomeBoxSnapshot.swift in Sources */,
 				41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */,
 				2D03E1C6AEAD755CE49CF9FD /* OpenCodeSnapshot.swift in Sources */,
 				1967FF4D20A83BF47DDFFCB2 /* ProcessSnapshot.swift in Sources */,

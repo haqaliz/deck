@@ -1,58 +1,66 @@
-# ClipBox — understanding note (Phase 2 dig)
+# Understanding: HomeBox (weather + world clock)
 
 ## What the work is really asking
 
-A sixth widget, fully agent-pumped (clipboard is another app's data, so the
-sandboxed widget can't touch it). One metric story: recent copies, with
-previews. Reuses the exact GitBox/DevBox agent-pump pipeline.
+A seventh widget in the Deck shell: weather for a user-configured location plus
+2–3 world-clock timezone rows. Pending M3 candidate (ROADMAP.md:47). Two halves:
 
-## Affected files (all in `native/`)
+1. **Weather (network)** — wttr.in `?format=j1` JSON: `current_condition[0]`
+   (temp_C, FeelsLikeC, weatherCode WW, weatherDesc, humidity, wind), plus the
+   3-day `weather[]` forecast (maxtempC/mintempC/weatherDesc per day) for the
+   large face.
+2. **World clock (local)** — timezone rows computed from `TimeZone` identifiers;
+   zero fetch by design (per the brief).
 
-| File | Change |
-|---|---|
-| `Shared/ClipBoxSnapshot.swift` (new) | `ClipBoxSnapshot` (Codable) + `ClipBoxSnapshotStore` + `HostClipBoardSampler` (pasteboard read + history merge) |
-| `Shared/DeckSettings.swift` | `ClipBoxSettings` (tolerant decode, PR #8 pattern): showList, historyCount, colors |
-| `DeckAgent/main.swift` | call `HostClipBoardSampler.snapshot(maxCount:)`; save if changed |
-| `DeckApp/DeckApp.swift` | `DeckWidget.clipbox` case (title/systemImage/tab), `ClipBoxSettingsView`, `refreshClipBox()` in onAppear + 60s timer |
-| `DeckWidgets/ClipBoxWidget.swift` (new) | copy GitBox widget shell; small/medium/large; unavailable view |
-| `DeckWidgets/DeckWidgets.swift` | register `ClipBoxWidget()` |
-| `README.md`, `ROADMAP.md` | register widget; tick M3 ClipBox `[x]` |
+## Shell mapping (grounded in files)
 
-## Key mechanics
+- **Widget template**: GitBoxWidget (agent-pumped snapshot + `available`/stale
+  degrade, GitBoxWidget.swift:114-126; store via `DeckSettings.containerDirectory`,
+  GitBoxSnapshot.swift:30-48; 5-min staleness window). NetBoxWidget for the
+  list-row layout language (colored dot rows, tracked section titles).
+- **Agent pump (the fetch home)**: `DeckAgent/main.swift` — add a HomeBox fetch
+  that runs every 60s tick alongside gitbox/devbox/clipbox. **Critical finding:
+  the widget sandbox has NO network entitlement** (DeckWidgets.entitlements has
+  only app-sandbox), so weather HTTP *must* run in the unsandboxed agent, exactly
+  like the proven openbox-remote pattern (`RemoteOpenCodeLoader` URLSession
+  transport, RemoteOpenCodeLoader.swift:307-336, called from
+  DeckAgent/main.swift:16). The deck-next handoff's "fetch inside the widget"
+  assumption is wrong — agent-side only, which also dissolves the "verify widget
+  timeline fetching" caveat.
+- **Settings**: `HomeBoxSettings` struct + tolerant `init(from:)` decode
+  (pattern: LiveBoxSettings, DeckSettings.swift:95-107), registered in
+  DeckSettings.swift:34-42; tab in DeckApp.swift (DeckWidget enum:217-246 +
+  detail switch:36-45 + settings view struct ~line 251+).
+- **Registration**: `HomeBoxWidget()` in DeckWidgets.swift bundle; project.yml
+  sources are directory-based → regenerate with xcodegen; register in README +
+  ROADMAP (blueprint ROADMAP.md:8-21).
 
-- Agent is a CLI that runs every 60s and exits (`DeckAgent/main.swift:1-44`);
-  it already loads settings itself, so ClipBox history **accumulates in the
-  snapshot file**: sampler loads prior snapshot, compares pasteboard
-  `changeCount`/content, appends a `ClipItem` when changed, trims to
-  `historyCount`, writes back. Widget renders the snapshot (same staleness
-  window as GitBox: `writtenAt > -300`).
-- Pasteboard types: `.string` (text preview), `.fileURL` (name preview),
-  `.tiff`/`.png` (image → type label + byte size), fallback `.other`. Pure
-  mapping logic is TDD-able in a scratch SwiftPM package.
-- Settings tab mirrors `GitBoxSettingsView` (`DeckApp.swift:373`); sidebar
-  enum at `DeckApp.swift:205-233`; widget registration `DeckWidgets.swift:6-13`.
-- Refresh wiring: `onAppear` + 60s timer `DeckApp.swift:48-64`; host refresh
-  funcs `DeckApp.swift:105-125`.
+## wttr.in contract facts (verified against live j1 payload)
+
+- Every numeric value is a **String** (temp_C "23", weatherCode "113") — parser
+  must string→number; tolerate empty/missing.
+- `weatherDesc[0].value` has **trailing whitespace** ("Clear ", "Partly Cloudy ") — trim.
+- `weatherCode` is the WW code (113 clear, 116 partly cloudy, 176 patchy rain) →
+  SF Symbol mapping is pure logic, TDD-able.
+- Location via settings text: wttr.in accepts `/City`, `/52.37,4.90`. Empty →
+  let wttr.in geolocate (no query). `nearest_area[0]` gives resolved place name.
+- `weather[]` is 3 days; hourly rows are `time`-stamped since midnight in local
+  time of the location.
 
 ## Ambiguities / open questions (for the PRD interview)
 
-1. **Granularity**: 60s tick means copies within the same minute collapse to
-   the newest — accepted in the brief, but confirm v1 behavior (timestamp
-   dedupe vs. changeCount dedupe).
-2. **Content storage**: store full text content per item (real history, more
-   storage/privacy) or only previews (lighter, still glanceable)?
-3. **Preview scope**: images/files — store nothing beyond metadata, or inline
-   image thumbnail (widget can't render NSImage from snapshot? it can — SwiftUI
-   Image(uiImage:) via data)? Keep v1 to text + type-labeled rows.
-4. **Clear action**: settings tab "Clear history" button? (widgets can't
-   mutate) — agent/host-side delete.
-5. **Pasteboard read from a CLI**: NSPasteboard.general is readable from an
-   unsandboxed CLI in the user session; verify with an empirical probe during
-   Phase 6 (first agent tick must produce a snapshot, not nil).
+1. Units: metric (temp_C) vs imperial toggle, or follow system locale?
+2. Large-face forecast: 3-day (maxtemp/mintemp + desc) vs hourly strip?
+3. Location UX: free-text city field vs lat/lon vs both; what does "empty"
+   mean (auto geolocate) and is auto-geolocate deterministic enough?
+4. Timezone editing UX: free-text TimeZone identifiers vs picker of known
+   cities; default ["local", "UTC"]; max count?
+5. wttr.in attribution footer — include small "wttr.in" credit on large face?
+6. Stale window: same 5-min `available` degrade as GitBox, plus last-update
+   affordance when snapshot is old (e.g. >30 min)?
 
-## Invariants (from CLAUDE.md) — none broken
+## Invariants check (CLAUDE.md)
 
-- Agent-pumped path for sandbox-blocked data ✓ (matches OpenBox/GitBox/DevBox)
-- 60s cadence, no fighting WidgetKit throttling ✓
-- Settings app-only with tolerant decode ✓
-- Pure logic TDD'd in scratch package, removed pre-merge ✓
+No panel invariant is touched: new widget file, new snapshot + store in Shared,
+new settings struct, new tab, agent append. All existing targets keep their
+sources; Shared is already compiled into all three targets.

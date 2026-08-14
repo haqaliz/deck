@@ -1,13 +1,17 @@
-# Inline brief: OpenBox cost-per-day chart (stacked by model)
+# Inline brief: HomeBox (weather + world clock)
 
 Source: deck-next handoff (2026-08-14).
 
-OpenBox's next slice: a cost-per-day chart stacked by model, alongside the
-existing 14-day token chart. The opencode DB already has per-model and per-day
-cost; the work is one new SQL grouping (day × model) in the agent reader, a
-snapshot field with tolerant decode, and a Chart face + settings toggle cloned
-from the openbox-tool-usage PR.
+HomeBox: weather + world clock widget (pending M3, ROADMAP.md:47). Copy the
+NetBox/GitBox shell; front face shows conditions + temp for your location plus
+2–3 timezones, settings tab picks location (wttr.in by city/geo) and zones
+(default: local + UTC).
 
-Caveat: remote serve mode must produce the same breakdown, and old snapshots
-must decode without the new field. Tests follow the existing scratch-package
-parser pattern.
+Follow the proven openbox-remote pattern for the bounded URLSession fetch
+inside the widget with loader-error degrade states; parse wttr.in JSON in a
+scratch HomeBoxCore package with fixture tests (the JSON shape is an external
+contract).
+
+Caveat: network-only front face — verify widget timeline fetching on macOS
+early (probe before PRD), and timezone rows must render from local TimeZone
+data with zero fetch.

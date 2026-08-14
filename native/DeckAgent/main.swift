@@ -43,6 +43,12 @@ Task {
         ClipBoxSnapshotStore.save(clipbox)
     }
 
+    if let homebox = try? await HostWeatherLoader.fetch(location: settings.homebox.location) {
+        // Always written: writtenAt drives the widget's staleness windows, so
+        // a successful fetch must refresh it even when weather is unchanged.
+        HomeBoxSnapshotStore.save(homebox)
+    }
+
     semaphore.signal()
 }
 
