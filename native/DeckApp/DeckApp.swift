@@ -321,7 +321,7 @@ private struct OpenBoxSettingsView: View {
     var body: some View {
         Form {
             Section("Remote server (optional)") {
-                SecureField("Token (no default — paste your own)", text: $settings.token)
+                SecureField("Token", text: $settings.token)
                     .textContentType(.password)
                 TextField("Server URL (opencode serve, e.g. http://host:4096)", text: serverURLBinding)
                 Stepper("Refresh interval: \(settings.refreshInterval) s", value: $settings.refreshInterval, in: 5...60, step: 5)
