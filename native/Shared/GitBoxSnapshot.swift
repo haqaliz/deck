@@ -89,9 +89,9 @@ enum HostGitBoxSampler {
     // MARK: - Repo discovery (ported from the window GitBox)
 
     private static func discoverRepos(paths: [String], depth: Int) -> [URL] {
-        let roots = paths.isEmpty ? ["~/dev"] : paths
+        // No default scan root: the user configures repo paths explicitly.
         var repos: [URL] = []
-        for root in roots {
+        for root in paths {
             let url = URL(fileURLWithPath: (root as NSString).expandingTildeInPath)
             var isDir: ObjCBool = false
             guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir),

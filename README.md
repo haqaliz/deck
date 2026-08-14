@@ -50,12 +50,15 @@ Settings live in the **Deck app** (one tab per widget): show/hide chart,
 metrics, lists; colors; counts; OpenBox token + server URL (remote mode);
 GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 
-- **OpenBox remote mode:** set a Server URL (e.g. `http://host:4096`) + token
-  and OpenBox fetches usage over HTTP from an `opencode serve` instance instead
-  of the local database (basic auth, username `opencode`). The chart can switch
-  between token lines and a cost-per-day view stacked by model (OpenBox tab →
-  "Cost-per-day chart", off by default).
-- **GitBox** scans `~/dev` by default; add comma-separated paths in settings.
+- **OpenBox remote mode:** set a Server URL (e.g. `http://host:4096`) and paste
+  your own token — no default token is ever sent, and without a pasted token
+  remote mode fetches nothing (it won't fall back to the local DB). OpenBox
+  then fetches usage over HTTP from an `opencode serve` instance (basic auth,
+  username `opencode`). The chart can switch between token lines and a
+  cost-per-day view stacked by model (OpenBox tab → "Cost-per-day chart", off
+  by default).
+- **GitBox** reads only the repo paths you configure (empty by default — add
+  comma-separated paths in settings).
 - **ClipBox** history lives local-only in the widget container (plaintext, up
   to 20 items); clear it from the ClipBox settings tab.
 - **HomeBox** fetches weather from wttr.in via the agent (empty location = auto
