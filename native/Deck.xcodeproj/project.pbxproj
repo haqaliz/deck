@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F06724D8333A9A74C4156DB6 /* SmokeTests.swift */; };
+		0D92FA03A401FBF07703028E /* ToolCountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */; };
 		0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */; };
 		0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
@@ -31,8 +32,10 @@
 		4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		4D29DC5858E1A5667D21B72A /* HomeBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E1012194CD52DAFA3C04BA7 /* HomeBoxWidget.swift */; };
 		4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		503A811FFA42B6C95C900C31 /* DecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B881092482BA9425E3F5918 /* DecodeTests.swift */; };
 		5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
+		56242BA287F3C3D8CD8A380D /* ModelParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55EA63643575600049612BD /* ModelParserTests.swift */; };
 		611DC32A1889B095CAE4D132 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		72183F6AE6F651DFC0C5A377 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = CBC89EF1D34611CB2B244F15 /* AppIcon.icns */; };
@@ -49,6 +52,7 @@
 		A5E22A6827149E7194FB4E64 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
 		A94346AFBE99A456A37C9F3A /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */; };
+		AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */; };
 		BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */; };
 		CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		CB137C6731146B546A106840 /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
@@ -107,6 +111,7 @@
 /* Begin PBXFileReference section */
 		0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxWidget.swift; sourceTree = "<group>"; };
 		0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxSnapshot.swift; sourceTree = "<group>"; };
+		0B881092482BA9425E3F5918 /* DecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodeTests.swift; sourceTree = "<group>"; };
 		13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshot.swift; sourceTree = "<group>"; };
 		18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxWidget.swift; sourceTree = "<group>"; };
 		1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryMetrics.swift; sourceTree = "<group>"; };
@@ -123,16 +128,19 @@
 		51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBoxSnapshot.swift; sourceTree = "<group>"; };
 		5E1012194CD52DAFA3C04BA7 /* HomeBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBoxWidget.swift; sourceTree = "<group>"; };
 		7B2DB053937C24CBB649992B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSeriesTests.swift; sourceTree = "<group>"; };
 		7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxSnapshot.swift; sourceTree = "<group>"; };
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSnapshot.swift; sourceTree = "<group>"; };
 		970F6F6A1DFB74AABEE7826C /* ClipBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxWidget.swift; sourceTree = "<group>"; };
 		AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxWidget.swift; sourceTree = "<group>"; };
+		AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCountTests.swift; sourceTree = "<group>"; };
 		B662E23A53ACAA091EAFA898 /* DeckApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeckApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBC89EF1D34611CB2B244F15 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeckWidgets.entitlements; sourceTree = "<group>"; };
 		D280CAAAC227082564309914 /* OpenCodeReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeReader.swift; sourceTree = "<group>"; };
+		E55EA63643575600049612BD /* ModelParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelParserTests.swift; sourceTree = "<group>"; };
 		EA5EADBCA4E36B421CDE1542 /* DeckAgent */ = {isa = PBXFileReference; includeInIndex = 0; path = DeckAgent; sourceTree = BUILT_PRODUCTS_DIR; };
 		F06724D8333A9A74C4156DB6 /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		F184F1820A5FC6758145DCAD /* DeckWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DeckWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -183,7 +191,11 @@
 		4487543148A35CAE067BBAE7 /* SharedTests */ = {
 			isa = PBXGroup;
 			children = (
+				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
+				0B881092482BA9425E3F5918 /* DecodeTests.swift */,
+				E55EA63643575600049612BD /* ModelParserTests.swift */,
 				F06724D8333A9A74C4156DB6 /* SmokeTests.swift */,
+				AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */,
 			);
 			path = SharedTests;
 			sourceTree = "<group>";
@@ -454,10 +466,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				EA90CCDFFC5A2B29D6F7908F /* ClipBoxSnapshot.swift in Sources */,
+				AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */,
 				E9C9897EA5B6B4BB0A42B780 /* DeckSettings.swift in Sources */,
+				503A811FFA42B6C95C900C31 /* DecodeTests.swift in Sources */,
 				2A844B182A8B55D6AE7B4116 /* DevBoxSnapshot.swift in Sources */,
 				29301B875DF6C63903F7C456 /* GitBoxSnapshot.swift in Sources */,
 				DEB817674110D144380A8EFD /* HomeBoxSnapshot.swift in Sources */,
+				56242BA287F3C3D8CD8A380D /* ModelParserTests.swift in Sources */,
 				A366F0122DCFF1970B2158B5 /* OpenBoxCore.swift in Sources */,
 				3731452DDEEE62491DBC4FD7 /* OpenCodeReader.swift in Sources */,
 				3256C001A7523B07D0D86C89 /* OpenCodeSnapshot.swift in Sources */,
@@ -465,6 +480,7 @@
 				4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */,
 				769F47CE66D9A10A5B348E02 /* ShipBoxSnapshot.swift in Sources */,
 				083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */,
+				0D92FA03A401FBF07703028E /* ToolCountTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,18 +1,14 @@
-# Inline brief: ShipBox (build/deploy status)
+# Inline brief: shared-parser-tests
 
-Source: deck-next handoff (2026-08-14).
+Source: deck-next handoff (2026-08-15).
 
-ShipBox — build/deploy status widget for the M3 slot (ROADMAP.md:48): GitHub
-Actions runs for a configured repo, shown as a status list with colored dots
-(pending/success/failure) + latest run summary, all three sizes.
-
-Not local-first by design: fetch via DeckAgent-side HTTP like HomeBox's wttr.in
-pump (docs/planning/_card/understanding.md:22-28), with a GitHub token pasted
-in the ShipBox settings tab mirroring OpenBox remote (README.md:53-58) —
-unauthenticated API rate limits are the caveat, so a token field is required,
-not optional.
-
-First slice: repo + runs list mapping (pure, TDD-able), then the widget front
-face copying GitBox's staleness degrade and NetBox's colored-dot rows. No shell
-invariants touched: new widget file, snapshot+store in Shared, settings struct
-+ tab, agent append, register in README/ROADMAP.
+Add the M4 tests milestone: a real XCTest target for the Shared parsers
+(ROADMAP.md:53) — GitLogParser, OpenBox ModelParser/session cost rows,
+formatters, and the opencode DB SQL — since every feature so far deleted its
+scratch SwiftPM package at merge and the repo now has zero tests and no
+testTarget in native/project.yml. Port the test cases from git history where
+possible, otherwise re-derive from parser behavior; keep tests at the
+pure-parser layer per the CLAUDE.md convention. Note the caveat: this touches
+project.yml (xcodegen) once for the test target — nothing else in the widget
+shell changes, and future widgets should keep their scratch-package TDD pattern
+until this lands.

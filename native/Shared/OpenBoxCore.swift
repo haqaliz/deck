@@ -64,7 +64,7 @@ enum ModelParser {
 }
 
 enum CostSeries {
-    struct Series {
+    struct Series: Equatable {
         let model: String
         let costs: [Double]
     }
