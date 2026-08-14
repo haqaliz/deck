@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
+		083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F06724D8333A9A74C4156DB6 /* SmokeTests.swift */; };
 		0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */; };
 		0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
@@ -16,31 +17,41 @@
 		18600374BCF4CECC18E75B9B /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		1967FF4D20A83BF47DDFFCB2 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		27DC4BBF55405C8CFB193051 /* OpenBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */; };
+		29301B875DF6C63903F7C456 /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
+		2A844B182A8B55D6AE7B4116 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */; };
 		2D03E1C6AEAD755CE49CF9FD /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
 		321052A8E1D6C63E19452D77 /* ClipBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 970F6F6A1DFB74AABEE7826C /* ClipBoxWidget.swift */; };
+		3256C001A7523B07D0D86C89 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
+		3731452DDEEE62491DBC4FD7 /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
 		38CA6F050AB3377F30390895 /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
 		41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
 		424DEB2DB806DD41871AE821 /* NetworkMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C7C7450F73A30B7B007FE7 /* NetworkMetrics.swift */; };
 		4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		4D29DC5858E1A5667D21B72A /* HomeBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E1012194CD52DAFA3C04BA7 /* HomeBoxWidget.swift */; };
+		4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		611DC32A1889B095CAE4D132 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		72183F6AE6F651DFC0C5A377 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = CBC89EF1D34611CB2B244F15 /* AppIcon.icns */; };
+		73AC55C40799B7FACDF0B935 /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
+		769F47CE66D9A10A5B348E02 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */; };
 		822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */; };
 		87E936C049D826980DD8F8C7 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B05E2B90DFEDC2F8CC1804F /* main.swift */; };
 		90A811EBE7E73139D552827E /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
+		933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		94F97F3C03EB1B33F5792A6C /* DevBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8410285538D08E9259413910 /* DevBoxWidget.swift */; };
 		96B73870192265B41638143C /* NetBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */; };
+		A366F0122DCFF1970B2158B5 /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
 		A5E22A6827149E7194FB4E64 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
 		A94346AFBE99A456A37C9F3A /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */; };
 		BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */; };
 		CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
+		CB137C6731146B546A106840 /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
 		D0E68887D6CF1F2F3EAFA435 /* DeckAgent in Resources */ = {isa = PBXBuildFile; fileRef = EA5EADBCA4E36B421CDE1542 /* DeckAgent */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		D2669CB46930616C7A93FD65 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
@@ -49,10 +60,14 @@
 		D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */; };
 		D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		D9DAC20F67AF8B1BE5D1F292 /* HomeBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */; };
+		DD3E61D42DB4A46DB5C256BF /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
+		DEB817674110D144380A8EFD /* HomeBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */; };
 		E2DE130621C6683B7AA69F2D /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		E6D839C9A24374E64BFEF87B /* HomeBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */; };
 		E92B0312841C61D01E21A06B /* HomeBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */; };
+		E9C9897EA5B6B4BB0A42B780 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
+		EA90CCDFFC5A2B29D6F7908F /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		FC125295397F417AA47379E3 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
@@ -99,6 +114,7 @@
 		26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshot.swift; sourceTree = "<group>"; };
 		34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckWidgets.swift; sourceTree = "<group>"; };
 		37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeLoader.swift; sourceTree = "<group>"; };
+		38FE485560E13BED32845511 /* DeckSharedTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeckSharedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxWidget.swift; sourceTree = "<group>"; };
 		4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckSettings.swift; sourceTree = "<group>"; };
 		45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxWidget.swift; sourceTree = "<group>"; };
@@ -118,10 +134,12 @@
 		D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeckWidgets.entitlements; sourceTree = "<group>"; };
 		D280CAAAC227082564309914 /* OpenCodeReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeReader.swift; sourceTree = "<group>"; };
 		EA5EADBCA4E36B421CDE1542 /* DeckAgent */ = {isa = PBXFileReference; includeInIndex = 0; path = DeckAgent; sourceTree = BUILT_PRODUCTS_DIR; };
+		F06724D8333A9A74C4156DB6 /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		F184F1820A5FC6758145DCAD /* DeckWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DeckWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3C7C7450F73A30B7B007FE7 /* NetworkMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMetrics.swift; sourceTree = "<group>"; };
 		F43C960DDF3AB3D1461849AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F44048FEBB8DD2831A60146B /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxCore.swift; sourceTree = "<group>"; };
 		FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -152,6 +170,7 @@
 				0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */,
 				13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */,
 				51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */,
+				F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */,
 				D280CAAAC227082564309914 /* OpenCodeReader.swift */,
 				1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */,
 				26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */,
@@ -159,6 +178,14 @@
 				94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */,
 			);
 			path = Shared;
+			sourceTree = "<group>";
+		};
+		4487543148A35CAE067BBAE7 /* SharedTests */ = {
+			isa = PBXGroup;
+			children = (
+				F06724D8333A9A74C4156DB6 /* SmokeTests.swift */,
+			);
+			path = SharedTests;
 			sourceTree = "<group>";
 		};
 		449BAD22FAAA834DAA8BED66 /* DeckAgent */ = {
@@ -174,6 +201,7 @@
 			children = (
 				EA5EADBCA4E36B421CDE1542 /* DeckAgent */,
 				B662E23A53ACAA091EAFA898 /* DeckApp.app */,
+				38FE485560E13BED32845511 /* DeckSharedTests.xctest */,
 				F184F1820A5FC6758145DCAD /* DeckWidgets.appex */,
 			);
 			name = Products;
@@ -196,6 +224,7 @@
 				155AFE11D196260105736FEC /* DeckApp */,
 				E562A923537B70436BFB9801 /* DeckWidgets */,
 				39404F96E0B2A7D51BED7847 /* Shared */,
+				4487543148A35CAE067BBAE7 /* SharedTests */,
 				5B4C6186FD2E4700749071F2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -264,6 +293,23 @@
 			productReference = B662E23A53ACAA091EAFA898 /* DeckApp.app */;
 			productType = "com.apple.product-type.application";
 		};
+		D9ECEAEB0D88406A32AA654E /* DeckSharedTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7FABA31A06083866A47C7E17 /* Build configuration list for PBXNativeTarget "DeckSharedTests" */;
+			buildPhases = (
+				AD7A5164522C2B5DCD36E0FD /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DeckSharedTests;
+			packageProductDependencies = (
+			);
+			productName = DeckSharedTests;
+			productReference = 38FE485560E13BED32845511 /* DeckSharedTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		DA0CEBB8193AB31545611EAD /* DeckAgent */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B2684F31532CA4F7896122D0 /* Build configuration list for PBXNativeTarget "DeckAgent" */;
@@ -298,6 +344,10 @@
 						DevelopmentTeam = K6X49DG8VF;
 						ProvisioningStyle = Automatic;
 					};
+					D9ECEAEB0D88406A32AA654E = {
+						DevelopmentTeam = K6X49DG8VF;
+						ProvisioningStyle = Automatic;
+					};
 					DA0CEBB8193AB31545611EAD = {
 						DevelopmentTeam = K6X49DG8VF;
 						ProvisioningStyle = Automatic;
@@ -321,6 +371,7 @@
 				ABD76AF73B9C2D876980ACA8 /* DeckApp */,
 				3B248A77C3846E785BA9F76D /* DeckWidgets */,
 				DA0CEBB8193AB31545611EAD /* DeckAgent */,
+				D9ECEAEB0D88406A32AA654E /* DeckSharedTests */,
 			);
 		};
 /* End PBXProject section */
@@ -386,6 +437,7 @@
 				AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */,
 				96B73870192265B41638143C /* NetBoxWidget.swift in Sources */,
 				424DEB2DB806DD41871AE821 /* NetworkMetrics.swift in Sources */,
+				DD3E61D42DB4A46DB5C256BF /* OpenBoxCore.swift in Sources */,
 				27DC4BBF55405C8CFB193051 /* OpenBoxWidget.swift in Sources */,
 				181D20A2D1C49B8ECF82CFFA /* OpenCodeReader.swift in Sources */,
 				A5E22A6827149E7194FB4E64 /* OpenCodeSnapshot.swift in Sources */,
@@ -394,6 +446,25 @@
 				611DC32A1889B095CAE4D132 /* ShipBoxSnapshot.swift in Sources */,
 				7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */,
 				D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AD7A5164522C2B5DCD36E0FD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EA90CCDFFC5A2B29D6F7908F /* ClipBoxSnapshot.swift in Sources */,
+				E9C9897EA5B6B4BB0A42B780 /* DeckSettings.swift in Sources */,
+				2A844B182A8B55D6AE7B4116 /* DevBoxSnapshot.swift in Sources */,
+				29301B875DF6C63903F7C456 /* GitBoxSnapshot.swift in Sources */,
+				DEB817674110D144380A8EFD /* HomeBoxSnapshot.swift in Sources */,
+				A366F0122DCFF1970B2158B5 /* OpenBoxCore.swift in Sources */,
+				3731452DDEEE62491DBC4FD7 /* OpenCodeReader.swift in Sources */,
+				3256C001A7523B07D0D86C89 /* OpenCodeSnapshot.swift in Sources */,
+				933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */,
+				4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */,
+				769F47CE66D9A10A5B348E02 /* ShipBoxSnapshot.swift in Sources */,
+				083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -407,6 +478,7 @@
 				18600374BCF4CECC18E75B9B /* DevBoxSnapshot.swift in Sources */,
 				D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */,
 				E92B0312841C61D01E21A06B /* HomeBoxSnapshot.swift in Sources */,
+				CB137C6731146B546A106840 /* OpenBoxCore.swift in Sources */,
 				38CA6F050AB3377F30390895 /* OpenCodeReader.swift in Sources */,
 				15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */,
 				CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */,
@@ -424,6 +496,7 @@
 				F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */,
 				5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */,
 				D9DAC20F67AF8B1BE5D1F292 /* HomeBoxSnapshot.swift in Sources */,
+				73AC55C40799B7FACDF0B935 /* OpenBoxCore.swift in Sources */,
 				41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */,
 				2D03E1C6AEAD755CE49CF9FD /* OpenCodeSnapshot.swift in Sources */,
 				1967FF4D20A83BF47DDFFCB2 /* ProcessSnapshot.swift in Sources */,
@@ -579,6 +652,28 @@
 			};
 			name = Debug;
 		};
+		E10ED778F2BEFD895B189F41 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = K6X49DG8VF;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.deck.sharedtests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
 		E23DF288B50FF1BCB220C6AE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -641,6 +736,28 @@
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
+		};
+		E392DCB31CA34A18EDD3AAF3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = K6X49DG8VF;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.deck.sharedtests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
 		};
 		E40D3DE40D4C323CAB30FD74 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -715,6 +832,15 @@
 			buildConfigurations = (
 				DFA704F8849790582B6E3DC5 /* Debug */,
 				338A89F45D69E5AFAF170CC8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7FABA31A06083866A47C7E17 /* Build configuration list for PBXNativeTarget "DeckSharedTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E10ED778F2BEFD895B189F41 /* Debug */,
+				E392DCB31CA34A18EDD3AAF3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
