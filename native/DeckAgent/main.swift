@@ -55,6 +55,19 @@ Task {
         HomeBoxSnapshotStore.save(homebox)
     }
 
+    // ShipBox: requires the user's own repo + token — never a default token.
+    let shipboxRepo = settings.shipbox.repo
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    if !shipboxRepo.isEmpty && !settings.shipbox.token.isEmpty {
+        if let shipbox = try? await HostGitHubLoader.fetch(
+            repo: shipboxRepo,
+            token: settings.shipbox.token
+        ) {
+            // Always written: writtenAt drives the staleness windows.
+            ShipBoxSnapshotStore.save(shipbox)
+        }
+    }
+
     semaphore.signal()
 }
 

@@ -43,6 +43,7 @@ struct ContentView: View {
             case .devbox: DevBoxSettingsView(settings: $settings.devbox)
             case .clipbox: ClipBoxSettingsView(settings: $settings.clipbox)
             case .homebox: HomeBoxSettingsView(settings: $settings.homebox)
+            case .shipbox: ShipBoxSettingsView(settings: $settings.shipbox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -55,6 +56,7 @@ struct ContentView: View {
             refreshDevBox()
             refreshClipBox()
             Task { await refreshHomeBox() }
+            Task { await refreshShipBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshProcesses()
@@ -62,6 +64,7 @@ struct ContentView: View {
                 refreshDevBox()
                 refreshClipBox()
                 Task { await refreshHomeBox() }
+                Task { await refreshShipBox() }
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -152,6 +155,18 @@ struct ContentView: View {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    /// Fetch GitHub Actions runs (host is unsandboxed) for the ShipBox widget.
+    /// Requires the user's own repo + token — never a default token. Always
+    /// written on success so writtenAt drives the staleness windows.
+    private func refreshShipBox() async {
+        let shipbox = settings.shipbox
+        let repo = shipbox.repo.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !repo.isEmpty, !shipbox.token.isEmpty else { return }
+        guard let snapshot = try? await HostGitHubLoader.fetch(repo: repo, token: shipbox.token) else { return }
+        ShipBoxSnapshotStore.save(snapshot)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     /// Install/remove the background refresh agent (launch at login) with the
     /// configured refresh interval.
     private func applyAgent() {
@@ -231,7 +246,7 @@ struct ContentView: View {
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox, homebox
+    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox, homebox, shipbox
 
     var id: String { rawValue }
 
@@ -246,6 +261,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .devbox: "DevBox"
         case .clipbox: "ClipBox"
         case .homebox: "HomeBox"
+        case .shipbox: "ShipBox"
         }
     }
 
@@ -260,6 +276,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .devbox: "server.rack"
         case .clipbox: "doc.on.clipboard"
         case .homebox: "cloud.sun"
+        case .shipbox: "shippingbox"
         }
     }
 }
@@ -525,6 +542,36 @@ private struct ClipBoxSettingsView: View {
                 ColorPicker("Image", selection: $settings.imageColor.color)
                 ColorPicker("File", selection: $settings.fileColor.color)
                 ColorPicker("Other", selection: $settings.otherColor.color)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+}
+
+private struct ShipBoxSettingsView: View {
+    @Binding var settings: ShipBoxSettings
+
+    var body: some View {
+        Form {
+            Section("Repository") {
+                TextField("owner/repo", text: $settings.repo)
+                SecureField("GitHub token", text: $settings.token)
+                    .textContentType(.password)
+                Text("Empty repo or token = the widget shows no data. The token is sent only to api.github.com over TLS.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("Runs") {
+                Toggle("Show runs list", isOn: $settings.showList)
+                Stepper("Run count: \(settings.runCount)", value: $settings.runCount, in: 2...8)
+                    .disabled(!settings.showList)
+            }
+            Section("Status colors") {
+                ColorPicker("Queued", selection: $settings.queuedColor.color)
+                ColorPicker("Running", selection: $settings.runningColor.color)
+                ColorPicker("Success", selection: $settings.successColor.color)
+                ColorPicker("Failure", selection: $settings.failureColor.color)
             }
         }
         .formStyle(.grouped)
