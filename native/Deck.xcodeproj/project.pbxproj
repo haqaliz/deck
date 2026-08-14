@@ -79,6 +79,7 @@
 		EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		F4968C6168797484C304D6B5 /* ClipBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */; };
 		F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
+		F7C61B7366E45966CD60DCB8 /* OpenCodeSQLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */; };
 		FC125295397F417AA47379E3 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 /* End PBXBuildFile section */
 
@@ -147,6 +148,7 @@
 		AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCountTests.swift; sourceTree = "<group>"; };
 		B662E23A53ACAA091EAFA898 /* DeckApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeckApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBC89EF1D34611CB2B244F15 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSQLTests.swift; sourceTree = "<group>"; };
 		D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeckWidgets.entitlements; sourceTree = "<group>"; };
 		D280CAAAC227082564309914 /* OpenCodeReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeReader.swift; sourceTree = "<group>"; };
 		E55EA63643575600049612BD /* ModelParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelParserTests.swift; sourceTree = "<group>"; };
@@ -207,6 +209,7 @@
 				3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */,
 				9D2A55F3FD7982AE42C95658 /* HomeBoxSnapshotTests.swift */,
 				E55EA63643575600049612BD /* ModelParserTests.swift */,
+				CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */,
 				2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */,
 				F06724D8333A9A74C4156DB6 /* SmokeTests.swift */,
 				AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */,
@@ -510,6 +513,7 @@
 				56242BA287F3C3D8CD8A380D /* ModelParserTests.swift in Sources */,
 				A366F0122DCFF1970B2158B5 /* OpenBoxCore.swift in Sources */,
 				3731452DDEEE62491DBC4FD7 /* OpenCodeReader.swift in Sources */,
+				F7C61B7366E45966CD60DCB8 /* OpenCodeSQLTests.swift in Sources */,
 				3256C001A7523B07D0D86C89 /* OpenCodeSnapshot.swift in Sources */,
 				933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */,
 				4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */,
