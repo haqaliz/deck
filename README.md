@@ -21,6 +21,7 @@ WidgetKit widgets with native colors, corners and materials.
 | **DevBox** | open TCP listening ports (process + port) and running Docker containers (CPU/mem) |
 | **ClipBox** | clipboard history: recent copies with previews, item kinds, relative times |
 | **HomeBox** | weather for your location (conditions + 3-day forecast) and a world clock |
+| **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals |
 
 All six come in **small / medium / large** sizes.
 
@@ -42,7 +43,7 @@ pluginkit -m -i com.deck.app.widgets   # verify the extension registered
 ```
 
 Then: right-click desktop → **Edit Widgets…** → search "Deck" → add
-LiveBox/OpenBox/NetBox/BatBox/GitBox/DevBox/ClipBox/HomeBox.
+LiveBox/OpenBox/NetBox/BatBox/GitBox/DevBox/ClipBox/HomeBox/ShipBox.
 
 ## Settings
 
@@ -63,12 +64,15 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   to 20 items); clear it from the ClipBox settings tab.
 - **HomeBox** fetches weather from wttr.in via the agent (empty location = auto
   geolocate); timezone rows are local-only (`local` = your zone).
+- **ShipBox** needs a repo (`owner/repo`) and a GitHub token in settings —
+  without a token nothing is fetched (the token goes only to api.github.com
+  over TLS). Runs refresh via the agent every 60s.
 
 ## How it works
 
 - **Self-sampled widgets** (LiveBox/NetBox/BatBox) read mach, getifaddrs and
   IOKit directly inside the widget — no other process needed.
-- **Agent-pumped data** (OpenBox, process list, GitBox, ClipBox, weather): the widget
+- **Agent-pumped data** (OpenBox, process list, GitBox, ClipBox, weather, ShipBox): the widget
   sandbox forbids subprocesses and reading other apps' data, so a silent CLI
   (`DeckAgent`, embedded in the app) runs every 60s via a LaunchAgent and
   writes snapshots the widgets render. ClipBox captures the pasteboard on each

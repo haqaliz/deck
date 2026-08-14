@@ -30,6 +30,7 @@
 		611DC32A1889B095CAE4D132 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		72183F6AE6F651DFC0C5A377 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = CBC89EF1D34611CB2B244F15 /* AppIcon.icns */; };
+		7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */; };
 		822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */; };
 		87E936C049D826980DD8F8C7 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B05E2B90DFEDC2F8CC1804F /* main.swift */; };
 		90A811EBE7E73139D552827E /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
@@ -100,6 +101,7 @@
 		37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeLoader.swift; sourceTree = "<group>"; };
 		42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxWidget.swift; sourceTree = "<group>"; };
 		4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckSettings.swift; sourceTree = "<group>"; };
+		45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxWidget.swift; sourceTree = "<group>"; };
 		46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetrics.swift; sourceTree = "<group>"; };
 		50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatBoxWidget.swift; sourceTree = "<group>"; };
 		51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBoxSnapshot.swift; sourceTree = "<group>"; };
@@ -213,6 +215,7 @@
 				AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */,
 				18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */,
 				0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */,
+				45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */,
 				77AD877F390CF0DABC304F1B /* Loaders */,
 			);
 			path = DeckWidgets;
@@ -389,6 +392,7 @@
 				040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */,
 				E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */,
 				611DC32A1889B095CAE4D132 /* ShipBoxSnapshot.swift in Sources */,
+				7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */,
 				D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
