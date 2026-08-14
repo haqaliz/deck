@@ -24,7 +24,12 @@ enum OpenCodeReader {
         }
         defer { sqlite3_close(db) }
         sqlite3_busy_timeout(db, 2000)
+        return load(from: db)
+    }
 
+    /// Builds the snapshot from an already-opened DB handle (readable by
+    /// tests against an in-memory fixture DB).
+    static func load(from db: OpaquePointer) -> OpenCodeSnapshot? {
         guard
             let today = rows(db, todaySQL).first,
             let todayInput = today.int64("input"),
@@ -81,20 +86,20 @@ enum OpenCodeReader {
 
     // MARK: - SQL (mirrors the window widget's OpenCodeQueries)
 
-    private static let todaySQL = """
+    static let todaySQL = """
         SELECT COUNT(*) as sessions, SUM(tokens_input) as input, SUM(tokens_output) as output,
                ROUND(SUM(cost), 4) as cost
         FROM session
         WHERE time_created > (strftime('%s','now')*1000 - 86400000)
         """
 
-    private static let totalsSQL = """
+    static let totalsSQL = """
         SELECT SUM(tokens_input) as input, SUM(tokens_output) as output,
                ROUND(SUM(cost), 4) as cost
         FROM session
         """
 
-    private static let dailySQL = """
+    static let dailySQL = """
         SELECT date(time_created/1000,'unixepoch') as day,
                SUM(tokens_input) as input, SUM(tokens_output) as output
         FROM session
@@ -102,21 +107,21 @@ enum OpenCodeReader {
         GROUP BY day ORDER BY day
         """
 
-    private static let modelsSQL = """
+    static let modelsSQL = """
         SELECT model, COUNT(*) as sessions, SUM(tokens_input) as input,
                SUM(tokens_output) as output, ROUND(SUM(cost), 4) as cost
         FROM session WHERE model IS NOT NULL
         GROUP BY model ORDER BY cost DESC LIMIT 3
         """
 
-    private static let toolsSQL = """
+    static let toolsSQL = """
         SELECT json_extract(data,'$.tool') as tool, COUNT(*) as count
         FROM part
         WHERE json_extract(data,'$.type')='tool'
         GROUP BY tool ORDER BY count DESC LIMIT 10
         """
 
-    private static let costDailySQL = """
+    static let costDailySQL = """
         SELECT date(time_created/1000,'unixepoch') as day, model,
                ROUND(SUM(cost), 4) as cost
         FROM session

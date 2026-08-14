@@ -1,75 +1,86 @@
-# Understanding: ShipBox (GitHub Actions run status)
+# Understanding: shared-parser-tests
 
 ## What the work is really asking
 
-A ninth widget in the Deck shell: GitHub Actions runs for a configured
-repository, shown as a status list with colored dots. Pending M3 candidate
-(ROADMAP.md:48). Not local-first by design — the gitbox PRD explicitly carves
-out "No GitHub/remote activity (ShipBox's job — ROADMAP.md:49, not local-first)"
-(docs/planning/gitbox/prd.md:86).
+The M4 milestone (ROADMAP.md:53-54) wants a permanent XCTest target for the
+Shared parsers — GitLogParser, ModelParser, formatters, DB SQL — because every
+feature so far did TDD in a throwaway SwiftPM "scratch package" that was deleted
+at merge (git log: `79845fd`, `d7c1110`, `01e9f0c`, `c9565da` "remove scratch
+test package"). The merged repo today has **zero tests** and no test target in
+`native/project.yml`. This work makes the test suite permanent and in-repo so
+future widgets stop re-deriving it.
 
-## Shell mapping (grounded in files)
+## Pure-logic surface to cover
 
-- **Widget template**: HomeBoxWidget — the newest agent-pumped widget
-  (HomeBoxWidget.swift:23-95): snapshot store + staleness windows (fresh
-  <5 min, stale hint 5–30 min, unavailable >30 min) + unavailable view.
-  GitBoxWidget for the colored-dot list-row language
-  (GitBoxWidget.swift:211-221 countRow, REPOS section :167-188).
-- **Agent pump (the fetch home)**: `DeckAgent/main.swift:52-56` — the HomeBox
-  block is the exact precedent: `try? await HostWeatherLoader.fetch(...)` then
-  "always written so writtenAt drives the staleness window". ShipBox gets the
-  same shape: `HostGitHubLoader.fetch(owner/repo, token)` → `ShipBoxSnapshot`.
-  The widget sandbox has NO network entitlement (DeckWidgets.entitlements —
-  only app-sandbox), so the fetch must run agent-side; this is proven, not a
-  probe.
-- **Token pattern**: OpenBox remote mode — `OpenBoxSettings.token` +
-  `serverURL`, no default token ever sent (README.md:53-58,
-  DeckAgent/main.swift:15-22). ShipBox mirrors it: token is required for the
-  widget to show anything; without it the agent skips the fetch and the widget
-  shows the unavailable state with a "paste a token in settings" hint.
-- **Settings**: `ShipBoxSettings` struct + tolerant `init(from:)` decode
-  (pattern: HomeBoxSettings, DeckSettings.swift:248-265), registered in
-  DeckSettings.swift:34-42; tab in DeckApp.swift (DeckWidget enum:233-265 +
-  detail switch:36-46 + settings view struct).
-- **Registration**: `ShipBoxWidget()` in DeckWidgets.swift bundle
-  (:14), project.yml sources are directory-based → regenerate with xcodegen;
-  register in README + ROADMAP (blueprint ROADMAP.md:8-21).
+- `native/Shared/` — compiles into all three targets, so a test bundle can
+  compile it directly (imports are Foundation/AppKit/SwiftUI/SQLite3 — all
+  macOS-testable):
+  - `GitBoxSnapshot.swift` — `dayCounts(from:)`, `daysBack`, `bucket`,
+    `streak`, `shortName`, formatters (the "GitLogParser" the roadmap names)
+  - `OpenCodeReader.swift` — `mapToolRows` (pure), the 5 SQL strings + `rows()`
+    (private — needs a minimal expose for DB SQL tests)
+  - `OpenBoxWidget.swift` — **not** Shared: private `ModelParser`,
+    `CostSeries`, `OpenCodeFormatters` live in the widget file (lines
+    444-602). The roadmap names ModelParser, so these move to
+    `Shared/OpenBoxCore.swift` (internal; pure extraction, no behavior change;
+    only referenced inside OpenBoxWidget.swift)
+  - `ClipBoxSnapshot.swift` — kind classifier, previews, dedupe, merge
+  - `HomeBoxSnapshot.swift` — wttr parse, icon mapping, zone rows
+  - `ShipBoxSnapshot.swift` — status map, parse
+  - `DevBoxSnapshot.swift` — lsof/docker parsers, percent parsing
+  - `ProcessSnapshot.swift` — ps output parse
+  - `RemoteOpenCodeLoader.swift` — aggregate/daily/models/costDaily/utcDay
+    (pure, untested anywhere)
+  - `DeckSettings.swift` — tolerant decode
 
-## GitHub REST contract (Actions API)
+## Recoverable test assets in git history
 
-`GET /repos/{owner}/{repo}/actions/runs` — headers `Authorization: Bearer
-<token>`, `Accept: application/vnd.github+json`, `X-GitHub-Api-Version:
-2022-11-28`. Response `workflow_runs[]` key fields (all JSON strings):
+Seven scratch packages had real tests (all under deleted `*Core/` dirs):
 
-- `name` (workflow name), `display_title` (commit subject), `head_branch`,
-  `event` (push/pull_request/…), `run_number`
-- `status`: `queued | in_progress | completed | waiting | requested | pending`
-- `conclusion`: `success | failure | neutral | cancelled | skipped |
-  timed_out | action_required | stale | null` (null while not completed)
-- `created_at`, `updated_at` (ISO8601) — completed-run duration =
-  updated − created
-- `html_url`
+| Package | Commit | Tests |
+|---|---|---|
+| ShipBoxCore | f0c94c4 | ShipBoxCoreTests.swift (197 ln) |
+| HomeBoxCore | 989999a | WttrParser/WeatherIcon/ZoneRows (150 ln) + amsterdam_j1.json fixture (1366 ln) |
+| ClipBoxCore | d2f81a0 | ClipBoxCoreTests.swift (139 ln) |
+| OpenBoxCostCore | e8e1c11 | CostCoreTests.swift (179 ln) |
+| SettingsCore | 8ca082b | DecodeTests.swift (131 ln) |
+| OpenBoxToolsCore | 2c899e7 | ToolCountTests.swift (82 ln) |
+| LiveBoxCore | afb1d37 | PerCoreTests.swift (66 ln) |
 
-Rate limits: 5000 req/h with a token, 60/h unauthenticated — token is
-required, unauthenticated is a dead end for a 60s-polling agent.
+GitLogParser and OpenBox formatters never had scratch tests (GitBox predates
+the pattern) — coverage for those is written fresh from behavior.
 
-## Ambiguities / open questions (for the PRD interview)
+## Files touched (planning ahead)
 
-1. Repos: single `owner/repo` field vs list? (GitBox has a paths list precedent.)
-2. Token required vs optional-but-recommended — the caveat says required.
-3. Face layout per size: small = latest-run summary (status dot + branch +
-   duration); medium = recent runs list; large = more rows + per-status totals?
-4. Status → color/icon mapping (queued gray, in_progress yellow, success
-   green, failure red, cancelled/skipped gray) — pure logic, TDD-able.
-5. Staleness windows: reuse HomeBox 5/30 min; what's the failure rate of a
-   60s poll against the 5000/h limit? (Trivial: 1440 polls/day ≪ 5000.)
-6. What does "configured repo" mean for the widget title — "owner/repo" as-is?
-7. Fetch success with 0 runs (brand-new repo): show "No runs yet" not error.
-8. Large face: show totals (e.g. "2 failing · 3 passing")?
+1. `native/project.yml` — one `bundle.unit-test` target `DeckSharedTests`
+   (sources: `Shared` + a new `native/SharedTests/` dir, `-lsqlite3`,
+   generated Info.plist) + a scheme with a test action.
+2. New `native/Shared/OpenBoxCore.swift` — moved ModelParser/CostSeries/
+   OpenCodeFormatters; OpenBoxWidget.swift drops its private copies.
+3. `native/Shared/OpenCodeReader.swift` — minimal expose for DB SQL tests:
+   SQL strings + a `load(from db:)` entry point (or `rows(_:_:)` internal).
+4. `native/SharedTests/*` — ported + fresh test files.
+5. `.github/workflows/deck.yml` — an `xcodebuild test` step so CI runs the
+   suite on every PR.
+6. No widget shell, no settings, no agent changes. No behavior changes to
+   production code beyond the mechanical OpenBox extraction.
 
-## Invariants check (CLAUDE.md)
+## Open questions for the PRD
 
-No shell invariant is touched: new widget file, new snapshot + store in
-Shared, new settings struct, new tab, agent append. All existing targets keep
-their sources; Shared is already compiled into all three targets. Widget must
-not regress: re-add from the gallery to verify after install.
+1. **Scope**: all parsers above, or staged? (Recommendation: staged — first
+   slice = the 7 ported suites + roadmap-named items; later slices = DevBox,
+   RemoteOpenCodeLoader, ProcessSnapshot, Loader formatters.)
+2. **ModelParser move**: pure extraction into Shared is the roadmap intent;
+   confirm it's acceptable to touch OpenBoxWidget.swift mechanically.
+3. **DB SQL tests**: build a fixture opencode schema (session/part tables) in an
+   in-memory sqlite DB and run the real SQL strings against it — needs the
+   minimal expose above. json_extract is available in macOS system sqlite.
+4. **Found-bug policy**: if a ported test exposes a real parser bug, fixing it
+   is in scope (that is the point of the milestone).
+5. **CI cost**: `xcodebuild test` adds minutes per run — acceptable on
+   macos-latest.
+
+## No shell invariants broken
+
+No card/flip/settings/agent behavior changes; the only non-test production
+edit is the OpenBox extraction which keeps identical output.

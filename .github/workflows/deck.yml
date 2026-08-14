@@ -54,6 +54,19 @@ jobs:
       - name: Generate project
         run: xcodegen generate --spec native/project.yml
 
+      - name: Test (shared parsers)
+        run: |
+          xcodebuild test -project native/Deck.xcodeproj -scheme DeckSharedTests \
+            -derivedDataPath native/build CODE_SIGNING_ALLOWED=NO 2>&1 | tee test.log
+          if ! grep -q "Test Suite 'All tests' passed" test.log; then
+            echo "::error::Shared parser test suite did not pass"
+            exit 1
+          fi
+          if ! grep -qE "Executed [1-9][0-9]* test" test.log; then
+            echo "::error::No tests executed (misconfigured target passes silently)"
+            exit 1
+          fi
+
       - name: Build (signed, auto-provisioned)
         if: steps.signing.outputs.available == 'true'
         env:

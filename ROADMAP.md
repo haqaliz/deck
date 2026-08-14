@@ -50,9 +50,15 @@ shell and only add a data source + a layout.
 ### M4 — Polish
 - [ ] Crash/robustness pass: run 24h, no leaks
 - [x] Settings schema migration (tolerant decode for all settings structs)
-- [ ] Tests: XCTest target for the Shared parsers (GitLogParser, ModelParser,
-      formatters, DB SQL)
+- [x] Tests: XCTest target for the Shared parsers (GitLogParser, ModelParser,
+      formatters, DB SQL) — `DeckSharedTests`, runs on CI
 - [ ] Share the agent data path for LiveBox processes on a tighter cadence
+
+Deferred from the tests milestone (still untested, pick via deck-next):
+- DevBox parsers (`DevBoxSnapshot` lsof/docker), RemoteOpenCodeLoader
+  aggregation, ProcessSnapshot parsing, and the Loader formatters in
+  `DeckWidgets/Loaders/` (NetworkMetrics.formatRate, BatteryMetrics, SystemMetrics
+  per-core math — the last needs the per-core math moved to Shared first).
 
 ## Feature backlog (existing widgets)
 

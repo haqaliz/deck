@@ -88,3 +88,29 @@ targets:
         SWIFT_VERSION: "5.10"
         MACOSX_DEPLOYMENT_TARGET: "15.0"
         OTHER_LDFLAGS: "$(inherited) -lsqlite3"
+  DeckSharedTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Shared
+      - SharedTests
+    resources:
+      - SharedTests/Fixtures
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.deck.sharedtests
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: K6X49DG8VF
+        SWIFT_VERSION: "5.10"
+        GENERATE_INFOPLIST_FILE: YES
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+        OTHER_LDFLAGS: "$(inherited) -lsqlite3"
+schemes:
+  DeckSharedTests:
+    build:
+      targets:
+        DeckSharedTests: all
+    test:
+      targets:
+        - DeckSharedTests
