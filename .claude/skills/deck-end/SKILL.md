@@ -15,7 +15,9 @@ Same cleanup as `deck-end-fast`, **plus** a completion report at the end via
 
 1. Phases 0–2 identical to `deck-end-fast` (safety → master pulled → remove worktree/branch).
 2. Phase 3 — ROADMAP/README updates (same as fast).
-3. Phase 4 — completion report: use `deck-report` to save a short, friendly,
+3. Phase 4 — release: identical to `deck-end-fast` Phase 4 (bump project.yml →
+   tag → verify → install). User-facing work ships here.
+4. Phase 5 — completion report: use `deck-report` to save a short, friendly,
    non-technical note on Desktop (what changed, a screenshot, the PR link).
 
 ## When to use full vs fast

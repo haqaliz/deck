@@ -9,8 +9,8 @@ arguments: "type id"
 ## Overview
 
 Closes out a unit of work's local state after the PR has merged:
-**master → pull → remove worktree → delete branch**. No report (use `deck-end`
-for that).
+**master → pull → remove worktree → delete branch → release**. No report (use
+`deck-end` for that).
 
 **Invocation:** `def <type> <id>` — e.g. `def feat netbox`.
 
@@ -55,6 +55,47 @@ If `worktree remove` refuses (uncommitted/untracked files) or `branch -d` refuse
 - Mark the milestone checkbox in `ROADMAP.md` if applicable.
 - Commit + push these doc updates.
 
+### Phase 4 — Release
+
+Ship the merged work as a GitHub Release. The CI workflow (`deck.yml`) builds,
+signs, and uploads `Deck-macos.zip` + SHA256 to a GitHub Release when a `v*`
+tag is pushed (README.md → "Releases"). One release per feature cluster — not
+per commit. Skip only for pure-internal work with no user-facing change (e.g.
+tests-only milestones still deserve one when a release is overdue).
+
+```bash
+# 1. Decide the version: patch bump from the latest tag (small fixes) or a
+#    minor bump (new widgets/features):  git tag --sort=-v:refname | head -1
+
+# 2. Bump the bundle versions in native/project.yml — it is the single source
+#    of truth: xcodegen regenerates BOTH native/DeckApp/Info.plist and
+#    native/DeckWidgets/Info.plist from its info.properties. Version = tag
+#    without the "v" (v1.4 → "1.4"), CFBundleVersion = the same integer.
+xcodegen generate --spec native/project.yml
+git add native/project.yml native/DeckApp/Info.plist native/DeckWidgets/Info.plist
+git commit -m "release: bump to v1.4"
+git push
+
+# 3. Tag + ship (v* tags trigger the signed Release build)
+git tag v1.4 && git push origin v1.4
+
+# 4. Verify the release landed
+gh run list --workflow deck.yml --limit 1    # wait for green
+gh release view v1.4                         # Deck-macos.zip + .sha256 present
+
+# 5. Install the signed build locally
+cp -R native/build/Build/Products/Release/Deck.app /Applications/
+open /Applications/Deck.app                  # re-registers widgets via pluginkit
+```
+
+**Version numbering rule**: `CFBundleShortVersionString` = tag without the `v`
+(v1.4 → "1.4"); `CFBundleVersion` = the same integer. Never tag without
+bumping first — the installed app must report the released version.
+
+If the release run fails, check `gh run view <id> --log`: the workflow needs
+the signing secrets (`APPLE_CERT_P12_BASE64`, `APPLE_APP_SPECIFIC_PASSWORD`,
+…) and only tag pushes sign — PR builds are unsigned compile checks.
+
 ## Common mistakes
 
 | Mistake | Fix |
@@ -62,3 +103,5 @@ If `worktree remove` refuses (uncommitted/untracked files) or `branch -d` refuse
 | `-D` on an unmerged branch | Stop; surface the PR state first |
 | `--force` on worktree remove | Go back to Phase 0 — clean up first |
 | Forgetting ROADMAP/README updates | Phase 3 exists for a reason |
+| Tagging without bumping project.yml | The installed app would report the old version — bump first |
+| Tagging a version with no signing secrets | The workflow fails; only the cert-secreted runner signs |
