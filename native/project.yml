@@ -94,6 +94,8 @@ targets:
     sources:
       - Shared
       - SharedTests
+    resources:
+      - SharedTests/Fixtures
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.deck.sharedtests
