@@ -163,14 +163,14 @@ enum HostGitBoxSampler {
         return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
     }
 
-    // MARK: - Math/formatting (ported from GitBoxCore)
+    // MARK: - Math/formatting (ported from GitBoxCore; internal for tests)
 
-    private static func dayLabel(_ date: Date, calendar: Calendar) -> String {
+    static func dayLabel(_ date: Date, calendar: Calendar) -> String {
         let comps = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", comps.year ?? 0, comps.month ?? 0, comps.day ?? 0)
     }
 
-    private static func daysBack(_ n: Int, today: Date, calendar: Calendar) -> [String] {
+    static func daysBack(_ n: Int, today: Date, calendar: Calendar) -> [String] {
         guard n > 0 else { return [] }
         return (0..<n).map { offset in
             let date = calendar.date(byAdding: .day, value: -(n - 1 - offset), to: today) ?? today
@@ -178,7 +178,7 @@ enum HostGitBoxSampler {
         }
     }
 
-    private static func streak(counts: [String: Int], window: [String]) -> Int {
+    static func streak(counts: [String: Int], window: [String]) -> Int {
         var index = window.count - 1
         guard index >= 0 else { return 0 }
         if (counts[window[index]] ?? 0) == 0 {
@@ -193,7 +193,7 @@ enum HostGitBoxSampler {
         return run
     }
 
-    private static func shortName(path: String) -> String {
+    static func shortName(path: String) -> String {
         let trimmed = path.hasSuffix("/") ? String(path.dropLast()) : path
         return trimmed.split(separator: "/").last.map(String.init) ?? path
     }
