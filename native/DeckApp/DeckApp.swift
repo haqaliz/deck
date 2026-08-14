@@ -82,12 +82,17 @@ struct ContentView: View {
     }
 
     /// Read opencode metrics (local DB or remote server) and push a snapshot
-    /// into the widget container.
+    /// into the widget container. Remote mode never passes a default token:
+    /// without the user's own token nothing is fetched.
     private func refreshOpenCode() async {
         let openbox = settings.openbox
         let snapshot: OpenCodeSnapshot?
-        if let serverURL = openbox.serverURL, !serverURL.isEmpty, !openbox.token.isEmpty {
-            snapshot = try? await RemoteOpenCodeLoader.load(serverURL: serverURL, token: openbox.token)
+        if let serverURL = openbox.serverURL, !serverURL.isEmpty {
+            if !openbox.token.isEmpty {
+                snapshot = try? await RemoteOpenCodeLoader.load(serverURL: serverURL, token: openbox.token)
+            } else {
+                snapshot = nil
+            }
         } else {
             snapshot = OpenCodeReader.load()
         }
@@ -316,10 +321,11 @@ private struct OpenBoxSettingsView: View {
     var body: some View {
         Form {
             Section("Remote server (optional)") {
-                SecureField("Token", text: $settings.token)
-                TextField("Server URL (opencode serve)", text: serverURLBinding)
+                SecureField("Token (no default — paste your own)", text: $settings.token)
+                    .textContentType(.password)
+                TextField("Server URL (opencode serve, e.g. http://host:4096)", text: serverURLBinding)
                 Stepper("Refresh interval: \(settings.refreshInterval) s", value: $settings.refreshInterval, in: 5...60, step: 5)
-                Text("Empty URL = local opencode database.")
+                Text("Empty URL = local opencode database. A configured URL works only with your own token pasted above.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -405,7 +411,7 @@ private struct GitBoxSettingsView: View {
     var body: some View {
         Form {
             Section("Repositories") {
-                TextField("Repo paths (comma separated, ~/dev default)", text: pathsBinding)
+                TextField("Repo paths (comma separated)", text: pathsBinding)
                 Stepper("Scan depth: \(settings.scanDepth)", value: $settings.scanDepth, in: 1...5)
             }
             Section("Chart") {

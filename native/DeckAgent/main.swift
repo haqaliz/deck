@@ -12,8 +12,14 @@ Task {
     let settings = DeckSettings.load()
 
     let opencode: OpenCodeSnapshot?
-    if let serverURL = settings.openbox.serverURL, !serverURL.isEmpty, !settings.openbox.token.isEmpty {
-        opencode = try? await RemoteOpenCodeLoader.load(serverURL: serverURL, token: settings.openbox.token)
+    if let serverURL = settings.openbox.serverURL, !serverURL.isEmpty {
+        // Remote mode: never passes a default token — without the user's own
+        // token no data is fetched (no silent local-DB fallback).
+        if !settings.openbox.token.isEmpty {
+            opencode = try? await RemoteOpenCodeLoader.load(serverURL: serverURL, token: settings.openbox.token)
+        } else {
+            opencode = nil
+        }
     } else {
         opencode = OpenCodeReader.load()
     }
