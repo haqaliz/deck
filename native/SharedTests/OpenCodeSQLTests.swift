@@ -10,7 +10,7 @@ final class OpenCodeSQLTests: XCTestCase {
     private func makeFixtureDB() -> OpaquePointer? {
         var db: OpaquePointer?
         guard sqlite3_open(":memory:", &db) == SQLITE_OK, let db else { return nil }
-        exec(db, "CREATE TABLE session (time_created INTEGER, tokens_input INTEGER, tokens_output INTEGER, cost REAL, model TEXT)")
+        exec(db, "CREATE TABLE session (time_created INTEGER, tokens_input INTEGER, tokens_output INTEGER, cost REAL, model TEXT, title TEXT)")
         exec(db, "CREATE TABLE part (data TEXT)")
 
         let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
@@ -22,14 +22,14 @@ final class OpenCodeSQLTests: XCTestCase {
         let d = "old/model-d"
 
         // today (last 24h): 2 sessions — model A (1.0) + model B (0.5)
-        insertSession(db, time: nowMs - hour, input: 100, output: 50, cost: 1.0, model: a)
-        insertSession(db, time: nowMs - 2 * hour, input: 40, output: 10, cost: 0.5, model: b)
+        insertSession(db, time: nowMs - hour, input: 100, output: 50, cost: 1.0, model: a, title: "fast fix")
+        insertSession(db, time: nowMs - 2 * hour, input: 40, output: 10, cost: 0.5, model: b, title: "netbox spike")
         // yesterday: model A (2.0)
-        insertSession(db, time: nowMs - day - hour, input: 200, output: 100, cost: 2.0, model: a)
+        insertSession(db, time: nowMs - day - hour, input: 200, output: 100, cost: 2.0, model: a, title: "deploy")
         // 10 days ago: model C (3.0) — inside the 14-day window
-        insertSession(db, time: nowMs - 10 * day, input: 300, output: 150, cost: 3.0, model: c)
+        insertSession(db, time: nowMs - 10 * day, input: 300, output: 150, cost: 3.0, model: c, title: "old refactor")
         // 20 days ago: model D (9.0) — outside the window, affects totals only
-        insertSession(db, time: nowMs - 20 * day, input: 400, output: 200, cost: 9.0, model: d)
+        insertSession(db, time: nowMs - 20 * day, input: 400, output: 200, cost: 9.0, model: d, title: "ancient")
 
         // tool parts: bash x2, read x1, one non-tool message
         insertPart(db, json: #"{"type":"tool","tool":"bash"}"#)
@@ -47,8 +47,8 @@ final class OpenCodeSQLTests: XCTestCase {
         XCTAssertEqual(sqlite3_step(statement), SQLITE_DONE, "step: \(sql)")
     }
 
-    private func insertSession(_ db: OpaquePointer, time: Int64, input: Int64, output: Int64, cost: Double, model: String) {
-        let sql = "INSERT INTO session (time_created, tokens_input, tokens_output, cost, model) VALUES (\(time), \(input), \(output), \(cost), '\(model)')"
+    private func insertSession(_ db: OpaquePointer, time: Int64, input: Int64, output: Int64, cost: Double, model: String, title: String = "session") {
+        let sql = "INSERT INTO session (time_created, tokens_input, tokens_output, cost, model, title) VALUES (\(time), \(input), \(output), \(cost), '\(model)', '\(title)')"
         exec(db, sql)
     }
 
@@ -133,8 +133,59 @@ final class OpenCodeSQLTests: XCTestCase {
         XCTAssertEqual(today.first { $0.model == a }?.cost ?? 0, 1.0, accuracy: 0.0001)
     }
 
-    func testEmptyDBReturnsNil() throws {
+    func testLoadParsesSessionListWindowedAndOrderedByTokens() throws {
         var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(":memory:", &db), SQLITE_OK)
+        defer { sqlite3_close(db) }
+        let fixture = db!
+        exec(fixture, "CREATE TABLE session (time_created INTEGER, tokens_input INTEGER, tokens_output INTEGER, cost REAL, model TEXT, title TEXT)")
+        exec(fixture, "CREATE TABLE part (data TEXT)")
+
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+        let hour: Int64 = 3_600_000
+        let day: Int64 = 86_400_000
+        insertSession(fixture, time: nowMs - hour, input: 100, output: 50, cost: 1.0, model: "a", title: "fast fix")
+        insertSession(fixture, time: nowMs - 2 * hour, input: 40, output: 10, cost: 0.5, model: "b", title: "netbox spike")
+        insertSession(fixture, time: nowMs - day - hour, input: 200, output: 100, cost: 2.0, model: "a", title: "deploy")
+        insertSession(fixture, time: nowMs - 10 * day, input: 300, output: 150, cost: 3.0, model: "c", title: "old refactor")
+        insertSession(fixture, time: nowMs - 20 * day, input: 400, output: 200, cost: 9.0, model: "d", title: "ancient")
+        exec(fixture, "INSERT INTO session (time_created, tokens_input, tokens_output, cost, model, title) VALUES (\(nowMs - 3 * hour), 999, 999, 9.0, 'a', NULL)")
+
+        let snapshot = try XCTUnwrap(OpenCodeReader.load(from: fixture))
+        XCTAssertEqual(snapshot.sessionList.map(\.title), [
+            "old refactor", // 450 total tokens, 10 days ago
+            "deploy", // 300
+            "fast fix", // 150
+            "netbox spike", // 50
+        ])
+        // 20-day-old "ancient" and the NULL-title row are excluded
+        XCTAssertFalse(snapshot.sessionList.contains { $0.title == "ancient" })
+        XCTAssertEqual(snapshot.sessionList.count, 4)
+
+        let tenDaysAgo = Date(timeIntervalSince1970: Double(nowMs - 10 * day) / 1000)
+        XCTAssertEqual(snapshot.sessionList[0].input, 300)
+        XCTAssertEqual(snapshot.sessionList[0].output, 150)
+        XCTAssertEqual(snapshot.sessionList[0].timeCreated.timeIntervalSince1970,
+                       tenDaysAgo.timeIntervalSince1970,
+                       accuracy: 1)
+    }
+
+    func testSnapshotWithoutSessionListKeyDecodesToEmpty() throws {
+        let db = try XCTUnwrap(makeFixtureDB())
+        defer { sqlite3_close(db) }
+        var snapshot = try XCTUnwrap(OpenCodeReader.load(from: db))
+        snapshot.sessionList = [
+            OpenCodeSnapshot.SessionRow(title: "s", input: 1, output: 2, timeCreated: Date()),
+        ]
+        let data = try JSONEncoder().encode(snapshot)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let stripped = try JSONSerialization.data(withJSONObject: json.filter { $0.key != "sessionList" })
+        let decoded = try JSONDecoder().decode(OpenCodeSnapshot.self, from: stripped)
+        XCTAssertEqual(decoded.sessionList, [])
+        XCTAssertEqual(decoded.sessions, snapshot.sessions)
+    }
+
+    func testEmptyDBReturnsNil() throws {        var db: OpaquePointer?
         XCTAssertEqual(sqlite3_open(":memory:", &db), SQLITE_OK)
         defer { sqlite3_close(db) }
         XCTAssertNil(OpenCodeReader.load(from: db!))
@@ -144,7 +195,7 @@ final class OpenCodeSQLTests: XCTestCase {
         var db: OpaquePointer?
         XCTAssertEqual(sqlite3_open(":memory:", &db), SQLITE_OK)
         defer { sqlite3_close(db) }
-        exec(db!, "CREATE TABLE session (time_created INTEGER, tokens_input INTEGER, tokens_output INTEGER, cost REAL, model TEXT)")
+        exec(db!, "CREATE TABLE session (time_created INTEGER, tokens_input INTEGER, tokens_output INTEGER, cost REAL, model TEXT, title TEXT)")
         let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
         insertSession(db!, time: nowMs - 30 * 86_400_000, input: 1, output: 1, cost: 0.1, model: "m")
         XCTAssertNil(OpenCodeReader.load(from: db!))

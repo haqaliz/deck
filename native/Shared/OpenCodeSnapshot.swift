@@ -17,6 +17,7 @@ struct OpenCodeSnapshot: Codable, Equatable {
     var models: [Model]
     var tools: [ToolCount]
     var costDaily: [CostDay]
+    var sessionList: [SessionRow]
     var totalInput: Int64
     var totalOutput: Int64
     var totalCost: Double
@@ -57,6 +58,7 @@ struct OpenCodeSnapshot: Codable, Equatable {
     init(writtenAt: Date, sessions: Int64, input: Int64, output: Int64, cost: Double,
          daily: [Day], models: [Model], tools: [ToolCount],
          costDaily: [CostDay],
+         sessionList: [SessionRow],
          totalInput: Int64, totalOutput: Int64, totalCost: Double) {
         self.writtenAt = writtenAt
         self.sessions = sessions
@@ -67,6 +69,7 @@ struct OpenCodeSnapshot: Codable, Equatable {
         self.models = models
         self.tools = tools
         self.costDaily = costDaily
+        self.sessionList = sessionList
         self.totalInput = totalInput
         self.totalOutput = totalOutput
         self.totalCost = totalCost
@@ -83,6 +86,7 @@ struct OpenCodeSnapshot: Codable, Equatable {
         models = try c.decode([Model].self, forKey: .models)
         tools = try c.decodeIfPresent([ToolCount].self, forKey: .tools) ?? []
         costDaily = try c.decodeIfPresent([CostDay].self, forKey: .costDaily) ?? []
+        sessionList = try c.decodeIfPresent([SessionRow].self, forKey: .sessionList) ?? []
         totalInput = try c.decode(Int64.self, forKey: .totalInput)
         totalOutput = try c.decode(Int64.self, forKey: .totalOutput)
         totalCost = try c.decode(Double.self, forKey: .totalCost)
