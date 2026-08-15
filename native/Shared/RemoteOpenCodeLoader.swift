@@ -148,6 +148,7 @@ enum RemoteOpenCodeLoader {
             models: models(from: modelTotals),
             tools: [],
             costDaily: costDaily(from: dayModelCosts),
+            sessionList: [],
             totalInput: totalInput,
             totalOutput: totalOutput,
             totalCost: round4(totalCost)
@@ -218,6 +219,7 @@ enum RemoteOpenCodeLoader {
             models: models(from: modelTotals),
             tools: [],
             costDaily: costDaily(from: dayModelCosts),
+            sessionList: [],
             totalInput: totalInput,
             totalOutput: totalOutput,
             totalCost: round4(totalCost)

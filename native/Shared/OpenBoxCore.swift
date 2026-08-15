@@ -165,3 +165,54 @@ enum OpenCodeFormatters {
         String(format: "$%.2f", value)
     }
 }
+
+// MARK: - Session rows (pure; tested in OpenBoxSessionCoreTests)
+
+enum OpenBoxSessionList {
+    /// Maps raw SQL rows (title/tokens_input/tokens_output/time_created) into
+    /// session rows: orders by total tokens desc, drops nil/empty titles,
+    /// caps at `limit`. The SQL query only filters the window — ordering and
+    /// capping live here so they stay purely testable.
+    static func map(_ rows: [[String: Any]], now: Date, limit: Int) -> [OpenCodeSnapshot.SessionRow] {
+        let mapped = rows.compactMap { row -> OpenCodeSnapshot.SessionRow? in
+            guard let title = row.string("title"), !title.isEmpty else { return nil }
+            return OpenCodeSnapshot.SessionRow(
+                title: title,
+                input: row.int64("tokens_input") ?? 0,
+                output: row.int64("tokens_output") ?? 0,
+                timeCreated: Date(timeIntervalSince1970: row.int64("time_created").map { Double($0) / 1000 } ?? 0)
+            )
+        }
+        return mapped
+            .sorted {
+                let lhs = $0.input + $0.output
+                let rhs = $1.input + $1.output
+                if lhs != rhs { return lhs > rhs }
+                return $0.timeCreated > $1.timeCreated
+            }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    /// "just now" / "10m ago" / "2h ago" / "3d ago" — same shape as the
+    /// ClipBox relative-time label, seconds from `to` back to `now`.
+    static func relativeTime(from now: Date, to date: Date) -> String {
+        let seconds = Int(now.timeIntervalSince(date))
+        return switch seconds {
+        case ..<60: "just now"
+        case ..<3600: "\(seconds / 60)m ago"
+        case ..<86400: "\(seconds / 3600)h ago"
+        default: "\(seconds / 86400)d ago"
+        }
+    }
+}
+
+private extension Dictionary where Key == String, Value == Any {
+    func int64(_ key: String) -> Int64? {
+        self[key] as? Int64 ?? (self[key] as? NSNumber)?.int64Value
+    }
+
+    func string(_ key: String) -> String? {
+        self[key] as? String
+    }
+}

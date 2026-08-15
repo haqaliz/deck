@@ -68,6 +68,8 @@ enum OpenCodeReader {
             )
         }
 
+        let sessionList = OpenBoxSessionList.map(rows(db, sessionsSQL), now: Date(), limit: 10)
+
         return OpenCodeSnapshot(
             writtenAt: Date(),
             sessions: today.int64("sessions") ?? 0,
@@ -78,6 +80,7 @@ enum OpenCodeReader {
             models: models,
             tools: tools,
             costDaily: costDaily,
+            sessionList: sessionList,
             totalInput: totals?.int64("input") ?? 0,
             totalOutput: totals?.int64("output") ?? 0,
             totalCost: totals?.double("cost") ?? 0
@@ -128,6 +131,17 @@ enum OpenCodeReader {
         WHERE time_created > (strftime('%s','now','-13 days')*1000)
           AND model IS NOT NULL
         GROUP BY day, model ORDER BY day
+        """
+
+    // No LIMIT here: the reader has no parameter binding, so the window is
+    // the only filter — the pure mapper (OpenBoxSessionList) orders by total
+    // tokens and caps.
+    static let sessionsSQL = """
+        SELECT title, tokens_input, tokens_output, time_created
+        FROM session
+        WHERE time_created > (strftime('%s','now','-13 days')*1000)
+          AND title IS NOT NULL
+        ORDER BY (tokens_input + tokens_output) DESC
         """
 
     // MARK: - Tool rows (pure; tested in the OpenBoxToolsCore scratch package)

@@ -20,6 +20,18 @@ final class OpenBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.costColor, RGBA(.orange))
     }
 
+    func testSessionKeysDefaultOffWithCountThree() throws {
+        let s = try decode(#"{}"#, as: OpenBoxSettings.self)
+        XCTAssertFalse(s.showSessions)
+        XCTAssertEqual(s.sessionCount, 3)
+    }
+
+    func testSessionKeysDecodeExplicitValues() throws {
+        let s = try decode(#"{"showSessions":true,"sessionCount":5}"#, as: OpenBoxSettings.self)
+        XCTAssertTrue(s.showSessions)
+        XCTAssertEqual(s.sessionCount, 5)
+    }
+
     func testFullFixtureDecodesExactValues() throws {
         let json = """
         {"token":"t","serverURL":"http://h:4096","refreshInterval":5,"showChart":false,"showCostChart":true,"showModels":false,"showTools":false,"toolCount":7,"modelCount":2,

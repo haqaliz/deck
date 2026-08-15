@@ -45,6 +45,7 @@
 		769F47CE66D9A10A5B348E02 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */; };
 		822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */; };
+		86444246D4788784A28FBA68 /* OpenBoxSessionCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */; };
 		87E936C049D826980DD8F8C7 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B05E2B90DFEDC2F8CC1804F /* main.swift */; };
 		90A811EBE7E73139D552827E /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
@@ -119,6 +120,7 @@
 		0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxSnapshot.swift; sourceTree = "<group>"; };
 		0B881092482BA9425E3F5918 /* DecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodeTests.swift; sourceTree = "<group>"; };
 		13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshot.swift; sourceTree = "<group>"; };
+		16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxSessionCoreTests.swift; sourceTree = "<group>"; };
 		18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxWidget.swift; sourceTree = "<group>"; };
 		1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryMetrics.swift; sourceTree = "<group>"; };
 		1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSnapshot.swift; sourceTree = "<group>"; };
@@ -209,6 +211,7 @@
 				3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */,
 				9D2A55F3FD7982AE42C95658 /* HomeBoxSnapshotTests.swift */,
 				E55EA63643575600049612BD /* ModelParserTests.swift */,
+				16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */,
 				CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */,
 				2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */,
 				F06724D8333A9A74C4156DB6 /* SmokeTests.swift */,
@@ -512,6 +515,7 @@
 				1FE81DDA83527315D68D3A07 /* HomeBoxSnapshotTests.swift in Sources */,
 				56242BA287F3C3D8CD8A380D /* ModelParserTests.swift in Sources */,
 				A366F0122DCFF1970B2158B5 /* OpenBoxCore.swift in Sources */,
+				86444246D4788784A28FBA68 /* OpenBoxSessionCoreTests.swift in Sources */,
 				3731452DDEEE62491DBC4FD7 /* OpenCodeReader.swift in Sources */,
 				F7C61B7366E45966CD60DCB8 /* OpenCodeSQLTests.swift in Sources */,
 				3256C001A7523B07D0D86C89 /* OpenCodeSnapshot.swift in Sources */,
