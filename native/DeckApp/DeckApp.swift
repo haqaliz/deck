@@ -321,6 +321,16 @@ private struct LiveBoxSettingsView: View {
                 Toggle("Show MEM", isOn: $settings.showMEM)
                 Toggle("Show DISK", isOn: $settings.showDisk)
             }
+            Section("Thresholds") {
+                Toggle("Show threshold colors", isOn: $settings.showThresholdColors)
+                Stepper("Warn at: \(settings.warnThreshold)%", value: $settings.warnThreshold, in: 0...100)
+                    .disabled(!settings.showThresholdColors)
+                Stepper("Alarm at: \(settings.alarmThreshold)%", value: $settings.alarmThreshold, in: 0...100)
+                    .disabled(!settings.showThresholdColors)
+                Text("Values at or above the warn threshold turn amber; at or above the alarm threshold, red. Alarm takes precedence when it is lower than Warn.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("Processes") {
                 Toggle("Show top processes", isOn: $settings.showProcesses)
                 Stepper("Process count: \(settings.processCount)", value: $settings.processCount, in: 1...20)
