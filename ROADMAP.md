@@ -70,7 +70,9 @@ LiveBox:
 
 OpenBox:
 - [x] Cost-per-day chart (stacked by model)
-- [ ] Session list with drill-down (top sessions by tokens)
+- [x] Session list (top sessions by tokens, large face) — "drill-down" is the
+      list itself; WidgetKit has no in-widget navigation, so tap-through is
+      out of scope
 - [x] Tool usage stats (bash/edit/read counts from the DB)
 
 NetBox:
