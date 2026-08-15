@@ -87,6 +87,9 @@ struct LiveBoxSettings: Codable, Equatable {
     var cpuColor = RGBA(.green)
     var memColor = RGBA(.cyan)
     var diskColor = RGBA(.orange)
+    var showThresholdColors = true
+    var warnThreshold = 80
+    var alarmThreshold = 90
 
     /// Tolerant decode: missing keys keep the defaults instead of throwing
     /// (the synthesized decoder throws, which would reset every setting via
@@ -106,6 +109,9 @@ struct LiveBoxSettings: Codable, Equatable {
         cpuColor = try c.decodeIfPresent(RGBA.self, forKey: .cpuColor) ?? RGBA(.green)
         memColor = try c.decodeIfPresent(RGBA.self, forKey: .memColor) ?? RGBA(.cyan)
         diskColor = try c.decodeIfPresent(RGBA.self, forKey: .diskColor) ?? RGBA(.orange)
+        showThresholdColors = try c.decodeIfPresent(Bool.self, forKey: .showThresholdColors) ?? true
+        warnThreshold = try c.decodeIfPresent(Int.self, forKey: .warnThreshold) ?? 80
+        alarmThreshold = try c.decodeIfPresent(Int.self, forKey: .alarmThreshold) ?? 90
     }
 }
 

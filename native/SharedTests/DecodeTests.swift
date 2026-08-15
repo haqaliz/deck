@@ -145,6 +145,25 @@ final class LiveBoxSettingsDecodeTests: XCTestCase {
         let s = try decode(#"{}"#, as: LiveBoxSettings.self)
         XCTAssertEqual(s, LiveBoxSettings())
     }
+
+    func testOldFileWithoutThresholdKeysKeepsDefaults() throws {
+        // Pre-threshold settings.json must not reset every setting.
+        let s = try decode(#"{"showCPU":false}"#, as: LiveBoxSettings.self)
+        XCTAssertFalse(s.showCPU)
+        XCTAssertTrue(s.showThresholdColors)
+        XCTAssertEqual(s.warnThreshold, 80)
+        XCTAssertEqual(s.alarmThreshold, 90)
+    }
+
+    func testThresholdKeysRoundTrip() throws {
+        let s = try decode(
+            #"{"showThresholdColors":false,"warnThreshold":70,"alarmThreshold":95}"#,
+            as: LiveBoxSettings.self
+        )
+        XCTAssertFalse(s.showThresholdColors)
+        XCTAssertEqual(s.warnThreshold, 70)
+        XCTAssertEqual(s.alarmThreshold, 95)
+    }
 }
 
 final class ClipBoxSettingsDecodeTests: XCTestCase {
