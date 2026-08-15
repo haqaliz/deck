@@ -1,86 +1,62 @@
-# Understanding: shared-parser-tests
+# Understanding: livebox-threshold-coloring
 
 ## What the work is really asking
 
-The M4 milestone (ROADMAP.md:53-54) wants a permanent XCTest target for the
-Shared parsers — GitLogParser, ModelParser, formatters, DB SQL — because every
-feature so far did TDD in a throwaway SwiftPM "scratch package" that was deleted
-at merge (git log: `79845fd`, `d7c1110`, `01e9f0c`, `c9565da` "remove scratch
-test package"). The merged repo today has **zero tests** and no test target in
-`native/project.yml`. This work makes the test suite permanent and in-repo so
-future widgets stop re-deriving it.
+LiveBox metric rows (CPU/MEM/DISK) and the per-core CPU chart lines should turn
+amber/red when a value crosses configurable thresholds (defaults warn 80% /
+alarm 90%). This is the deck-next pick for the roadmap item "Threshold coloring
+(e.g. red when CPU > 90%)" (ROADMAP.md:69). It must be **pure layout/color**:
+LiveBox already samples mach in-process (LiveBoxWidget.swift:61-99), so there is
+no agent, no loader, and no snapshot change. The threshold rules must live in a
+**shared, testable helper** (OpenBoxCore.swift precedent) so NetBox threshold
+coloring (ROADMAP.md:81) can reuse them later.
 
-## Pure-logic surface to cover
+## Code map
 
-- `native/Shared/` — compiles into all three targets, so a test bundle can
-  compile it directly (imports are Foundation/AppKit/SwiftUI/SQLite3 — all
-  macOS-testable):
-  - `GitBoxSnapshot.swift` — `dayCounts(from:)`, `daysBack`, `bucket`,
-    `streak`, `shortName`, formatters (the "GitLogParser" the roadmap names)
-  - `OpenCodeReader.swift` — `mapToolRows` (pure), the 5 SQL strings + `rows()`
-    (private — needs a minimal expose for DB SQL tests)
-  - `OpenBoxWidget.swift` — **not** Shared: private `ModelParser`,
-    `CostSeries`, `OpenCodeFormatters` live in the widget file (lines
-    444-602). The roadmap names ModelParser, so these move to
-    `Shared/OpenBoxCore.swift` (internal; pure extraction, no behavior change;
-    only referenced inside OpenBoxWidget.swift)
-  - `ClipBoxSnapshot.swift` — kind classifier, previews, dedupe, merge
-  - `HomeBoxSnapshot.swift` — wttr parse, icon mapping, zone rows
-  - `ShipBoxSnapshot.swift` — status map, parse
-  - `DevBoxSnapshot.swift` — lsof/docker parsers, percent parsing
-  - `ProcessSnapshot.swift` — ps output parse
-  - `RemoteOpenCodeLoader.swift` — aggregate/daily/models/costDaily/utcDay
-    (pure, untested anywhere)
-  - `DeckSettings.swift` — tolerant decode
+- `native/DeckWidgets/LiveBoxWidget.swift`:
+  - `LiveBoxFace` (line 208) — renders 3 sizes; metric rows via `metricRow`
+    (line 409: colored dot + secondary title + primary value text).
+  - `chart` (line 352) — per-core lines (354-368, `cpuColor.opacity(0.4)`),
+    CPU/MEM/DISK lines (370-401, user colors). Current value is live; the chart
+    plots the 60-sample history.
+  - Process rows (330-345) color percents with the metric colors — brief says
+    nothing about processes; default out of scope.
+- `native/Shared/DeckSettings.swift` — `LiveBoxSettings` (line 79) with the
+  tolerant-decode `init(from:)` pattern (97-109). New keys must follow it.
+- `native/DeckApp/DeckApp.swift` — `LiveBoxSettingsView` (line 303): Form with
+  Chart/Metrics/Processes sections; Stepper pattern (line 326) to copy.
+- `native/Shared/OpenBoxCore.swift` — the shared pure-logic precedent (Foundation
+  only, extracted so DeckSharedTests can compile it).
+- `native/SharedTests/` — XCTest suites; `DecodeTests.swift:143` covers
+  `LiveBoxSettings` tolerant decode; new suite file for the tier logic.
 
-## Recoverable test assets in git history
+## Design sketch
 
-Seven scratch packages had real tests (all under deleted `*Core/` dirs):
+- New `Shared/LiveBoxCore.swift`: `enum ThresholdTier { normal, warn, alarm }`,
+  pure `tier(value:warn:alarm:)` (alarm wins over warn), plus standard warn
+  (amber) / alarm (red) colors so NetBox reuses the same language.
+- `LiveBoxSettings`: `showThresholdColors = true`, `warnThreshold = 80`,
+  `alarmThreshold = 90`, tolerant decode.
+- `LiveBoxFace`: row dot + value text + the metric's chart line switch to the
+  tier color when the **current** value crosses; per-core lines too (series
+  colored by latest value's tier — per-point coloring in Swift Charts is not
+  worth it for a 1.5px line).
 
-| Package | Commit | Tests |
-|---|---|---|
-| ShipBoxCore | f0c94c4 | ShipBoxCoreTests.swift (197 ln) |
-| HomeBoxCore | 989999a | WttrParser/WeatherIcon/ZoneRows (150 ln) + amsterdam_j1.json fixture (1366 ln) |
-| ClipBoxCore | d2f81a0 | ClipBoxCoreTests.swift (139 ln) |
-| OpenBoxCostCore | e8e1c11 | CostCoreTests.swift (179 ln) |
-| SettingsCore | 8ca082b | DecodeTests.swift (131 ln) |
-| OpenBoxToolsCore | 2c899e7 | ToolCountTests.swift (82 ln) |
-| LiveBoxCore | afb1d37 | PerCoreTests.swift (66 ln) |
+## Ambiguities for the interview
 
-GitLogParser and OpenBox formatters never had scratch tests (GitBox predates
-the pattern) — coverage for those is written fresh from behavior.
-
-## Files touched (planning ahead)
-
-1. `native/project.yml` — one `bundle.unit-test` target `DeckSharedTests`
-   (sources: `Shared` + a new `native/SharedTests/` dir, `-lsqlite3`,
-   generated Info.plist) + a scheme with a test action.
-2. New `native/Shared/OpenBoxCore.swift` — moved ModelParser/CostSeries/
-   OpenCodeFormatters; OpenBoxWidget.swift drops its private copies.
-3. `native/Shared/OpenCodeReader.swift` — minimal expose for DB SQL tests:
-   SQL strings + a `load(from db:)` entry point (or `rows(_:_:)` internal).
-4. `native/SharedTests/*` — ported + fresh test files.
-5. `.github/workflows/deck.yml` — an `xcodebuild test` step so CI runs the
-   suite on every PR.
-6. No widget shell, no settings, no agent changes. No behavior changes to
-   production code beyond the mechanical OpenBox extraction.
-
-## Open questions for the PRD
-
-1. **Scope**: all parsers above, or staged? (Recommendation: staged — first
-   slice = the 7 ported suites + roadmap-named items; later slices = DevBox,
-   RemoteOpenCodeLoader, ProcessSnapshot, Loader formatters.)
-2. **ModelParser move**: pure extraction into Shared is the roadmap intent;
-   confirm it's acceptable to touch OpenBoxWidget.swift mechanically.
-3. **DB SQL tests**: build a fixture opencode schema (session/part tables) in an
-   in-memory sqlite DB and run the real SQL strings against it — needs the
-   minimal expose above. json_extract is available in macOS system sqlite.
-4. **Found-bug policy**: if a ported test exposes a real parser bug, fixing it
-   is in scope (that is the point of the milestone).
-5. **CI cost**: `xcodebuild test` adds minutes per run — acceptable on
-   macos-latest.
+1. One shared threshold pair for all three metrics, or per-metric? (Brief reads
+   shared; per-metric = 6 settings, follow-on slice.)
+2. Recolor the row **dot** too, or only the value text? (Dot is the user's
+   metric color identity — keep it, recolor value text + chart line.)
+3. Per-core lines: all recolor when the aggregate CPU alarms, or each core by
+   its own value? (Own value is the honest reading of "per-core CPU lines".)
+4. Default ON or a toggle defaulting OFF? (Feature-by-default matches the
+   brief; a toggle still gives an escape hatch.)
+5. What if user sets warn > alarm? (Tier precedence: alarm wins. No clamping
+   gymnastics.)
+6. Processes stay out of scope for this slice.
 
 ## No shell invariants broken
 
-No card/flip/settings/agent behavior changes; the only non-test production
-edit is the OpenBox extraction which keeps identical output.
+No card/flip/settings-window/agent behavior changes; the only production edits
+are one Shared helper + three setting keys + view colors. Same data path.
