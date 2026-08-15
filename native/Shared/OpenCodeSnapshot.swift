@@ -39,6 +39,13 @@ struct OpenCodeSnapshot: Codable, Equatable {
         let count: Int64
     }
 
+    struct SessionRow: Codable, Equatable {
+        let title: String
+        let input: Int64
+        let output: Int64
+        let timeCreated: Date
+    }
+
     struct CostDay: Codable, Equatable {
         let day: String
         let model: String
