@@ -18,6 +18,7 @@ struct OpenBoxEntry: TimelineEntry {
     let models: [OpenCodeSnapshot.Model]
     let tools: [OpenCodeSnapshot.ToolCount]
     let costDaily: [OpenCodeSnapshot.CostDay]
+    let sessionList: [OpenCodeSnapshot.SessionRow]
     let totalInput: Int64
     let totalOutput: Int64
     let totalCost: Double
@@ -60,6 +61,11 @@ struct OpenBoxProvider: TimelineProvider {
                 OpenCodeSnapshot.CostDay(day: "day1", model: "deepseek-v4-flash", cost: 0.15),
                 OpenCodeSnapshot.CostDay(day: "day1", model: "gpt-5.2", cost: 0.06),
             ],
+            sessionList: [
+                OpenCodeSnapshot.SessionRow(title: "ShipBox widget review", input: 380_000, output: 32_000, timeCreated: .now.addingTimeInterval(-7200)),
+                OpenCodeSnapshot.SessionRow(title: "OpenBox cost chart spike", input: 96_000, output: 11_000, timeCreated: .now.addingTimeInterval(-86_400)),
+                OpenCodeSnapshot.SessionRow(title: "Settings migration audit", input: 31_000, output: 4_000, timeCreated: .now.addingTimeInterval(-3 * 86_400)),
+            ],
             totalInput: 48_000_000,
             totalOutput: 6_100_000,
             totalCost: 9.84,
@@ -92,6 +98,7 @@ struct OpenBoxProvider: TimelineProvider {
                 models: [],
                 tools: [],
                 costDaily: [],
+                sessionList: [],
                 totalInput: 0,
                 totalOutput: 0,
                 totalCost: 0,
@@ -110,6 +117,7 @@ struct OpenBoxProvider: TimelineProvider {
             models: snapshot.models,
             tools: snapshot.tools,
             costDaily: snapshot.costDaily,
+            sessionList: snapshot.sessionList,
             totalInput: snapshot.totalInput,
             totalOutput: snapshot.totalOutput,
             totalCost: snapshot.totalCost,
@@ -266,6 +274,12 @@ struct OpenBoxWidgetEntryView: View {
                 toolsList
             }
 
+            if entry.settings.showSessions && !entry.sessionList.isEmpty {
+                Divider()
+                    .padding(.top, 4)
+                sessionsList
+            }
+
             Spacer(minLength: 0)
 
             Text("All time: \(OpenCodeFormatters.formatTokens(entry.totalInput)) in · \(OpenCodeFormatters.formatTokens(entry.totalOutput)) out · \(OpenCodeFormatters.formatCost(entry.totalCost))")
@@ -346,6 +360,34 @@ struct OpenBoxWidgetEntryView: View {
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(entry.settings.inputColor.color)
+                }
+            }
+        }
+    }
+
+    private var sessionsList: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("SESSIONS")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(.secondary)
+                .tracking(1)
+
+            ForEach(entry.sessionList.prefix(entry.settings.sessionCount), id: \.title) { session in
+                HStack(spacing: 8) {
+                    Text(session.title)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer()
+                    Text(OpenCodeFormatters.formatTokens(session.input + session.output))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(entry.settings.inputColor.color)
+                    Text(OpenBoxSessionList.relativeTime(from: entry.date, to: session.timeCreated))
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 48, alignment: .trailing)
                 }
             }
         }
