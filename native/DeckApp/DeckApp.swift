@@ -367,6 +367,14 @@ private struct OpenBoxSettingsView: View {
                 Stepper("Tools: \(settings.toolCount)", value: $settings.toolCount, in: 1...3)
                     .disabled(!settings.showTools)
             }
+            Section("Sessions") {
+                Toggle("Show top sessions", isOn: $settings.showSessions)
+                Stepper("Sessions: \(settings.sessionCount)", value: $settings.sessionCount, in: 1...5)
+                    .disabled(!settings.showSessions)
+                Text("Top sessions by tokens over the last 14 days (large widget only).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .padding(.top, 4)

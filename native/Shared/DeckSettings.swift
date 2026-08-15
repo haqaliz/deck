@@ -118,8 +118,10 @@ struct OpenBoxSettings: Codable, Equatable {
     var showCostChart = false
     var showModels = true
     var showTools = true
+    var showSessions = false
     var toolCount = 3
     var modelCount = 3
+    var sessionCount = 3
     var inputColor = RGBA(.cyan)
     var outputColor = RGBA(.green)
     var costColor = RGBA(.orange)
@@ -139,8 +141,10 @@ struct OpenBoxSettings: Codable, Equatable {
         showCostChart = try c.decodeIfPresent(Bool.self, forKey: .showCostChart) ?? false
         showModels = try c.decodeIfPresent(Bool.self, forKey: .showModels) ?? true
         showTools = try c.decodeIfPresent(Bool.self, forKey: .showTools) ?? true
+        showSessions = try c.decodeIfPresent(Bool.self, forKey: .showSessions) ?? false
         toolCount = try c.decodeIfPresent(Int.self, forKey: .toolCount) ?? 3
         modelCount = try c.decodeIfPresent(Int.self, forKey: .modelCount) ?? 3
+        sessionCount = try c.decodeIfPresent(Int.self, forKey: .sessionCount) ?? 3
         inputColor = try c.decodeIfPresent(RGBA.self, forKey: .inputColor) ?? RGBA(.cyan)
         outputColor = try c.decodeIfPresent(RGBA.self, forKey: .outputColor) ?? RGBA(.green)
         costColor = try c.decodeIfPresent(RGBA.self, forKey: .costColor) ?? RGBA(.orange)
