@@ -400,9 +400,18 @@ private struct OpenBoxSettingsView: View {
 
 private struct NetBoxSettingsView: View {
     @Binding var settings: NetBoxSettings
+    @State private var interfaceOptions: [String] = []
 
     var body: some View {
         Form {
+            Section("Interface") {
+                Picker("Interface", selection: $settings.pinnedInterface) {
+                    Text("Automatic (most active)").tag(String?.none)
+                    ForEach(displayOptions, id: \.self) { name in
+                        Text(name).tag(String?.some(name))
+                    }
+                }
+            }
             Section("Chart") {
                 Toggle("Show chart", isOn: $settings.showChart)
                 ColorPicker("UP color", selection: $settings.upColor.color)
@@ -418,6 +427,21 @@ private struct NetBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+        .onAppear(perform: refreshInterfaces)
+    }
+
+    private var displayOptions: [String] {
+        if let pinned = settings.pinnedInterface, !interfaceOptions.contains(pinned) {
+            return interfaceOptions + ["\(pinned) (offline)"]
+        }
+        return interfaceOptions
+    }
+
+    private func refreshInterfaces() {
+        interfaceOptions = NetworkMetricsLoader.sample()
+            .filter { $0.rxBytes + $0.txBytes > 0 }
+            .map(\.name)
+            .sorted()
     }
 }
 
