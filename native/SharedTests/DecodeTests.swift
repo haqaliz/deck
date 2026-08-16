@@ -103,6 +103,29 @@ final class NetBoxSettingsDecodeTests: XCTestCase {
         XCTAssertTrue(s.showChart)
         XCTAssertEqual(s.upColor, RGBA(.green))
     }
+
+    func testMissingPinnedInterfaceDecodesNil() throws {
+        let s = try decode(#"{}"#, as: NetBoxSettings.self)
+        XCTAssertNil(s.pinnedInterface)
+    }
+
+    func testPinnedInterfaceDecodesExplicitValue() throws {
+        let s = try decode(#"{"pinnedInterface":"en0"}"#, as: NetBoxSettings.self)
+        XCTAssertEqual(s.pinnedInterface, "en0")
+    }
+
+    func testExplicitNullPinnedInterfaceDecodesNil() throws {
+        let s = try decode(#"{"pinnedInterface":null}"#, as: NetBoxSettings.self)
+        XCTAssertNil(s.pinnedInterface)
+    }
+
+    func testPinnedInterfaceRoundTrip() throws {
+        var s = NetBoxSettings()
+        s.pinnedInterface = "en1"
+        let data = try JSONEncoder().encode(s)
+        let back = try JSONDecoder().decode(NetBoxSettings.self, from: data)
+        XCTAssertEqual(back.pinnedInterface, "en1")
+    }
 }
 
 final class BatBoxSettingsDecodeTests: XCTestCase {

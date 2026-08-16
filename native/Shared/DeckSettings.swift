@@ -161,6 +161,8 @@ struct NetBoxSettings: Codable, Equatable {
     var showChart = true
     var showInterfaces = true
     var interfaceCount = 3
+    /// Non-empty → pinned to one interface; nil → auto "most active".
+    var pinnedInterface: String?
     var upColor = RGBA(.green)
     var downColor = RGBA(.cyan)
 
@@ -171,6 +173,7 @@ struct NetBoxSettings: Codable, Equatable {
         showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
         showInterfaces = try c.decodeIfPresent(Bool.self, forKey: .showInterfaces) ?? true
         interfaceCount = try c.decodeIfPresent(Int.self, forKey: .interfaceCount) ?? 3
+        pinnedInterface = try c.decodeIfPresent(String.self, forKey: .pinnedInterface)
         upColor = try c.decodeIfPresent(RGBA.self, forKey: .upColor) ?? RGBA(.green)
         downColor = try c.decodeIfPresent(RGBA.self, forKey: .downColor) ?? RGBA(.cyan)
     }
