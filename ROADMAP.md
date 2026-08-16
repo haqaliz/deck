@@ -76,7 +76,7 @@ OpenBox:
 - [x] Tool usage stats (bash/edit/read counts from the DB)
 
 NetBox:
-- [ ] Network interface picker (manual override of the auto "most active" pick)
+- [x] Network interface picker (manual override of the auto "most active" pick)
 - [ ] Per-interface packet counts / error counters
 - [ ] Threshold coloring on rates
 

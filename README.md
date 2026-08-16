@@ -59,6 +59,9 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   cost-per-day view stacked by model (OpenBox tab → "Cost-per-day chart", off
   by default). The large face can also list the top sessions of the last 14
   days by tokens (OpenBox tab → "Show sessions", off by default).
+- **NetBox** reads only the interface you pin in settings (default: automatic
+  "most active" pick — pinning falls back to automatic while that interface is
+  offline).
 - **GitBox** reads only the repo paths you configure (empty by default — add
   comma-separated paths in settings).
 - **ClipBox** history lives local-only in the widget container (plaintext, up
