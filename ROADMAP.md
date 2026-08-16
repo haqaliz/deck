@@ -56,9 +56,10 @@ shell and only add a data source + a layout.
 
 Deferred from the tests milestone (still untested, pick via deck-next):
 - DevBox parsers (`DevBoxSnapshot` lsof/docker), RemoteOpenCodeLoader
-  aggregation, ProcessSnapshot parsing, and the Loader formatters in
-  `DeckWidgets/Loaders/` (NetworkMetrics.formatRate, BatteryMetrics, SystemMetrics
-  per-core math — the last needs the per-core math moved to Shared first).
+  aggregation, ProcessSnapshot parsing, and the remaining Loader formatters
+  (BatteryMetrics, SystemMetrics per-core math — the latter needs the per-core
+  math moved to Shared first). NetworkMetrics.formatRate is covered since the
+  loader moved to `Shared/NetBoxCore.swift`.
 
 ## Feature backlog (existing widgets)
 
