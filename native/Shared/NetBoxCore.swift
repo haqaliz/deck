@@ -64,6 +64,18 @@ enum NetworkMetricsLoader {
     }
 }
 
+/// Which interfaces the widget displays: a manual pin wins when it is still
+/// present in the sample; anything else (no pin, or the pin vanished, e.g.
+/// Wi-Fi off) falls back to all interfaces — the provider's "most active"
+/// auto pick.
+enum NetBoxPinnedInterface {
+    static func select(pinned: String?, interfaces: [InterfaceRates]) -> [InterfaceRates] {
+        guard let pinned, !pinned.isEmpty else { return interfaces }
+        let filtered = interfaces.filter { $0.name == pinned }
+        return filtered.isEmpty ? interfaces : filtered
+    }
+}
+
 enum NetBoxFormatters {
     /// "512 B/s", "1.2 KB/s", "3.4 MB/s", "1.2 GB/s"
     static func formatRate(_ bytesPerSecond: Double) -> String {
