@@ -96,6 +96,7 @@ struct NetBoxProvider: TimelineProvider {
     }
 
     private func makeEntry() -> NetBoxEntry {
+        let settings = DeckSettings.load().netbox
         let current = NetworkMetricsLoader.sample()
         let now = Date()
 
@@ -126,8 +127,9 @@ struct NetBoxProvider: TimelineProvider {
             UserDefaults.standard.set(data, forKey: Self.storageKey)
         }
 
-        let totalUp = rates.reduce(0) { $0 + $1.up }
-        let totalDown = rates.reduce(0) { $0 + $1.down }
+        let pinned = NetBoxPinnedInterface.select(pinned: settings.pinnedInterface, interfaces: rates)
+        let totalUp = pinned.reduce(0) { $0 + $1.up }
+        let totalDown = pinned.reduce(0) { $0 + $1.down }
 
         var history = NetBoxHistoryStore.load()
         history.append(NetSample(up: totalUp, down: totalDown))
@@ -136,7 +138,7 @@ struct NetBoxProvider: TimelineProvider {
         }
         NetBoxHistoryStore.save(history)
 
-        let sorted = rates.sorted { max($0.up, $0.down) > max($1.up, $1.down) }
+        let sorted = pinned.sorted { max($0.up, $0.down) > max($1.up, $1.down) }
 
         return NetBoxEntry(
             date: now,
@@ -144,7 +146,7 @@ struct NetBoxProvider: TimelineProvider {
             totalUp: totalUp,
             totalDown: totalDown,
             history: history,
-            settings: DeckSettings.load().netbox
+            settings: settings
         )
     }
 }
