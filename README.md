@@ -15,7 +15,7 @@ WidgetKit widgets with native colors, corners and materials.
 |---|---|
 | **LiveBox** | CPU / MEM / DISK usage with a live chart (per-core CPU lines) and top processes (CPU/MEM tabs); metric rows and chart lines turn amber/red past your warn/alarm thresholds |
 | **OpenBox** | opencode usage: today's in/out tokens + cost, 14-day chart (tokens or cost-per-day stacked by model), top models, tool usage counts, top sessions by tokens |
-| **NetBox** | per-interface up/down rates, history chart, most active interfaces |
+| **NetBox** | per-interface up/down rates, history chart, most active interfaces; rates turn amber/red past your warn/alarm thresholds |
 | **BatBox** | battery level, time remaining, charge state, level chart |
 | **GitBox** | commits per day (14 days), today's count, streak, active repos |
 | **DevBox** | open TCP listening ports (process + port) and running Docker containers (CPU/mem) |
@@ -61,7 +61,8 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   days by tokens (OpenBox tab → "Show sessions", off by default).
 - **NetBox** reads only the interface you pin in settings (default: automatic
   "most active" pick — pinning falls back to automatic while that interface is
-  offline).
+  offline). Rates past your warn/alarm thresholds (MB/s, NetBox tab) turn
+  amber/red; idle or no-reading rates are never tinted.
 - **GitBox** reads only the repo paths you configure (empty by default — add
   comma-separated paths in settings).
 - **ClipBox** history lives local-only in the widget container (plaintext, up

@@ -234,9 +234,9 @@ struct NetBoxWidgetEntryView: View {
                                 .frame(width: 44, alignment: .leading)
                             Spacer()
                             Text("↑ \(NetBoxFormatters.formatRate(interface.up))")
-                                .foregroundStyle(entry.settings.upColor.color)
+                                .foregroundStyle(tierColor(for: interface.up) ?? entry.settings.upColor.color)
                             Text("↓ \(NetBoxFormatters.formatRate(interface.down))")
-                                .foregroundStyle(entry.settings.downColor.color)
+                                .foregroundStyle(tierColor(for: interface.down) ?? entry.settings.downColor.color)
                         }
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .monospacedDigit()
@@ -279,9 +279,9 @@ struct NetBoxWidgetEntryView: View {
                                 .frame(width: 44, alignment: .leading)
                             Spacer()
                             Text("↑ \(NetBoxFormatters.formatRate(interface.up))")
-                                .foregroundStyle(entry.settings.upColor.color)
+                                .foregroundStyle(tierColor(for: interface.up) ?? entry.settings.upColor.color)
                             Text("↓ \(NetBoxFormatters.formatRate(interface.down))")
-                                .foregroundStyle(entry.settings.downColor.color)
+                                .foregroundStyle(tierColor(for: interface.down) ?? entry.settings.downColor.color)
                         }
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .monospacedDigit()
@@ -304,7 +304,7 @@ struct NetBoxWidgetEntryView: View {
                 y: .value("UP", sample.up),
                 series: .value("Metric", "UP")
             )
-            .foregroundStyle(entry.settings.upColor.color)
+            .foregroundStyle(tierColor(for: sample.up) ?? entry.settings.upColor.color)
             .lineStyle(StrokeStyle(lineWidth: 1.5))
             .interpolationMethod(.catmullRom)
 
@@ -313,7 +313,7 @@ struct NetBoxWidgetEntryView: View {
                 y: .value("DOWN", sample.down),
                 series: .value("Metric", "DOWN")
             )
-            .foregroundStyle(entry.settings.downColor.color)
+            .foregroundStyle(tierColor(for: sample.down) ?? entry.settings.downColor.color)
             .lineStyle(StrokeStyle(lineWidth: 1.5))
             .interpolationMethod(.catmullRom)
         }
@@ -331,7 +331,24 @@ struct NetBoxWidgetEntryView: View {
             Text(title)
                 .foregroundStyle(.secondary)
             Text(NetBoxFormatters.formatRate(value))
-                .foregroundStyle(.primary)
+                .foregroundStyle(tierColor(for: value) ?? .primary)
+        }
+    }
+
+    /// Overrides the row/chart color while a rate sits in warn/alarm tier;
+    /// nil keeps the user's color (or the default .primary text color).
+    /// Non-positive rates ("no reading") never tint.
+    private func tierColor(for rate: Double) -> Color? {
+        let settings = entry.settings
+        guard settings.showThresholdColors else { return nil }
+        switch NetBoxThresholdTier.tier(
+            rate: rate,
+            warnMBps: settings.warnThreshold,
+            alarmMBps: settings.alarmThreshold
+        ) {
+        case .normal: return nil
+        case .warn: return ThresholdTier.warnColor.color
+        case .alarm: return ThresholdTier.alarmColor.color
         }
     }
 }

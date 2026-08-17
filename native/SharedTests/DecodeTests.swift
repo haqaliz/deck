@@ -126,6 +126,32 @@ final class NetBoxSettingsDecodeTests: XCTestCase {
         let back = try JSONDecoder().decode(NetBoxSettings.self, from: data)
         XCTAssertEqual(back.pinnedInterface, "en1")
     }
+
+    func testOldFileWithoutThresholdKeysKeepsDefaults() throws {
+        // Pre-threshold settings.json must not reset every setting.
+        let s = try decode(#"{"interfaceCount":7}"#, as: NetBoxSettings.self)
+        XCTAssertEqual(s.interfaceCount, 7)
+        XCTAssertTrue(s.showThresholdColors)
+        XCTAssertEqual(s.warnThreshold, 50)
+        XCTAssertEqual(s.alarmThreshold, 100)
+    }
+
+    func testThresholdKeysRoundTrip() throws {
+        let s = try decode(
+            #"{"showThresholdColors":false,"warnThreshold":20,"alarmThreshold":80}"#,
+            as: NetBoxSettings.self
+        )
+        XCTAssertFalse(s.showThresholdColors)
+        XCTAssertEqual(s.warnThreshold, 20)
+        XCTAssertEqual(s.alarmThreshold, 80)
+    }
+
+    func testZeroThresholdsFloorToOne() throws {
+        // A hand-edited 0 must not make every positive rate an alarm.
+        let s = try decode(#"{"warnThreshold":0,"alarmThreshold":0}"#, as: NetBoxSettings.self)
+        XCTAssertEqual(s.warnThreshold, 1)
+        XCTAssertEqual(s.alarmThreshold, 1)
+    }
 }
 
 final class BatBoxSettingsDecodeTests: XCTestCase {

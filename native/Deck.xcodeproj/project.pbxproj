@@ -64,6 +64,7 @@
 		A94346AFBE99A456A37C9F3A /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */; };
 		AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */; };
+		B65A51E1C663EA52C4B95C29 /* NetBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */; };
 		BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */; };
 		C25CF03F42EF2643976A9291 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		CA1BF5806D6024A7A49CE577 /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
@@ -160,6 +161,7 @@
 		AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxCoreTests.swift; sourceTree = "<group>"; };
 		AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCountTests.swift; sourceTree = "<group>"; };
 		B662E23A53ACAA091EAFA898 /* DeckApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeckApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxThresholdTests.swift; sourceTree = "<group>"; };
 		C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxCore.swift; sourceTree = "<group>"; };
 		CBC89EF1D34611CB2B244F15 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSQLTests.swift; sourceTree = "<group>"; };
@@ -226,6 +228,7 @@
 				9D2A55F3FD7982AE42C95658 /* HomeBoxSnapshotTests.swift */,
 				E55EA63643575600049612BD /* ModelParserTests.swift */,
 				AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */,
+				C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */,
 				16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */,
 				CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */,
 				2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */,
@@ -533,6 +536,7 @@
 				56242BA287F3C3D8CD8A380D /* ModelParserTests.swift in Sources */,
 				5DAADD8D5F4E17021759CBE1 /* NetBoxCore.swift in Sources */,
 				43222AFDC10A1829EE888C3E /* NetBoxCoreTests.swift in Sources */,
+				B65A51E1C663EA52C4B95C29 /* NetBoxThresholdTests.swift in Sources */,
 				A366F0122DCFF1970B2158B5 /* OpenBoxCore.swift in Sources */,
 				86444246D4788784A28FBA68 /* OpenBoxSessionCoreTests.swift in Sources */,
 				3731452DDEEE62491DBC4FD7 /* OpenCodeReader.swift in Sources */,

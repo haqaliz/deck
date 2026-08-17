@@ -419,6 +419,16 @@ private struct NetBoxSettingsView: View {
                 ColorPicker("DOWN color", selection: $settings.downColor.color)
                     .disabled(!settings.showChart)
             }
+            Section("Thresholds") {
+                Toggle("Show threshold colors", isOn: $settings.showThresholdColors)
+                Stepper("Warn at: \(settings.warnThreshold) MB/s", value: $settings.warnThreshold, in: 1...2000)
+                    .disabled(!settings.showThresholdColors)
+                Stepper("Alarm at: \(settings.alarmThreshold) MB/s", value: $settings.alarmThreshold, in: 1...2000)
+                    .disabled(!settings.showThresholdColors)
+                Text("Rates at or above the warn threshold turn amber; at or above the alarm threshold, red. Alarm takes precedence when it is lower than Warn.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("Interfaces") {
                 Toggle("Show interfaces", isOn: $settings.showInterfaces)
                 Stepper("Interface count: \(settings.interfaceCount)", value: $settings.interfaceCount, in: 1...10)
