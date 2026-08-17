@@ -287,7 +287,7 @@ struct LiveBoxFace: View {
                 if settings.showMEM {
                     metricRow(title: "MEM", value: mem, color: settings.memColor.color)
                 }
-                if settings.showDisk && !showingPerVolumeDisk {
+                if settings.showDisk {
                     metricRow(title: "DISK", value: disk, color: settings.diskColor.color)
                 }
                 Spacer()
@@ -312,8 +312,9 @@ struct LiveBoxFace: View {
         }
     }
 
-    /// Per-volume disk rows replace the aggregate DISK header row on the large
-    /// face when the toggle is on and the sampler found at least one volume.
+    /// Per-volume disk rows render below the chart on the large face when the
+    /// toggle is on and the sampler found at least one volume; the aggregate
+    /// DISK header row stays visible, governed by its own `showDisk` toggle.
     private var showingPerVolumeDisk: Bool {
         settings.showDisk && settings.showPerVolumeDisk && !volumes.isEmpty
     }

@@ -15,10 +15,12 @@ self-sampled data — no agent, no snapshot, no history change.
 
 - **Small / medium**: unchanged. The aggregate DISK metric row is the only disk
   surface (`showDisk` toggle governs it as today).
-- **Large**: when the new `Show per-volume disk` toggle is on, the aggregate
-  DISK row is **removed from the header HStack** (CPU/MEM stay) and per-volume
-  rows render as a **vertical list between the chart and the processes
-  section** (up to 5 rows):
+- **Large**: when the new `Show per-volume disk` toggle is on, per-volume rows
+  render as a **vertical list between the chart and the processes section**
+  (up to 5 rows). The aggregate DISK metric row **stays in the header**,
+  governed by its own `Show DISK` toggle — per-volume rows are additive, not a
+  replacement (revised after implementation per stakeholder: the aggregate row
+  must remain hideable/showable independently):
   - Row layout: colored dot (the DISK color) + volume name + `xx%` + free space
     (e.g. `Macintosh HD  71%  195 GB free`). Matches the existing `metricRow`
     visual language — rounded system font, monospaced digits, colored dot.
