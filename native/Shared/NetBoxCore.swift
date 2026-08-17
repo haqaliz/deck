@@ -76,6 +76,21 @@ enum NetBoxPinnedInterface {
     }
 }
 
+/// Warn/alarm tier for a network rate (NetBox threshold coloring).
+/// Thresholds are in decimal MB/s (×1,000,000, matching NetBoxFormatters).
+/// A non-positive rate is "no reading" — idle, stale, or a counter reset —
+/// and is never tinted, even when the configured thresholds are 0.
+/// Thresholds below 1 MB/s are floored to 1 so a hand-edited 0 can never
+/// make any traffic an alarm.
+enum NetBoxThresholdTier {
+    static func tier(rate: Double, warnMBps: Int, alarmMBps: Int) -> ThresholdTier {
+        guard rate > 0 else { return .normal }
+        let warn = max(1, warnMBps) * 1_000_000
+        let alarm = max(1, alarmMBps) * 1_000_000
+        return ThresholdTier.tier(value: rate, warn: Double(warn), alarm: Double(alarm))
+    }
+}
+
 enum NetBoxFormatters {
     /// "512 B/s", "1.2 KB/s", "3.4 MB/s", "1.2 GB/s"
     static func formatRate(_ bytesPerSecond: Double) -> String {
