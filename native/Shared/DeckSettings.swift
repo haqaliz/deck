@@ -165,6 +165,10 @@ struct NetBoxSettings: Codable, Equatable {
     var pinnedInterface: String?
     var upColor = RGBA(.green)
     var downColor = RGBA(.cyan)
+    var showThresholdColors = true
+    /// MB/s (decimal, ×1,000,000 — matches NetBoxFormatters).
+    var warnThreshold = 50
+    var alarmThreshold = 100
 
     init() {}
 
@@ -176,6 +180,10 @@ struct NetBoxSettings: Codable, Equatable {
         pinnedInterface = try c.decodeIfPresent(String.self, forKey: .pinnedInterface)
         upColor = try c.decodeIfPresent(RGBA.self, forKey: .upColor) ?? RGBA(.green)
         downColor = try c.decodeIfPresent(RGBA.self, forKey: .downColor) ?? RGBA(.cyan)
+        showThresholdColors = try c.decodeIfPresent(Bool.self, forKey: .showThresholdColors) ?? true
+        // Floor at 1 so a hand-edited 0 can never make every rate an alarm.
+        warnThreshold = max(1, try c.decodeIfPresent(Int.self, forKey: .warnThreshold) ?? 50)
+        alarmThreshold = max(1, try c.decodeIfPresent(Int.self, forKey: .alarmThreshold) ?? 100)
     }
 }
 
