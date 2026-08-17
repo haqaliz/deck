@@ -78,8 +78,8 @@ OpenBox:
 
 NetBox:
 - [x] Network interface picker (manual override of the auto "most active" pick)
-- [ ] Per-interface packet counts / error counters
-- [ ] Threshold coloring on rates
+- [x] Per-interface packet counts / error counters
+- [x] Threshold coloring on rates
 
 ## Planning workflow
 
