@@ -81,6 +81,7 @@ struct LiveBoxSettings: Codable, Equatable {
     var showCPU = true
     var showMEM = true
     var showDisk = true
+    var showPerVolumeDisk = true
     var showProcesses = true
     var showPerCoreCores = false
     var processCount = 3
@@ -103,6 +104,7 @@ struct LiveBoxSettings: Codable, Equatable {
         showCPU = try c.decodeIfPresent(Bool.self, forKey: .showCPU) ?? true
         showMEM = try c.decodeIfPresent(Bool.self, forKey: .showMEM) ?? true
         showDisk = try c.decodeIfPresent(Bool.self, forKey: .showDisk) ?? true
+        showPerVolumeDisk = try c.decodeIfPresent(Bool.self, forKey: .showPerVolumeDisk) ?? true
         showProcesses = try c.decodeIfPresent(Bool.self, forKey: .showProcesses) ?? true
         showPerCoreCores = try c.decodeIfPresent(Bool.self, forKey: .showPerCoreCores) ?? false
         processCount = try c.decodeIfPresent(Int.self, forKey: .processCount) ?? 3
