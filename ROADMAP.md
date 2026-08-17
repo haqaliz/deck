@@ -66,7 +66,7 @@ Deferred from the tests milestone (still untested, pick via deck-next):
 LiveBox:
 - [x] Per-core CPU lines (first 8 cores) or per-core selection
 - [ ] Apple Silicon GPU/ANE usage, thermal state
-- [ ] Disk per-volume (multiple mounts)
+- [x] Disk per-volume (multiple mounts, internal + external)
 - [x] Threshold coloring (amber/red when a value crosses warn/alarm thresholds)
 
 OpenBox:
