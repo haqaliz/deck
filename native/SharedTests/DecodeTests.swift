@@ -205,6 +205,17 @@ final class LiveBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.alarmThreshold, 90)
     }
 
+    func testOldFileWithoutPerVolumeKeyKeepsDefault() throws {
+        let s = try decode(#"{"showDisk":false}"#, as: LiveBoxSettings.self)
+        XCTAssertFalse(s.showDisk)
+        XCTAssertTrue(s.showPerVolumeDisk)
+    }
+
+    func testPerVolumeKeyRoundTrips() throws {
+        let s = try decode(#"{"showPerVolumeDisk":false}"#, as: LiveBoxSettings.self)
+        XCTAssertFalse(s.showPerVolumeDisk)
+    }
+
     func testThresholdKeysRoundTrip() throws {
         let s = try decode(
             #"{"showThresholdColors":false,"warnThreshold":70,"alarmThreshold":95}"#,

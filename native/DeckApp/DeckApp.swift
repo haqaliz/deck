@@ -321,6 +321,13 @@ private struct LiveBoxSettingsView: View {
                 Toggle("Show MEM", isOn: $settings.showMEM)
                 Toggle("Show DISK", isOn: $settings.showDisk)
             }
+            Section("Disk") {
+                Toggle("Show per-volume disk", isOn: $settings.showPerVolumeDisk)
+                    .disabled(!settings.showDisk)
+                Text("Lists internal and external volumes on the large widget; small and medium keep the aggregate disk row.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("Thresholds") {
                 Toggle("Show threshold colors", isOn: $settings.showThresholdColors)
                 Stepper("Warn at: \(settings.warnThreshold)%", value: $settings.warnThreshold, in: 0...100)

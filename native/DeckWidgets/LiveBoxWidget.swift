@@ -87,6 +87,10 @@ enum LiveBoxSampler {
             : snapshot.processes
     }
 
+    static func volumes() -> [DiskVolume] {
+        LiveBoxDiskCore.displayable(diskVolumeSamples())
+    }
+
     static func history(appending sample: (cpu: Double, mem: Double, disk: Double, perCore: [Double])) -> [Sample] {
         var history = HistoryStore.load()
         history.append(Sample(cpu: sample.cpu, mem: sample.mem, disk: sample.disk, perCore: sample.perCore))
@@ -198,6 +202,7 @@ struct LiveBoxWidgetEntryView: View {
                 mem: sample.mem,
                 disk: sample.disk,
                 processes: LiveBoxSampler.processes(mode: entry.processMode),
+                volumes: LiveBoxSampler.volumes(),
                 history: LiveBoxSampler.history(appending: sample)
             )
         }
@@ -214,6 +219,7 @@ struct LiveBoxFace: View {
     let mem: Double
     let disk: Double
     let processes: [TopProcess]
+    let volumes: [DiskVolume]
     let history: [Sample]
 
     var body: some View {
@@ -293,6 +299,10 @@ struct LiveBoxFace: View {
                 chart
             }
 
+            if showingPerVolumeDisk {
+                perVolumeList
+            }
+
             if settings.showProcesses && !processes.isEmpty {
                 Divider()
                 processList
@@ -300,6 +310,41 @@ struct LiveBoxFace: View {
 
             Spacer(minLength: 0)
         }
+    }
+
+    /// Per-volume disk rows render below the chart on the large face when the
+    /// toggle is on and the sampler found at least one volume; the aggregate
+    /// DISK header row stays visible, governed by its own `showDisk` toggle.
+    private var showingPerVolumeDisk: Bool {
+        settings.showDisk && settings.showPerVolumeDisk && !volumes.isEmpty
+    }
+
+    private var perVolumeList: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(volumes, id: \.mountPoint) { volume in
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(settings.diskColor.color)
+                        .frame(width: 7, height: 7)
+                    Text(volume.name)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer()
+                    Text(String(format: "%3.0f%%", volume.usedPercent))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.primary)
+                    Text(LiveBoxDiskCore.formatFreeBytes(volume.availableBytes))
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .font(.system(size: 12, weight: .semibold, design: .rounded))
+        .monospacedDigit()
     }
 
     private var currentProcesses: [TopProcess] {
