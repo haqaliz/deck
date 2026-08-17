@@ -123,7 +123,7 @@ struct OpenBoxSettings: Codable, Equatable {
     var showChart = true
     var showCostChart = false
     var showModels = true
-    var showTools = true
+    var showTools = false
     var showSessions = false
     var toolCount = 3
     var modelCount = 3
@@ -146,7 +146,7 @@ struct OpenBoxSettings: Codable, Equatable {
         showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
         showCostChart = try c.decodeIfPresent(Bool.self, forKey: .showCostChart) ?? false
         showModels = try c.decodeIfPresent(Bool.self, forKey: .showModels) ?? true
-        showTools = try c.decodeIfPresent(Bool.self, forKey: .showTools) ?? true
+        showTools = try c.decodeIfPresent(Bool.self, forKey: .showTools) ?? false
         showSessions = try c.decodeIfPresent(Bool.self, forKey: .showSessions) ?? false
         toolCount = try c.decodeIfPresent(Int.self, forKey: .toolCount) ?? 3
         modelCount = try c.decodeIfPresent(Int.self, forKey: .modelCount) ?? 3

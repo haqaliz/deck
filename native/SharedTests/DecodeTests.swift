@@ -23,6 +23,7 @@ final class OpenBoxSettingsDecodeTests: XCTestCase {
     func testSessionKeysDefaultOffWithCountThree() throws {
         let s = try decode(#"{}"#, as: OpenBoxSettings.self)
         XCTAssertFalse(s.showSessions)
+        XCTAssertFalse(s.showTools)
         XCTAssertEqual(s.sessionCount, 3)
     }
 
