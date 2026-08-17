@@ -18,7 +18,9 @@
 		181D20A2D1C49B8ECF82CFFA /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
 		18600374BCF4CECC18E75B9B /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		1967FF4D20A83BF47DDFFCB2 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
+		1C87D8AA7039304EE1047703 /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		1FE81DDA83527315D68D3A07 /* HomeBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D2A55F3FD7982AE42C95658 /* HomeBoxSnapshotTests.swift */; };
+		21F6F45C09E63559C20C6F2D /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		2204B91FEF36EF22F09364D4 /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
 		234BBFEE49DDFBC2A6F9A084 /* ThresholdTierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */; };
 		27DC4BBF55405C8CFB193051 /* OpenBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */; };
@@ -45,6 +47,7 @@
 		56242BA287F3C3D8CD8A380D /* ModelParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55EA63643575600049612BD /* ModelParserTests.swift */; };
 		5DAADD8D5F4E17021759CBE1 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		611DC32A1889B095CAE4D132 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
+		63CAFAA1018EA45415E903FE /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		72183F6AE6F651DFC0C5A377 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = CBC89EF1D34611CB2B244F15 /* AppIcon.icns */; };
 		73AC55C40799B7FACDF0B935 /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
@@ -64,7 +67,9 @@
 		A94346AFBE99A456A37C9F3A /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */; };
 		AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */; };
+		AF7FE0721F8D203C29B1D8D1 /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		B65A51E1C663EA52C4B95C29 /* NetBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */; };
+		BB0DA9CFEFB09DB47DCA109F /* LiveBoxDiskCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */; };
 		BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */; };
 		C25CF03F42EF2643976A9291 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		CA1BF5806D6024A7A49CE577 /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
@@ -127,6 +132,7 @@
 
 /* Begin PBXFileReference section */
 		0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxWidget.swift; sourceTree = "<group>"; };
+		06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxDiskCoreTests.swift; sourceTree = "<group>"; };
 		0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxSnapshot.swift; sourceTree = "<group>"; };
 		0B881092482BA9425E3F5918 /* DecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodeTests.swift; sourceTree = "<group>"; };
 		13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshot.swift; sourceTree = "<group>"; };
@@ -137,6 +143,7 @@
 		26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshot.swift; sourceTree = "<group>"; };
 		2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSnapshotTests.swift; sourceTree = "<group>"; };
 		34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckWidgets.swift; sourceTree = "<group>"; };
+		361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxDiskCore.swift; sourceTree = "<group>"; };
 		37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeLoader.swift; sourceTree = "<group>"; };
 		3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshotTests.swift; sourceTree = "<group>"; };
 		38FE485560E13BED32845511 /* DeckSharedTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeckSharedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -207,6 +214,7 @@
 				13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */,
 				51A807324DF40FC4483AF75D /* HomeBoxSnapshot.swift */,
 				F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */,
+				361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */,
 				C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */,
 				F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */,
 				D280CAAAC227082564309914 /* OpenCodeReader.swift */,
@@ -226,6 +234,7 @@
 				0B881092482BA9425E3F5918 /* DecodeTests.swift */,
 				3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */,
 				9D2A55F3FD7982AE42C95658 /* HomeBoxSnapshotTests.swift */,
+				06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */,
 				E55EA63643575600049612BD /* ModelParserTests.swift */,
 				AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */,
 				C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */,
@@ -503,6 +512,7 @@
 				E6D839C9A24374E64BFEF87B /* HomeBoxSnapshot.swift in Sources */,
 				4D29DC5858E1A5667D21B72A /* HomeBoxWidget.swift in Sources */,
 				CA1BF5806D6024A7A49CE577 /* LiveBoxCore.swift in Sources */,
+				63CAFAA1018EA45415E903FE /* LiveBoxDiskCore.swift in Sources */,
 				AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */,
 				519062F60924DCB8663544C7 /* NetBoxCore.swift in Sources */,
 				96B73870192265B41638143C /* NetBoxWidget.swift in Sources */,
@@ -533,6 +543,8 @@
 				DEB817674110D144380A8EFD /* HomeBoxSnapshot.swift in Sources */,
 				1FE81DDA83527315D68D3A07 /* HomeBoxSnapshotTests.swift in Sources */,
 				2204B91FEF36EF22F09364D4 /* LiveBoxCore.swift in Sources */,
+				1C87D8AA7039304EE1047703 /* LiveBoxDiskCore.swift in Sources */,
+				BB0DA9CFEFB09DB47DCA109F /* LiveBoxDiskCoreTests.swift in Sources */,
 				56242BA287F3C3D8CD8A380D /* ModelParserTests.swift in Sources */,
 				5DAADD8D5F4E17021759CBE1 /* NetBoxCore.swift in Sources */,
 				43222AFDC10A1829EE888C3E /* NetBoxCoreTests.swift in Sources */,
@@ -563,6 +575,7 @@
 				D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */,
 				E92B0312841C61D01E21A06B /* HomeBoxSnapshot.swift in Sources */,
 				17D71C4767C8E41123882FAB /* LiveBoxCore.swift in Sources */,
+				AF7FE0721F8D203C29B1D8D1 /* LiveBoxDiskCore.swift in Sources */,
 				47A9B9675547988F1A1C1786 /* NetBoxCore.swift in Sources */,
 				CB137C6731146B546A106840 /* OpenBoxCore.swift in Sources */,
 				38CA6F050AB3377F30390895 /* OpenCodeReader.swift in Sources */,
@@ -583,6 +596,7 @@
 				5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */,
 				D9DAC20F67AF8B1BE5D1F292 /* HomeBoxSnapshot.swift in Sources */,
 				758F397B4CB36B934DA2AD64 /* LiveBoxCore.swift in Sources */,
+				21F6F45C09E63559C20C6F2D /* LiveBoxDiskCore.swift in Sources */,
 				C25CF03F42EF2643976A9291 /* NetBoxCore.swift in Sources */,
 				73AC55C40799B7FACDF0B935 /* OpenBoxCore.swift in Sources */,
 				41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */,

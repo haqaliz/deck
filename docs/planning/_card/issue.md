@@ -1,13 +1,12 @@
-# NetBox threshold coloring (inline brief)
+# LiveBox disk per-volume (inline brief)
 
-Give NetBox the warn/alarm threshold coloring LiveBox already has (copy the
-pattern from the LiveBox widget + its warnThreshold/alarmThreshold settings,
-`native/Shared/DeckSettings.swift:91`): metric rows and the history chart turn
-amber/red when up/down rates cross the per-rate thresholds, with a NetBox tab in
-the Deck app settings. All math lives in `Shared/NetBoxCore.swift` (rates() at
-:51, formatRate at :81) so write the threshold + coloring logic in Shared with
-DeckSharedTests coverage, mirroring how LiveBox's thresholds were done. Two
-caveats from ROADMAP.md:82 / the interface picker work: apply thresholds to the
-resolved (pinned-or-auto) interface only, and treat zero/stale rates as "no
-reading", not "below threshold". Finish by registering the feature in README.md
-and ROADMAP.md and verifying all three sizes from the Widget Center.
+Give LiveBox a disk per-volume slice: enumerate mounted volumes
+(statfs/getmntinfo or the Volume resource API already used in
+`native/DeckWidgets/Loaders/SystemMetrics.swift:126`) and show each volume's
+used-percent + free space as rows/bars, while small/medium faces keep the
+aggregate DISK row. Scope out duplicate APFS volumes (e.g. `/System/Volumes/Data`)
+and decide the large-face layout (per-volume bars vs. keeping the aggregate
+chart line). Add settings (toggle + per-volume color optional) following the
+LiveBoxSettings tolerant-decode pattern, and keep everything in the
+self-sampled in-widget path — no agent changes. Finish by registering in
+README.md and ROADMAP.md and verifying all three sizes from the Widget Center.
