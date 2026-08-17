@@ -133,3 +133,45 @@ func diskUsagePercent() -> Double {
     else { return 0 }
     return (Double(total) - Double(available)) / Double(total) * 100.0
 }
+
+/// Every mounted volume's capacity, as raw records for `LiveBoxDiskCore`.
+///
+/// The widget sandbox permits reading Volume resource values (the same API
+/// `diskUsagePercent()` already uses in-process). We enumerate with
+/// `getmntinfo` rather than `mountedVolumeURLs` because the real boot volume
+/// (`/System/Volumes/Data`) is marked "nobrowse" on Catalina+ and would be
+/// hidden by `skipHiddenVolumes`; `getmntinfo` lists every mount, and
+/// `LiveBoxDiskCore` drops the system/pseudo mounts by path + browsable flag.
+func diskVolumeSamples() -> [RawVolume] {
+    let keys: Set<URLResourceKey> = [
+        .volumeLocalizedNameKey,
+        .volumeTotalCapacityKey,
+        .volumeAvailableCapacityForImportantUsageKey,
+        .volumeIsBrowsableKey,
+        .volumeIdentifierKey,
+    ]
+    var mnt: UnsafeMutablePointer<statfs>?
+    let count = getmntinfo(&mnt, MNT_NOWAIT)
+    guard count > 0, let mnt else { return [] }
+
+    var result: [RawVolume] = []
+    result.reserveCapacity(Int(count))
+    for i in 0..<Int(count) {
+        let m = mnt[i]
+        guard (m.f_flags & UInt32(MNT_LOCAL)) != 0 else { continue }
+        let path = withUnsafeBytes(of: m.f_mntonname) { raw -> String in
+            String(cString: raw.bindMemory(to: CChar.self).baseAddress!)
+        }
+        guard let values = try? URL(fileURLWithPath: path).resourceValues(forKeys: keys) else { continue }
+        result.append(RawVolume(
+            name: values.volumeLocalizedName ?? "",
+            mountPath: path,
+            totalBytes: values.volumeTotalCapacity.map(UInt64.init),
+            availableBytes: values.volumeAvailableCapacityForImportantUsage.map(UInt64.init),
+            isLocal: true,
+            isBrowsable: values.volumeIsBrowsable ?? false,
+            identifier: (values.volumeIdentifier as? UUID)?.uuidString ?? path
+        ))
+    }
+    return result
+}

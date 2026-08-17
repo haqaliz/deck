@@ -6,6 +6,7 @@ private let boot = RawVolume(
     totalBytes: 1_000_000_000_000,
     availableBytes: 300_000_000_000,
     isLocal: true,
+    isBrowsable: true,
     identifier: "boot-data"
 )
 private let system = RawVolume(
@@ -14,6 +15,7 @@ private let system = RawVolume(
     totalBytes: 1_000_000_000_000,
     availableBytes: 0,
     isLocal: true,
+    isBrowsable: true,
     identifier: "system"
 )
 private let external = RawVolume(
@@ -22,6 +24,7 @@ private let external = RawVolume(
     totalBytes: 2_000_000_000_000,
     availableBytes: 1_000_000_000_000,
     isLocal: true,
+    isBrowsable: true,
     identifier: "external"
 )
 
@@ -86,34 +89,40 @@ final class LiveBoxDiskSetTests: XCTestCase {
     }
 
     func testDropsSystemSiblingsExceptData() {
-        let preboot = RawVolume(name: "Preboot", mountPath: "/System/Volumes/Preboot", totalBytes: 500_000_000, availableBytes: 100_000_000, isLocal: true, identifier: "preboot")
-        let vm = RawVolume(name: "VM", mountPath: "/System/Volumes/VM", totalBytes: 500_000_000, availableBytes: 100_000_000, isLocal: true, identifier: "vm")
-        let update = RawVolume(name: "Update", mountPath: "/System/Volumes/Update", totalBytes: 500_000_000, availableBytes: 100_000_000, isLocal: true, identifier: "update")
+        let preboot = RawVolume(name: "Preboot", mountPath: "/System/Volumes/Preboot", totalBytes: 500_000_000, availableBytes: 100_000_000, isLocal: true, isBrowsable: true, identifier: "preboot")
+        let vm = RawVolume(name: "VM", mountPath: "/System/Volumes/VM", totalBytes: 500_000_000, availableBytes: 100_000_000, isLocal: true, isBrowsable: true, identifier: "vm")
+        let update = RawVolume(name: "Update", mountPath: "/System/Volumes/Update", totalBytes: 500_000_000, availableBytes: 100_000_000, isLocal: true, isBrowsable: true, identifier: "update")
         let result = LiveBoxDiskCore.displayable([boot, preboot, vm, update])
         XCTAssertEqual(result.map(\.mountPoint), ["/System/Volumes/Data"])
     }
 
     func testDropsPseudoMounts() {
-        let dev = RawVolume(name: "dev", mountPath: "/dev", totalBytes: 500_000_000, availableBytes: 100_000_000, isLocal: true, identifier: "dev")
-        let vm = RawVolume(name: "vm", mountPath: "/private/var/vm", totalBytes: 500_000_000, availableBytes: 100_000_000, isLocal: true, identifier: "vm")
+        let dev = RawVolume(name: "dev", mountPath: "/dev", totalBytes: 500_000_000, availableBytes: 100_000_000, isLocal: true, isBrowsable: true, identifier: "dev")
+        let vm = RawVolume(name: "vm", mountPath: "/private/var/vm", totalBytes: 500_000_000, availableBytes: 100_000_000, isLocal: true, isBrowsable: true, identifier: "vm")
         let result = LiveBoxDiskCore.displayable([dev, vm, boot])
         XCTAssertEqual(result.map(\.mountPoint), ["/System/Volumes/Data"])
     }
 
     func testDropsNonLocalVolumes() {
-        let network = RawVolume(name: "NAS", mountPath: "/Volumes/NAS", totalBytes: 1_000_000_000, availableBytes: 500_000_000, isLocal: false, identifier: "nas")
+        let network = RawVolume(name: "NAS", mountPath: "/Volumes/NAS", totalBytes: 1_000_000_000, availableBytes: 500_000_000, isLocal: false, isBrowsable: true, identifier: "nas")
         let result = LiveBoxDiskCore.displayable([network, boot])
         XCTAssertEqual(result.map(\.mountPoint), ["/System/Volumes/Data"])
     }
 
+    func testDropsNonBrowsableVolumes() {
+        let simulator = RawVolume(name: "iOS Simulator", mountPath: "/Library/Developer/CoreSimulator/Volumes/iOS_23D8133", totalBytes: 17_000_000_000, availableBytes: 500_000_000, isLocal: true, isBrowsable: false, identifier: "sim")
+        let result = LiveBoxDiskCore.displayable([simulator, boot])
+        XCTAssertEqual(result.map(\.mountPoint), ["/System/Volumes/Data"])
+    }
+
     func testDropsNilCapacityVolumes() {
-        let unknown = RawVolume(name: "Unknown", mountPath: "/Volumes/Unknown", totalBytes: nil, availableBytes: nil, isLocal: true, identifier: "unknown")
+        let unknown = RawVolume(name: "Unknown", mountPath: "/Volumes/Unknown", totalBytes: nil, availableBytes: nil, isLocal: true, isBrowsable: true, identifier: "unknown")
         let result = LiveBoxDiskCore.displayable([unknown, boot])
         XCTAssertEqual(result.map(\.mountPoint), ["/System/Volumes/Data"])
     }
 
     func testDedupesByIdentifier() {
-        let duplicate = RawVolume(name: "Macintosh HD - Data", mountPath: "/Volumes/Data", totalBytes: 1_000_000_000, availableBytes: 500_000_000, isLocal: true, identifier: "boot-data")
+        let duplicate = RawVolume(name: "Macintosh HD - Data", mountPath: "/Volumes/Data", totalBytes: 1_000_000_000, availableBytes: 500_000_000, isLocal: true, isBrowsable: true, identifier: "boot-data")
         let result = LiveBoxDiskCore.displayable([boot, duplicate])
         XCTAssertEqual(result.count, 1)
         XCTAssertEqual(result[0].mountPoint, "/System/Volumes/Data")
@@ -126,7 +135,7 @@ final class LiveBoxDiskSetTests: XCTestCase {
 
     func testCapsAtMaxVolumes() {
         let many = (0..<8).map { i in
-            RawVolume(name: "Vol \(i)", mountPath: "/Volumes/Vol \(i)", totalBytes: 1_000_000_000, availableBytes: UInt64(i) * 100_000_000, isLocal: true, identifier: "v\(i)")
+            RawVolume(name: "Vol \(i)", mountPath: "/Volumes/Vol \(i)", totalBytes: 1_000_000_000, availableBytes: UInt64(i) * 100_000_000, isLocal: true, isBrowsable: true, identifier: "v\(i)")
         }
         let result = LiveBoxDiskCore.displayable(many)
         XCTAssertEqual(result.count, LiveBoxDiskCore.maxVolumes)

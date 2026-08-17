@@ -7,13 +7,14 @@ import Foundation
 // bundle). The loader in DeckWidgets samples Volume resource values and feeds
 // these pure functions. ROADMAP.md:69.
 
-/// Raw record straight from the loader's Volume resource keys.
+/// Raw record straight from the loader (getmntinfo + Volume resource keys).
 struct RawVolume: Equatable {
     let name: String
     let mountPath: String
     let totalBytes: UInt64?
     let availableBytes: UInt64?
     let isLocal: Bool
+    let isBrowsable: Bool
     let identifier: String
 }
 
@@ -67,13 +68,14 @@ enum LiveBoxDiskCore {
         return name
     }
 
-    /// Local, real-capacity volumes only: drops the sealed system volume `/`,
-    /// the non-boot `/System/Volumes/*` siblings, and pseudo mounts; dedupes by
-    /// identifier; sorts fullest-first; caps at `maxVolumes`.
+    /// Local, browsable, real-capacity volumes only: drops the sealed system
+    /// volume `/`, the non-boot `/System/Volumes/*` siblings, non-browsable
+    /// system/disk-image mounts, and pseudo mounts; dedupes by identifier;
+    /// sorts fullest-first; caps at `maxVolumes`.
     static func displayable(_ raw: [RawVolume]) -> [DiskVolume] {
         var seen = Set<String>()
         let kept = raw.compactMap { v -> DiskVolume? in
-            guard v.isLocal, let total = v.totalBytes, let available = v.availableBytes else { return nil }
+            guard v.isLocal, v.isBrowsable, let total = v.totalBytes, let available = v.availableBytes else { return nil }
             guard !isExcludedMount(v.mountPath) else { return nil }
             guard seen.insert(v.identifier).inserted else { return nil }
             return DiskVolume(
