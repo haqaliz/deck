@@ -3,11 +3,6 @@ import IOKit.ps
 
 // MARK: - Battery state (IOKit power source, no subprocess)
 
-enum PowerSource: Equatable {
-    case battery
-    case ac
-}
-
 struct BatterySnapshot: Equatable {
     let levelPercent: Double?
     let timeToEmptyMinutes: Int?
@@ -51,13 +46,13 @@ enum BatteryMetricsLoader {
         }
 
         let level: Double? = (current != nil && maxCapacity != nil)
-            ? percent(current: current!, maxCapacity: maxCapacity!)
+            ? BatteryMath.percent(current: current!, maxCapacity: maxCapacity!)
             : nil
 
         return BatterySnapshot(
             levelPercent: level,
-            timeToEmptyMinutes: timeToEmptySeconds.flatMap(timeMinutes),
-            timeToFullMinutes: timeToFullSeconds.flatMap(timeMinutes),
+            timeToEmptyMinutes: timeToEmptySeconds.flatMap(BatteryMath.timeMinutes),
+            timeToFullMinutes: timeToFullSeconds.flatMap(BatteryMath.timeMinutes),
             isCharging: isCharging,
             isCharged: isCharged || (level ?? 0) >= 100,
             isPresent: isPresent,
@@ -75,41 +70,5 @@ enum BatteryMetricsLoader {
 
     private static func int(_ value: Any?) -> Int? {
         (value as? NSNumber)?.intValue
-    }
-
-    /// Charge percent from current/max capacity, clamped to 0...100.
-    private static func percent(current: Double, maxCapacity: Double) -> Double? {
-        guard maxCapacity > 0 else { return nil }
-        return min(100, max(0, current / maxCapacity * 100))
-    }
-
-    /// Whole minutes from a seconds value; 0 (or less) means "not applicable".
-    private static func timeMinutes(seconds: Int) -> Int? {
-        guard seconds > 0 else { return nil }
-        return Int(round(Double(seconds) / 60))
-    }
-}
-
-enum BatteryFormatters {
-    /// "71%"
-    static func formatPercent(_ value: Double) -> String {
-        String(format: "%.0f%%", value)
-    }
-
-    /// "6h 34m", "45m"; nil → "—"
-    static func formatTime(minutes: Int?) -> String {
-        guard let minutes else { return "—" }
-        let hours = minutes / 60
-        let mins = minutes % 60
-        if hours > 0 { return "\(hours)h \(mins)m" }
-        return "\(mins)m"
-    }
-
-    /// "Charging" / "Discharging" / "Full" / "AC Power"
-    static func formatState(isCharging: Bool, isCharged: Bool, powerSource: PowerSource) -> String {
-        if powerSource == .ac && isCharged { return "AC Power" }
-        if isCharged { return "Full" }
-        if isCharging { return "Charging" }
-        return "Discharging"
     }
 }

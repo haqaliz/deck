@@ -1,0 +1,52 @@
+import Foundation
+
+// MARK: - Battery pure logic (formatters + math)
+//
+// Extracted from DeckWidgets/Loaders/BatteryMetrics.swift so the formatters are
+// testable in DeckSharedTests (the widget target can't be compiled into a
+// unit-test bundle). The IOKit loader feeds these pure functions and keeps the
+// BatterySnapshot shape. Pure-core extraction (LiveBoxDiskCore precedent) —
+// no IOKit import lands in the app/agent/test targets.
+
+enum PowerSource: Equatable {
+    case battery
+    case ac
+}
+
+enum BatteryFormatters {
+    /// "71%"
+    static func formatPercent(_ value: Double) -> String {
+        String(format: "%.0f%%", value)
+    }
+
+    /// "6h 34m", "45m"; nil → "—"
+    static func formatTime(minutes: Int?) -> String {
+        guard let minutes else { return "—" }
+        let hours = minutes / 60
+        let mins = minutes % 60
+        if hours > 0 { return "\(hours)h \(mins)m" }
+        return "\(mins)m"
+    }
+
+    /// "Charging" / "Discharging" / "Full" / "AC Power"
+    static func formatState(isCharging: Bool, isCharged: Bool, powerSource: PowerSource) -> String {
+        if powerSource == .ac && isCharged { return "AC Power" }
+        if isCharged { return "Full" }
+        if isCharging { return "Charging" }
+        return "Discharging"
+    }
+}
+
+enum BatteryMath {
+    /// Charge percent from current/max capacity, clamped to 0...100.
+    static func percent(current: Double, maxCapacity: Double) -> Double? {
+        guard maxCapacity > 0 else { return nil }
+        return min(100, max(0, current / maxCapacity * 100))
+    }
+
+    /// Whole minutes from a seconds value; 0 (or less) means "not applicable".
+    static func timeMinutes(seconds: Int) -> Int? {
+        guard seconds > 0 else { return nil }
+        return Int(round(Double(seconds) / 60))
+    }
+}
