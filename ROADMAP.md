@@ -52,18 +52,16 @@ shell and only add a data source + a layout.
 - [x] Settings schema migration (tolerant decode for all settings structs)
 - [x] Tests: XCTest target for the Shared parsers (GitLogParser, ModelParser,
       formatters, DB SQL) — `DeckSharedTests`, runs on CI
-- [ ] Share the agent data path for LiveBox processes on a tighter cadence
+- [x] Share the agent data path for LiveBox processes on a tighter cadence
+      (`com.deck.agent.processes` LaunchAgent at the process refresh interval,
+      default 15s; the widget tick, staleness guard, and history window follow
+      the same interval)
 
-Deferred from the tests milestone (still untested, pick via deck-next):
-- SystemMetrics per-core math — needs the per-core math moved to Shared first,
-  which touches the LiveBox widget file.
-
-Covered by the `deferred-parser-tests` slice (feat/deferred-parser-tests/aliz):
-DevBox parsers (`DevBoxSnapshot` lsof/docker), `RemoteOpenCodeLoader`
-aggregation (`RemoteOpenCodeAggregator`), `ProcessSnapshot` parsing
-(`PsParser`, incl. the paths-with-spaces fix), and `BatteryMetrics` formatters
-(`Shared/BatteryCore.swift`). NetworkMetrics.formatRate is covered since the
-loader moved to `Shared/NetBoxCore.swift`.
+Deferred from the tests milestone (all covered as of v1.10):
+- SystemMetrics per-core math is now in `Shared/SystemMetricsCore.swift` and
+  covered by `DeckSharedTests` (`SystemMetricsCoreTests`), along with the
+  DevBox parsers, `RemoteOpenCodeLoader` aggregation, `ProcessSnapshot`
+  parsing, and `BatteryMetrics` formatters — see `deferred-parser-tests`.
 
 ## Feature backlog (existing widgets)
 

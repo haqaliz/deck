@@ -5,10 +5,28 @@ import Foundation
 // Silent CLI that refreshes the widget data snapshots (opencode usage +
 // top processes) into the extension container, then exits. Runs from a
 // LaunchAgent every N seconds — no window, no Dock icon, no flicker.
+//
+// Modes:
+//   (default)      full refresh: every snapshot, launched by com.deck.agent
+//   --processes    process snapshot only, launched by com.deck.agent.processes
+//                  at the LiveBox process refresh interval (default 15s)
 
 let semaphore = DispatchSemaphore(value: 0)
 
+func sampleProcesses() {
+    let processes = ProcessSnapshot(writtenAt: Date(), processes: HostProcessSampler.top(limit: 10))
+    if processes != ProcessSnapshotStore.load() {
+        ProcessSnapshotStore.save(processes)
+    }
+}
+
 Task {
+    if CommandLine.arguments.contains("--processes") {
+        sampleProcesses()
+        semaphore.signal()
+        exit(0)
+    }
+
     let settings = DeckSettings.load()
 
     let opencode: OpenCodeSnapshot?
@@ -27,10 +45,7 @@ Task {
         OpenCodeSnapshotStore.save(opencode)
     }
 
-    let processes = ProcessSnapshot(writtenAt: Date(), processes: HostProcessSampler.top(limit: 10))
-    if processes != ProcessSnapshotStore.load() {
-        ProcessSnapshotStore.save(processes)
-    }
+    sampleProcesses()
 
     if let gitbox = HostGitBoxSampler.snapshot(
         paths: settings.gitbox.repoPaths,

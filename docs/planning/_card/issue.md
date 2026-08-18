@@ -1,20 +1,19 @@
-# Deferred parser/formatter test slices (inline brief)
+# Source brief: livebox-process-cadence (inline, from deck-next handoff)
 
-Extend the DeckSharedTests suite to the deferred test slices recorded in
-ROADMAP.md under M4 "Deferred from the tests milestone":
+LiveBox's CPU chart re-samples live on a TimelineView tick, but the top-process
+rows render from the agent's `processes.json` snapshot which refreshes only
+every 60s — a visible staleness gap on the deck's liveliest widget.
 
-1. DevBoxSnapshot lsof/docker parsers
-2. RemoteOpenCodeLoader aggregation
-3. ProcessSnapshot ps parsing
-4. BatteryMetrics formatters
+Plan (draft): sample the process snapshot at a tighter interval (agent change,
+keep CPU cost negligible) and have LiveBox re-read it on its existing live
+tick; wire an optional interval setting with tolerant decode, test the Shared
+changes in DeckSharedTests.
 
-Pure parser/formatter tests — no widget, settings, agent, or shell changes.
+Caveats (from deck-next):
 
-Keep the SystemMetrics per-core math out of the first slice (it needs the math
-moved to Shared first, touching the LiveBox widget file — that is a follow-on).
-
-Follow the shared-parser-tests precedent:
-
-- `xcodegen generate` + `xcodebuild test -scheme DeckSharedTests` must pass.
-- The three app targets still build.
-- ROADMAP.md updated to mark the covered items.
+- Do NOT fight the ~60s WidgetKit timeline floor (CLAUDE.md) — the gain is
+  fresher snapshot data per render, not more renders.
+- Also pick up the deferred SystemMetrics per-core math tests (ROADMAP.md:58)
+  since both touch the same files.
+- GPU/ANE/thermal is out (documented blocker: no public Apple Silicon API —
+  docs/planning/livebox-per-core-cpu/prd.md:94).

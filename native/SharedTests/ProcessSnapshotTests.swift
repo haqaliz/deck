@@ -63,3 +63,31 @@ final class PsParserTests: XCTestCase {
         ])
     }
 }
+
+final class ProcessMaxAgeTests: XCTestCase {
+    func testDefaultFifteenSecondIntervalGivesThirtySecondWindow() {
+        XCTAssertEqual(ProcessSnapshot.maxAgeSeconds(for: 15), 30)
+    }
+
+    func testThirtySecondIntervalDoublesWindow() {
+        XCTAssertEqual(ProcessSnapshot.maxAgeSeconds(for: 30), 60)
+    }
+
+    func testSixtySecondIntervalGivesTwoMinuteWindow() {
+        XCTAssertEqual(ProcessSnapshot.maxAgeSeconds(for: 60), 120)
+    }
+
+    func testFastIntervalsFloorAtThirtySeconds() {
+        XCTAssertEqual(ProcessSnapshot.maxAgeSeconds(for: 5), 30)
+        XCTAssertEqual(ProcessSnapshot.maxAgeSeconds(for: 10), 30)
+    }
+
+    func testGuardIsMonotonicWithInterval() {
+        var previous = 0.0
+        for interval in 1...60 {
+            let next = ProcessSnapshot.maxAgeSeconds(for: interval)
+            XCTAssertGreaterThanOrEqual(next, previous)
+            previous = next
+        }
+    }
+}

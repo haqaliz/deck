@@ -225,6 +225,25 @@ final class LiveBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.warnThreshold, 70)
         XCTAssertEqual(s.alarmThreshold, 95)
     }
+
+    func testOldFileWithoutRefreshIntervalKeyKeepsDefault() throws {
+        let s = try decode(#"{"showCPU":false}"#, as: LiveBoxSettings.self)
+        XCTAssertFalse(s.showCPU)
+        XCTAssertEqual(s.processRefreshInterval, 15)
+    }
+
+    func testRefreshIntervalDecodesExplicitValue() throws {
+        let s = try decode(#"{"processRefreshInterval":30}"#, as: LiveBoxSettings.self)
+        XCTAssertEqual(s.processRefreshInterval, 30)
+    }
+
+    func testRefreshIntervalRoundTrips() throws {
+        var s = LiveBoxSettings()
+        s.processRefreshInterval = 5
+        let data = try JSONEncoder().encode(s)
+        let back = try JSONDecoder().decode(LiveBoxSettings.self, from: data)
+        XCTAssertEqual(back.processRefreshInterval, 5)
+    }
 }
 
 final class ClipBoxSettingsDecodeTests: XCTestCase {

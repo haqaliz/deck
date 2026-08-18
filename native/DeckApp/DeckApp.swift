@@ -182,55 +182,85 @@ struct ContentView: View {
             .appendingPathComponent("Library/LaunchAgents/com.deck.agent.plist")
     }
 
+    private var processAgentPlistURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/LaunchAgents/com.deck.agent.processes.plist")
+    }
+
     private var agentInterval: Int {
         60
     }
 
     private func installAgentIfNeeded() {
-        let plist = agentPlistURL
+        installAgent(plistURL: agentPlistURL, label: "com.deck.agent", interval: agentInterval, extraArguments: [], logPath: "/tmp/deck-agent.log", restartIfChanged: false)
+        installAgent(
+            plistURL: processAgentPlistURL,
+            label: "com.deck.agent.processes",
+            interval: settings.livebox.processRefreshInterval,
+            extraArguments: ["--processes"],
+            logPath: "/tmp/deck-agent-processes.log",
+            restartIfChanged: true
+        )
+    }
+
+    private func installAgent(plistURL: URL, label: String, interval: Int, extraArguments: [String], logPath: String, restartIfChanged: Bool) {
         try? FileManager.default.createDirectory(
-            at: plist.deletingLastPathComponent(),
+            at: plistURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
+        if restartIfChanged && currentStartInterval(of: plistURL) != interval {
+            runLaunchctl(["bootout", "gui/\(getuid())/\(label)"])
+        }
+        let args = (["/Applications/Deck.app/Contents/MacOS/DeckAgent"] + extraArguments)
+            .map { "<string>\($0)</string>" }
+            .joined(separator: "\n")
         let content = """
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
         <dict>
             <key>Label</key>
-            <string>com.deck.agent</string>
+            <string>\(label)</string>
             <key>ProgramArguments</key>
             <array>
-                <string>/Applications/Deck.app/Contents/MacOS/DeckAgent</string>
+        \(args)
             </array>
             <key>RunAtLoad</key>
             <true/>
             <key>StartInterval</key>
-            <integer>\(agentInterval)</integer>
+            <integer>\(interval)</integer>
             <key>StandardOutPath</key>
-            <string>/tmp/deck-agent.log</string>
+            <string>\(logPath)</string>
             <key>StandardErrorPath</key>
-            <string>/tmp/deck-agent.log</string>
+            <string>\(logPath)</string>
         </dict>
         </plist>
         """
-        try? content.write(to: plist, atomically: true, encoding: .utf8)
-        bootstrapAgent()
+        try? content.write(to: plistURL, atomically: true, encoding: .utf8)
+        runLaunchctl(["bootstrap", "gui/\(getuid())", plistURL.path])
     }
 
-    private func bootstrapAgent() {
+    private func currentStartInterval(of plistURL: URL) -> Int? {
+        guard
+            let data = try? Data(contentsOf: plistURL),
+            let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
+            let dict = plist as? [String: Any]
+        else { return nil }
+        return dict["StartInterval"] as? Int
+    }
+
+    private func runLaunchctl(_ arguments: [String]) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-        process.arguments = ["bootstrap", "gui/\(getuid())", agentPlistURL.path]
+        process.arguments = arguments
         try? process.run()
     }
 
     private func removeAgent() {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-        process.arguments = ["bootout", "gui/\(getuid())/com.deck.agent"]
-        try? process.run()
+        runLaunchctl(["bootout", "gui/\(getuid())/com.deck.agent"])
+        runLaunchctl(["bootout", "gui/\(getuid())/com.deck.agent.processes"])
         try? FileManager.default.removeItem(at: agentPlistURL)
+        try? FileManager.default.removeItem(at: processAgentPlistURL)
     }
 
     private func removeSidebarToggleFromWindow() {
@@ -342,6 +372,11 @@ private struct LiveBoxSettingsView: View {
                 Toggle("Show top processes", isOn: $settings.showProcesses)
                 Stepper("Process count: \(settings.processCount)", value: $settings.processCount, in: 1...20)
                     .disabled(!settings.showProcesses)
+                Stepper("Process refresh: \(settings.processRefreshInterval) s", value: $settings.processRefreshInterval, in: 5...60, step: 5)
+                    .disabled(!settings.showProcesses)
+                Text("How often the widget and the background agent refresh the process list. Lower is livelier; other widgets stay on their own cadence.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

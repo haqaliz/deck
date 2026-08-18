@@ -16,6 +16,12 @@ struct TopProcess: Codable, Equatable {
 struct ProcessSnapshot: Codable, Equatable {
     var writtenAt: Date
     var processes: [TopProcess]
+
+    /// Max age of a snapshot the widget still renders, given the process
+    /// refresh interval. Tolerates one missed fast-agent tick; floors at 30s.
+    static func maxAgeSeconds(for interval: Int) -> TimeInterval {
+        TimeInterval(max(2 * interval, 30))
+    }
 }
 
 enum ProcessSnapshotStore {
