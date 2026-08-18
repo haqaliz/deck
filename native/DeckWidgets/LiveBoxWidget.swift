@@ -17,7 +17,11 @@ struct Sample: Codable {
 }
 
 enum HistoryStore {
-    static let capacity = 60
+    /// One sample per render tick; keeps a ~60-minute window at any refresh
+    /// interval, capped at 240 points so fast intervals don't bloat the chart.
+    static func capacity(interval: Int) -> Int {
+        min(3600 / max(interval, 1), 240)
+    }
 
     static var fileURL: URL {
         let base = FileManager.default.urls(
@@ -48,7 +52,8 @@ enum HistoryStore {
 // MARK: - Timeline entry
 //
 // The entry only carries stable config; live data is sampled at render time
-// inside a TimelineView (5s ticks), which WidgetKit does not throttle.
+// inside a TimelineView that ticks at the configured process refresh interval
+// (processRefreshInterval, default 15s), which WidgetKit does not throttle.
 
 struct LiveBoxEntry: TimelineEntry {
     let date: Date
@@ -56,7 +61,7 @@ struct LiveBoxEntry: TimelineEntry {
     let processMode: String
 }
 
-// MARK: - Live sampler (runs on every 5s render tick)
+// MARK: - Live sampler (runs on every render tick)
 
 enum LiveBoxSampler {
     private static var previousTicks: CpuTicks?
@@ -77,10 +82,10 @@ enum LiveBoxSampler {
         return (cpu, memoryUsagePercent(), diskUsagePercent(), perCore)
     }
 
-    static func processes(mode: String) -> [TopProcess] {
+    static func processes(mode: String, interval: Int) -> [TopProcess] {
         guard
             let snapshot = ProcessSnapshotStore.load(),
-            snapshot.writtenAt.timeIntervalSinceNow > -90
+            snapshot.writtenAt.timeIntervalSinceNow > -ProcessSnapshot.maxAgeSeconds(for: interval)
         else { return [] }
         return mode == LiveBoxProcessMode.memory
             ? snapshot.processes.sorted { $0.memPercent > $1.memPercent }
@@ -91,11 +96,11 @@ enum LiveBoxSampler {
         LiveBoxDiskCore.displayable(diskVolumeSamples())
     }
 
-    static func history(appending sample: (cpu: Double, mem: Double, disk: Double, perCore: [Double])) -> [Sample] {
+    static func history(appending sample: (cpu: Double, mem: Double, disk: Double, perCore: [Double]), interval: Int) -> [Sample] {
         var history = HistoryStore.load()
         history.append(Sample(cpu: sample.cpu, mem: sample.mem, disk: sample.disk, perCore: sample.perCore))
-        if history.count > HistoryStore.capacity {
-            history.removeFirst(history.count - HistoryStore.capacity)
+        if history.count > HistoryStore.capacity(interval: interval) {
+            history.removeFirst(history.count - HistoryStore.capacity(interval: interval))
         }
         HistoryStore.save(history)
         return history
@@ -191,7 +196,8 @@ struct LiveBoxWidgetEntryView: View {
     let entry: LiveBoxEntry
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { context in
+        let interval = entry.settings.processRefreshInterval
+        TimelineView(.periodic(from: .now, by: Double(interval))) { context in
             let sample = LiveBoxSampler.sample()
             LiveBoxFace(
                 family: family,
@@ -201,9 +207,9 @@ struct LiveBoxWidgetEntryView: View {
                 cpu: sample.cpu,
                 mem: sample.mem,
                 disk: sample.disk,
-                processes: LiveBoxSampler.processes(mode: entry.processMode),
+                processes: LiveBoxSampler.processes(mode: entry.processMode, interval: interval),
                 volumes: LiveBoxSampler.volumes(),
-                history: LiveBoxSampler.history(appending: sample)
+                history: LiveBoxSampler.history(appending: sample, interval: interval)
             )
         }
     }
