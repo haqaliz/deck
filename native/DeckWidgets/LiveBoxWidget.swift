@@ -41,11 +41,7 @@ enum HistoryStore {
 
     static func save(_ samples: [Sample]) {
         guard let data = try? JSONEncoder().encode(samples) else { return }
-        try? FileManager.default.createDirectory(
-            at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try? data.write(to: fileURL)
+        _ = AtomicFile.write(data, to: fileURL)
     }
 }
 

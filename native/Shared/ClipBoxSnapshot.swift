@@ -43,11 +43,7 @@ enum ClipBoxSnapshotStore {
 
     static func save(_ snapshot: ClipBoxSnapshot) {
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        try? FileManager.default.createDirectory(
-            at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try? data.write(to: fileURL)
+        _ = AtomicFile.write(data, to: fileURL)
     }
 
     /// Purges the history (Clear history in the ClipBox settings tab).

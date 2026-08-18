@@ -105,10 +105,6 @@ enum OpenCodeSnapshotStore {
 
     static func save(_ snapshot: OpenCodeSnapshot) {
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        try? FileManager.default.createDirectory(
-            at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try? data.write(to: fileURL)
+        _ = AtomicFile.write(data, to: fileURL)
     }
 }

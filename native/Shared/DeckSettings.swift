@@ -68,11 +68,7 @@ struct DeckSettings: Codable, Equatable {
 
     func save() {
         guard let data = try? JSONEncoder().encode(self) else { return }
-        try? FileManager.default.createDirectory(
-            at: Self.fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try? data.write(to: Self.fileURL)
+        _ = AtomicFile.write(data, to: Self.fileURL)
     }
 }
 
