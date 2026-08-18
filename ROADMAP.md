@@ -55,11 +55,15 @@ shell and only add a data source + a layout.
 - [ ] Share the agent data path for LiveBox processes on a tighter cadence
 
 Deferred from the tests milestone (still untested, pick via deck-next):
-- DevBox parsers (`DevBoxSnapshot` lsof/docker), RemoteOpenCodeLoader
-  aggregation, ProcessSnapshot parsing, and the remaining Loader formatters
-  (BatteryMetrics, SystemMetrics per-core math — the latter needs the per-core
-  math moved to Shared first). NetworkMetrics.formatRate is covered since the
-  loader moved to `Shared/NetBoxCore.swift`.
+- SystemMetrics per-core math — needs the per-core math moved to Shared first,
+  which touches the LiveBox widget file.
+
+Covered by the `deferred-parser-tests` slice (feat/deferred-parser-tests/aliz):
+DevBox parsers (`DevBoxSnapshot` lsof/docker), `RemoteOpenCodeLoader`
+aggregation (`RemoteOpenCodeAggregator`), `ProcessSnapshot` parsing
+(`PsParser`, incl. the paths-with-spaces fix), and `BatteryMetrics` formatters
+(`Shared/BatteryCore.swift`). NetworkMetrics.formatRate is covered since the
+loader moved to `Shared/NetBoxCore.swift`.
 
 ## Feature backlog (existing widgets)
 
