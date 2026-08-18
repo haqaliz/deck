@@ -122,3 +122,9 @@ xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release
 
 The Xcode project regenerates from `native/project.yml` (DeckApp host,
 DeckWidgets extension, DeckAgent CLI, Shared models).
+
+**Soak test:** `scripts/soak.sh` stresses the agent write paths (400 agent
+runs + 50 overlapping launches, JSON integrity + exit-code assertions) and
+runs in a few minutes; it isolates the LaunchAgents and the snapshot
+container during the run and restores them afterwards. For the full 24h
+stability soak see `docs/planning/crash-robustness-pass/runbook-24h.md`.
