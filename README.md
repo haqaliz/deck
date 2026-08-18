@@ -89,7 +89,9 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 
 ```bash
 launchctl bootout gui/$(id -u)/com.deck.agent
+launchctl bootout gui/$(id -u)/com.deck.agent.processes
 rm -f ~/Library/LaunchAgents/com.deck.agent.plist
+rm -f ~/Library/LaunchAgents/com.deck.agent.processes.plist
 rm -rf /Applications/Deck.app
 ```
 
