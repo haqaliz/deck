@@ -2,15 +2,12 @@ import Foundation
 import Darwin
 
 // MARK: - CPU
+//
+// The pure tick math (CpuTicks, perCoreUsagePercents, cpuUsagePercent) lives
+// in Shared/SystemMetricsCore.swift so DeckSharedTests can cover it; this file
+// keeps only the mach samplers that feed it.
 
-struct CpuTicks {
-    var user: UInt64 = 0
-    var system: UInt64 = 0
-    var idle: UInt64 = 0
-    var nice: UInt64 = 0
-
-    var total: UInt64 { user + system + idle + nice }
-
+extension CpuTicks {
     static func sample() -> CpuTicks {
         var ticks = CpuTicks()
         var cpuInfo: processor_info_array_t?
@@ -69,28 +66,6 @@ struct CpuTicks {
             )
         }
     }
-}
-
-/// Per-core usage percent (0...100) between two tick samples, one entry per
-/// shared-prefix core. 0 when a core shows no delta. Counts that differ
-/// between samples are zip-safe (shared prefix only).
-func perCoreUsagePercents(previous: [CpuTicks], current: [CpuTicks]) -> [Double] {
-    zip(previous, current).map { prev, cur in
-        let deltaTotal = cur.total - prev.total
-        guard deltaTotal > 0 else { return 0 }
-        let deltaIdle = cur.idle - prev.idle
-        return Double(deltaTotal - deltaIdle) / Double(deltaTotal) * 100.0
-    }
-}
-
-/// CPU usage percent (0...100) between two tick samples.
-/// Pass `nil` for the first call to seed the baseline.
-func cpuUsagePercent(previous: CpuTicks?, current: CpuTicks) -> Double {
-    guard let previous else { return 0 }
-    let deltaTotal = current.total - previous.total
-    guard deltaTotal > 0 else { return 0 }
-    let deltaIdle = current.idle - previous.idle
-    return Double(deltaTotal - deltaIdle) / Double(deltaTotal) * 100.0
 }
 
 /// CPU usage percent (0...100) since the previous sample.
