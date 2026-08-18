@@ -5,7 +5,8 @@ import Foundation
 // Compact port of the window OpenBox's remote mode: fetch /session (and
 // per-session messages when the server lacks session-level usage) from an
 // `opencode serve` instance using HTTP basic auth, then aggregate into an
-// OpenCodeSnapshot for the widget.
+// OpenCodeSnapshot for the widget. Aggregation lives in
+// RemoteOpenCodeAggregator (internal, testable); this file owns transport.
 
 enum RemoteOpenCodeLoader {
     enum RemoteError: Error {
@@ -19,38 +20,88 @@ enum RemoteOpenCodeLoader {
         let base = try normalizedBase(serverURL)
         let auth = "Basic " + Data("opencode:\(token)".utf8).base64EncodedString()
 
-        let sessions: [RemoteSession] = try await get(base, auth, path: "/session")
+        let sessions: [RemoteOpenCodeAggregator.RemoteSession] = try await get(base, auth, path: "/session")
         let now = Date()
         let sessionCutoff = now.timeIntervalSince1970 * 1000 - 14 * 86_400 * 1000
 
         if sessions.contains(where: { $0.cost != nil || $0.tokens != nil }) {
-            return aggregate(sessions: sessions, now: now)
+            return RemoteOpenCodeAggregator.aggregate(sessions: sessions, now: now)
         }
 
-        var messages: [RemoteMessage] = []
+        var messages: [RemoteOpenCodeAggregator.RemoteMessage] = []
         for remoteSession in sessions where remoteSession.time.updated >= sessionCutoff {
             let envelopes: [RemoteMessageEnvelope] = try await get(
                 base, auth, path: "/session/\(remoteSession.id)/message"
             )
             messages.append(contentsOf: envelopes.map(\.info))
         }
-        return aggregate(sessions: sessions, messages: messages, now: now)
+        return RemoteOpenCodeAggregator.aggregate(sessions: sessions, messages: messages, now: now)
     }
 
     // MARK: - Server JSON shapes
 
-    private struct RemoteTime: Codable {
+    private struct RemoteMessageEnvelope: Codable {
+        let info: RemoteOpenCodeAggregator.RemoteMessage
+    }
+
+    // MARK: - Transport
+
+    private static func normalizedBase(_ raw: String) throws -> URL {
+        guard let url = URL(string: raw), let scheme = url.scheme, !scheme.isEmpty else {
+            throw RemoteError.invalidURL
+        }
+        return url
+    }
+
+    private static func get<T: Decodable>(_ base: URL, _ auth: String, path: String) async throws -> T {
+        guard let url = URL(string: base.absoluteString + path) else {
+            throw RemoteError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.setValue(auth, forHTTPHeaderField: "Authorization")
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw RemoteError.transport(error.localizedDescription)
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw RemoteError.transport("Not an HTTP response")
+        }
+        switch http.statusCode {
+        case 200:
+            do {
+                return try JSONDecoder().decode(T.self, from: data)
+            } catch {
+                throw RemoteError.transport("Invalid JSON: \(error.localizedDescription)")
+            }
+        case 401, 403:
+            throw RemoteError.unauthorized
+        default:
+            throw RemoteError.serverError(http.statusCode)
+        }
+    }
+}
+
+// MARK: - Aggregation (internal, testable in DeckSharedTests)
+
+enum RemoteOpenCodeAggregator {
+    // Server JSON shapes (shared with load()'s decode — one type set, no fork).
+
+    struct RemoteTime: Codable {
         let created: Double
         let updated: Double
     }
 
-    private struct RemoteModel: Codable {
+    struct RemoteModel: Codable {
         let id: String
         let providerID: String?
         let variant: String?
     }
 
-    private struct RemoteSession: Codable {
+    struct RemoteSession: Codable {
         let id: String
         let time: RemoteTime
         let cost: Double?
@@ -58,22 +109,22 @@ enum RemoteOpenCodeLoader {
         let model: RemoteModel?
     }
 
-    private struct RemoteCache: Codable {
+    struct RemoteCache: Codable {
         let read: Double
         let write: Double
     }
 
-    private struct RemoteTokens: Codable {
+    struct RemoteTokens: Codable {
         let input: Double
         let output: Double
         let cache: RemoteCache
     }
 
-    private struct RemoteMessageTime: Codable {
+    struct RemoteMessageTime: Codable {
         let created: Double
     }
 
-    private struct RemoteMessage: Codable {
+    struct RemoteMessage: Codable {
         let id: String
         let sessionID: String
         let role: String
@@ -84,18 +135,14 @@ enum RemoteOpenCodeLoader {
         let tokens: RemoteTokens?
     }
 
-    private struct RemoteMessageEnvelope: Codable {
-        let info: RemoteMessage
-    }
-
-    // MARK: - Aggregation (mirrors the window's RemoteMetrics)
+    // Mirrors the window's RemoteMetrics.
 
     private static let daySeconds = 86_400.0
     private static let sessionWindow: TimeInterval = 14 * daySeconds
     private static let messageWindow: TimeInterval = 13 * daySeconds
     private static let todayWindow: TimeInterval = daySeconds
 
-    private static func aggregate(sessions: [RemoteSession], now: Date) -> OpenCodeSnapshot {
+    static func aggregate(sessions: [RemoteSession], now: Date) -> OpenCodeSnapshot {
         let nowMilliseconds = now.timeIntervalSince1970 * 1000
         let sessionCutoff = nowMilliseconds - sessionWindow * 1000
         let todayCutoff = nowMilliseconds - todayWindow * 1000
@@ -155,7 +202,7 @@ enum RemoteOpenCodeLoader {
         )
     }
 
-    private static func aggregate(sessions: [RemoteSession], messages: [RemoteMessage], now: Date) -> OpenCodeSnapshot {
+    static func aggregate(sessions: [RemoteSession], messages: [RemoteMessage], now: Date) -> OpenCodeSnapshot {
         let nowMilliseconds = now.timeIntervalSince1970 * 1000
         let sessionCutoff = nowMilliseconds - sessionWindow * 1000
         let messageCutoff = nowMilliseconds - messageWindow * 1000
@@ -277,7 +324,7 @@ enum RemoteOpenCodeLoader {
         return rows.sorted { $0.day == $1.day ? $0.cost > $1.cost : $0.day < $1.day }
     }
 
-    private static func utcDayString(from epochMilliseconds: Double) -> String {
+    static func utcDayString(from epochMilliseconds: Double) -> String {
         let seconds = Int64(epochMilliseconds / 1000)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -295,45 +342,5 @@ enum RemoteOpenCodeLoader {
 
     private static func round4(_ value: Double) -> Double {
         (value * 10_000).rounded() / 10_000
-    }
-
-    // MARK: - Transport
-
-    private static func normalizedBase(_ raw: String) throws -> URL {
-        guard let url = URL(string: raw), let scheme = url.scheme, !scheme.isEmpty else {
-            throw RemoteError.invalidURL
-        }
-        return url
-    }
-
-    private static func get<T: Decodable>(_ base: URL, _ auth: String, path: String) async throws -> T {
-        guard let url = URL(string: base.absoluteString + path) else {
-            throw RemoteError.invalidURL
-        }
-        var request = URLRequest(url: url)
-        request.setValue(auth, forHTTPHeaderField: "Authorization")
-
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch {
-            throw RemoteError.transport(error.localizedDescription)
-        }
-        guard let http = response as? HTTPURLResponse else {
-            throw RemoteError.transport("Not an HTTP response")
-        }
-        switch http.statusCode {
-        case 200:
-            do {
-                return try JSONDecoder().decode(T.self, from: data)
-            } catch {
-                throw RemoteError.transport("Invalid JSON: \(error.localizedDescription)")
-            }
-        case 401, 403:
-            throw RemoteError.unauthorized
-        default:
-            throw RemoteError.serverError(http.statusCode)
-        }
     }
 }

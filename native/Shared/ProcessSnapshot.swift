@@ -57,14 +57,25 @@ enum HostProcessSampler {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         guard let text = String(data: data, encoding: .utf8) else { return [] }
 
-        return text
+        return PsParser.parse(text)
+            .prefix(limit)
+            .map { $0 }
+    }
+}
+
+enum PsParser {
+    /// Parses `ps -Aceo comm=,%cpu=,%mem=` output. %cpu/%mem are the last two
+    /// whitespace tokens; comm is a full executable path that may contain
+    /// spaces, so it is parsed right-anchored.
+    static func parse(_ raw: String) -> [TopProcess] {
+        raw
             .split(separator: "\n")
             .compactMap { row -> TopProcess? in
                 let parts = row.split(whereSeparator: { $0 == " " }).filter { !$0.isEmpty }
                 guard parts.count >= 3 else { return nil }
-                let path = parts[0]
-                let cpu = Double(parts[1]) ?? 0
-                let mem = Double(parts[2]) ?? 0
+                let cpu = Double(parts[parts.count - 2]) ?? 0
+                let mem = Double(parts[parts.count - 1]) ?? 0
+                let path = parts[0..<parts.count - 2].joined(separator: " ")
                 return TopProcess(
                     name: NSString(string: String(path)).lastPathComponent,
                     cpuPercent: cpu,
@@ -72,7 +83,5 @@ enum HostProcessSampler {
                 )
             }
             .sorted { $0.cpuPercent > $1.cpuPercent }
-            .prefix(limit)
-            .map { $0 }
     }
 }

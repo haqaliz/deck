@@ -1,12 +1,20 @@
-# LiveBox disk per-volume (inline brief)
+# Deferred parser/formatter test slices (inline brief)
 
-Give LiveBox a disk per-volume slice: enumerate mounted volumes
-(statfs/getmntinfo or the Volume resource API already used in
-`native/DeckWidgets/Loaders/SystemMetrics.swift:126`) and show each volume's
-used-percent + free space as rows/bars, while small/medium faces keep the
-aggregate DISK row. Scope out duplicate APFS volumes (e.g. `/System/Volumes/Data`)
-and decide the large-face layout (per-volume bars vs. keeping the aggregate
-chart line). Add settings (toggle + per-volume color optional) following the
-LiveBoxSettings tolerant-decode pattern, and keep everything in the
-self-sampled in-widget path — no agent changes. Finish by registering in
-README.md and ROADMAP.md and verifying all three sizes from the Widget Center.
+Extend the DeckSharedTests suite to the deferred test slices recorded in
+ROADMAP.md under M4 "Deferred from the tests milestone":
+
+1. DevBoxSnapshot lsof/docker parsers
+2. RemoteOpenCodeLoader aggregation
+3. ProcessSnapshot ps parsing
+4. BatteryMetrics formatters
+
+Pure parser/formatter tests — no widget, settings, agent, or shell changes.
+
+Keep the SystemMetrics per-core math out of the first slice (it needs the math
+moved to Shared first, touching the LiveBox widget file — that is a follow-on).
+
+Follow the shared-parser-tests precedent:
+
+- `xcodegen generate` + `xcodebuild test -scheme DeckSharedTests` must pass.
+- The three app targets still build.
+- ROADMAP.md updated to mark the covered items.
