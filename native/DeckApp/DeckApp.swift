@@ -51,7 +51,6 @@ struct ContentView: View {
         .onAppear {
             installAgentIfNeeded()
             Task { await refreshOpenCode() }
-            refreshProcesses()
             refreshGitBox()
             refreshDevBox()
             refreshClipBox()
@@ -59,7 +58,6 @@ struct ContentView: View {
             Task { await refreshShipBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
-                refreshProcesses()
                 refreshGitBox()
                 refreshDevBox()
                 refreshClipBox()
@@ -102,16 +100,6 @@ struct ContentView: View {
         guard let snapshot else { return }
         if snapshot != OpenCodeSnapshotStore.load() {
             OpenCodeSnapshotStore.save(snapshot)
-            WidgetCenter.shared.reloadAllTimelines()
-        }
-    }
-
-    /// Sample top processes (host is unsandboxed) and push them into the
-    /// widget container for the LiveBox process list.
-    private func refreshProcesses() {
-        let snapshot = ProcessSnapshot(writtenAt: Date(), processes: HostProcessSampler.top(limit: 10))
-        if snapshot != ProcessSnapshotStore.load() {
-            ProcessSnapshotStore.save(snapshot)
             WidgetCenter.shared.reloadAllTimelines()
         }
     }

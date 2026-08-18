@@ -45,8 +45,6 @@ Task {
         OpenCodeSnapshotStore.save(opencode)
     }
 
-    sampleProcesses()
-
     if let gitbox = HostGitBoxSampler.snapshot(
         paths: settings.gitbox.repoPaths,
         scanDepth: settings.gitbox.scanDepth
