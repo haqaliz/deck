@@ -342,6 +342,11 @@ private struct LiveBoxSettingsView: View {
                 Toggle("Show top processes", isOn: $settings.showProcesses)
                 Stepper("Process count: \(settings.processCount)", value: $settings.processCount, in: 1...20)
                     .disabled(!settings.showProcesses)
+                Stepper("Process refresh: \(settings.processRefreshInterval) s", value: $settings.processRefreshInterval, in: 5...60, step: 5)
+                    .disabled(!settings.showProcesses)
+                Text("How often the widget and the background agent refresh the process list. Lower is livelier; other widgets stay on their own cadence.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

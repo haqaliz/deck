@@ -85,6 +85,8 @@ struct LiveBoxSettings: Codable, Equatable {
     var showProcesses = true
     var showPerCoreCores = false
     var processCount = 3
+    /// Seconds between widget render ticks and fast process-snapshot samples.
+    var processRefreshInterval = 15
     var cpuColor = RGBA(.green)
     var memColor = RGBA(.cyan)
     var diskColor = RGBA(.orange)
@@ -108,6 +110,7 @@ struct LiveBoxSettings: Codable, Equatable {
         showProcesses = try c.decodeIfPresent(Bool.self, forKey: .showProcesses) ?? true
         showPerCoreCores = try c.decodeIfPresent(Bool.self, forKey: .showPerCoreCores) ?? false
         processCount = try c.decodeIfPresent(Int.self, forKey: .processCount) ?? 3
+        processRefreshInterval = try c.decodeIfPresent(Int.self, forKey: .processRefreshInterval) ?? 15
         cpuColor = try c.decodeIfPresent(RGBA.self, forKey: .cpuColor) ?? RGBA(.green)
         memColor = try c.decodeIfPresent(RGBA.self, forKey: .memColor) ?? RGBA(.cyan)
         diskColor = try c.decodeIfPresent(RGBA.self, forKey: .diskColor) ?? RGBA(.orange)
