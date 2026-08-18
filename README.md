@@ -13,7 +13,7 @@ WidgetKit widgets with native colors, corners and materials.
 
 | Widget | Shows |
 |---|---|
-| **LiveBox** | CPU / MEM / DISK usage with a live chart (per-core CPU lines) and top processes (CPU/MEM tabs); metric rows and chart lines turn amber/red past your warn/alarm thresholds; the large widget can list per-volume disk rows (internal + external volumes) instead of the aggregate DISK row |
+| **LiveBox** | CPU / MEM / DISK usage with a live chart (per-core CPU lines) and top processes (CPU/MEM tabs); metric rows and chart lines turn amber/red past your warn/alarm thresholds; the large widget can list per-volume disk rows (internal + external volumes) instead of the aggregate DISK row; the process list refreshes at your chosen cadence (default 15s) |
 | **OpenBox** | opencode usage: today's in/out tokens + cost, 14-day chart (tokens or cost-per-day stacked by model), top models, tool usage counts, top sessions by tokens |
 | **NetBox** | per-interface up/down rates, history chart, most active interfaces; rates turn amber/red past your warn/alarm thresholds |
 | **BatBox** | battery level, time remaining, charge state, level chart |
@@ -59,6 +59,10 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   cost-per-day view stacked by model (OpenBox tab → "Cost-per-day chart", off
   by default). The large face can also list the top sessions of the last 14
   days by tokens (OpenBox tab → "Show sessions", off by default).
+- **LiveBox** reads mach, getifaddrs-style samplers and IOKit directly inside
+  the widget; the top-process rows come from the background agent (ps) and
+  refresh at your "Process refresh" interval (5–60s, default 15s — the widget
+  tick and the fast process agent `com.deck.agent.processes` follow it).
 - **NetBox** reads only the interface you pin in settings (default: automatic
   "most active" pick — pinning falls back to automatic while that interface is
   offline). Rates past your warn/alarm thresholds (MB/s, NetBox tab) turn
@@ -80,8 +84,10 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 - **Agent-pumped data** (OpenBox, process list, GitBox, ClipBox, weather, ShipBox): the widget
   sandbox forbids subprocesses and reading other apps' data, so a silent CLI
   (`DeckAgent`, embedded in the app) runs every 60s via a LaunchAgent and
-  writes snapshots the widgets render. ClipBox captures the pasteboard on each
-  tick — consecutive copies within a minute collapse to the newest.
+  writes snapshots the widgets render. The top-process snapshot is sampled
+  faster by a dedicated LaunchAgent (`com.deck.agent.processes`, default 15s).
+  ClipBox captures the pasteboard on each tick — consecutive copies within a
+  minute collapse to the newest.
 - Everything refreshes on a ~60s cadence (WidgetKit throttles faster requests
   on macOS).
 
