@@ -60,6 +60,11 @@ shell and only add a data source + a layout.
       (`com.deck.agent.processes` LaunchAgent at the process refresh interval,
       default 15s; the widget tick, staleness guard, and history window follow
       the same interval)
+- [x] Dev builds no longer break widget rendering: derived data lives in
+      `native/build.noindex` so Spotlight/LaunchServices never registers
+      throwaway copies of `com.deck.app` (stale registrations made WidgetKit
+      reject every render — all widgets fell back to placeholders);
+      `scripts/lsclean.sh` repairs an already-polluted LaunchServices DB
 
 Deferred from the tests milestone (all covered as of v1.10):
 - SystemMetrics per-core math is now in `Shared/SystemMetricsCore.swift` and
