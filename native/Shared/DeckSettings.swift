@@ -87,14 +87,30 @@ struct LiveBoxSettings: Codable, Equatable {
     var memColor = RGBA(.cyan)
     var diskColor = RGBA(.orange)
     var showThresholdColors = true
-    var warnThreshold = 80
-    var alarmThreshold = 90
+    var cpuWarnThreshold = 80
+    var cpuAlarmThreshold = 90
+    var memWarnThreshold = 80
+    var memAlarmThreshold = 90
+    var diskWarnThreshold = 80
+    var diskAlarmThreshold = 90
 
     /// Tolerant decode: missing keys keep the defaults instead of throwing
     /// (the synthesized decoder throws, which would reset every setting via
     /// `DeckSettings.load()`'s fallback when old settings.json files lack
     /// newly added keys).
     init() {}
+
+    /// Decode-only legacy keys (`warnThreshold`/`alarmThreshold`): read from the
+    /// container for the migration fallback, never stored, so the synthesized
+    /// encoder writes only the six per-metric keys (one-way migration).
+    enum CodingKeys: String, CodingKey {
+        case showChart, showCPU, showMEM, showDisk, showPerVolumeDisk
+        case showProcesses, showPerCoreCores, processCount, processRefreshInterval
+        case cpuColor, memColor, diskColor, showThresholdColors
+        case cpuWarnThreshold, cpuAlarmThreshold, memWarnThreshold, memAlarmThreshold
+        case diskWarnThreshold, diskAlarmThreshold
+        case warnThreshold, alarmThreshold
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -111,8 +127,45 @@ struct LiveBoxSettings: Codable, Equatable {
         memColor = try c.decodeIfPresent(RGBA.self, forKey: .memColor) ?? RGBA(.cyan)
         diskColor = try c.decodeIfPresent(RGBA.self, forKey: .diskColor) ?? RGBA(.orange)
         showThresholdColors = try c.decodeIfPresent(Bool.self, forKey: .showThresholdColors) ?? true
-        warnThreshold = try c.decodeIfPresent(Int.self, forKey: .warnThreshold) ?? 80
-        alarmThreshold = try c.decodeIfPresent(Int.self, forKey: .alarmThreshold) ?? 90
+        // Per-metric keys with a legacy-pair fallback (settings-schema migration,
+        // ROADMAP.md:56): a per-metric key wins, else the old shared pair, else 80/90.
+        cpuWarnThreshold = try c.decodeIfPresent(Int.self, forKey: .cpuWarnThreshold)
+            ?? c.decodeIfPresent(Int.self, forKey: .warnThreshold) ?? 80
+        cpuAlarmThreshold = try c.decodeIfPresent(Int.self, forKey: .cpuAlarmThreshold)
+            ?? c.decodeIfPresent(Int.self, forKey: .alarmThreshold) ?? 90
+        memWarnThreshold = try c.decodeIfPresent(Int.self, forKey: .memWarnThreshold)
+            ?? c.decodeIfPresent(Int.self, forKey: .warnThreshold) ?? 80
+        memAlarmThreshold = try c.decodeIfPresent(Int.self, forKey: .memAlarmThreshold)
+            ?? c.decodeIfPresent(Int.self, forKey: .alarmThreshold) ?? 90
+        diskWarnThreshold = try c.decodeIfPresent(Int.self, forKey: .diskWarnThreshold)
+            ?? c.decodeIfPresent(Int.self, forKey: .warnThreshold) ?? 80
+        diskAlarmThreshold = try c.decodeIfPresent(Int.self, forKey: .diskAlarmThreshold)
+            ?? c.decodeIfPresent(Int.self, forKey: .alarmThreshold) ?? 90
+    }
+
+    /// Writes only the six per-metric keys — the legacy pair is decode-only, so
+    /// this is a one-way settings-schema migration.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(showChart, forKey: .showChart)
+        try c.encode(showCPU, forKey: .showCPU)
+        try c.encode(showMEM, forKey: .showMEM)
+        try c.encode(showDisk, forKey: .showDisk)
+        try c.encode(showPerVolumeDisk, forKey: .showPerVolumeDisk)
+        try c.encode(showProcesses, forKey: .showProcesses)
+        try c.encode(showPerCoreCores, forKey: .showPerCoreCores)
+        try c.encode(processCount, forKey: .processCount)
+        try c.encode(processRefreshInterval, forKey: .processRefreshInterval)
+        try c.encode(cpuColor, forKey: .cpuColor)
+        try c.encode(memColor, forKey: .memColor)
+        try c.encode(diskColor, forKey: .diskColor)
+        try c.encode(showThresholdColors, forKey: .showThresholdColors)
+        try c.encode(cpuWarnThreshold, forKey: .cpuWarnThreshold)
+        try c.encode(cpuAlarmThreshold, forKey: .cpuAlarmThreshold)
+        try c.encode(memWarnThreshold, forKey: .memWarnThreshold)
+        try c.encode(memAlarmThreshold, forKey: .memAlarmThreshold)
+        try c.encode(diskWarnThreshold, forKey: .diskWarnThreshold)
+        try c.encode(diskAlarmThreshold, forKey: .diskAlarmThreshold)
     }
 }
 

@@ -56,6 +56,7 @@
 		611DC32A1889B095CAE4D132 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		63CAFAA1018EA45415E903FE /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		6551819CA5506A4D266E0D79 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
+		6993ADF4472F602F7B97C449 /* LiveBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */; };
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		712262DD2FEF389783A540A1 /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
 		72183F6AE6F651DFC0C5A377 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = CBC89EF1D34611CB2B244F15 /* AppIcon.icns */; };
@@ -202,6 +203,7 @@
 		CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSQLTests.swift; sourceTree = "<group>"; };
 		D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeckWidgets.entitlements; sourceTree = "<group>"; };
 		D280CAAAC227082564309914 /* OpenCodeReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeReader.swift; sourceTree = "<group>"; };
+		D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThresholdTests.swift; sourceTree = "<group>"; };
 		D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshotTests.swift; sourceTree = "<group>"; };
 		E55EA63643575600049612BD /* ModelParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelParserTests.swift; sourceTree = "<group>"; };
 		EA5EADBCA4E36B421CDE1542 /* DeckAgent */ = {isa = PBXFileReference; includeInIndex = 0; path = DeckAgent; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -270,6 +272,7 @@
 				3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */,
 				9D2A55F3FD7982AE42C95658 /* HomeBoxSnapshotTests.swift */,
 				06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */,
+				D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */,
 				E55EA63643575600049612BD /* ModelParserTests.swift */,
 				AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */,
 				C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */,
@@ -592,6 +595,7 @@
 				2204B91FEF36EF22F09364D4 /* LiveBoxCore.swift in Sources */,
 				1C87D8AA7039304EE1047703 /* LiveBoxDiskCore.swift in Sources */,
 				BB0DA9CFEFB09DB47DCA109F /* LiveBoxDiskCoreTests.swift in Sources */,
+				6993ADF4472F602F7B97C449 /* LiveBoxThresholdTests.swift in Sources */,
 				56242BA287F3C3D8CD8A380D /* ModelParserTests.swift in Sources */,
 				5DAADD8D5F4E17021759CBE1 /* NetBoxCore.swift in Sources */,
 				43222AFDC10A1829EE888C3E /* NetBoxCoreTests.swift in Sources */,

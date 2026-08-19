@@ -1,71 +1,74 @@
-# Understanding: livebox-disk-per-volume
+# Understanding: livebox-per-metric-thresholds
 
 ## What the work is really asking
 
-Give LiveBox a disk per-volume slice: enumerate mounted volumes and show each
-volume's used-percent + free space as rows/bars, while small/medium faces keep
-the aggregate DISK row. This is the deck-next pick for ROADMAP.md:69 (`Disk
-per-volume (multiple mounts)`, `[ ]`). It must be **pure self-sampled data** —
-LiveBox already samples mach/Volume in-process (`LiveBoxWidget.swift:61-99`),
-so there is no agent, no snapshot, no process-list change, and the history
-`Sample` struct (`LiveBoxWidget.swift:11-17`) stays untouched (per-volume data
-is live-sampled, never charted over history). The volume math must live in a
-**shared, testable core** (`LiveBoxCore.swift` precedent) so DeckSharedTests
-can compile it — the widget target can't be compiled into a unit-test bundle
-(project.yml `DeckSharedTests` compiles `Shared` + `SharedTests` only).
+Split LiveBox's single shared warn/alarm threshold pair into **per-metric
+pairs** (CPU / MEM / DISK), so a busy CPU or a full disk can alarm independently
+instead of sharing one pair. This is the recorded follow-on from
+`docs/planning/livebox-threshold-coloring/prd.md:67` ("No per-metric threshold
+pairs (follow-on if asked)"). Pure settings + view-color work: no agent, no
+snapshot, no loader, no timeline change (path 1, self-sampled, in CLAUDE.md).
 
-## Code map
+## Current state (what shipped)
 
-- `native/DeckWidgets/Loaders/SystemMetrics.swift:126-135` — `diskUsagePercent()`
-  reads only `/` via `URL.resourceValues([.volumeTotalCapacityKey,
-  .volumeAvailableCapacityForImportantUsageKey])`. This is the I/O seam to
-  extend: enumerate all volumes with the same Volume resource keys.
-- `native/DeckWidgets/LiveBoxWidget.swift` — `LiveBoxSampler.sample()` (:65)
-  returns `(cpu, mem, disk, perCore)` on every 5s `TimelineView` tick (:190);
-  faces at :236 (small), :252 (medium), :275 (large); `metricRow` (:409) is the
-  colored-dot row to reuse for per-volume rows.
-- `native/Shared/DeckSettings.swift:79-116` — `LiveBoxSettings` with the
-  tolerant-decode `init(from:)` pattern (:100-115); new keys must follow it.
-- `native/DeckApp/DeckApp.swift:303-343` — `LiveBoxSettingsView`: Form with
-  Chart/Metrics/Thresholds/Processes sections; add a Disk section.
-- `native/Shared/LiveBoxCore.swift` — the shared pure-logic precedent
-  (ThresholdTier); `NetBoxCore.swift` shows the Darwin-import pattern works in
-  Shared (`import Darwin` + Foundation, compiles into DeckSharedTests).
-- `native/SharedTests/` — XCTest suites; `DecodeTests.swift:143` covers
-  `LiveBoxSettings` tolerant decode; new suite file for the volume core.
+- `LiveBoxSettings` (Shared/DeckSettings.swift:75-117): one pair
+  `warnThreshold=80` / `alarmThreshold=90` + master `showThresholdColors=true`,
+  tolerant-decode init (missing keys → defaults, so old settings.json keeps
+  loading).
+- `ThresholdTier` (Shared/LiveBoxCore.swift:10-26): pure `tier(value:warn:alarm:)`
+  (alarm wins over warn when warn > alarm) + shared warn/alarm colors. Covered by
+  `SharedTests/ThresholdTierTests.swift`.
+- `LiveBoxFace.tierColor(for:)` (DeckWidgets/LiveBoxWidget.swift:470-481) applies
+  the ONE pair to: metric-row value text (`metricRow`, :456-466), CPU/MEM/DISK
+  chart lines (:423/:434/:445), and per-core CPU lines (:411, each core by its own
+  value).
+- Settings UI "Thresholds" section (DeckApp/DeckApp.swift:349-358): toggle + 2
+  steppers (0...100), both disabled while toggle off.
+- NetBox precedent: `NetBoxThresholdTier` wrapper (Shared/NetBoxCore.swift:85-92)
+  adds a no-reading guard + unit conversion; NetBox floors threshold steppers at 1
+  (DeckSettings.swift:186-187). NetBox keeps ONE pair by design (its PRD §5
+  non-goals "no per-direction pairs") — this feature is LiveBox-only.
 
-## Design sketch
+## Design shape (for the PRD interview)
 
-- New `Shared/LiveBoxDiskCore.swift`: `struct VolumeInfo { name, mountPoint,
-  totalBytes, availableBytes }`, pure `percentUsed(total:available:)`,
-  `formattedFree` byte formatter, and `displayableVolumes(_:)` that drops
-  pseudo/read-only/system duplicates. The I/O sampler (`volumeSamples()`, in
-  `SystemMetrics.swift`) wraps `FileManager.mountedVolumeURLs(
-  includingResourceValuesForKeys:options:)` (same Volume API as the current
-  `diskUsagePercent()`) and feeds the pure core.
-- `LiveBoxSettings`: `showPerVolumeDisk = true` (+ optional
-  `perVolumeCount`/color), tolerant decode.
-- `LiveBoxFace` large: per-volume rows (dot + name + `xx%` + free bytes),
-  small/medium unchanged (aggregate DISK row only). Layout vs. the existing
-  chart/processes blocks is an open question.
+- **Settings:** 6 new keys — `cpuWarnThreshold`, `cpuAlarmThreshold`,
+  `memWarnThreshold`, `memAlarmThreshold`, `diskWarnThreshold`,
+  `diskAlarmThreshold` — each tolerant-decoding with a **fallback chain:
+  per-metric key → legacy `warnThreshold`/`alarmThreshold` → default 80/90** so
+  existing customizations survive the migration (settings-schema-migration
+  precedent, ROADMAP.md:56).
+- **Pure helper** in Shared (testable in DeckSharedTests; widget target can't be
+  compiled into the test bundle): a `Metric` enum (cpu/mem/disk) + a resolver that
+  returns the (warn, alarm) pair for a metric, or directly the tier for a
+  (metric, value, settings) triple. Mirrors `NetBoxThresholdTier`'s wrapper shape.
+- **Widget:** `tierColor(for:)` → `tierColor(metric:value:)`; per-core chart lines
+  use the **CPU** pair; per-volume disk rows stay **untinted** (disk-per-volume
+  PRD: thresholds are the aggregate DISK row's story).
+- **UI:** LiveBoxSettingsView Thresholds section gains per-metric rows (e.g. three
+  "CPU / MEM / DISK" stepper groups), single master toggle retained.
+
+## Affected files
+
+- `native/Shared/DeckSettings.swift` — LiveBoxSettings keys + tolerant decode.
+- `native/Shared/LiveBoxCore.swift` — add metric resolver (or new
+  `LiveBoxThresholdCore.swift`).
+- `native/DeckWidgets/LiveBoxWidget.swift` — per-metric tier application.
+- `native/DeckApp/DeckApp.swift` — LiveBoxSettingsView Thresholds section.
+- `native/SharedTests/LiveBoxThresholdTests.swift` (new) +
+  `DecodeTests.swift` LiveBox suite.
 
 ## Ambiguities for the interview
 
-1. **Volume set**: which mounts count? Exclude `/System/Volumes/Data` and the
-   read-only system volume; include external volumes? Dedupe by
-   `.volumeIdentifierKey`? Network/Time Machine mounts excluded?
-2. **Large-face layout**: per-volume rows replace the DISK chart line, sit
-   below it, or only show when enabled? Keep the aggregate DISK row on large?
-3. **Settings scope**: toggle only, or toggle + max volume count + per-volume
-   color?
-4. **Row content**: percent only, or percent + free bytes ("512 GB free")?
-   Threshold coloring on per-volume values (likely no — thresholds are the
-   aggregate's story)?
-5. **Sampling cost**: enumerating volumes every 5s tick is cheap (statfs), but
-   confirm no first-launch hiccup when external drives are spinning up.
+1. **Migration:** when per-metric keys are missing but legacy keys exist, inherit
+   the legacy pair (one-time) — agreed? And stop encoding legacy keys afterward?
+2. **Defaults:** 80/90 for all three metrics, or different sensible defaults
+   (e.g. DISK lower)? Stepper range 0...100 like today?
+3. **Per-core CPU lines:** use the CPU pair (yes, they are CPU).
+4. **Per-volume disk rows:** stay untinted (yes per disk-per-volume PRD).
+5. **UI layout:** three compact stepper groups vs. a single warn/alarm column per
+   metric row.
 
-## No shell invariants broken
+## Shell invariants
 
-No card/flip/settings-window/agent behavior changes; the only production edits
-are one Shared core + one settings struct + one view section + loader I/O. Same
-data path (self-sampled, path 1 in CLAUDE.md).
+None touched: material card, dynamic height, corner mask, settings persistence
+(path/format), agent, refresh cadences all unchanged. Verified against CLAUDE.md.

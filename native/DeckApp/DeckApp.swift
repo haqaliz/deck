@@ -348,11 +348,10 @@ private struct LiveBoxSettingsView: View {
             }
             Section("Thresholds") {
                 Toggle("Show threshold colors", isOn: $settings.showThresholdColors)
-                Stepper("Warn at: \(settings.warnThreshold)%", value: $settings.warnThreshold, in: 0...100)
-                    .disabled(!settings.showThresholdColors)
-                Stepper("Alarm at: \(settings.alarmThreshold)%", value: $settings.alarmThreshold, in: 0...100)
-                    .disabled(!settings.showThresholdColors)
-                Text("Values at or above the warn threshold turn amber; at or above the alarm threshold, red. Alarm takes precedence when it is lower than Warn.")
+                thresholdGroup("CPU", warn: $settings.cpuWarnThreshold, alarm: $settings.cpuAlarmThreshold)
+                thresholdGroup("MEM", warn: $settings.memWarnThreshold, alarm: $settings.memAlarmThreshold)
+                thresholdGroup("DISK", warn: $settings.diskWarnThreshold, alarm: $settings.diskAlarmThreshold)
+                Text("Values at or above a metric's warn threshold turn amber; at or above its alarm threshold, red. Alarm takes precedence when it is lower than Warn.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -369,6 +368,18 @@ private struct LiveBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+    }
+
+    private func thresholdGroup(_ name: String, warn: Binding<Int>, alarm: Binding<Int>) -> some View {
+        Group {
+            Text(name)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Stepper("Warn at: \(warn.wrappedValue)%", value: warn, in: 0...100)
+                .disabled(!settings.showThresholdColors)
+            Stepper("Alarm at: \(alarm.wrappedValue)%", value: alarm, in: 0...100)
+                .disabled(!settings.showThresholdColors)
+        }
     }
 }
 

@@ -244,13 +244,13 @@ struct LiveBoxFace: View {
     private var smallView: some View {
         VStack(alignment: .leading, spacing: 8) {
             if settings.showCPU {
-                metricRow(title: "CPU", value: cpu, color: settings.cpuColor.color)
+                metricRow(metric: .cpu, title: "CPU", value: cpu, color: settings.cpuColor.color)
             }
             if settings.showMEM {
-                metricRow(title: "MEM", value: mem, color: settings.memColor.color)
+                metricRow(metric: .mem, title: "MEM", value: mem, color: settings.memColor.color)
             }
             if settings.showDisk {
-                metricRow(title: "DISK", value: disk, color: settings.diskColor.color)
+                metricRow(metric: .disk, title: "DISK", value: disk, color: settings.diskColor.color)
             }
         }
         .font(.system(size: 12, weight: .semibold, design: .rounded))
@@ -261,13 +261,13 @@ struct LiveBoxFace: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 14) {
                 if settings.showCPU {
-                    metricRow(title: "CPU", value: cpu, color: settings.cpuColor.color)
+                    metricRow(metric: .cpu, title: "CPU", value: cpu, color: settings.cpuColor.color)
                 }
                 if settings.showMEM {
-                    metricRow(title: "MEM", value: mem, color: settings.memColor.color)
+                    metricRow(metric: .mem, title: "MEM", value: mem, color: settings.memColor.color)
                 }
                 if settings.showDisk {
-                    metricRow(title: "DISK", value: disk, color: settings.diskColor.color)
+                    metricRow(metric: .disk, title: "DISK", value: disk, color: settings.diskColor.color)
                 }
                 Spacer()
             }
@@ -284,13 +284,13 @@ struct LiveBoxFace: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 14) {
                 if settings.showCPU {
-                    metricRow(title: "CPU", value: cpu, color: settings.cpuColor.color)
+                    metricRow(metric: .cpu, title: "CPU", value: cpu, color: settings.cpuColor.color)
                 }
                 if settings.showMEM {
-                    metricRow(title: "MEM", value: mem, color: settings.memColor.color)
+                    metricRow(metric: .mem, title: "MEM", value: mem, color: settings.memColor.color)
                 }
                 if settings.showDisk {
-                    metricRow(title: "DISK", value: disk, color: settings.diskColor.color)
+                    metricRow(metric: .disk, title: "DISK", value: disk, color: settings.diskColor.color)
                 }
                 Spacer()
             }
@@ -408,7 +408,7 @@ struct LiveBoxFace: View {
                         y: .value("Core \(coreIndex)", value),
                         series: .value("Core", "Core \(coreIndex)")
                     )
-                    .foregroundStyle(tierColor(for: value) ?? settings.cpuColor.color.opacity(0.4))
+                    .foregroundStyle(tierColor(metric: .cpu, value: value) ?? settings.cpuColor.color.opacity(0.4))
                     .lineStyle(StrokeStyle(lineWidth: 1.0))
                     .interpolationMethod(.catmullRom)
                 }
@@ -420,7 +420,7 @@ struct LiveBoxFace: View {
                     y: .value("CPU", sample.cpu),
                     series: .value("Metric", "CPU")
                 )
-                .foregroundStyle(tierColor(for: sample.cpu) ?? settings.cpuColor.color)
+                .foregroundStyle(tierColor(metric: .cpu, value: sample.cpu) ?? settings.cpuColor.color)
                 .lineStyle(StrokeStyle(lineWidth: 1.5))
                 .interpolationMethod(.catmullRom)
             }
@@ -431,7 +431,7 @@ struct LiveBoxFace: View {
                     y: .value("MEM", sample.mem),
                     series: .value("Metric", "MEM")
                 )
-                .foregroundStyle(tierColor(for: sample.mem) ?? settings.memColor.color)
+                .foregroundStyle(tierColor(metric: .mem, value: sample.mem) ?? settings.memColor.color)
                 .lineStyle(StrokeStyle(lineWidth: 1.5))
                 .interpolationMethod(.catmullRom)
             }
@@ -442,7 +442,7 @@ struct LiveBoxFace: View {
                     y: .value("DISK", sample.disk),
                     series: .value("Metric", "DISK")
                 )
-                .foregroundStyle(tierColor(for: sample.disk) ?? settings.diskColor.color)
+                .foregroundStyle(tierColor(metric: .disk, value: sample.disk) ?? settings.diskColor.color)
                 .lineStyle(StrokeStyle(lineWidth: 1.5))
                 .interpolationMethod(.catmullRom)
             }
@@ -453,7 +453,7 @@ struct LiveBoxFace: View {
         .frame(height: 62)
     }
 
-    private func metricRow(title: String, value: Double, color: Color) -> some View {
+    private func metricRow(metric: LiveBoxMetric, title: String, value: Double, color: Color) -> some View {
         HStack(spacing: 4) {
             Circle()
                 .fill(color)
@@ -461,19 +461,16 @@ struct LiveBoxFace: View {
             Text(title)
                 .foregroundStyle(.secondary)
             Text(String(format: "%3.0f%%", value))
-                .foregroundStyle(tierColor(for: value) ?? .primary)
+                .foregroundStyle(tierColor(metric: metric, value: value) ?? .primary)
         }
     }
 
     /// Overrides the row/chart color while a metric sits in warn/alarm tier;
-    /// nil keeps the user's color (or the default .primary text color).
-    private func tierColor(for value: Double) -> Color? {
+    /// nil keeps the user's color (or the default .primary text color). Each
+    /// metric is judged against its own warn/alarm pair.
+    private func tierColor(metric: LiveBoxMetric, value: Double) -> Color? {
         guard settings.showThresholdColors else { return nil }
-        switch ThresholdTier.tier(
-            value: value,
-            warn: Double(settings.warnThreshold),
-            alarm: Double(settings.alarmThreshold)
-        ) {
+        switch LiveBoxThresholdTier.tier(metric: metric, value: value, settings: settings) {
         case .normal: return nil
         case .warn: return ThresholdTier.warnColor.color
         case .alarm: return ThresholdTier.alarmColor.color

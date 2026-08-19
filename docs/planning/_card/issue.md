@@ -1,18 +1,19 @@
-# Source brief: crash-robustness-pass (inline, from deck-next handoff)
+# Source brief: livebox-per-metric-thresholds (inline, from deck-next handoff)
 
-M4 crash/robustness pass for Deck: run the extension 24h and fix any crashes,
-leaks, or memory growth. All nine widgets are shipped (ROADMAP.md M3
-complete), so this closes the last open milestone.
+Give LiveBox per-metric threshold pairs: split the single shared warn/alarm
+settings into per-metric (CPU / MEM / DISK) warn/alarm pairs, reusing the
+shipped `ThresholdTier` core in `Shared/LiveBoxCore.swift` and following the
+NetBox threshold-coloring precedent (settings tab section + tolerant decode,
+tinting on rows/chart, idle values never tinted).
 
-Plan (draft): define the soak method (widgets kept visible; Leaks instrument
-on the DeckWidgets process, or repeated timeline invalidation), instrument if
-needed, fix what surfaces, and keep the 60s timeline floor and shell
-invariants untouched.
+This is the only unblocked follow-on recorded in the planning docs
+(`docs/planning/livebox-threshold-coloring/prd.md:67`, "No per-metric threshold
+pairs (follow-on if asked)").
 
 Caveats (from deck-next):
 
-- GPU/ANE stays blocker-deferred (no public Apple Silicon API,
-  docs/planning/livebox-per-core-cpu/prd.md:94) — do not pull that item in.
-- Hidden widgets are throttled by WidgetKit, so a 24h soak must keep widgets
-  on-screen to be meaningful.
-- Verify via build + install + re-add from the gallery after any change.
+- Do NOT pull in GPU/ANE/thermal — it is blocker-deferred with no public Apple
+  Silicon API (`docs/planning/livebox-per-core-cpu/prd.md:94`).
+- Pure self-sampled data (path 1 in CLAUDE.md) — no agent, no snapshot, no
+  timeline changes; keep the ~60s timeline floor and the per-process refresh
+  cadence untouched.
