@@ -74,6 +74,7 @@ LiveBox:
 - [ ] Apple Silicon GPU/ANE usage, thermal state
 - [x] Disk per-volume (multiple mounts, internal + external)
 - [x] Threshold coloring (amber/red when a value crosses warn/alarm thresholds)
+- [x] Per-metric threshold pairs (CPU/MEM/DISK each have their own warn + alarm)
 
 OpenBox:
 - [x] Cost-per-day chart (stacked by model)

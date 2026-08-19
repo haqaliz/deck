@@ -201,8 +201,74 @@ final class LiveBoxSettingsDecodeTests: XCTestCase {
         let s = try decode(#"{"showCPU":false}"#, as: LiveBoxSettings.self)
         XCTAssertFalse(s.showCPU)
         XCTAssertTrue(s.showThresholdColors)
-        XCTAssertEqual(s.warnThreshold, 80)
-        XCTAssertEqual(s.alarmThreshold, 90)
+        XCTAssertEqual(s.cpuWarnThreshold, 80)
+        XCTAssertEqual(s.cpuAlarmThreshold, 90)
+        XCTAssertEqual(s.memWarnThreshold, 80)
+        XCTAssertEqual(s.memAlarmThreshold, 90)
+        XCTAssertEqual(s.diskWarnThreshold, 80)
+        XCTAssertEqual(s.diskAlarmThreshold, 90)
+    }
+
+    func testLegacyPairMigratesToAllThreeMetrics() throws {
+        // settings-schema migration (ROADMAP.md:56): old warn/alarm pair is
+        // inherited by every metric when no per-metric key is present.
+        let s = try decode(#"{"warnThreshold":85,"alarmThreshold":92}"#, as: LiveBoxSettings.self)
+        XCTAssertEqual(s.cpuWarnThreshold, 85)
+        XCTAssertEqual(s.cpuAlarmThreshold, 92)
+        XCTAssertEqual(s.memWarnThreshold, 85)
+        XCTAssertEqual(s.memAlarmThreshold, 92)
+        XCTAssertEqual(s.diskWarnThreshold, 85)
+        XCTAssertEqual(s.diskAlarmThreshold, 92)
+    }
+
+    func testPerMetricKeysRoundTrip() throws {
+        let s = try decode(
+            #"{"showThresholdColors":false,"cpuWarnThreshold":70,"cpuAlarmThreshold":95,"memWarnThreshold":60,"memAlarmThreshold":85,"diskWarnThreshold":50,"diskAlarmThreshold":80}"#,
+            as: LiveBoxSettings.self
+        )
+        XCTAssertFalse(s.showThresholdColors)
+        XCTAssertEqual(s.cpuWarnThreshold, 70)
+        XCTAssertEqual(s.cpuAlarmThreshold, 95)
+        XCTAssertEqual(s.memWarnThreshold, 60)
+        XCTAssertEqual(s.memAlarmThreshold, 85)
+        XCTAssertEqual(s.diskWarnThreshold, 50)
+        XCTAssertEqual(s.diskAlarmThreshold, 80)
+    }
+
+    func testMixedKeysKeepPresentFallBackLegacy() throws {
+        // CPU pair explicit; MEM/DISK absent → fall back to the legacy pair.
+        let s = try decode(
+            #"{"cpuWarnThreshold":70,"cpuAlarmThreshold":95,"warnThreshold":85,"alarmThreshold":92}"#,
+            as: LiveBoxSettings.self
+        )
+        XCTAssertEqual(s.cpuWarnThreshold, 70)
+        XCTAssertEqual(s.cpuAlarmThreshold, 95)
+        XCTAssertEqual(s.memWarnThreshold, 85)
+        XCTAssertEqual(s.memAlarmThreshold, 92)
+        XCTAssertEqual(s.diskWarnThreshold, 85)
+        XCTAssertEqual(s.diskAlarmThreshold, 92)
+    }
+
+    func testEncodedOutputOmitsLegacyKeys() throws {
+        var s = LiveBoxSettings()
+        s.cpuWarnThreshold = 55
+        s.memAlarmThreshold = 88
+        let data = try JSONEncoder().encode(s)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertNil(object["warnThreshold"])
+        XCTAssertNil(object["alarmThreshold"])
+        XCTAssertEqual(object["cpuWarnThreshold"] as? Int, 55)
+        XCTAssertEqual(object["memAlarmThreshold"] as? Int, 88)
+        XCTAssertEqual(object["diskWarnThreshold"] as? Int, 80)
+    }
+
+    func testExistingKeysStillDecodeAndEncode() throws {
+        let s = try decode(
+            #"{"showPerCoreCores":true,"processRefreshInterval":30}"#,
+            as: LiveBoxSettings.self
+        )
+        XCTAssertTrue(s.showPerCoreCores)
+        XCTAssertEqual(s.processRefreshInterval, 30)
     }
 
     func testOldFileWithoutPerVolumeKeyKeepsDefault() throws {
@@ -214,16 +280,6 @@ final class LiveBoxSettingsDecodeTests: XCTestCase {
     func testPerVolumeKeyRoundTrips() throws {
         let s = try decode(#"{"showPerVolumeDisk":false}"#, as: LiveBoxSettings.self)
         XCTAssertFalse(s.showPerVolumeDisk)
-    }
-
-    func testThresholdKeysRoundTrip() throws {
-        let s = try decode(
-            #"{"showThresholdColors":false,"warnThreshold":70,"alarmThreshold":95}"#,
-            as: LiveBoxSettings.self
-        )
-        XCTAssertFalse(s.showThresholdColors)
-        XCTAssertEqual(s.warnThreshold, 70)
-        XCTAssertEqual(s.alarmThreshold, 95)
     }
 
     func testOldFileWithoutRefreshIntervalKeyKeepsDefault() throws {
