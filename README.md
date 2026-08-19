@@ -34,10 +34,10 @@ Apple ID works):
 ```bash
 xcodegen generate --spec native/project.yml
 xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release \
-  -derivedDataPath native/build -allowProvisioningUpdates \
+  -derivedDataPath native/build.noindex -allowProvisioningUpdates \
   -allowProvisioningDeviceRegistration build
 
-cp -R native/build/Build/Products/Release/Deck.app /Applications/
+cp -R native/build.noindex/Build/Products/Release/Deck.app /Applications/
 open /Applications/Deck.app     # first run installs the refresh agent
 pluginkit -m -i com.deck.app.widgets   # verify the extension registered
 ```
@@ -91,6 +91,20 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 - Everything refreshes on a ~60s cadence (WidgetKit throttles faster requests
   on macOS).
 
+## Troubleshooting
+
+**Every widget shows grey placeholder blocks instead of text** (charts still
+draw, all sizes affected). LaunchServices is resolving `com.deck.app` to a
+stale dev build — chronod rejects every render with `bundleStubNotSupported` /
+"Bundle version did not match". Run:
+
+```bash
+scripts/lsclean.sh    # unregisters dev copies, re-registers /Applications/Deck.app, restarts chronod
+```
+
+Building into `native/build.noindex` (as above) keeps new dev copies from being
+registered in the first place.
+
 ## Uninstall
 
 ```bash
@@ -117,7 +131,7 @@ rm -rf /Applications/Deck.app
 ```bash
 xcodegen generate --spec native/project.yml   # after project.yml changes
 xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release \
-  -derivedDataPath native/build build         # build
+  -derivedDataPath native/build.noindex build         # build
 ```
 
 The Xcode project regenerates from `native/project.yml` (DeckApp host,

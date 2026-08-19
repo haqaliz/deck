@@ -84,7 +84,7 @@ gh run list --workflow deck.yml --limit 1    # wait for green
 gh release view v1.4                         # Deck-macos.zip + .sha256 present
 
 # 5. Install the signed build locally
-cp -R native/build/Build/Products/Release/Deck.app /Applications/
+cp -R native/build.noindex/Build/Products/Release/Deck.app /Applications/
 open /Applications/Deck.app                  # re-registers widgets via pluginkit
 ```
 

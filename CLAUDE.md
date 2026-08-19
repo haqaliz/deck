@@ -65,11 +65,11 @@ regardless of requested policy — do not fight it.
 ```bash
 xcodegen generate --spec native/project.yml   # regenerate the project
 xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release \
-  -derivedDataPath native/build -allowProvisioningUpdates \
+  -derivedDataPath native/build.noindex -allowProvisioningUpdates \
   -allowProvisioningDeviceRegistration build
 
 # install
-cp -R native/build/Build/Products/Release/Deck.app /Applications/
+cp -R native/build.noindex/Build/Products/Release/Deck.app /Applications/
 open /Applications/Deck.app                    # installs the LaunchAgent, refreshes data
 pluginkit -m -i com.deck.app.widgets           # verify the extension registered
 ```
@@ -88,6 +88,13 @@ and remove `~/Library/LaunchAgents/com.deck.agent.plist`.
 - First run of DeckAgent prompts once for "access data from other apps"
   (it runs `ps` for the process list) — click Allow; the grant sticks to the
   stable signature.
+- Build only into `native/build.noindex` (the `.noindex` suffix keeps Spotlight,
+  and therefore LaunchServices, from registering throwaway dev copies of
+  `com.deck.app`). A registered dev copy — especially one whose worktree was
+  later deleted — makes WidgetKit resolve the wrong bundle and reject every
+  render: chronod logs `bundleStubNotSupported` / "Bundle version did not
+  match", and every widget falls back to its placeholder (text as grey blocks,
+  charts still drawn) at every size. Repair with `scripts/lsclean.sh`.
 
 ## Conventions
 

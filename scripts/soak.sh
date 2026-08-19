@@ -23,7 +23,7 @@
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-AGENT="$ROOT/native/build/Build/Products/Release/DeckAgent"
+AGENT="$ROOT/native/build.noindex/Build/Products/Release/DeckAgent"
 CONTAINER="$HOME/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck"
 FULL="${SOAK_FULL:-200}"
 PROCESSES="${SOAK_PROCESSES:-200}"
@@ -38,7 +38,7 @@ if [[ ! -x "$AGENT" ]]; then
   echo "building Release DeckAgent…"
   (cd "$ROOT/native" && xcodegen generate --spec project.yml >/dev/null && \
    xcodebuild -project Deck.xcodeproj -scheme DeckApp -configuration Release \
-     -derivedDataPath build CODE_SIGNING_ALLOWED=NO build >/dev/null) || {
+     -derivedDataPath build.noindex CODE_SIGNING_ALLOWED=NO build >/dev/null) || {
     echo "soak: build failed" >&2
     exit 1
   }
