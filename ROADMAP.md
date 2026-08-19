@@ -48,7 +48,11 @@ shell and only add a data source + a layout.
 - [x] **ShipBox** — build/deploy status: GitHub Actions runs for a repo
 
 ### M4 — Polish
-- [ ] Crash/robustness pass: run 24h, no leaks
+- [x] Crash/robustness pass: atomic snapshot writes (unique temp + rename),
+      single writer for processes.json (fast agent owns it; host app and full
+      agent no longer write it), agent OSLog diagnostics (`com.deck.agent`),
+      soak harness `scripts/soak.sh` + 24h runbook
+      (`docs/planning/crash-robustness-pass/runbook-24h.md`)
 - [x] Settings schema migration (tolerant decode for all settings structs)
 - [x] Tests: XCTest target for the Shared parsers (GitLogParser, ModelParser,
       formatters, DB SQL) — `DeckSharedTests`, runs on CI

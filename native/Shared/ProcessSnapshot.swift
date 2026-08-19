@@ -29,18 +29,14 @@ enum ProcessSnapshotStore {
         DeckSettings.containerDirectory.appendingPathComponent("processes.json")
     }
 
-    static func load() -> ProcessSnapshot? {
-        guard let data = try? Data(contentsOf: fileURL) else { return nil }
+    static func load(from url: URL = fileURL) -> ProcessSnapshot? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(ProcessSnapshot.self, from: data)
     }
 
-    static func save(_ snapshot: ProcessSnapshot) {
+    static func save(_ snapshot: ProcessSnapshot, to url: URL = fileURL) {
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        try? FileManager.default.createDirectory(
-            at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try? data.write(to: fileURL)
+        _ = AtomicFile.write(data, to: url)
     }
 }
 
