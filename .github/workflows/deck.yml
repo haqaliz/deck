@@ -57,7 +57,7 @@ jobs:
       - name: Test (shared parsers)
         run: |
           xcodebuild test -project native/Deck.xcodeproj -scheme DeckSharedTests \
-            -derivedDataPath native/build CODE_SIGNING_ALLOWED=NO 2>&1 | tee test.log
+            -derivedDataPath native/build.noindex CODE_SIGNING_ALLOWED=NO 2>&1 | tee test.log
           if ! grep -q "Test Suite 'All tests' passed" test.log; then
             echo "::error::Shared parser test suite did not pass"
             exit 1
@@ -75,19 +75,19 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release \
-            -derivedDataPath native/build -allowProvisioningUpdates \
+            -derivedDataPath native/build.noindex -allowProvisioningUpdates \
             -allowProvisioningDeviceRegistration build
 
       - name: Build (unsigned, compile check)
         if: steps.signing.outputs.available == 'false'
         run: |
           xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release \
-            -derivedDataPath native/build CODE_SIGNING_ALLOWED=NO build
+            -derivedDataPath native/build.noindex CODE_SIGNING_ALLOWED=NO build
 
       - name: Package Deck.app
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          cd native/build/Build/Products/Release
+          cd native/build.noindex/Build/Products/Release
           zip -r Deck-macos.zip Deck.app
           shasum -a 256 Deck-macos.zip > Deck-macos.zip.sha256
 
@@ -96,6 +96,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cd native/build/Build/Products/Release
+          cd native/build.noindex/Build/Products/Release
           gh release create "$GITHUB_REF_NAME" Deck-macos.zip Deck-macos.zip.sha256 \
             --repo "$GITHUB_REPOSITORY" --generate-notes

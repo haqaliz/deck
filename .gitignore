@@ -1,4 +1,5 @@
 .build/
 native/build/
+native/build.noindex/
 .claude/worktrees/
 .DS_Store
