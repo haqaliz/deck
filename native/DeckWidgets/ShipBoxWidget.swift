@@ -7,6 +7,9 @@ struct ShipBoxEntry: TimelineEntry {
     let date: Date
     let available: Bool
     let stale: Bool
+    let writtenAt: Date?
+    /// One line explaining the last fetch attempt, or nil when all is well.
+    let chip: String?
     let repo: String
     let runs: [ShipRun]
     let settings: ShipBoxSettings
@@ -15,8 +18,9 @@ struct ShipBoxEntry: TimelineEntry {
 // MARK: - Provider
 //
 // Runs arrive via the agent-pumped snapshot (the widget sandbox has no network
-// entitlement). Staleness windows: fresh <5 min, stale hint 5–30 min,
-// unavailable >30 min.
+// entitlement). A snapshot that exists is always rendered — data is never
+// blanked for being old; the age hint past 5 min and the fetch-status chip
+// carry the honesty instead.
 
 struct ShipBoxProvider: TimelineProvider {
     func placeholder(in context: Context) -> ShipBoxEntry {
@@ -24,6 +28,8 @@ struct ShipBoxProvider: TimelineProvider {
             date: .now,
             available: true,
             stale: false,
+            writtenAt: .now,
+            chip: nil,
             repo: "haqaliz/deck",
             runs: [
                 ShipRun(name: "Deck", runNumber: 15, branch: "master", status: .success, createdAt: .now.addingTimeInterval(-192), updatedAt: .now, htmlURL: ""),
@@ -48,26 +54,32 @@ struct ShipBoxProvider: TimelineProvider {
         let snapshot = ShipBoxSnapshotStore.load()
         let settings = DeckSettings.load().shipbox
         let now = Date()
+        let chip = FetchChip.text(
+            source: .shipbox,
+            status: FetchStatusStore.load(.shipbox),
+            dataWrittenAt: snapshot?.writtenAt,
+            now: now
+        )
 
         guard let snapshot else {
             return ShipBoxEntry(
                 date: now,
                 available: false,
                 stale: false,
+                writtenAt: nil,
+                chip: chip,
                 repo: "",
                 runs: [],
                 settings: settings
             )
         }
 
-        let age = now.timeIntervalSince(snapshot.writtenAt)
-        let available = age <= 30 * 60
-        let stale = age > 5 * 60
-
         return ShipBoxEntry(
             date: now,
-            available: available,
-            stale: stale,
+            available: true,
+            stale: now.timeIntervalSince(snapshot.writtenAt) > 5 * 60,
+            writtenAt: snapshot.writtenAt,
+            chip: chip,
             repo: snapshot.repo,
             runs: snapshot.runs,
             settings: settings
@@ -127,7 +139,7 @@ struct ShipBoxWidgetEntryView: View {
                 .foregroundStyle(.secondary)
             Text("No build data")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-            Text("Paste a repo + token in Deck settings.")
+            Text(entry.chip ?? "Paste a repo + token in Deck settings.")
                 .font(.system(size: 11, design: .rounded))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
@@ -178,23 +190,27 @@ struct ShipBoxWidgetEntryView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 4)
-            if !entry.runs.isEmpty {
+            // A small face has room for one hint, not two: the reason wins.
+            if !entry.runs.isEmpty && !(family == .systemSmall && entry.chip != nil) {
                 Text(RunFormatting.totalsLine(for: entry.runs))
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .lineLimit(1)
             }
-            if entry.stale, let writtenAt = snapshotWrittenAt {
+            if let chip = entry.chip {
+                Text(chip)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            if entry.stale, let writtenAt = entry.writtenAt {
                 Text("· \(timeString(writtenAt))")
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.tertiary)
             }
         }
-    }
-
-    private var snapshotWrittenAt: Date? {
-        ShipBoxSnapshotStore.load()?.writtenAt
     }
 
     private var totalsRow: some View {
