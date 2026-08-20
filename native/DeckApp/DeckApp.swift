@@ -90,12 +90,24 @@ struct ContentView: View {
         let snapshot: OpenCodeSnapshot?
         if let serverURL = openbox.serverURL, !serverURL.isEmpty {
             if !openbox.token.isEmpty {
-                snapshot = try? await RemoteOpenCodeLoader.load(serverURL: serverURL, token: openbox.token)
+                do {
+                    snapshot = try await RemoteOpenCodeLoader.load(serverURL: serverURL, token: openbox.token)
+                    FetchStatusStore.record(.ok, for: .opencodeRemote)
+                } catch {
+                    snapshot = nil
+                    FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .opencodeRemote)
+                }
             } else {
                 snapshot = nil
+                FetchStatusStore.record(.notConfigured, for: .opencodeRemote)
             }
         } else {
             snapshot = OpenCodeReader.load()
+            // Local mode shows no chip, but a stale remote failure must not
+            // outlive the mode that produced it.
+            if snapshot != nil {
+                FetchStatusStore.record(.ok, for: .opencodeRemote)
+            }
         }
         guard let snapshot else { return }
         if snapshot != OpenCodeSnapshotStore.load() {
@@ -138,8 +150,16 @@ struct ContentView: View {
     /// Fetch weather (host is unsandboxed) for the HomeBox widget. Always
     /// written on success so writtenAt drives the staleness windows.
     private func refreshHomeBox() async {
-        guard let snapshot = try? await HostWeatherLoader.fetch(location: settings.homebox.location) else { return }
+        let snapshot: HomeBoxSnapshot
+        do {
+            snapshot = try await HostWeatherLoader.fetch(location: settings.homebox.location)
+        } catch {
+            FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .weather)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
         HomeBoxSnapshotStore.save(snapshot)
+        FetchStatusStore.record(.ok, for: .weather)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -149,9 +169,21 @@ struct ContentView: View {
     private func refreshShipBox() async {
         let shipbox = settings.shipbox
         let repo = shipbox.repo.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !repo.isEmpty, !shipbox.token.isEmpty else { return }
-        guard let snapshot = try? await HostGitHubLoader.fetch(repo: repo, token: shipbox.token) else { return }
+        guard !repo.isEmpty, !shipbox.token.isEmpty else {
+            FetchStatusStore.record(.notConfigured, for: .shipbox)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+        let snapshot: ShipBoxSnapshot
+        do {
+            snapshot = try await HostGitHubLoader.fetch(repo: repo, token: shipbox.token)
+        } catch {
+            FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .shipbox)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
         ShipBoxSnapshotStore.save(snapshot)
+        FetchStatusStore.record(.ok, for: .shipbox)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -396,7 +428,6 @@ private struct OpenBoxSettingsView: View {
                 SecureField("Token", text: $settings.token)
                     .textContentType(.password)
                 TextField("Server URL (opencode serve, e.g. http://host:4096)", text: serverURLBinding)
-                Stepper("Refresh interval: \(settings.refreshInterval) s", value: $settings.refreshInterval, in: 5...60, step: 5)
                 Text("Empty URL = local opencode database. A configured URL works only with your own token pasted above.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
