@@ -300,6 +300,30 @@ final class LiveBoxSettingsDecodeTests: XCTestCase {
         let back = try JSONDecoder().decode(LiveBoxSettings.self, from: data)
         XCTAssertEqual(back.processRefreshInterval, 5)
     }
+
+    // Thermal row (plan_20260820.md Phase 2): opt-in, so an existing
+    // settings.json must keep LiveBox rendering exactly as before.
+
+    func testOldFileWithoutThermalKeyDefaultsOff() throws {
+        let s = try decode(#"{"showCPU":false}"#, as: LiveBoxSettings.self)
+        XCTAssertFalse(s.showCPU)
+        XCTAssertFalse(s.showThermal)
+    }
+
+    func testThermalKeyDecodesExplicitValue() throws {
+        let s = try decode(#"{"showThermal":true}"#, as: LiveBoxSettings.self)
+        XCTAssertTrue(s.showThermal)
+    }
+
+    /// LiveBoxSettings hand-writes both the decoder and the encoder, so a
+    /// missing `encode` line would silently drop the setting on every save.
+    func testThermalKeyRoundTrips() throws {
+        var s = LiveBoxSettings()
+        s.showThermal = true
+        let data = try JSONEncoder().encode(s)
+        let back = try JSONDecoder().decode(LiveBoxSettings.self, from: data)
+        XCTAssertTrue(back.showThermal)
+    }
 }
 
 final class ClipBoxSettingsDecodeTests: XCTestCase {

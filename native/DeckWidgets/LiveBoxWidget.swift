@@ -88,6 +88,13 @@ enum LiveBoxSampler {
             : snapshot.processes
     }
 
+    /// Deliberately separate from `sample()`: that tuple flows into
+    /// `history(appending:)` and `Sample`, and thermal must not change
+    /// history.json's schema (prd.md §5).
+    static func thermal() -> ThermalLevel {
+        LiveBoxThermalCore.level(rawValue: ProcessInfo.processInfo.thermalState.rawValue)
+    }
+
     static func volumes() -> [DiskVolume] {
         LiveBoxDiskCore.displayable(diskVolumeSamples())
     }
@@ -203,6 +210,7 @@ struct LiveBoxWidgetEntryView: View {
                 cpu: sample.cpu,
                 mem: sample.mem,
                 disk: sample.disk,
+                thermal: LiveBoxSampler.thermal(),
                 processes: LiveBoxSampler.processes(mode: entry.processMode, interval: interval),
                 volumes: LiveBoxSampler.volumes(),
                 history: LiveBoxSampler.history(appending: sample, interval: interval)
@@ -220,6 +228,7 @@ struct LiveBoxFace: View {
     let cpu: Double
     let mem: Double
     let disk: Double
+    let thermal: ThermalLevel
     let processes: [TopProcess]
     let volumes: [DiskVolume]
     let history: [Sample]
@@ -252,6 +261,9 @@ struct LiveBoxFace: View {
             if settings.showDisk {
                 metricRow(metric: .disk, title: "DISK", value: disk, color: settings.diskColor.color)
             }
+            if settings.showThermal {
+                thermalRow
+            }
         }
         .font(.system(size: 12, weight: .semibold, design: .rounded))
         .monospacedDigit()
@@ -273,6 +285,11 @@ struct LiveBoxFace: View {
             }
             .font(.system(size: 12, weight: .semibold, design: .rounded))
             .monospacedDigit()
+
+            if settings.showThermal {
+                thermalRow
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+            }
 
             if settings.showChart && !history.isEmpty {
                 chart
@@ -296,6 +313,11 @@ struct LiveBoxFace: View {
             }
             .font(.system(size: 12, weight: .semibold, design: .rounded))
             .monospacedDigit()
+
+            if settings.showThermal {
+                thermalRow
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+            }
 
             if settings.showChart && !history.isEmpty {
                 chart
@@ -451,6 +473,40 @@ struct LiveBoxFace: View {
         .chartYAxis(.hidden)
         .chartYScale(domain: 0...100)
         .frame(height: 62)
+    }
+
+    /// A word, not a percentage — so this can't reuse `metricRow`, which
+    /// formats "%3.0f%%". The dot carries no user-chosen hue (there is no
+    /// thermal color picker): it shows the tier tint, or grey when calm.
+    ///
+    /// On medium/large it renders on its own line rather than inside the
+    /// CPU/MEM/DISK header: measured at the real font, that header would need
+    /// 364.5pt with "CRITICAL" against ~297pt of usable width, and no spacing
+    /// or scale-factor tweak closes a 67pt gap (plan_20260820.md Phase 3
+    /// deviation).
+    private var thermalRow: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(thermalTint ?? Color.secondary)
+                .frame(width: 7, height: 7)
+            Text("THRM")
+                .foregroundStyle(.secondary)
+            Text(LiveBoxThermalCore.label(thermal))
+                .foregroundStyle(thermalTint ?? .primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+    }
+
+    /// Mirrors `tierColor` but sources its tier from the thermal level rather
+    /// than a warn/alarm number pair; nominal and fair stay untinted.
+    private var thermalTint: Color? {
+        guard settings.showThresholdColors else { return nil }
+        switch LiveBoxThermalCore.tier(thermal) {
+        case .normal: return nil
+        case .warn: return ThresholdTier.warnColor.color
+        case .alarm: return ThresholdTier.alarmColor.color
+        }
     }
 
     private func metricRow(metric: LiveBoxMetric, title: String, value: Double, color: Color) -> some View {

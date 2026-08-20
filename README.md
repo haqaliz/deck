@@ -13,7 +13,7 @@ WidgetKit widgets with native colors, corners and materials.
 
 | Widget | Shows |
 |---|---|
-| **LiveBox** | CPU / MEM / DISK usage with a live chart (per-core CPU lines) and top processes (CPU/MEM tabs); metric rows and chart lines turn amber/red past each metric's own warn/alarm thresholds; the large widget can list per-volume disk rows (internal + external volumes) instead of the aggregate DISK row; the process list refreshes at your chosen cadence (default 15s) |
+| **LiveBox** | CPU / MEM / DISK usage with a live chart (per-core CPU lines) and top processes (CPU/MEM tabs); metric rows and chart lines turn amber/red past each metric's own warn/alarm thresholds; the large widget can list per-volume disk rows (internal + external volumes) instead of the aggregate DISK row; the process list refreshes at your chosen cadence (default 15s); an optional thermal-pressure row (off by default) shows the system state as NOMINAL/FAIR/SERIOUS/CRITICAL |
 | **OpenBox** | opencode usage: today's in/out tokens + cost, 14-day chart (tokens or cost-per-day stacked by model), top models, tool usage counts, top sessions by tokens |
 | **NetBox** | per-interface up/down rates, history chart, most active interfaces; rates turn amber/red past your warn/alarm thresholds |
 | **BatBox** | battery level, time remaining, charge state, level chart |
@@ -60,7 +60,9 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   by default). The large face can also list the top sessions of the last 14
   days by tokens (OpenBox tab → "Show sessions", off by default).
 - **LiveBox** reads mach, getifaddrs-style samplers and IOKit directly inside
-  the widget; the top-process rows come from the background agent (ps) and
+  the widget — including the optional thermal row, which reads
+  `ProcessInfo.thermalState` (a coarse pressure level, not a temperature: macOS
+  exposes no fan speed or degrees without private SMC access); the top-process rows come from the background agent (ps) and
   refresh at your "Process refresh" interval (5–60s, default 15s — the widget
   tick and the fast process agent `com.deck.agent.processes` follow it).
 - **NetBox** reads only the interface you pin in settings (default: automatic
@@ -130,6 +132,7 @@ rm -rf /Applications/Deck.app
 
 ```bash
 xcodegen generate --spec native/project.yml   # after project.yml changes
+                                              # AND after adding any source file
 xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release \
   -derivedDataPath native/build.noindex build         # build
 ```
