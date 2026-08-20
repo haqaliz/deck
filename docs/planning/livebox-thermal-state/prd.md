@@ -37,10 +37,11 @@ SMALL                    MEDIUM / LARGE header
   color-picker setting** — thermal has no user-chosen hue, unlike CPU/MEM/DISK.
 - **Tint gate:** obeys the existing `showThresholdColors` toggle. With it off,
   the row renders plain (grey dot, primary text) but still shows the word.
-- **Width mitigation (medium):** four items plus the 8-character `CRITICAL` is
-  the widest case. Reduce the header `HStack` spacing from 14 to 10 when the
-  thermal row is visible, and add `.lineLimit(1)` +
-  `.minimumScaleFactor(0.75)`. Acceptance is measured, not assumed (§7).
+- **Position, as shipped:** on **small** the row joins the existing vertical
+  stack; on **medium/large** it renders on **its own line** directly below the
+  CPU/MEM/DISK header, not inside it. Measurement during implementation showed
+  the header would need 364.5pt against ~297pt usable — see the Phase 3
+  deviation in `plan_20260820.md`. The header is left untouched at spacing 14.
 
 ### Back face — settings (Deck app → LiveBox tab, "Metrics" section)
 
@@ -151,8 +152,9 @@ change.
       3 × 8pt spacing ≈ 84pt against ~130pt usable — expected to fit, but
       confirmed by eye, not by arithmetic).
 - [ ] `showThresholdColors` off → thermal row never tinted.
-- [ ] **Medium face at `CRITICAL` with CPU+MEM+DISK+THRM all shown does not
-      truncate or clip** — verified by eye on the installed widget.
+- [x] **Medium face at `CRITICAL` with CPU+MEM+DISK+THRM all shown does not
+      truncate or clip** — verified by rendering `LiveBoxFace` at true widget
+      sizes via `ImageRenderer`.
 - [ ] Tinting verified at `SERIOUS` and `CRITICAL` by **temporarily hardcoding
       the level in `LiveBoxSampler.thermal()` in an uncommitted local build**,
       checking all three sizes, then reverting. macOS offers no supported way
