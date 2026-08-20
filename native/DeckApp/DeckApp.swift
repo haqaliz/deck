@@ -431,6 +431,7 @@ private struct OpenBoxSettingsView: View {
                 Text("Empty URL = local opencode database. A configured URL works only with your own token pasted above.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                FetchStatusCaption(source: .opencodeRemote, clearOn: "\(settings.serverURL ?? "")\u{0}\(settings.token)")
             }
             Section("Chart") {
                 Toggle("Show 14-day chart", isOn: $settings.showChart)
@@ -627,6 +628,7 @@ private struct HomeBoxSettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 Toggle("Show 3-day forecast", isOn: $settings.showForecast)
+                FetchStatusCaption(source: .weather, clearOn: settings.location)
             }
             Section("World clock") {
                 Toggle("Show zones", isOn: $settings.showZones)
@@ -677,6 +679,49 @@ private struct ClipBoxSettingsView: View {
     }
 }
 
+/// Reports the last fetch failure for a source next to the fields that cause
+/// it. The widget carries the terse chip; here there is room for the sentence.
+///
+/// The status is held in state and refreshed on a tick — reading the file from
+/// `body` would hit the disk on every keystroke in a token field.
+private struct FetchStatusCaption: View {
+    let source: FetchSource
+    /// The fetch inputs (token, repo, URL, location). When they change the
+    /// caption clears: a stale reason must not accuse the user of a problem
+    /// they may have just fixed. The next refresh re-records it if it still
+    /// fails. Keyed on these fields only, so changing a color leaves it alone.
+    let clearOn: String
+
+    @State private var status: FetchStatus?
+
+    /// Built once — a publisher recreated per body evaluation leaves a timer
+    /// running per render.
+    private static let tick = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        Group {
+            if let status, let hint = FetchStatusCopy.hint(source: source, outcome: status.outcome) {
+                Text("\(FetchStatusCopy.line(source: source, outcome: status.outcome) ?? "") · \(Self.timeFormatter.string(from: status.attemptedAt))")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                Text(hint)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .onAppear { status = FetchStatusStore.load(source) }
+        .onReceive(Self.tick) { _ in status = FetchStatusStore.load(source) }
+        .onChange(of: clearOn) { _ in status = nil }
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
+}
+
 private struct ShipBoxSettingsView: View {
     @Binding var settings: ShipBoxSettings
 
@@ -689,6 +734,7 @@ private struct ShipBoxSettingsView: View {
                 Text("Empty repo or token = the widget shows no data. The token is sent only to api.github.com over TLS.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                FetchStatusCaption(source: .shipbox, clearOn: "\(settings.repo)\u{0}\(settings.token)")
             }
             Section("Runs") {
                 Toggle("Show runs list", isOn: $settings.showList)

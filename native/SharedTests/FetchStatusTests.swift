@@ -297,3 +297,46 @@ final class FetchStatusStoreTests: XCTestCase {
         XCTAssertTrue(urls.allSatisfy { $0.hasPrefix("fetch-") && $0.hasSuffix(".json") })
     }
 }
+
+// MARK: - Settings-tab hints (shipbox-settings-status)
+
+final class FetchStatusHintTests: XCTestCase {
+    /// The widget chip is one terse line; the settings tab has room for a
+    /// sentence that says what to actually do.
+    func testHintIsLongerAndMoreSpecificThanTheChip() {
+        for source in FetchSource.allCases {
+            for outcome in [FetchOutcome.notConfigured, .authOrTarget, .unreachable, .badResponse] {
+                guard let hint = FetchStatusCopy.hint(source: source, outcome: outcome) else { continue }
+                XCTAssertGreaterThan(hint.count, 20, "\(source)/\(outcome) hint too terse: \(hint)")
+                XCTAssertTrue(hint.hasSuffix("."), "\(source)/\(outcome) hint should read as a sentence")
+            }
+        }
+    }
+
+    func testSuccessHasNoHint() {
+        for source in FetchSource.allCases {
+            XCTAssertNil(FetchStatusCopy.hint(source: source, outcome: .ok), "\(source)")
+        }
+    }
+
+    func testEveryFailureOutcomeHasAHintWhereTheChipHasALine() {
+        for source in FetchSource.allCases {
+            for outcome in [FetchOutcome.notConfigured, .authOrTarget, .unreachable, .badResponse] {
+                let hasLine = FetchStatusCopy.line(source: source, outcome: outcome) != nil
+                let hasHint = FetchStatusCopy.hint(source: source, outcome: outcome) != nil
+                XCTAssertEqual(hasLine, hasHint, "\(source)/\(outcome): chip and hint must agree on whether to speak")
+            }
+        }
+    }
+
+    func testShipBoxAuthHintNamesBothCauses() {
+        let hint = FetchStatusCopy.hint(source: .shipbox, outcome: .authOrTarget)
+
+        // GitHub answers 404 for a private repo the token can't see, so the
+        // copy must not blame the repo name alone.
+        XCTAssertEqual(
+            hint,
+            "GitHub rejected the request: check owner/repo and that the token is valid and can see it."
+        )
+    }
+}
