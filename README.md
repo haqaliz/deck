@@ -14,14 +14,14 @@ WidgetKit widgets with native colors, corners and materials.
 | Widget | Shows |
 |---|---|
 | **LiveBox** | CPU / MEM / DISK usage with a live chart (per-core CPU lines) and top processes (CPU/MEM tabs); metric rows and chart lines turn amber/red past each metric's own warn/alarm thresholds; the large widget can list per-volume disk rows (internal + external volumes) instead of the aggregate DISK row; the process list refreshes at your chosen cadence (default 15s); an optional thermal-pressure row (off by default) shows the system state as NOMINAL/FAIR/SERIOUS/CRITICAL |
-| **OpenBox** | opencode usage: today's in/out tokens + cost, 14-day chart (tokens or cost-per-day stacked by model), top models, tool usage counts, top sessions by tokens |
+| **OpenBox** | opencode usage: today's in/out tokens + cost, 14-day chart (tokens or cost-per-day stacked by model), top models, tool usage counts, top sessions by tokens; in remote mode a failed fetch says why |
 | **NetBox** | per-interface up/down rates, history chart, most active interfaces; rates turn amber/red past your warn/alarm thresholds |
 | **BatBox** | battery level, time remaining, charge state, level chart |
 | **GitBox** | commits per day (14 days), today's count, streak, active repos |
 | **DevBox** | open TCP listening ports (process + port) and running Docker containers (CPU/mem) |
 | **ClipBox** | clipboard history: recent copies with previews, item kinds, relative times |
-| **HomeBox** | weather for your location (conditions + 3-day forecast) and a world clock |
-| **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals |
+| **HomeBox** | weather for your location (conditions + 3-day forecast) and a world clock; a failed fetch says why |
+| **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
 
 All six come in **small / medium / large** sizes.
 
@@ -78,6 +78,17 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 - **ShipBox** needs a repo (`owner/repo`) and a GitHub token in settings —
   without a token nothing is fetched (the token goes only to api.github.com
   over TLS). Runs refresh via the agent every 60s.
+- **When a fetch fails**, ShipBox, HomeBox and OpenBox (remote mode) say why in
+  one short line instead of a generic "no data": *"Add a repo + token in
+  settings"* (nothing configured), *"Check repo + token"* / *"Check the
+  location"* (credentials or target wrong — 401/403/404), *"Can't reach
+  GitHub"* (offline, rate-limited, or the service is down), *"Unexpected
+  GitHub response"* (reached it, couldn't parse it). If the background agent
+  itself hasn't run for half an hour the line reads *"Agent hasn't run"*.
+  These widgets no longer blank out data that has gone stale — whatever was
+  last fetched stays on screen with its timestamp and the reason, so a broken
+  token never silently empties a widget that was working a minute ago. The
+  reason clears itself on the next successful fetch.
 
 ## How it works
 
@@ -106,6 +117,13 @@ scripts/lsclean.sh    # unregisters dev copies, re-registers /Applications/Deck.
 
 Building into `native/build.noindex` (as above) keeps new dev copies from being
 registered in the first place.
+
+**A widget says "Check repo + token" or "Agent hasn't run".** That is the
+widget reporting the last fetch, not a bug: fix the token/repo/location in Deck
+settings (the app refreshes immediately, so the line clears within seconds), or
+check the agent is loaded with `launchctl list | grep com.deck.agent`. Reasons
+are recorded per source in `fetch-{shipbox,weather,opencodeRemote}.json` inside
+the widget container.
 
 ## Uninstall
 
