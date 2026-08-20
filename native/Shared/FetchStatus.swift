@@ -141,6 +141,43 @@ enum FetchStatusCopy {
             }
         }
     }
+
+    /// A full sentence for the settings window, where the fields that cause the
+    /// failure are on screen and there is room to say what to do about it.
+    /// Speaks exactly when `line` speaks.
+    static func hint(source: FetchSource, outcome: FetchOutcome) -> String? {
+        switch outcome {
+        case .ok:
+            return nil
+        case .notConfigured:
+            switch source {
+            case .shipbox: return "Nothing is fetched until both a repo and a token are set."
+            case .weather: return nil
+            case .opencodeRemote: return "Remote mode fetches nothing until you paste your own token."
+            }
+        case .authOrTarget:
+            switch source {
+            case .shipbox:
+                return "GitHub rejected the request: check owner/repo and that the token is valid and can see it."
+            case .weather:
+                return "wttr.in didn't recognise that location — try a city name, or leave it empty to geolocate."
+            case .opencodeRemote:
+                return "The opencode server rejected the request: check the server URL and your token."
+            }
+        case .unreachable:
+            switch source {
+            case .shipbox: return "Couldn't reach api.github.com — offline, rate-limited, or GitHub is down."
+            case .weather: return "Couldn't reach wttr.in — offline, or the service is down."
+            case .opencodeRemote: return "Couldn't reach the opencode server — check it is running and reachable."
+            }
+        case .badResponse:
+            switch source {
+            case .shipbox: return "Reached GitHub, but the response couldn't be read. Retrying every minute."
+            case .weather: return "Reached wttr.in, but the response couldn't be read. Retrying every minute."
+            case .opencodeRemote: return "Reached the server, but the response couldn't be read. Retrying every minute."
+            }
+        }
+    }
 }
 
 // MARK: - Face resolution (pure)

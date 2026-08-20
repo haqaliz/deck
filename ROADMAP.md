@@ -64,7 +64,10 @@ shell and only add a data source + a layout.
       OpenBox remote): the agent classifies each loader's typed error into four
       coarse outcomes (not configured / auth or target / unreachable / bad
       response) and records them per source in `fetch-{source}.json`; the
-      widgets render one short reason line. **Behaviour change:** these three
+      widgets render one short reason line, and each widget's settings tab
+      repeats it as a full sentence under the fields that cause it (token,
+      repo, server URL, location), cleared as soon as those fields change.
+      **Behaviour change:** these three
       no longer blank data on age — a snapshot that exists is always rendered
       with its timestamp, and a silent agent gets its own "Agent hasn't run"
       wording. Also removed the dead OpenBox "Refresh interval" stepper (the

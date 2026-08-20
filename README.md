@@ -23,7 +23,7 @@ WidgetKit widgets with native colors, corners and materials.
 | **HomeBox** | weather for your location (conditions + 3-day forecast) and a world clock; a failed fetch says why |
 | **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
 
-All six come in **small / medium / large** sizes.
+All nine come in **small / medium / large** sizes.
 
 ## Install
 
@@ -88,7 +88,9 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   These widgets no longer blank out data that has gone stale — whatever was
   last fetched stays on screen with its timestamp and the reason, so a broken
   token never silently empties a widget that was working a minute ago. The
-  reason clears itself on the next successful fetch.
+  reason clears itself on the next successful fetch. The same reason appears in
+  the widget's settings tab as a full sentence, right under the field that
+  causes it, and clears the moment you edit that field.
 
 ## How it works
 
