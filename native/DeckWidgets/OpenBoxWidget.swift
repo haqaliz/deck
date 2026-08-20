@@ -10,6 +10,11 @@ private let openboxLog = Logger(subsystem: "com.deck.app.widgets", category: "Op
 struct OpenBoxEntry: TimelineEntry {
     let date: Date
     let available: Bool
+    let writtenAt: Date?
+    let stale: Bool
+    /// One line explaining the last remote fetch, or nil (always nil in local
+    /// mode — the local DB is not a fetch).
+    let chip: String?
     let sessions: Int64
     let input: Int64
     let output: Int64
@@ -42,6 +47,9 @@ struct OpenBoxProvider: TimelineProvider {
         return OpenBoxEntry(
             date: .now,
             available: true,
+            writtenAt: .now,
+            stale: false,
+            chip: nil,
             sessions: 12,
             input: 2_400_000,
             output: 310_000,
@@ -86,10 +94,27 @@ struct OpenBoxProvider: TimelineProvider {
     private func makeEntry() -> OpenBoxEntry {
         let snapshot = OpenCodeSnapshotStore.load()
         openboxLog.info("snapshot found=\(snapshot != nil) path=\(OpenCodeSnapshotStore.fileURL.path) home=\(FileManager.default.homeDirectoryForCurrentUser.path)")
-        guard let snapshot, snapshot.writtenAt.timeIntervalSinceNow > -7200 else {
+        let now = Date()
+        let openboxSettings = DeckSettings.load().openbox
+        // Remote mode only: a status left over from a server the user has
+        // since cleared must not haunt a perfectly healthy local OpenBox.
+        let isRemote = !(openboxSettings.serverURL ?? "").isEmpty
+        let chip = isRemote
+            ? FetchChip.text(
+                source: .opencodeRemote,
+                status: FetchStatusStore.load(.opencodeRemote),
+                dataWrittenAt: snapshot?.writtenAt,
+                now: now
+            )
+            : nil
+
+        guard let snapshot else {
             return OpenBoxEntry(
-                date: .now,
+                date: now,
                 available: false,
+                writtenAt: nil,
+                stale: false,
+                chip: chip,
                 sessions: 0,
                 input: 0,
                 output: 0,
@@ -102,13 +127,16 @@ struct OpenBoxProvider: TimelineProvider {
                 totalInput: 0,
                 totalOutput: 0,
                 totalCost: 0,
-                settings: DeckSettings.load().openbox
+                settings: openboxSettings
             )
         }
-        let settings = DeckSettings.load().openbox
+        let settings = openboxSettings
         return OpenBoxEntry(
-            date: .now,
+            date: now,
             available: true,
+            writtenAt: snapshot.writtenAt,
+            stale: now.timeIntervalSince(snapshot.writtenAt) > 5 * 60,
+            chip: chip,
             sessions: snapshot.sessions,
             input: snapshot.input,
             output: snapshot.output,
@@ -175,12 +203,47 @@ struct OpenBoxWidgetEntryView: View {
                 .foregroundStyle(.secondary)
             Text("No opencode data")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-            Text("Run opencode to record usage.")
+            Text(entry.chip ?? "Run opencode to record usage.")
                 .font(.system(size: 11, design: .rounded))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
         }
     }
+
+    /// Reason for the last failed remote fetch and/or how old these numbers
+    /// are. Without the old 2-hour cutoff, stale figures must say so rather
+    /// than read as today's.
+    private var statusLine: some View {
+        HStack(spacing: 4) {
+            if let chip = entry.chip {
+                Text(chip)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            if entry.stale, let writtenAt = entry.writtenAt {
+                Text("· \(timeString(writtenAt))")
+                    .monospacedDigit()
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: 10, weight: .medium, design: .rounded))
+        .foregroundStyle(.tertiary)
+    }
+
+    private var hasStatusLine: Bool {
+        entry.chip != nil || (entry.stale && entry.writtenAt != nil)
+    }
+
+    private func timeString(_ date: Date) -> String {
+        Self.timeFormatter.string(from: date)
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
 
     private var smallView: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -195,6 +258,9 @@ struct OpenBoxWidgetEntryView: View {
                     Text(OpenCodeFormatters.formatCost(entry.cost))
                         .foregroundStyle(.primary)
                 }
+            if hasStatusLine {
+                statusLine
+            }
         }
         .font(.system(size: 12, weight: .semibold, design: .rounded))
         .monospacedDigit()
@@ -202,6 +268,9 @@ struct OpenBoxWidgetEntryView: View {
 
     private var mediumView: some View {
         VStack(alignment: .leading, spacing: 6) {
+            if hasStatusLine {
+                statusLine
+            }
             HStack(spacing: 14) {
                 tokenRow(title: "IN", value: entry.input, color: entry.settings.inputColor.color)
                 tokenRow(title: "OUT", value: entry.output, color: entry.settings.outputColor.color)
@@ -231,6 +300,9 @@ struct OpenBoxWidgetEntryView: View {
 
     private var largeView: some View {
         VStack(alignment: .leading, spacing: 6) {
+            if hasStatusLine {
+                statusLine
+            }
             HStack(spacing: 14) {
                 tokenRow(title: "IN", value: entry.input, color: entry.settings.inputColor.color)
                 tokenRow(title: "OUT", value: entry.output, color: entry.settings.outputColor.color)

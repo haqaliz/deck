@@ -60,6 +60,17 @@ shell and only add a data source + a layout.
       (`com.deck.agent.processes` LaunchAgent at the process refresh interval,
       default 15s; the widget tick, staleness guard, and history window follow
       the same interval)
+- [x] Agent-fetched widgets say *why* a fetch failed (ShipBox / HomeBox /
+      OpenBox remote): the agent classifies each loader's typed error into four
+      coarse outcomes (not configured / auth or target / unreachable / bad
+      response) and records them per source in `fetch-{source}.json`; the
+      widgets render one short reason line. **Behaviour change:** these three
+      no longer blank data on age — a snapshot that exists is always rendered
+      with its timestamp, and a silent agent gets its own "Agent hasn't run"
+      wording. Also removed the dead OpenBox "Refresh interval" stepper (the
+      settings key stays, tolerantly decoded).
+      Follow-ups still open from `docs/planning/shipbox/prd.md:118`: ShipBox
+      multi-repo support.
 - [x] Dev builds no longer break widget rendering: derived data lives in
       `native/build.noindex` so Spotlight/LaunchServices never registers
       throwaway copies of `com.deck.app` (stale registrations made WidgetKit

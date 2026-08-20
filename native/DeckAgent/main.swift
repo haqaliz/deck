@@ -48,12 +48,26 @@ Task {
         // Remote mode: never passes a default token — without the user's own
         // token no data is fetched (no silent local-DB fallback).
         if !settings.openbox.token.isEmpty {
-            opencode = try? await RemoteOpenCodeLoader.load(serverURL: serverURL, token: settings.openbox.token)
+            do {
+                opencode = try await RemoteOpenCodeLoader.load(serverURL: serverURL, token: settings.openbox.token)
+                FetchStatusStore.record(.ok, for: .opencodeRemote)
+            } catch {
+                opencode = nil
+                let outcome = FetchClassifier.outcome(for: error)
+                FetchStatusStore.record(outcome, for: .opencodeRemote)
+                agentLog.info("failed opencode fetch (\(outcome.rawValue, privacy: .public))")
+            }
         } else {
             opencode = nil
+            FetchStatusStore.record(.notConfigured, for: .opencodeRemote)
         }
     } else {
         opencode = OpenCodeReader.load()
+        // Local mode shows no chip, but a stale remote failure must not
+        // outlive the mode that produced it.
+        if opencode != nil {
+            FetchStatusStore.record(.ok, for: .opencodeRemote)
+        }
     }
     if let opencode {
         if opencode != OpenCodeSnapshotStore.load() {
@@ -100,30 +114,42 @@ Task {
         agentLog.info("failed clipbox snapshot (unavailable)")
     }
 
-    if let homebox = try? await HostWeatherLoader.fetch(location: settings.homebox.location) {
+    do {
         // Always written: writtenAt drives the widget's staleness windows, so
         // a successful fetch must refresh it even when weather is unchanged.
+        let homebox = try await HostWeatherLoader.fetch(location: settings.homebox.location)
         HomeBoxSnapshotStore.save(homebox)
+        FetchStatusStore.record(.ok, for: .weather)
         agentLog.info("written weather snapshot")
-    } else {
-        agentLog.info("failed weather snapshot (network unavailable)")
+    } catch {
+        let outcome = FetchClassifier.outcome(for: error)
+        FetchStatusStore.record(outcome, for: .weather)
+        agentLog.info("failed weather snapshot (\(outcome.rawValue, privacy: .public))")
     }
 
     // ShipBox: requires the user's own repo + token — never a default token.
     let shipboxRepo = settings.shipbox.repo
         .trimmingCharacters(in: .whitespacesAndNewlines)
     if !shipboxRepo.isEmpty && !settings.shipbox.token.isEmpty {
-        if let shipbox = try? await HostGitHubLoader.fetch(
-            repo: shipboxRepo,
-            token: settings.shipbox.token
-        ) {
+        do {
             // Always written: writtenAt drives the staleness windows.
+            let shipbox = try await HostGitHubLoader.fetch(
+                repo: shipboxRepo,
+                token: settings.shipbox.token
+            )
             ShipBoxSnapshotStore.save(shipbox)
+            FetchStatusStore.record(.ok, for: .shipbox)
             agentLog.info("written shipbox snapshot")
-        } else {
-            agentLog.info("failed shipbox snapshot (network or API unavailable)")
+        } catch {
+            let outcome = FetchClassifier.outcome(for: error)
+            FetchStatusStore.record(outcome, for: .shipbox)
+            agentLog.info("failed shipbox snapshot (\(outcome.rawValue, privacy: .public))")
         }
     } else {
+        // Recorded, not just logged: "you haven't set this up" is the most
+        // fixable state there is, and the widget can only say so if it lands
+        // in the container.
+        FetchStatusStore.record(.notConfigured, for: .shipbox)
         agentLog.info("skipped shipbox snapshot (not configured)")
     }
 
