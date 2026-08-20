@@ -7,6 +7,9 @@ struct HomeBoxEntry: TimelineEntry {
     let date: Date
     let available: Bool
     let stale: Bool
+    let writtenAt: Date?
+    /// One line explaining the last fetch attempt, or nil when all is well.
+    let chip: String?
     let location: String
     let condition: WeatherCondition?
     let days: [WeatherDay]
@@ -17,8 +20,8 @@ struct HomeBoxEntry: TimelineEntry {
 // MARK: - Provider
 //
 // Weather arrives via the agent-pumped snapshot; the world-clock rows are
-// computed locally. Staleness windows: fresh <5 min, stale hint 5–30 min,
-// unavailable >30 min.
+// computed locally. A snapshot that exists is always rendered — the age hint
+// past 5 min and the fetch-status chip carry the honesty instead of blanking.
 
 struct HomeBoxProvider: TimelineProvider {
     func placeholder(in context: Context) -> HomeBoxEntry {
@@ -26,6 +29,8 @@ struct HomeBoxProvider: TimelineProvider {
             date: .now,
             available: true,
             stale: false,
+            writtenAt: .now,
+            chip: nil,
             location: "Amsterdam",
             condition: WeatherCondition(
                 code: 113,
@@ -63,12 +68,20 @@ struct HomeBoxProvider: TimelineProvider {
         let settings = DeckSettings.load().homebox
         let now = Date()
         let zoneRows = ZoneRows.build(identifiers: settings.timezoneIDs, at: now)
+        let chip = FetchChip.text(
+            source: .weather,
+            status: FetchStatusStore.load(.weather),
+            dataWrittenAt: snapshot?.writtenAt,
+            now: now
+        )
 
         guard let snapshot else {
             return HomeBoxEntry(
                 date: now,
                 available: false,
                 stale: false,
+                writtenAt: nil,
+                chip: chip,
                 location: "",
                 condition: nil,
                 days: [],
@@ -77,14 +90,12 @@ struct HomeBoxProvider: TimelineProvider {
             )
         }
 
-        let age = now.timeIntervalSince(snapshot.writtenAt)
-        let available = age <= 30 * 60
-        let stale = age > 5 * 60
-
         return HomeBoxEntry(
             date: now,
-            available: available,
-            stale: stale,
+            available: true,
+            stale: now.timeIntervalSince(snapshot.writtenAt) > 5 * 60,
+            writtenAt: snapshot.writtenAt,
+            chip: chip,
             location: snapshot.location,
             condition: snapshot.condition,
             days: snapshot.days,
@@ -142,7 +153,7 @@ struct HomeBoxWidgetEntryView: View {
                 .foregroundStyle(.secondary)
             Text("No weather data")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-            Text("Waiting for the Deck agent…")
+            Text(entry.chip ?? "Waiting for the Deck agent…")
                 .font(.system(size: 11, design: .rounded))
                 .foregroundStyle(.secondary)
             if !entry.zoneRows.isEmpty {
@@ -270,17 +281,20 @@ struct HomeBoxWidgetEntryView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
-            if entry.stale, let writtenAt = snapshotWrittenAt {
+            if let chip = entry.chip {
+                Text(chip)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            if entry.stale, let writtenAt = entry.writtenAt {
                 Text("· \(timeString(writtenAt))")
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.tertiary)
             }
         }
-    }
-
-    private var snapshotWrittenAt: Date? {
-        HomeBoxSnapshotStore.load()?.writtenAt
     }
 
     private var zoneRowsList: some View {
