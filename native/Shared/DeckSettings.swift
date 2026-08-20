@@ -78,6 +78,8 @@ struct LiveBoxSettings: Codable, Equatable {
     var showMEM = true
     var showDisk = true
     var showPerVolumeDisk = true
+    /// Thermal pressure row — opt-in so existing widgets don't gain a row.
+    var showThermal = false
     var showProcesses = true
     var showPerCoreCores = false
     var processCount = 3
@@ -104,7 +106,7 @@ struct LiveBoxSettings: Codable, Equatable {
     /// container for the migration fallback, never stored, so the synthesized
     /// encoder writes only the six per-metric keys (one-way migration).
     enum CodingKeys: String, CodingKey {
-        case showChart, showCPU, showMEM, showDisk, showPerVolumeDisk
+        case showChart, showCPU, showMEM, showDisk, showPerVolumeDisk, showThermal
         case showProcesses, showPerCoreCores, processCount, processRefreshInterval
         case cpuColor, memColor, diskColor, showThresholdColors
         case cpuWarnThreshold, cpuAlarmThreshold, memWarnThreshold, memAlarmThreshold
@@ -119,6 +121,7 @@ struct LiveBoxSettings: Codable, Equatable {
         showMEM = try c.decodeIfPresent(Bool.self, forKey: .showMEM) ?? true
         showDisk = try c.decodeIfPresent(Bool.self, forKey: .showDisk) ?? true
         showPerVolumeDisk = try c.decodeIfPresent(Bool.self, forKey: .showPerVolumeDisk) ?? true
+        showThermal = try c.decodeIfPresent(Bool.self, forKey: .showThermal) ?? false
         showProcesses = try c.decodeIfPresent(Bool.self, forKey: .showProcesses) ?? true
         showPerCoreCores = try c.decodeIfPresent(Bool.self, forKey: .showPerCoreCores) ?? false
         processCount = try c.decodeIfPresent(Int.self, forKey: .processCount) ?? 3
@@ -152,6 +155,7 @@ struct LiveBoxSettings: Codable, Equatable {
         try c.encode(showMEM, forKey: .showMEM)
         try c.encode(showDisk, forKey: .showDisk)
         try c.encode(showPerVolumeDisk, forKey: .showPerVolumeDisk)
+        try c.encode(showThermal, forKey: .showThermal)
         try c.encode(showProcesses, forKey: .showProcesses)
         try c.encode(showPerCoreCores, forKey: .showPerCoreCores)
         try c.encode(processCount, forKey: .processCount)
