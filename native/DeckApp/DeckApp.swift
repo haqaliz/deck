@@ -338,6 +338,10 @@ private struct LiveBoxSettingsView: View {
                 Toggle("Show CPU", isOn: $settings.showCPU)
                 Toggle("Show MEM", isOn: $settings.showMEM)
                 Toggle("Show DISK", isOn: $settings.showDisk)
+                Toggle("Show thermal state", isOn: $settings.showThermal)
+                Text("System thermal pressure (nominal / fair / serious / critical), not a temperature reading. Turns amber at serious and red at critical.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Disk") {
                 Toggle("Show per-volume disk", isOn: $settings.showPerVolumeDisk)
