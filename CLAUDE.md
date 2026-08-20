@@ -63,7 +63,12 @@ regardless of requested policy — do not fight it.
 ## Commands
 
 ```bash
-xcodegen generate --spec native/project.yml   # regenerate the project
+xcodegen generate --spec native/project.yml   # regenerate after project.yml
+                                              # OR any new source file: xcodegen
+                                              # enumerates files at generation
+                                              # time, so a new test file is
+                                              # silently not compiled and the
+                                              # suite still reports success
 xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release \
   -derivedDataPath native/build.noindex -allowProvisioningUpdates \
   -allowProvisioningDeviceRegistration build
