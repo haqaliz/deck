@@ -98,6 +98,7 @@
 		AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */; };
 		AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */; };
 		AF37865EFBC4BAF79B768D19 /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
+		AF427E1E2B40CE7467D6F1AC /* CalBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8F7E47D5B1EFC7E9E91DF3 /* CalBoxWidget.swift */; };
 		AF7FE0721F8D203C29B1D8D1 /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		B65A51E1C663EA52C4B95C29 /* NetBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */; };
 		B78D28F3EFB86CEA57C9803E /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
@@ -213,6 +214,7 @@
 		7073AE9469C6B027A42C9684 /* AtomicFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicFile.swift; sourceTree = "<group>"; };
 		72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdTierTests.swift; sourceTree = "<group>"; };
 		772E2CD7B7548ED00950F6F7 /* amsterdam_j1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = amsterdam_j1.json; sourceTree = "<group>"; };
+		7A8F7E47D5B1EFC7E9E91DF3 /* CalBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalBoxWidget.swift; sourceTree = "<group>"; };
 		7B2DB053937C24CBB649992B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSeriesTests.swift; sourceTree = "<group>"; };
 		7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxSnapshot.swift; sourceTree = "<group>"; };
@@ -390,6 +392,7 @@
 			children = (
 				CBC89EF1D34611CB2B244F15 /* AppIcon.icns */,
 				50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */,
+				7A8F7E47D5B1EFC7E9E91DF3 /* CalBoxWidget.swift */,
 				970F6F6A1DFB74AABEE7826C /* ClipBoxWidget.swift */,
 				D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */,
 				34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */,
@@ -594,6 +597,7 @@
 				54B1F45AED650BAB57FF2A53 /* BatteryCore.swift in Sources */,
 				822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */,
 				3D2D11CA3FAADA3275D66E63 /* CalBoxSnapshot.swift in Sources */,
+				AF427E1E2B40CE7467D6F1AC /* CalBoxWidget.swift in Sources */,
 				A94346AFBE99A456A37C9F3A /* ClipBoxSnapshot.swift in Sources */,
 				321052A8E1D6C63E19452D77 /* ClipBoxWidget.swift in Sources */,
 				53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */,
