@@ -118,19 +118,23 @@ the next slate. Ordered by priority, not by cost.
       snapshot is provider-agnostic (`TaskItem` with a String `id` and a
       `provider`), so a second provider extends the enum rather than
       migrating the store.
-      **Open follow-ups:**
-      - ⚠️ **Never verified against a live org.** The API was unreachable from
-        the dev machine while building (`az boards` unauthorized, no usable
-        PAT), so every payload shape comes from the documented contract, not a
-        real response. The parsers are defensive and fixture-tested, and the
-        settings tab names the failure, but the first real PAT is still the
-        first live test. Confirm which scheduling fields the org populates.
-      - Due dates resolve `DueDate → TargetDate → sprint end → undated`. If an
-        org populates none of them TaskBox degrades to an assigned-work list
-        (`"N open"`, `—` rows) — by design, but it means the headline
-        due/overdue feature may render nothing until this is checked.
-      - Deferred: deep links (`widgetURL`), multi-project/multi-org, custom
-        WIQL, a second provider, Keychain storage for the PAT.
+      **Verified against the live org on 2026-08-22** (org `ForesightAnalytics`,
+      project `ForesightManifold`) — the earlier "never tested against a real
+      API" caveat is closed, and testing it changed the design:
+      - **Due dates were removed entirely.** `DueDate`/`TargetDate` are sparse,
+        and the sprint-end fallback gave every item in a sprint the same date.
+        The face now shows board lanes instead.
+      - **Cross-project leak fixed.** A project-scoped WIQL *URL* does not
+        filter by project — the clause `[System.TeamProject] = @project` is
+        required. Without it the dev org returned 67 items across three
+        projects instead of the 25 in the configured one. Worth remembering
+        for any future WIQL.
+      - **`System.BoardColumn` is not usable** as a lane source: null on 24 of
+        50 sampled items, and reads `Doing` where the board header says
+        `In Progress`. States are stored raw and mapped at render time, with
+        the mapping editable in settings.
+      **Open follow-ups:** deep links (`widgetURL`), multi-project/multi-org,
+      custom WIQL, a second provider, Keychain storage for the PAT.
 - [ ] **PRBox** — GitHub review queue: your open PRs + PRs awaiting review.
       Cheapest of the slate: reuses ShipBox's token, `HostGitHubLoader`, and
       the `FetchClassifier` error path against the pulls/search endpoints.
