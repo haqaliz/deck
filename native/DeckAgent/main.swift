@@ -1,4 +1,3 @@
-import EventKit
 import Foundation
 import OSLog
 
@@ -32,31 +31,7 @@ func sampleProcesses() {
     }
 }
 
-// TEMPORARY (Phase 1 spike, removed in Phase 4): proves the embedded
-// __TEXT,__info_plist section makes the calendar TCC prompt reachable from a
-// `type: tool` target.
-func calendarProbe() {
-    let store = EKEventStore()
-    let sem = DispatchSemaphore(value: 0)
-    var granted = false
-    var failure: Error?
-    store.requestFullAccessToEvents { ok, error in
-        granted = ok
-        failure = error
-        sem.signal()
-    }
-    sem.wait()
-    print("granted: \(granted), calendars: \(store.calendars(for: .event).count)")
-    if let failure { print("error: \(failure)") }
-}
-
 Task {
-    if CommandLine.arguments.contains("--calendar-probe") {
-        calendarProbe()
-        semaphore.signal()
-        exit(0)
-    }
-
     if CommandLine.arguments.contains("--processes") {
         sampleProcesses()
         semaphore.signal()
@@ -204,6 +179,26 @@ Task {
     } else {
         FetchStatusStore.record(.notConfigured, for: .taskbox)
         agentLog.info("skipped taskbox snapshot (not configured)")
+    }
+
+    // CalBox: requires at least one ticked calendar and a granted TCC prompt.
+    // Never logs event titles — only counts and outcomes.
+    if settings.calbox.calendarIDs.isEmpty {
+        FetchStatusStore.record(.notConfigured, for: .calbox)
+        agentLog.info("skipped calbox snapshot (not configured)")
+    } else {
+        do {
+            // Always written: writtenAt drives the staleness window and the
+            // "Agent hasn't run" chip, so a quiet calendar must still refresh it.
+            let calbox = try await HostCalendarLoader.fetch(calendarIDs: settings.calbox.calendarIDs)
+            CalBoxSnapshotStore.save(calbox)
+            FetchStatusStore.record(.ok, for: .calbox)
+            agentLog.info("written calbox snapshot (\(calbox.events.count, privacy: .public) events)")
+        } catch {
+            let outcome = FetchClassifier.outcome(for: error)
+            FetchStatusStore.record(outcome, for: .calbox)
+            agentLog.info("failed calbox snapshot (\(outcome.rawValue, privacy: .public))")
+        }
     }
 
     let elapsed = Date().timeIntervalSince(start)
