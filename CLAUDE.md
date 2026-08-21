@@ -27,8 +27,10 @@ widget.
   (wttr.in, fetched by the agent).
 - **ShipBox** — build/deploy status: GitHub Actions runs for a repo (fetched
   by the agent with the user's token).
+- **CalBox** — calendar: next event + live countdown, all-day row, today's
+  agenda (EventKit, read by the agent; covers whatever macOS syncs).
 
-All nine ship in one WidgetKit extension: `Deck.app` (host + settings window)
+All ten ship in one WidgetKit extension: `Deck.app` (host + settings window)
 → `DeckWidgets.appex`.
 
 ## Architecture
@@ -38,7 +40,7 @@ targets:
 
 ```
 DeckApp/        # host app: settings window (tabs per widget), agent installer
-DeckWidgets/    # WidgetKit extension: 6 widgets + Loaders/ (mach, getifaddrs, IOKit)
+DeckWidgets/    # WidgetKit extension: 10 widgets + Loaders/ (mach, getifaddrs, IOKit)
 DeckAgent/      # silent CLI: refreshes sandbox-blocked data snapshots, then exits
 Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
 ```
@@ -52,7 +54,7 @@ Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
    and reading other apps' data (opencode DB, `ps`/process info, `git log`).
    The unsandboxed `DeckAgent` (LaunchAgent `com.deck.agent`, every 60s) reads
    those and writes snapshots into the widget's container:
-   `~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox}.json`
+   `~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox,calbox}.json`
    The widgets render the snapshots.
 
 **Settings live in the Deck app window only** (per-widget tabs: show toggles,
@@ -97,6 +99,11 @@ and remove `~/Library/LaunchAgents/com.deck.agent.plist`.
 - First run of DeckAgent prompts once for "access data from other apps"
   (it runs `ps` for the process list) — click Allow; the grant sticks to the
   stable signature.
+- DeckAgent also prompts for **calendar** access (CalBox). A `type: tool`
+  target has no bundle, so the usage-description key ships in a
+  `__TEXT,__info_plist` section (`CREATE_INFOPLIST_SECTION_IN_BINARY` in
+  project.yml) — without it the request is denied without ever prompting.
+  Deck.app and DeckAgent are separately signed, so macOS asks once for each.
 - Build only into `native/build.noindex` (the `.noindex` suffix keeps Spotlight,
   and therefore LaunchServices, from registering throwaway dev copies of
   `com.deck.app`). A registered dev copy — especially one whose worktree was

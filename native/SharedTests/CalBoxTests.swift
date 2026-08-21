@@ -1,5 +1,9 @@
 import XCTest
-@testable import CalBoxCore
+
+// Ported from the CalBoxCore scratch package. Everything here is the pure
+// logic behind the CalBox face: which event the countdown counts down to, how
+// the agenda splits, which calendars start ticked, and when the widget's
+// timeline must re-render.
 
 // A fixed reference point so nothing here depends on the wall clock.
 // 2026-08-22 09:00:00 UTC, exercised in UTC to keep day boundaries explicit.

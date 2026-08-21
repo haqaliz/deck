@@ -181,24 +181,6 @@ Task {
         agentLog.info("skipped taskbox snapshot (not configured)")
     }
 
-    // CalBox: requires at least one ticked calendar and a granted TCC prompt.
-    // Never logs event titles — only counts and outcomes.
-    if settings.calbox.calendarIDs.isEmpty {
-        FetchStatusStore.record(.notConfigured, for: .calbox)
-        agentLog.info("skipped calbox snapshot (not configured)")
-    } else {
-        do {
-            // Always written: writtenAt drives the staleness window and the
-            // "Agent hasn't run" chip, so a quiet calendar must still refresh it.
-            let calbox = try await HostCalendarLoader.fetch(calendarIDs: settings.calbox.calendarIDs)
-            CalBoxSnapshotStore.save(calbox)
-            FetchStatusStore.record(.ok, for: .calbox)
-            agentLog.info("written calbox snapshot (\(calbox.events.count, privacy: .public) events)")
-        } catch {
-            let outcome = FetchClassifier.outcome(for: error)
-            FetchStatusStore.record(outcome, for: .calbox)
-            agentLog.info("failed calbox snapshot (\(outcome.rawValue, privacy: .public))")
-        }
     // CalBox: needs a granted TCC prompt; the loader resolves which calendars
     // to read, so a widget added before settings were ever opened still shows
     // real events. Never logs event titles — only counts and outcomes.

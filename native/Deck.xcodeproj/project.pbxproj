@@ -31,6 +31,7 @@
 		2A844B182A8B55D6AE7B4116 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */; };
 		2D03E1C6AEAD755CE49CF9FD /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
+		30201B65F9B4481BA816125F /* CalBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79E814CE71C9E15746C2443A /* CalBoxTests.swift */; };
 		321052A8E1D6C63E19452D77 /* ClipBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 970F6F6A1DFB74AABEE7826C /* ClipBoxWidget.swift */; };
 		3256C001A7523B07D0D86C89 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
 		36AA8FE38FBF4541D88EA3BB /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
@@ -214,6 +215,7 @@
 		7073AE9469C6B027A42C9684 /* AtomicFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicFile.swift; sourceTree = "<group>"; };
 		72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdTierTests.swift; sourceTree = "<group>"; };
 		772E2CD7B7548ED00950F6F7 /* amsterdam_j1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = amsterdam_j1.json; sourceTree = "<group>"; };
+		79E814CE71C9E15746C2443A /* CalBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalBoxTests.swift; sourceTree = "<group>"; };
 		7A8F7E47D5B1EFC7E9E91DF3 /* CalBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalBoxWidget.swift; sourceTree = "<group>"; };
 		7B2DB053937C24CBB649992B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSeriesTests.swift; sourceTree = "<group>"; };
@@ -309,6 +311,7 @@
 				8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */,
 				E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */,
 				4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */,
+				79E814CE71C9E15746C2443A /* CalBoxTests.swift */,
 				F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */,
 				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
 				0B881092482BA9425E3F5918 /* DecodeTests.swift */,
@@ -641,6 +644,7 @@
 				6551819CA5506A4D266E0D79 /* BatteryCore.swift in Sources */,
 				A63FED1F6FABE8563FF1E242 /* BatteryCoreTests.swift in Sources */,
 				F7D714F5EC3F20D7242F6E85 /* CalBoxSnapshot.swift in Sources */,
+				30201B65F9B4481BA816125F /* CalBoxTests.swift in Sources */,
 				EA90CCDFFC5A2B29D6F7908F /* ClipBoxSnapshot.swift in Sources */,
 				F4968C6168797484C304D6B5 /* ClipBoxSnapshotTests.swift in Sources */,
 				AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */,
