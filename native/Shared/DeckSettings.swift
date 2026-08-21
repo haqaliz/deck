@@ -41,7 +41,35 @@ struct DeckSettings: Codable, Equatable {
     var clipbox = ClipBoxSettings()
     var homebox = HomeBoxSettings()
     var shipbox = ShipBoxSettings()
+    var taskbox = TaskBoxSettings()
     var agentAtLogin = true
+
+    init() {}
+
+    /// Tolerant decode at the container level, not just inside each section.
+    ///
+    /// The sub-structs were made tolerant in `settings-schema-migration`, but
+    /// `DeckSettings` itself stayed on the synthesized decoder, which throws
+    /// `keyNotFound` for any absent section. Combined with `load()`'s
+    /// `?? DeckSettings()` fallback that means adding a widget silently resets
+    /// EVERY setting — colors, tokens, repo paths — for anyone whose
+    /// `settings.json` predates it. Adding `taskbox` is exactly that case, so
+    /// a missing section now falls back to its defaults and leaves the rest of
+    /// the user's configuration intact.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        livebox = try c.decodeIfPresent(LiveBoxSettings.self, forKey: .livebox) ?? LiveBoxSettings()
+        openbox = try c.decodeIfPresent(OpenBoxSettings.self, forKey: .openbox) ?? OpenBoxSettings()
+        netbox = try c.decodeIfPresent(NetBoxSettings.self, forKey: .netbox) ?? NetBoxSettings()
+        batbox = try c.decodeIfPresent(BatBoxSettings.self, forKey: .batbox) ?? BatBoxSettings()
+        gitbox = try c.decodeIfPresent(GitBoxSettings.self, forKey: .gitbox) ?? GitBoxSettings()
+        devbox = try c.decodeIfPresent(DevBoxSettings.self, forKey: .devbox) ?? DevBoxSettings()
+        clipbox = try c.decodeIfPresent(ClipBoxSettings.self, forKey: .clipbox) ?? ClipBoxSettings()
+        homebox = try c.decodeIfPresent(HomeBoxSettings.self, forKey: .homebox) ?? HomeBoxSettings()
+        shipbox = try c.decodeIfPresent(ShipBoxSettings.self, forKey: .shipbox) ?? ShipBoxSettings()
+        taskbox = try c.decodeIfPresent(TaskBoxSettings.self, forKey: .taskbox) ?? TaskBoxSettings()
+        agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
+    }
 
     /// Settings live inside the widget extension's sandbox container so both
     /// the (unsandboxed) host app and the sandboxed extension can use them.
@@ -368,6 +396,41 @@ struct ShipBoxSettings: Codable, Equatable {
         runningColor = try c.decodeIfPresent(RGBA.self, forKey: .runningColor) ?? RGBA(.yellow)
         successColor = try c.decodeIfPresent(RGBA.self, forKey: .successColor) ?? RGBA(.green)
         failureColor = try c.decodeIfPresent(RGBA.self, forKey: .failureColor) ?? RGBA(.red)
+    }
+}
+
+struct TaskBoxSettings: Codable, Equatable {
+    /// Azure DevOps organization — a bare name or a full dev.azure.com URL.
+    /// Empty → agent skips the fetch.
+    var organization = ""
+    /// Project within the organization. Empty → agent skips the fetch.
+    var project = ""
+    /// Personal access token — required; no default is ever sent. A read-only
+    /// Work Items (Read) scope is enough.
+    var token = ""
+    var showList = true
+    var taskCount = 5
+    /// How far ahead counts as "due soon", in days.
+    var soonWindowDays = 7
+    var overdueColor = RGBA(.red)
+    var todayColor = RGBA(.orange)
+    var soonColor = RGBA(.yellow)
+    var laterColor = RGBA(.green)
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        organization = try c.decodeIfPresent(String.self, forKey: .organization) ?? ""
+        project = try c.decodeIfPresent(String.self, forKey: .project) ?? ""
+        token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+        showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
+        taskCount = try c.decodeIfPresent(Int.self, forKey: .taskCount) ?? 5
+        soonWindowDays = try c.decodeIfPresent(Int.self, forKey: .soonWindowDays) ?? 7
+        overdueColor = try c.decodeIfPresent(RGBA.self, forKey: .overdueColor) ?? RGBA(.red)
+        todayColor = try c.decodeIfPresent(RGBA.self, forKey: .todayColor) ?? RGBA(.orange)
+        soonColor = try c.decodeIfPresent(RGBA.self, forKey: .soonColor) ?? RGBA(.yellow)
+        laterColor = try c.decodeIfPresent(RGBA.self, forKey: .laterColor) ?? RGBA(.green)
     }
 }
 

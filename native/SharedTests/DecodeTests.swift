@@ -357,3 +357,71 @@ final class ShipBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.successColor, RGBA(.green))
     }
 }
+
+final class TaskBoxSettingsDecodeTests: XCTestCase {
+    func testEmptyFixtureDecodesAllDefaults() throws {
+        let s = try decode(#"{}"#, as: TaskBoxSettings.self)
+        XCTAssertEqual(s, TaskBoxSettings())
+    }
+
+    func testPartialFixtureKeepsDefaults() throws {
+        let s = try decode(
+            #"{"organization":"Contoso","project":"My Project","taskCount":8}"#,
+            as: TaskBoxSettings.self
+        )
+        XCTAssertEqual(s.organization, "Contoso")
+        XCTAssertEqual(s.project, "My Project")
+        XCTAssertEqual(s.taskCount, 8)
+        XCTAssertEqual(s.soonWindowDays, 7)
+        XCTAssertTrue(s.showList)
+        XCTAssertEqual(s.overdueColor, RGBA(.red))
+    }
+
+    /// A settings file written by a newer build must not cost the user their
+    /// whole TaskBox configuration.
+    func testUnknownFutureFieldIsIgnored() throws {
+        let s = try decode(#"{"organization":"C","somethingNew":true}"#, as: TaskBoxSettings.self)
+        XCTAssertEqual(s.organization, "C")
+    }
+
+    func testDeckSettingsWithoutATaskBoxSectionStillLoads() throws {
+        let s = try decode(#"{"shipbox":{"repo":"a/b"}}"#, as: DeckSettings.self)
+        XCTAssertEqual(s.shipbox.repo, "a/b")
+        XCTAssertEqual(s.taskbox, TaskBoxSettings())
+    }
+}
+
+/// Guards the data-loss path that adding a widget section opens up.
+///
+/// `DeckSettings.load()` falls back to `DeckSettings()` on any decode error, so
+/// a container-level `keyNotFound` doesn't surface as an error — it silently
+/// replaces every setting the user has. These tests are the reason the
+/// container decodes tolerantly and not just each section.
+final class DeckSettingsSchemaEvolutionTests: XCTestCase {
+    func testSettingsFileFromBeforeTaskBoxKeepsEveryOtherSection() throws {
+        let s = try decode("""
+        {"livebox":{"showCPU":false},"openbox":{"token":"abc"},"netbox":{},
+         "batbox":{},"gitbox":{"scanDepth":4},"devbox":{},"clipbox":{},
+         "homebox":{"location":"Tehran"},"shipbox":{"repo":"a/b"},
+         "agentAtLogin":false}
+        """, as: DeckSettings.self)
+        XCTAssertFalse(s.livebox.showCPU)
+        XCTAssertEqual(s.openbox.token, "abc")
+        XCTAssertEqual(s.gitbox.scanDepth, 4)
+        XCTAssertEqual(s.homebox.location, "Tehran")
+        XCTAssertEqual(s.shipbox.repo, "a/b")
+        XCTAssertFalse(s.agentAtLogin)
+        XCTAssertEqual(s.taskbox, TaskBoxSettings(), "the new section defaults")
+    }
+
+    func testAnyOneSectionCanBeAbsentWithoutLosingTheOthers() throws {
+        let s = try decode(#"{"openbox":{"token":"kept"}}"#, as: DeckSettings.self)
+        XCTAssertEqual(s.openbox.token, "kept")
+        XCTAssertEqual(s.livebox, LiveBoxSettings())
+        XCTAssertEqual(s.shipbox, ShipBoxSettings())
+    }
+
+    func testAnEmptyObjectDecodesToAllDefaults() throws {
+        XCTAssertEqual(try decode(#"{}"#, as: DeckSettings.self), DeckSettings())
+    }
+}
