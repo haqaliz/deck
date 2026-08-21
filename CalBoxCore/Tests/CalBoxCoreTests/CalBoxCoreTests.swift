@@ -49,6 +49,36 @@ final class CalendarDefaultsTests: XCTestCase {
     func testReadOnlyCalendarIsOffByDefault() {
         XCTAssertFalse(CalendarDefaults.shouldEnableByDefault(allowsContentModifications: false))
     }
+
+    private let available = [
+        (id: "work", allowsContentModifications: true),
+        (id: "google", allowsContentModifications: true),
+        (id: "holidays", allowsContentModifications: false),
+        (id: "birthdays", allowsContentModifications: false),
+    ]
+
+    // A freshly added widget must show something without a trip to settings.
+    func testDefaultsApplyBeforeTheUserHasChosen() {
+        XCTAssertEqual(
+            CalendarDefaults.resolve(selected: [], hasChosen: false, available: available),
+            ["work", "google"]
+        )
+    }
+
+    // Once chosen, the stored list is authoritative -- including an empty one.
+    func testEmptySelectionIsRespectedAfterChoosing() {
+        XCTAssertEqual(
+            CalendarDefaults.resolve(selected: [], hasChosen: true, available: available),
+            []
+        )
+    }
+
+    func testChosenSelectionWins() {
+        XCTAssertEqual(
+            CalendarDefaults.resolve(selected: ["holidays"], hasChosen: true, available: available),
+            ["holidays"]
+        )
+    }
 }
 
 // MARK: - Occurrence identity

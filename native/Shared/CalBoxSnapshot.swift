@@ -50,6 +50,42 @@ struct CalEvent: Codable, Equatable, Sendable {
 }
 
 
+// MARK: - Which calendars start ticked
+
+enum CalendarDefaults {
+    /// A calendar starts enabled when the user can write to it.
+    ///
+    /// Read-only calendars are the feeds — holidays, birthdays, subscriptions —
+    /// whose all-day entries would otherwise swamp the agenda. Writability is
+    /// the signal because it is locale-independent: matching a `"Holidays"`
+    /// title prefix misses `Feiertage in Deutschland`, and `sourceType` /
+    /// `isSubscribed` miss holiday calendars delivered as plain CalDAV.
+    /// Verified against this machine's 11 calendars: false for exactly
+    /// `US Holidays`, `Holidays in Canada`, `Holidays in Iran` and `Birthdays`.
+    static func shouldEnableByDefault(allowsContentModifications: Bool) -> Bool {
+        allowsContentModifications
+    }
+
+    /// The calendars to actually read.
+    ///
+    /// Until the user has been through the picker there is no stored choice,
+    /// so the default rule is applied live — otherwise a freshly added widget
+    /// would sit empty until someone happened to open settings, which is the
+    /// worst first run of any Deck widget. Once they have chosen, their list
+    /// is authoritative: unticking everything means everything, not "fall back
+    /// to the defaults".
+    static func resolve(
+        selected: [String],
+        hasChosen: Bool,
+        available: [(id: String, allowsContentModifications: Bool)]
+    ) -> [String] {
+        if hasChosen { return selected }
+        return available
+            .filter { shouldEnableByDefault(allowsContentModifications: $0.allowsContentModifications) }
+            .map(\.id)
+    }
+}
+
 // MARK: - Turning raw calendar rows into renderable ones
 
 enum EventNormalisation {
@@ -330,14 +366,23 @@ enum HostCalendarLoader {
     /// Reads the selected calendars over the horizon and returns a normalised
     /// snapshot.
     static func fetch(
-        calendarIDs: [String],
+        settings: CalBoxSettings,
         now: Date = Date(),
         calendar: Calendar = .current,
         store: EKEventStore = EKEventStore()
     ) async throws -> CalBoxSnapshot {
-        guard !calendarIDs.isEmpty else { throw CalendarError.notConfigured }
-
         guard await requestAccess(store: store) else { throw CalendarError.accessDenied }
+
+        // Resolved rather than read straight off settings: before the picker
+        // has been opened there is no stored choice, and a widget that sits
+        // empty until someone visits settings is the worst first run we could
+        // ship.
+        let calendarIDs = CalendarDefaults.resolve(
+            selected: settings.calendarIDs,
+            hasChosen: settings.hasChosenCalendars,
+            available: calendars(store: store).map { ($0.id, $0.allowsContentModifications) }
+        )
+        guard !calendarIDs.isEmpty else { throw CalendarError.notConfigured }
 
         let selected = store.calendars(for: .event)
             .filter { calendarIDs.contains($0.calendarIdentifier) }

@@ -15,4 +15,23 @@ public enum CalendarDefaults {
     public static func shouldEnableByDefault(allowsContentModifications: Bool) -> Bool {
         allowsContentModifications
     }
+
+    /// The calendars to actually read.
+    ///
+    /// Until the user has been through the picker there is no stored choice,
+    /// so the default rule is applied live — otherwise a freshly added widget
+    /// would sit empty until someone happened to open settings, which is the
+    /// worst first run of any Deck widget. Once they have chosen, their list
+    /// is authoritative: unticking everything means everything, not "fall back
+    /// to the defaults".
+    public static func resolve(
+        selected: [String],
+        hasChosen: Bool,
+        available: [(id: String, allowsContentModifications: Bool)]
+    ) -> [String] {
+        if hasChosen { return selected }
+        return available
+            .filter { shouldEnableByDefault(allowsContentModifications: $0.allowsContentModifications) }
+            .map(\.id)
+    }
 }

@@ -199,6 +199,20 @@ Task {
             FetchStatusStore.record(outcome, for: .calbox)
             agentLog.info("failed calbox snapshot (\(outcome.rawValue, privacy: .public))")
         }
+    // CalBox: needs a granted TCC prompt; the loader resolves which calendars
+    // to read, so a widget added before settings were ever opened still shows
+    // real events. Never logs event titles — only counts and outcomes.
+    do {
+        // Always written: writtenAt drives the staleness window and the
+        // "Agent hasn't run" chip, so a quiet calendar must still refresh it.
+        let calbox = try await HostCalendarLoader.fetch(settings: settings.calbox)
+        CalBoxSnapshotStore.save(calbox)
+        FetchStatusStore.record(.ok, for: .calbox)
+        agentLog.info("written calbox snapshot (\(calbox.events.count, privacy: .public) events)")
+    } catch {
+        let outcome = FetchClassifier.outcome(for: error)
+        FetchStatusStore.record(outcome, for: .calbox)
+        agentLog.info("failed calbox snapshot (\(outcome.rawValue, privacy: .public))")
     }
 
     let elapsed = Date().timeIntervalSince(start)
