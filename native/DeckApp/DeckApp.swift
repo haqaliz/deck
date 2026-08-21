@@ -44,6 +44,7 @@ struct ContentView: View {
             case .clipbox: ClipBoxSettingsView(settings: $settings.clipbox)
             case .homebox: HomeBoxSettingsView(settings: $settings.homebox)
             case .shipbox: ShipBoxSettingsView(settings: $settings.shipbox)
+            case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -56,6 +57,7 @@ struct ContentView: View {
             refreshClipBox()
             Task { await refreshHomeBox() }
             Task { await refreshShipBox() }
+            Task { await refreshTaskBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshGitBox()
@@ -63,6 +65,7 @@ struct ContentView: View {
                 refreshClipBox()
                 Task { await refreshHomeBox() }
                 Task { await refreshShipBox() }
+                Task { await refreshTaskBox() }
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -187,6 +190,34 @@ struct ContentView: View {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    /// Fetch Azure DevOps work items (host is unsandboxed) for the TaskBox
+    /// widget. Requires the user's own org, project and PAT — never a default
+    /// token. Always written on success so writtenAt drives the staleness
+    /// windows; a failure leaves the last-good snapshot untouched.
+    private func refreshTaskBox() async {
+        let taskbox = settings.taskbox
+        let organization = taskbox.organization.trimmingCharacters(in: .whitespacesAndNewlines)
+        let project = taskbox.project.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !organization.isEmpty, !project.isEmpty, !taskbox.token.isEmpty else {
+            FetchStatusStore.record(.notConfigured, for: .taskbox)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+        let snapshot: TaskBoxSnapshot
+        do {
+            snapshot = try await HostAzureDevOpsLoader.fetch(
+                organization: organization, project: project, token: taskbox.token
+            )
+        } catch {
+            FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .taskbox)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+        TaskBoxSnapshotStore.save(snapshot)
+        FetchStatusStore.record(.ok, for: .taskbox)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     /// Install/remove the background refresh agent (launch at login) with the
     /// configured refresh interval.
     private func applyAgent() {
@@ -296,7 +327,7 @@ struct ContentView: View {
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox, homebox, shipbox
+    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox, homebox, shipbox, taskbox
 
     var id: String { rawValue }
 
@@ -312,6 +343,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .clipbox: "ClipBox"
         case .homebox: "HomeBox"
         case .shipbox: "ShipBox"
+        case .taskbox: "TaskBox"
         }
     }
 
@@ -327,6 +359,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .clipbox: "doc.on.clipboard"
         case .homebox: "cloud.sun"
         case .shipbox: "shippingbox"
+        case .taskbox: "checklist"
         }
     }
 }
@@ -746,6 +779,45 @@ private struct ShipBoxSettingsView: View {
                 ColorPicker("Running", selection: $settings.runningColor.color)
                 ColorPicker("Success", selection: $settings.successColor.color)
                 ColorPicker("Failure", selection: $settings.failureColor.color)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+}
+
+private struct TaskBoxSettingsView: View {
+    @Binding var settings: TaskBoxSettings
+
+    var body: some View {
+        Form {
+            Section("Azure DevOps") {
+                TextField("Organization", text: $settings.organization)
+                TextField("Project", text: $settings.project)
+                SecureField("Personal access token", text: $settings.token)
+                    .textContentType(.password)
+                Text("Empty organization, project or token = the widget shows no data. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("Shows work items assigned to whoever owns the PAT \u{2014} not whoever is signed in to the browser or the az CLI.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                FetchStatusCaption(
+                    source: .taskbox,
+                    clearOn: "\(settings.organization)\u{0}\(settings.project)\u{0}\(settings.token)"
+                )
+            }
+            Section("Tasks") {
+                Toggle("Show task list", isOn: $settings.showList)
+                Stepper("Task count: \(settings.taskCount)", value: $settings.taskCount, in: 2...8)
+                    .disabled(!settings.showList)
+                Stepper("Due soon window: \(settings.soonWindowDays)d", value: $settings.soonWindowDays, in: 1...30)
+            }
+            Section("Due colors") {
+                ColorPicker("Overdue", selection: $settings.overdueColor.color)
+                ColorPicker("Today", selection: $settings.todayColor.color)
+                ColorPicker("Soon", selection: $settings.soonColor.color)
+                ColorPicker("Later", selection: $settings.laterColor.color)
             }
         }
         .formStyle(.grouped)
