@@ -1,7 +1,7 @@
 # Deck Roadmap
 
 Small, beautiful macOS desktop widgets that behave like native ones. The
-product value is **one WidgetKit extension** (five widgets in the Widget
+product value is **one WidgetKit extension** (nine widgets in the Widget
 Center) plus **one metric story per widget**. New widgets reuse the widget
 shell and only add a data source + a layout.
 
@@ -38,7 +38,7 @@ shell and only add a data source + a layout.
 - [x] OpenBox remote server mode (token + URL → HTTP metrics)
 - [x] Non-native window widgets removed — Widget Center is the only surface
 
-### M3 — More widgets (candidates, pick via deck-next)
+### M3 — More widgets (DONE — candidate list exhausted)
 - [x] **NetBox** — network: up/down rates + history, interfaces
 - [x] **BatBox** — battery: level, time remaining, charge state
 - [x] **GitBox** — git activity: today + streak, 14-day chart, active repos
@@ -85,6 +85,77 @@ Deferred from the tests milestone (all covered as of v1.10):
   covered by `DeckSharedTests` (`SystemMetricsCoreTests`), along with the
   DevBox parsers, `RemoteOpenCodeLoader` aggregation, `ProcessSnapshot`
   parsing, and `BatteryMetrics` formatters — see `deferred-parser-tests`.
+
+### M5 — New widgets (candidates, pick via deck-next)
+
+Widgets come before improvements: M3's candidate list is exhausted, so this is
+the next slate. Ordered by priority, not by cost.
+
+- [ ] **CalBox** — calendar: next event + countdown, today's agenda.
+      Target is **Google Calendar**. Three routes, to be settled in the PRD:
+      1. **EventKit** — reads whatever macOS Calendar syncs (Google via
+         Internet Accounts, plus iCloud/Exchange/CalDAV) with one TCC grant
+         and no OAuth. *Verified caveat: `~/Library/Calendars/` is empty on
+         the dev machine — no account is configured today, so this route
+         renders nothing until the user adds their Google account to
+         System Settings → Internet Accounts.*
+      2. **Secret ICS URL** — Google's private iCal address, agent-fetched
+         over HTTP exactly like HomeBox/wttr.in. No OAuth, no TCC; read-only
+         and Google caches it (freshness measured in hours). The URL is a
+         bearer secret and must be stored like the ShipBox token.
+      3. **Google Calendar API (OAuth)** — freshest and richest, but the
+         first OAuth flow in the repo: PKCE, browser round-trip, refresh
+         token in the Keychain. Heaviest; a later slice unless the PRD
+         proves 1 and 2 both fail.
+      Shell caveat (verified): `DeckAgent` is `type: tool` with **no
+      Info.plist** (project.yml), so an EventKit TCC prompt needs an
+      embedded `__TEXT,__info_plist` section (a project.yml change) or the
+      read must move to DeckApp / the widget extension.
+- [ ] **TaskBox** — tasks: due/overdue counts + the next few items.
+      First provider is **Azure DevOps** (work items assigned to me, via WIQL
+      `[System.AssignedTo] = @Me` + the workitems batch endpoint, PAT over
+      Basic auth — the same static-token shape as ShipBox, no OAuth).
+      Dev machine already targets org `Manifold`, project `Manifold`.
+      Design the snapshot around a **provider-agnostic `TaskItem`** (id,
+      title, state, url, provider) so GitHub Issues / Jira / Linear /
+      Reminders drop in later without reshaping the store. Only the Azure
+      DevOps provider ships in slice 1.
+- [ ] **PRBox** — GitHub review queue: your open PRs + PRs awaiting review.
+      Cheapest of the slate: reuses ShipBox's token, `HostGitHubLoader`, and
+      the `FetchClassifier` error path against the pulls/search endpoints.
+- [ ] **MarketBox** — configured tickers/crypto: price, day change, sparkline.
+      Near line-for-line clone of the HomeBox agent fetch block.
+- [ ] **BlueBox** — peripheral battery (AirPods, Magic Mouse/Keyboard).
+      **Needs a feasibility spike first:** on the dev machine both
+      `system_profiler SPBluetoothDataType -json` and
+      `ioreg -r -k BatteryPercent` returned no battery keys for the connected
+      mouse and keyboard. Do not plan until a source is proven.
+
+Rejected with a recorded blocker (do not re-recommend):
+- **MusicBox / now-playing** — MediaRemote is entitlement-gated as of
+  macOS 15.4; the AppleScript fallback only sees Music.app, not Spotify or
+  browsers.
+- **TempBox / fan + sensor temps** — SMC sensors need private API on Apple
+  Silicon, the same family as the GPU/ANE blocker
+  (`docs/planning/livebox-per-core-cpu/prd.md:94`). `ProcessInfo.thermalState`
+  already shipped as the sanctioned proxy.
+- **MailBox** — Full Disk Access plus Mail's undocumented Envelope Index
+  schema; fragile across OS updates.
+
+### M6 — Improvements (after M5)
+
+Deferred behind the new widgets by decision on 2026-08-22.
+
+- [ ] **ShipBox multi-repo** — several `owner/repo` targets instead of one
+      (`docs/planning/shipbox/prd.md:118`). Open design points: `FetchStatusStore`
+      is keyed per *source* (`.shipbox`), so per-repo outcomes need either a new
+      key or an explicit worst-wins aggregate that names the failing repo;
+      `ShipBoxSettings.repo: String` → list needs tolerant-decode migration;
+      GitHub rate limits imply a repo cap at the 60s cadence.
+- [ ] **OpenBox remote incremental sync** — `limit`-based sync instead of a full
+      resync each tick (`docs/planning/openbox-remote/prd.md:105`).
+- [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic
+      (`docs/planning/devbox/prd.md:106`).
 
 ## Feature backlog (existing widgets)
 

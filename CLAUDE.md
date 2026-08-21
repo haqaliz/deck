@@ -21,10 +21,14 @@ widget.
   streak, and active repos (scanned under `~/dev` by default).
 - **ClipBox** — clipboard history: recent copies with previews, local only
   (sampled from NSPasteboard by the agent).
+- **DevBox** — dev environment: open TCP listening ports (process + port) and
+  running Docker containers (subprocesses, via the agent).
+- **HomeBox** — weather + world clocks: conditions and a 3-day forecast
+  (wttr.in, fetched by the agent).
 - **ShipBox** — build/deploy status: GitHub Actions runs for a repo (fetched
   by the agent with the user's token).
 
-All six ship in one WidgetKit extension: `Deck.app` (host + settings window)
+All nine ship in one WidgetKit extension: `Deck.app` (host + settings window)
 → `DeckWidgets.appex`.
 
 ## Architecture
