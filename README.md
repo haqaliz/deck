@@ -22,7 +22,7 @@ WidgetKit widgets with native colors, corners and materials.
 | **ClipBox** | clipboard history: recent copies with previews, item kinds, relative times |
 | **HomeBox** | weather for your location (conditions + 3-day forecast) and a world clock; a failed fetch says why |
 | **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
-| **TaskBox** | Azure DevOps work items assigned to you: open count, current sprint, board-lane legend (to do / in progress / testing) and recent items with type glyphs; a failed fetch says why |
+| **TaskBox** | Azure DevOps work items assigned to you: open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 
 All ten come in **small / medium / large** sizes.
 
@@ -88,13 +88,22 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   Refreshes via the agent every 60s.
 - **TaskBox lanes** are configurable. Azure DevOps runs two vocabularies on one
   board — tasks move `To Do → In Progress`, while backlog items move
-  `New → Approved → Committed` — so the TaskBox tab has a comma-separated list
-  per lane that collapses both into *to do / in progress / testing*. Edit them
-  if your process template renames states; anything unmatched is counted under
-  `OTHER` rather than dropped, so the legend always adds up to the tasks it
-  describes. There is deliberately no due-date display: Azure DevOps populates
-  no dependable due field, and falling back to the sprint end gave every item
-  in a sprint the same meaningless date.
+  `New → Approved → Committed` — so the TaskBox tab has a comma-separated,
+  case-insensitive list per lane (*to do / in progress / testing / done*) that
+  collapses both. Edit them if your process template renames states, or use
+  **Reset to defaults**. A state in none of the lists is counted under `OTHER`
+  rather than dropped, so the legend always adds up to the tasks it describes;
+  `DONE` and `OTHER` only appear when something lands there.
+- **TaskBox rows** are `● number  title`. Only completed items carry a
+  checkmark (struck through and dimmed) — everything else leaves the slot empty
+  so the work item numbers stay in one column. The dot colour is the lane. The
+  list holds up to 15 items on the large widget; the medium one caps at 6,
+  because past that the rows would be clipped by the frame rather than by your
+  setting.
+- **TaskBox has no due dates, on purpose.** Azure DevOps populates no
+  dependable due field: `DueDate` and `TargetDate` are sparse, and falling back
+  to the sprint end gave every item in a sprint the same meaningless date.
+  Progress through the board is the real signal.
 - **When a fetch fails**, ShipBox, TaskBox, HomeBox and OpenBox (remote mode) say why in
   one short line instead of a generic "no data": *"Add a repo + token in
   settings"* (nothing configured), *"Check repo + token"* / *"Check the

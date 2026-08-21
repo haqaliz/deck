@@ -133,6 +133,11 @@ the next slate. Ordered by priority, not by cost.
         50 sampled items, and reads `Doing` where the board header says
         `In Progress`. States are stored raw and mapped at render time, with
         the mapping editable in settings.
+      - **The WIQL exclusion list is narrower than it looks.** It drops
+        `Closed`, `Removed` and `Done` but not `Resolved` or `Completed`, so a
+        team using those words really does receive finished items. TaskBox
+        gives them a `done` lane (checked before the open lanes) and renders
+        them struck through rather than letting them read as outstanding.
       **Open follow-ups:** deep links (`widgetURL`), multi-project/multi-org,
       custom WIQL, a second provider, Keychain storage for the PAT.
 - [ ] **PRBox** — GitHub review queue: your open PRs + PRs awaiting review.
