@@ -42,6 +42,7 @@ struct DeckSettings: Codable, Equatable {
     var homebox = HomeBoxSettings()
     var shipbox = ShipBoxSettings()
     var taskbox = TaskBoxSettings()
+    var calbox = CalBoxSettings()
     var agentAtLogin = true
 
     init() {}
@@ -450,6 +451,36 @@ struct TaskBoxSettings: Codable, Equatable {
         case .done: doneColor
         case .other: otherColor
         }
+    }
+}
+
+struct CalBoxSettings: Codable, Equatable {
+    /// `EKCalendar.calendarIdentifier`s to read — empty → agent skips the read.
+    var calendarIDs: [String] = []
+    /// Set once the defaults have been applied, so a user who unticks every
+    /// calendar is never silently re-defaulted back on at the next launch.
+    var hasChosenCalendars = false
+    var showAllDay = true
+    var showAgenda = true
+    /// Events on the medium face. The large face has its own fixed cap.
+    var eventCount = 4
+    var showTomorrow = true
+    /// Off → every dot uses `accentColor` instead of the calendar's own colour.
+    var useCalendarColors = true
+    var accentColor = RGBA(.blue)
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        calendarIDs = try c.decodeIfPresent([String].self, forKey: .calendarIDs) ?? []
+        hasChosenCalendars = try c.decodeIfPresent(Bool.self, forKey: .hasChosenCalendars) ?? false
+        showAllDay = try c.decodeIfPresent(Bool.self, forKey: .showAllDay) ?? true
+        showAgenda = try c.decodeIfPresent(Bool.self, forKey: .showAgenda) ?? true
+        eventCount = try c.decodeIfPresent(Int.self, forKey: .eventCount) ?? 4
+        showTomorrow = try c.decodeIfPresent(Bool.self, forKey: .showTomorrow) ?? true
+        useCalendarColors = try c.decodeIfPresent(Bool.self, forKey: .useCalendarColors) ?? true
+        accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA(.blue)
     }
 }
 
