@@ -4,29 +4,19 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleDisplayName</key>
-	<string>Deck</string>
 	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIconFile</key>
-	<string>AppIcon</string>
+	<string>DeckAgent</string>
 	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<string>com.deck.agent</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
+	<string>DeckAgent</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.14</string>
 	<key>CFBundleVersion</key>
 	<string>14</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>15.0</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Deck reads your calendar to show your next event in the CalBox widget.</string>
-	<key>NSHighResolutionCapable</key>
-	<true/>
 </dict>
 </plist>

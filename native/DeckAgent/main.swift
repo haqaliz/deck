@@ -1,3 +1,4 @@
+import EventKit
 import Foundation
 import OSLog
 
@@ -31,7 +32,31 @@ func sampleProcesses() {
     }
 }
 
+// TEMPORARY (Phase 1 spike, removed in Phase 4): proves the embedded
+// __TEXT,__info_plist section makes the calendar TCC prompt reachable from a
+// `type: tool` target.
+func calendarProbe() {
+    let store = EKEventStore()
+    let sem = DispatchSemaphore(value: 0)
+    var granted = false
+    var failure: Error?
+    store.requestFullAccessToEvents { ok, error in
+        granted = ok
+        failure = error
+        sem.signal()
+    }
+    sem.wait()
+    print("granted: \(granted), calendars: \(store.calendars(for: .event).count)")
+    if let failure { print("error: \(failure)") }
+}
+
 Task {
+    if CommandLine.arguments.contains("--calendar-probe") {
+        calendarProbe()
+        semaphore.signal()
+        exit(0)
+    }
+
     if CommandLine.arguments.contains("--processes") {
         sampleProcesses()
         semaphore.signal()
