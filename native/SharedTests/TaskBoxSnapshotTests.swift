@@ -104,6 +104,23 @@ final class TaskStateMappingTests: XCTestCase {
         XCTAssertEqual(lane("QA"), .testing)
     }
 
+    /// The WIQL excludes Done/Closed/Removed but not every completion state a
+    /// process template can use, so finished items really can arrive — and
+    /// those are the rows that earn a checkmark.
+    func testDefaultsCoverCompletionStates() {
+        XCTAssertEqual(lane("Done"), .done)
+        XCTAssertEqual(lane("Closed"), .done)
+        XCTAssertEqual(lane("Resolved"), .done)
+        XCTAssertEqual(lane("Completed"), .done)
+    }
+
+    /// Done is checked before the other lanes so a template that reuses a word
+    /// can't strand a finished item in an open lane.
+    func testDoneWinsOverTheOtherLanes() {
+        let custom = TaskStateMapping(todo: "Shipped", inProgress: "", testing: "", done: "Shipped")
+        XCTAssertEqual(lane("Shipped", custom), .done)
+    }
+
     /// Board columns and states differ in casing and spacing across templates.
     func testMatchingIsCaseAndWhitespaceInsensitive() {
         XCTAssertEqual(lane("  in progress  "), .inProgress)
@@ -122,17 +139,18 @@ final class TaskStateMappingTests: XCTestCase {
 
     func testMappingIsEditable() {
         let custom = TaskStateMapping(
-            todo: "Icebox, Backlog", inProgress: "Cooking", testing: "Verify"
+            todo: "Icebox, Backlog", inProgress: "Cooking", testing: "Verify", done: "Shipped"
         )
         XCTAssertEqual(lane("Backlog", custom), .todo)
         XCTAssertEqual(lane("Cooking", custom), .inProgress)
         XCTAssertEqual(lane("Verify", custom), .testing)
+        XCTAssertEqual(lane("Shipped", custom), .done)
         // The defaults are replaced, not merged.
         XCTAssertEqual(lane("Committed", custom), .other)
     }
 
     func testBlankMappingEntriesAreIgnoredRatherThanMatchingEverything() {
-        let custom = TaskStateMapping(todo: "A, , ,B", inProgress: "", testing: "")
+        let custom = TaskStateMapping(todo: "A, , ,B", inProgress: "", testing: "", done: "")
         XCTAssertEqual(lane("A", custom), .todo)
         XCTAssertEqual(lane("B", custom), .todo)
         XCTAssertEqual(lane("", custom), .other, "an empty entry must not swallow empty states")
@@ -140,7 +158,7 @@ final class TaskStateMappingTests: XCTestCase {
     }
 
     func testAStateListedTwiceResolvesToTheFirstGroup() {
-        let custom = TaskStateMapping(todo: "Review", inProgress: "Review", testing: "")
+        let custom = TaskStateMapping(todo: "Review", inProgress: "Review", testing: "", done: "")
         XCTAssertEqual(lane("Review", custom), .todo)
     }
 }
@@ -183,13 +201,23 @@ final class TaskLaneCountsTests: XCTestCase {
 
     /// Legend order is the lifecycle, not whatever the dictionary yields.
     func testLegendOrderFollowsTheLifecycle() {
-        XCTAssertEqual(TaskLane.allCases, [.todo, .inProgress, .testing, .other])
+        XCTAssertEqual(TaskLane.allCases, [.todo, .inProgress, .testing, .done, .other])
+    }
+
+    /// Only completed rows carry a glyph; everything else leaves the slot
+    /// empty so the work item numbers stay in one column.
+    func testOnlyDoneRowsAreMarkedComplete() {
+        XCTAssertTrue(TaskLane.done.isComplete)
+        for lane in TaskLane.allCases where lane != .done {
+            XCTAssertFalse(lane.isComplete, "\(lane)")
+        }
     }
 
     func testLabels() {
         XCTAssertEqual(TaskLane.todo.label, "TO DO")
         XCTAssertEqual(TaskLane.inProgress.label, "IN PROGRESS")
         XCTAssertEqual(TaskLane.testing.label, "TESTING")
+        XCTAssertEqual(TaskLane.done.label, "DONE")
         XCTAssertEqual(TaskLane.other.label, "OTHER")
     }
 }

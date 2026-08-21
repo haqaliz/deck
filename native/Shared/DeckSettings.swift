@@ -412,8 +412,6 @@ struct TaskBoxSettings: Codable, Equatable {
     /// The lane legend under the header.
     var showLegend = true
     var showList = true
-    /// A short Bug / PBI / Task marker on each row.
-    var showItemType = true
     var taskCount = 5
     /// Which raw Azure DevOps states feed which lane. Editable because process
     /// templates get customised and board columns get renamed.
@@ -421,6 +419,7 @@ struct TaskBoxSettings: Codable, Equatable {
     var todoColor = RGBA(.blue)
     var inProgressColor = RGBA(.orange)
     var testingColor = RGBA(.purple)
+    var doneColor = RGBA(.green)
     var otherColor = RGBA(.gray)
 
     init() {}
@@ -432,12 +431,12 @@ struct TaskBoxSettings: Codable, Equatable {
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
         showLegend = try c.decodeIfPresent(Bool.self, forKey: .showLegend) ?? true
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
-        showItemType = try c.decodeIfPresent(Bool.self, forKey: .showItemType) ?? true
         taskCount = try c.decodeIfPresent(Int.self, forKey: .taskCount) ?? 5
         stateMapping = try c.decodeIfPresent(TaskStateMapping.self, forKey: .stateMapping) ?? TaskStateMapping()
         todoColor = try c.decodeIfPresent(RGBA.self, forKey: .todoColor) ?? RGBA(.blue)
         inProgressColor = try c.decodeIfPresent(RGBA.self, forKey: .inProgressColor) ?? RGBA(.orange)
         testingColor = try c.decodeIfPresent(RGBA.self, forKey: .testingColor) ?? RGBA(.purple)
+        doneColor = try c.decodeIfPresent(RGBA.self, forKey: .doneColor) ?? RGBA(.green)
         otherColor = try c.decodeIfPresent(RGBA.self, forKey: .otherColor) ?? RGBA(.gray)
     }
 
@@ -448,6 +447,7 @@ struct TaskBoxSettings: Codable, Equatable {
         case .todo: todoColor
         case .inProgress: inProgressColor
         case .testing: testingColor
+        case .done: doneColor
         case .other: otherColor
         }
     }

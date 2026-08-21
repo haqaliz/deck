@@ -179,11 +179,14 @@ struct TaskBoxWidgetEntryView: View {
         }
     }
 
+    /// A medium widget is ~170pt tall: past six rows the list would be clipped
+    /// by the frame rather than by the setting, so it is capped here while the
+    /// large face honours the full count.
     private var mediumView: some View {
         VStack(alignment: .leading, spacing: 6) {
             headerLine
             legendRow
-            taskList(maxCount: entry.settings.taskCount)
+            taskList(maxCount: min(entry.settings.taskCount, 6))
             Spacer(minLength: 0)
         }
     }
@@ -243,10 +246,16 @@ struct TaskBoxWidgetEntryView: View {
         }
     }
 
-    /// "Other" is only worth a chip when something actually landed there —
-    /// otherwise it is a permanent zero explaining nothing.
+    /// "Done" and "Other" are only worth a chip when something actually landed
+    /// there — otherwise they are permanent zeroes explaining nothing. The open
+    /// lanes always show, so the legend keeps a stable width.
     private var visibleLanes: [TaskLane] {
-        TaskLane.allCases.filter { $0 != .other || (counts[$0] ?? 0) > 0 }
+        TaskLane.allCases.filter { lane in
+            switch lane {
+            case .done, .other: (counts[lane] ?? 0) > 0
+            default: true
+            }
+        }
     }
 
     private var counts: [TaskLane: Int] {
@@ -285,20 +294,23 @@ struct TaskBoxWidgetEntryView: View {
         }
     }
 
-    /// Row shape mirrors the Azure board: state dot, type glyph, work item
-    /// number, then the title.
+    /// Row shape: state dot, completion slot, work item number, then the title.
+    /// Only finished rows carry a glyph; the rest leave the slot empty so every
+    /// number stays in one column.
     private func taskRow(_ task: TaskItem) -> some View {
         let lane = entry.settings.stateMapping.lane(for: task.state)
         return HStack(spacing: 5) {
             Circle()
                 .fill(entry.settings.color(for: lane).color)
                 .frame(width: 7, height: 7)
-            if entry.settings.showItemType {
-                Image(systemName: Self.symbol(for: task.itemType))
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(Self.typeColor(for: task.itemType))
-                    .frame(width: 11)
+            Group {
+                if lane.isComplete {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(entry.settings.color(for: lane).color)
+                }
             }
+            .frame(width: 10)
             Text(task.id)
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
@@ -308,31 +320,11 @@ struct TaskBoxWidgetEntryView: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .padding(.leading, 2)
+                // Finished work reads as finished rather than as another
+                // outstanding row.
+                .strikethrough(lane.isComplete, color: .secondary)
+                .foregroundStyle(lane.isComplete ? Color.secondary : Color.primary)
             Spacer(minLength: 0)
-        }
-    }
-
-    /// Azure DevOps' own glyph vocabulary, so the row reads the same as the
-    /// board it came from.
-    private static func symbol(for itemType: String) -> String {
-        switch itemType.lowercased() {
-        case "bug": "ladybug.fill"
-        case "task": "checkmark.square.fill"
-        case "product backlog item", "user story", "issue": "list.bullet.rectangle.fill"
-        case "feature": "trophy.fill"
-        case "epic": "crown.fill"
-        default: "square.fill"
-        }
-    }
-
-    private static func typeColor(for itemType: String) -> Color {
-        switch itemType.lowercased() {
-        case "bug": .red
-        case "task": .yellow
-        case "product backlog item", "user story", "issue": .blue
-        case "feature": .purple
-        case "epic": .orange
-        default: .secondary
         }
     }
 

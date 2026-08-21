@@ -810,18 +810,18 @@ private struct TaskBoxSettingsView: View {
             Section("Tasks") {
                 Toggle("Show lane legend", isOn: $settings.showLegend)
                 Toggle("Show task list", isOn: $settings.showList)
-                Toggle("Show work item type", isOn: $settings.showItemType)
-                Stepper("Task count: \(settings.taskCount)", value: $settings.taskCount, in: 2...8)
+                Stepper("Task count: \(settings.taskCount)", value: $settings.taskCount, in: 2...15)
                     .disabled(!settings.showList)
             }
             Section("Lanes") {
                 TextField("To do states", text: $settings.stateMapping.todo)
                 TextField("In progress states", text: $settings.stateMapping.inProgress)
                 TextField("Testing states", text: $settings.stateMapping.testing)
-                Text("Comma-separated, case-insensitive. Azure DevOps runs two vocabularies on one board \u{2014} tasks move To Do \u{2192} In Progress, while backlog items move New \u{2192} Approved \u{2192} Committed \u{2014} so these lists collapse both into the lanes shown on the widget.")
+                TextField("Done states", text: $settings.stateMapping.done)
+                Text("Comma-separated, case-insensitive. Azure DevOps runs two vocabularies on one board \u{2014} tasks move To Do \u{2192} In Progress, while backlog items move New \u{2192} Approved \u{2192} Committed \u{2014} so these lists collapse both into the lanes shown on the widget. Only Done rows get a checkmark.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("A state in none of the three lists is counted under OTHER, which only appears when something lands there. Nothing is ever dropped, so the legend always adds up to the tasks it describes.")
+                Text("A state in none of these lists is counted under OTHER, which only appears when something lands there. Nothing is ever dropped, so the legend always adds up to the tasks it describes.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Button("Reset to defaults") { settings.stateMapping = TaskStateMapping() }
@@ -830,6 +830,7 @@ private struct TaskBoxSettingsView: View {
                 ColorPicker("To do", selection: $settings.todoColor.color)
                 ColorPicker("In progress", selection: $settings.inProgressColor.color)
                 ColorPicker("Testing", selection: $settings.testingColor.color)
+                ColorPicker("Done", selection: $settings.doneColor.color)
                 ColorPicker("Other", selection: $settings.otherColor.color)
             }
         }

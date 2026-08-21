@@ -122,6 +122,9 @@ enum TaskLane: String, Codable, CaseIterable, Equatable {
     case todo
     case inProgress
     case testing
+    /// Finished. The WIQL excludes Done/Closed/Removed, but not every
+    /// completion state a process template can invent, so these do turn up.
+    case done
     /// Anything the mapping doesn't recognise. Counted rather than dropped, so
     /// the legend always reconciles with the rows it describes.
     case other
@@ -131,9 +134,14 @@ enum TaskLane: String, Codable, CaseIterable, Equatable {
         case .todo: "TO DO"
         case .inProgress: "IN PROGRESS"
         case .testing: "TESTING"
+        case .done: "DONE"
         case .other: "OTHER"
         }
     }
+
+    /// Whether a row earns a checkmark. Everything else leaves the slot blank,
+    /// so the work item numbers stay in one column.
+    var isComplete: Bool { self == .done }
 }
 
 /// Which raw states feed which lane. Editable in settings because process
@@ -143,15 +151,18 @@ struct TaskStateMapping: Codable, Equatable {
     var todo: String
     var inProgress: String
     var testing: String
+    var done: String
 
     init(
         todo: String = "New, Approved, To Do, Open, Proposed",
         inProgress: String = "Committed, In Progress, Doing, Active, Started",
-        testing: String = "Testing, In Test, QA, In Review, Review"
+        testing: String = "Testing, In Test, QA, In Review, Review",
+        done: String = "Done, Closed, Resolved, Completed"
     ) {
         self.todo = todo
         self.inProgress = inProgress
         self.testing = testing
+        self.done = done
     }
 
     /// Tolerant per field: a mapping written by an older build, or one the user
@@ -164,6 +175,7 @@ struct TaskStateMapping: Codable, Equatable {
         todo = try c.decodeIfPresent(String.self, forKey: .todo) ?? defaults.todo
         inProgress = try c.decodeIfPresent(String.self, forKey: .inProgress) ?? defaults.inProgress
         testing = try c.decodeIfPresent(String.self, forKey: .testing) ?? defaults.testing
+        done = try c.decodeIfPresent(String.self, forKey: .done) ?? defaults.done
     }
 
     /// Comma-separated, trimmed, case-insensitive. Blank entries are dropped so
@@ -175,10 +187,12 @@ struct TaskStateMapping: Codable, Equatable {
     }
 
     /// First lane wins, so a state listed in two fields resolves predictably
-    /// rather than by dictionary order.
+    /// rather than by dictionary order. Done is tested first: a template that
+    /// reuses a word must not strand a finished item in an open lane.
     func lane(for state: String) -> TaskLane {
         let needle = state.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !needle.isEmpty else { return .other }
+        if Self.terms(done).contains(needle) { return .done }
         if Self.terms(todo).contains(needle) { return .todo }
         if Self.terms(inProgress).contains(needle) { return .inProgress }
         if Self.terms(testing).contains(needle) { return .testing }
