@@ -13,5 +13,6 @@ struct DeckWidgetsBundle: WidgetBundle {
         ClipBoxWidget()
         HomeBoxWidget()
         ShipBoxWidget()
+        TaskBoxWidget()
     }
 }

@@ -54,6 +54,7 @@
 		53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		54B1F45AED650BAB57FF2A53 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
 		54D534F314A536D957EAE16F /* amsterdam_j1.json in Resources */ = {isa = PBXBuildFile; fileRef = 772E2CD7B7548ED00950F6F7 /* amsterdam_j1.json */; };
+		55D9104F71906E66209EB1B6 /* TaskBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A788CB6CFA3DEF16062DD57 /* TaskBoxWidget.swift */; };
 		56242BA287F3C3D8CD8A380D /* ModelParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55EA63643575600049612BD /* ModelParserTests.swift */; };
 		5650F7F4BB3B97AF335BCD05 /* TaskBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5089372A785C079676513337 /* TaskBoxSnapshot.swift */; };
 		596256D947FA628D3158EA89 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
@@ -204,6 +205,7 @@
 		5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeAggregatorTests.swift; sourceTree = "<group>"; };
 		5E1012194CD52DAFA3C04BA7 /* HomeBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBoxWidget.swift; sourceTree = "<group>"; };
 		61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThermalCore.swift; sourceTree = "<group>"; };
+		6A788CB6CFA3DEF16062DD57 /* TaskBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBoxWidget.swift; sourceTree = "<group>"; };
 		7073AE9469C6B027A42C9684 /* AtomicFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicFile.swift; sourceTree = "<group>"; };
 		72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdTierTests.swift; sourceTree = "<group>"; };
 		772E2CD7B7548ED00950F6F7 /* amsterdam_j1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = amsterdam_j1.json; sourceTree = "<group>"; };
@@ -391,6 +393,7 @@
 				18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */,
 				0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */,
 				45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */,
+				6A788CB6CFA3DEF16062DD57 /* TaskBoxWidget.swift */,
 				77AD877F390CF0DABC304F1B /* Loaders */,
 			);
 			path = DeckWidgets;
@@ -610,6 +613,7 @@
 				D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */,
 				27E46B2CB6BF58E9D9DD72A3 /* SystemMetricsCore.swift in Sources */,
 				5650F7F4BB3B97AF335BCD05 /* TaskBoxSnapshot.swift in Sources */,
+				55D9104F71906E66209EB1B6 /* TaskBoxWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
