@@ -106,15 +106,37 @@ final class NextEventTests: XCTestCase {
         XCTAssertEqual(NextEvent.select(events: [later, sooner], now: now)?.title, "Sooner")
     }
 
-    // An event you are already inside is more relevant than one that hasn't
-    // started — it is the thing you are supposed to be doing.
-    func testInProgressBeatsUpcoming() {
+    // A short event you are already inside is the thing you are supposed to
+    // be doing, so it outranks one that hasn't started.
+    func testShortInProgressBeatsUpcoming() {
         let inProgress = event("Standup", at(2026, 8, 22, 8, 30), at(2026, 8, 22, 9, 30))
         let upcoming = event("Review", at(2026, 8, 22, 10), at(2026, 8, 22, 11))
         XCTAssertEqual(NextEvent.select(events: [upcoming, inProgress], now: now)?.title, "Standup")
     }
 
     // "Holidays in Iran" must never be the thing counting down.
+    // ...but a long block you happen to be inside should not hide what is
+    // actually next. Observed on real data: a 22:30-06:30 "Aliz sleep time"
+    // owned the countdown all night and hid breakfast.
+    func testLongInProgressYieldsToUpcoming() {
+        let overnight = event("Aliz sleep time", at(2026, 8, 21, 22, 30), at(2026, 8, 22, 18))
+        let upcoming = event("Breakfast", at(2026, 8, 22, 10), at(2026, 8, 22, 11))
+        XCTAssertEqual(NextEvent.select(events: [overnight, upcoming], now: now)?.title, "Breakfast")
+    }
+
+    // With nothing upcoming, the long block is still better than showing
+    // "nothing left today" while you are demonstrably inside something.
+    func testLongInProgressWinsWhenNothingIsUpcoming() {
+        let overnight = event("Aliz sleep time", at(2026, 8, 21, 22, 30), at(2026, 8, 22, 18))
+        XCTAssertEqual(NextEvent.select(events: [overnight], now: now)?.title, "Aliz sleep time")
+    }
+
+    func testInProgressEndingExactlyAtTheGraceBoundaryStillWins() {
+        let ending = event("Workshop", at(2026, 8, 22, 7), now.addingTimeInterval(NextEvent.inProgressGrace))
+        let upcoming = event("Breakfast", at(2026, 8, 22, 9, 30), at(2026, 8, 22, 10))
+        XCTAssertEqual(NextEvent.select(events: [ending, upcoming], now: now)?.title, "Workshop")
+    }
+
     func testAllDayNeverWins() {
         let allDay = event("Holidays in Iran", at(2026, 8, 22, 0), at(2026, 8, 23, 0), allDay: true)
         let timed = event("Review", at(2026, 8, 22, 14), at(2026, 8, 22, 15))
