@@ -13,6 +13,7 @@
 		0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */; };
 		0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		117970D84E0920F72D67A760 /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
+		14D533149620BDF218F5C8A1 /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
 		17266D39A2BF38493202D4A1 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = F44048FEBB8DD2831A60146B /* AppIcon.icns */; };
 		17D71C4767C8E41123882FAB /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
@@ -72,6 +73,7 @@
 		769F47CE66D9A10A5B348E02 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */; };
 		822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */; };
+		82D525C8424FF0CFA882A47F /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		86444246D4788784A28FBA68 /* OpenBoxSessionCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */; };
 		87E936C049D826980DD8F8C7 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B05E2B90DFEDC2F8CC1804F /* main.swift */; };
 		8DB85954851471484CB62D8C /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
@@ -91,13 +93,16 @@
 		AA9E91EA980B1F6E98C2FF6B /* RemoteOpenCodeAggregatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */; };
 		AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */; };
 		AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */; };
+		AF37865EFBC4BAF79B768D19 /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		AF7FE0721F8D203C29B1D8D1 /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		B65A51E1C663EA52C4B95C29 /* NetBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */; };
 		B78D28F3EFB86CEA57C9803E /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
+		B8D2216F560466E6AB864171 /* AzureDevOpsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */; };
 		BB0DA9CFEFB09DB47DCA109F /* LiveBoxDiskCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */; };
 		BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */; };
 		C1880C6DD5759D69ACFFE48B /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
 		C25CF03F42EF2643976A9291 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
+		C2697957F8E3A81F07B6342B /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		C302C7E4ACAF175EC6AD3B6E /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
 		C42FB5B9E249E0FE9710B663 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
 		C483D310228E6B2532465BC6 /* DevBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290D71C97A8936CF963F219D /* DevBoxSnapshotTests.swift */; };
@@ -182,6 +187,7 @@
 		290D71C97A8936CF963F219D /* DevBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxSnapshotTests.swift; sourceTree = "<group>"; };
 		29738728E12DD5CDF3E8BB45 /* SystemMetricsCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetricsCoreTests.swift; sourceTree = "<group>"; };
 		2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSnapshotTests.swift; sourceTree = "<group>"; };
+		2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureDevOpsLoader.swift; sourceTree = "<group>"; };
 		34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckWidgets.swift; sourceTree = "<group>"; };
 		361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxDiskCore.swift; sourceTree = "<group>"; };
 		37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeLoader.swift; sourceTree = "<group>"; };
@@ -227,6 +233,7 @@
 		D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThresholdTests.swift; sourceTree = "<group>"; };
 		D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshotTests.swift; sourceTree = "<group>"; };
 		E55EA63643575600049612BD /* ModelParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelParserTests.swift; sourceTree = "<group>"; };
+		E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureDevOpsParserTests.swift; sourceTree = "<group>"; };
 		EA5EADBCA4E36B421CDE1542 /* DeckAgent */ = {isa = PBXFileReference; includeInIndex = 0; path = DeckAgent; sourceTree = BUILT_PRODUCTS_DIR; };
 		F06724D8333A9A74C4156DB6 /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		F184F1820A5FC6758145DCAD /* DeckWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DeckWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -261,6 +268,7 @@
 			isa = PBXGroup;
 			children = (
 				7073AE9469C6B027A42C9684 /* AtomicFile.swift */,
+				2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */,
 				23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */,
 				7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */,
 				4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */,
@@ -288,6 +296,7 @@
 			isa = PBXGroup;
 			children = (
 				8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */,
+				E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */,
 				4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */,
 				F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */,
 				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
@@ -569,6 +578,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8DB85954851471484CB62D8C /* AtomicFile.swift in Sources */,
+				C2697957F8E3A81F07B6342B /* AzureDevOpsLoader.swift in Sources */,
 				D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */,
 				54B1F45AED650BAB57FF2A53 /* BatteryCore.swift in Sources */,
 				822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */,
@@ -609,6 +619,8 @@
 			files = (
 				712262DD2FEF389783A540A1 /* AtomicFile.swift in Sources */,
 				DAD7D5822D2A6F40FD89DD26 /* AtomicFileTests.swift in Sources */,
+				14D533149620BDF218F5C8A1 /* AzureDevOpsLoader.swift in Sources */,
+				B8D2216F560466E6AB864171 /* AzureDevOpsParserTests.swift in Sources */,
 				6551819CA5506A4D266E0D79 /* BatteryCore.swift in Sources */,
 				A63FED1F6FABE8563FF1E242 /* BatteryCoreTests.swift in Sources */,
 				EA90CCDFFC5A2B29D6F7908F /* ClipBoxSnapshot.swift in Sources */,
@@ -661,6 +673,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C302C7E4ACAF175EC6AD3B6E /* AtomicFile.swift in Sources */,
+				AF37865EFBC4BAF79B768D19 /* AzureDevOpsLoader.swift in Sources */,
 				4908B2BE0C5A785B8F08F91D /* BatteryCore.swift in Sources */,
 				0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */,
 				2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */,
@@ -689,6 +702,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				99C485D084282BAF9BDD5AA3 /* AtomicFile.swift in Sources */,
+				82D525C8424FF0CFA882A47F /* AzureDevOpsLoader.swift in Sources */,
 				D284040183253CE7DFFEABB2 /* BatteryCore.swift in Sources */,
 				90A811EBE7E73139D552827E /* ClipBoxSnapshot.swift in Sources */,
 				4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */,
