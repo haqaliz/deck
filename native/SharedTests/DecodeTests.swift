@@ -372,9 +372,10 @@ final class TaskBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.organization, "Contoso")
         XCTAssertEqual(s.project, "My Project")
         XCTAssertEqual(s.taskCount, 8)
-        XCTAssertEqual(s.soonWindowDays, 7)
         XCTAssertTrue(s.showList)
-        XCTAssertEqual(s.overdueColor, RGBA(.red))
+        XCTAssertTrue(s.showLegend)
+        XCTAssertEqual(s.todoColor, RGBA(.blue))
+        XCTAssertEqual(s.stateMapping, TaskStateMapping(), "the mapping defaults when absent")
     }
 
     /// A settings file written by a newer build must not cost the user their
@@ -423,5 +424,22 @@ final class DeckSettingsSchemaEvolutionTests: XCTestCase {
 
     func testAnEmptyObjectDecodesToAllDefaults() throws {
         XCTAssertEqual(try decode(#"{}"#, as: DeckSettings.self), DeckSettings())
+    }
+}
+
+final class TaskStateMappingDecodeTests: XCTestCase {
+    /// A user who has customised the mapping must keep it across updates, and a
+    /// settings file predating the mapping must gain the defaults rather than
+    /// an empty mapping that sends every state to "other".
+    func testPartialMappingKeepsTheOtherLanesAtTheirDefaults() throws {
+        let s = try decode(#"{"stateMapping":{"todo":"Icebox"}}"#, as: TaskBoxSettings.self)
+        XCTAssertEqual(s.stateMapping.todo, "Icebox")
+        XCTAssertEqual(s.stateMapping.inProgress, TaskStateMapping().inProgress)
+        XCTAssertEqual(s.stateMapping.testing, TaskStateMapping().testing)
+    }
+
+    func testAbsentMappingDecodesToDefaults() throws {
+        let s = try decode(#"{"organization":"C"}"#, as: TaskBoxSettings.self)
+        XCTAssertEqual(s.stateMapping.lane(for: "Committed"), .inProgress)
     }
 }

@@ -11,6 +11,9 @@ struct TaskBoxEntry: TimelineEntry {
     /// One line explaining the last fetch attempt, or nil when all is well.
     let chip: String?
     let scope: String
+    /// Every open item assigned to the user — may exceed `tasks.count`.
+    let totalCount: Int
+    let sprint: String?
     let tasks: [TaskItem]
     let settings: TaskBoxSettings
 }
@@ -34,24 +37,23 @@ struct TaskBoxProvider: TimelineProvider {
             writtenAt: now,
             chip: nil,
             scope: "Contoso",
+            totalCount: 12,
+            sprint: "Sprint 1",
             tasks: [
-                sample("1", "Sample overdue task", days: -2, now: now),
-                sample("2", "Sample task due today", days: 0, now: now),
-                sample("3", "Sample upcoming task", days: 3, now: now),
-                sample("4", "Sample undated task", days: nil, now: now),
+                sample("1001", "Sample backlog item", "New", "Product Backlog Item", now),
+                sample("1002", "Sample task in progress", "In Progress", "Task", now),
+                sample("1003", "Sample bug", "Committed", "Bug", now),
+                sample("1004", "Sample task", "To Do", "Task", now),
             ],
             settings: TaskBoxSettings()
         )
     }
 
-    private func sample(_ id: String, _ title: String, days: Int?, now: Date) -> TaskItem {
-        TaskItem(
-            id: id, title: title, state: "Active", itemType: "Task", url: "",
-            provider: .azureDevOps,
-            dueDate: days.map { now.addingTimeInterval(Double($0) * 86_400) },
-            dueSource: days == nil ? .unset : .explicit,
-            changedAt: now
-        )
+    private func sample(
+        _ id: String, _ title: String, _ state: String, _ type: String, _ now: Date
+    ) -> TaskItem {
+        TaskItem(id: id, title: title, state: state, itemType: type, url: "",
+                 provider: .azureDevOps, changedAt: now)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TaskBoxEntry) -> Void) {
@@ -78,7 +80,8 @@ struct TaskBoxProvider: TimelineProvider {
         guard let snapshot else {
             return TaskBoxEntry(
                 date: now, available: false, stale: false, writtenAt: nil,
-                chip: chip, scope: "", tasks: [], settings: settings
+                chip: chip, scope: "", totalCount: 0, sprint: nil,
+                tasks: [], settings: settings
             )
         }
 
@@ -89,6 +92,8 @@ struct TaskBoxProvider: TimelineProvider {
             writtenAt: snapshot.writtenAt,
             chip: chip,
             scope: snapshot.scope,
+            totalCount: snapshot.totalCount,
+            sprint: snapshot.sprint,
             tasks: snapshot.tasks,
             settings: settings
         )
@@ -177,6 +182,7 @@ struct TaskBoxWidgetEntryView: View {
     private var mediumView: some View {
         VStack(alignment: .leading, spacing: 6) {
             headerLine
+            legendRow
             taskList(maxCount: entry.settings.taskCount)
             Spacer(minLength: 0)
         }
@@ -185,33 +191,20 @@ struct TaskBoxWidgetEntryView: View {
     private var largeView: some View {
         VStack(alignment: .leading, spacing: 6) {
             headerLine
-            if entry.settings.showList && !entry.tasks.isEmpty {
-                Divider()
-                totalsRow
-            }
+            legendRow
             taskList(maxCount: entry.settings.taskCount)
             Spacer(minLength: 0)
         }
     }
 
+    /// Left: how much is on your plate. Right: the sprint you are in.
     private var headerLine: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text(entry.scope.isEmpty ? "TaskBox" : entry.scope)
+            Text(TaskFormatting.totalLine(totalCount: entry.totalCount))
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            Spacer(minLength: 4)
-            // A small face has room for one hint, not two: the reason wins.
-            if !entry.tasks.isEmpty && !(family == .systemSmall && entry.chip != nil) {
-                Text(TaskFormatting.countsLine(
-                    tasks: entry.tasks, now: entry.date, calendar: calendar,
-                    soonWindowDays: entry.settings.soonWindowDays
-                ))
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
-            }
+            Spacer(minLength: 4)
             if let chip = entry.chip {
                 Text(chip)
                     .font(.system(size: 10, weight: .medium, design: .rounded))
@@ -219,8 +212,17 @@ struct TaskBoxWidgetEntryView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
+            // A small face has room for one thing on the right: the reason a
+            // fetch failed beats the sprint number.
+            if let sprint = entry.sprint, !(family == .systemSmall && entry.chip != nil) {
+                Text(sprint)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
             if entry.stale, let writtenAt = entry.writtenAt {
-                Text("· \(timeString(writtenAt))")
+                Text("\u{00B7} \(timeString(writtenAt))")
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.tertiary)
@@ -228,35 +230,45 @@ struct TaskBoxWidgetEntryView: View {
         }
     }
 
-    private var totalsRow: some View {
-        HStack(spacing: 10) {
-            bucketCount(label: "OVERDUE", count: counts.overdue, color: entry.settings.overdueColor.color)
-            bucketCount(label: "TODAY", count: counts.today, color: entry.settings.todayColor.color)
-            bucketCount(label: "SOON", count: counts.soon, color: entry.settings.soonColor.color)
-            bucketCount(label: "LATER", count: counts.later, color: entry.settings.laterColor.color)
-            Spacer()
+    @ViewBuilder
+    private var legendRow: some View {
+        if entry.settings.showLegend && !entry.tasks.isEmpty {
+            Divider()
+            HStack(spacing: 10) {
+                ForEach(visibleLanes, id: \.self) { lane in
+                    laneCount(lane)
+                }
+                Spacer(minLength: 0)
+            }
         }
     }
 
-    private var counts: TaskFormatting.Counts {
-        TaskFormatting.counts(
-            tasks: entry.tasks, now: entry.date, calendar: calendar,
-            soonWindowDays: entry.settings.soonWindowDays
-        )
+    /// "Other" is only worth a chip when something actually landed there —
+    /// otherwise it is a permanent zero explaining nothing.
+    private var visibleLanes: [TaskLane] {
+        TaskLane.allCases.filter { $0 != .other || (counts[$0] ?? 0) > 0 }
     }
 
-    private func bucketCount(label: String, count: Int, color: Color) -> some View {
+    private var counts: [TaskLane: Int] {
+        TaskFormatting.laneCounts(tasks: entry.tasks, mapping: entry.settings.stateMapping)
+    }
+
+    private func laneCount(_ lane: TaskLane) -> some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(color)
+                .fill(entry.settings.color(for: lane).color)
                 .frame(width: 7, height: 7)
-            Text(label)
+            Text(lane.label)
                 .foregroundStyle(.secondary)
-            Text("\(count)")
+            Text("\(counts[lane] ?? 0)")
                 .foregroundStyle(.primary)
         }
         .font(.system(size: 11, weight: .semibold, design: .rounded))
         .monospacedDigit()
+        // Labels never wrap: an "OVERDUE" that broke across two lines is what
+        // this row looked like before.
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func taskList(maxCount: Int) -> some View {
@@ -268,43 +280,59 @@ struct TaskBoxWidgetEntryView: View {
                     .tracking(1)
             }
             ForEach(Array(entry.tasks.prefix(maxCount).enumerated()), id: \.offset) { _, task in
-                let bucket = TaskFormatting.bucket(
-                    due: task.dueDate, now: entry.date, calendar: calendar,
-                    soonWindowDays: entry.settings.soonWindowDays
-                )
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(color(for: bucket))
-                        .frame(width: 7, height: 7)
-                    Text(task.title)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    Spacer()
-                    Text(TaskFormatting.relativeDay(
-                        due: task.dueDate, now: entry.date, calendar: calendar
-                    ))
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(urgent(bucket) ? Color.primary : Color.secondary)
-                    .lineLimit(1)
-                }
+                taskRow(task)
             }
         }
     }
 
-    private func urgent(_ bucket: DueBucket) -> Bool {
-        bucket == .overdue || bucket == .today
+    /// Row shape mirrors the Azure board: state dot, type glyph, work item
+    /// number, then the title.
+    private func taskRow(_ task: TaskItem) -> some View {
+        let lane = entry.settings.stateMapping.lane(for: task.state)
+        return HStack(spacing: 5) {
+            Circle()
+                .fill(entry.settings.color(for: lane).color)
+                .frame(width: 7, height: 7)
+            if entry.settings.showItemType {
+                Image(systemName: Self.symbol(for: task.itemType))
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Self.typeColor(for: task.itemType))
+                    .frame(width: 11)
+            }
+            Text(task.id)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+            Text(task.title)
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .padding(.leading, 2)
+            Spacer(minLength: 0)
+        }
     }
 
-    private func color(for bucket: DueBucket) -> Color {
-        switch bucket {
-        case .overdue: entry.settings.overdueColor.color
-        case .today: entry.settings.todayColor.color
-        case .soon: entry.settings.soonColor.color
-        case .later: entry.settings.laterColor.color
-        // Undated has no picker, matching ShipBox's neutral status.
-        case .undated: Color.secondary
+    /// Azure DevOps' own glyph vocabulary, so the row reads the same as the
+    /// board it came from.
+    private static func symbol(for itemType: String) -> String {
+        switch itemType.lowercased() {
+        case "bug": "ladybug.fill"
+        case "task": "checkmark.square.fill"
+        case "product backlog item", "user story", "issue": "list.bullet.rectangle.fill"
+        case "feature": "trophy.fill"
+        case "epic": "crown.fill"
+        default: "square.fill"
+        }
+    }
+
+    private static func typeColor(for itemType: String) -> Color {
+        switch itemType.lowercased() {
+        case "bug": .red
+        case "task": .yellow
+        case "product backlog item", "user story", "issue": .blue
+        case "feature": .purple
+        case "epic": .orange
+        default: .secondary
         }
     }
 

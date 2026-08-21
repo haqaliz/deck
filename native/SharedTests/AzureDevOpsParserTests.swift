@@ -80,7 +80,7 @@ final class WiqlIdParserTests: XCTestCase {
         let json = """
         {"queryType":"flat","workItems":[{"id":42,"url":"x"},{"id":7,"url":"y"}]}
         """.data(using: .utf8)!
-        XCTAssertEqual(WiqlIdParser.parse(json), [42, 7])
+        XCTAssertEqual(WiqlIdParser.parse(json)?.ids, [42, 7])
     }
 
     /// "Nothing assigned" is a success, not a failure — an empty list must be
@@ -88,16 +88,25 @@ final class WiqlIdParserTests: XCTestCase {
     /// parse error.
     func testEmptyWorkItemsIsEmptyNotNil() {
         let json = #"{"queryType":"flat","workItems":[]}"#.data(using: .utf8)!
-        XCTAssertEqual(WiqlIdParser.parse(json), [])
+        XCTAssertEqual(WiqlIdParser.parse(json)?.ids, [])
+        XCTAssertEqual(WiqlIdParser.parse(json)?.total, 0)
     }
 
-    func testCapsAtFiftyPreservingOrder() {
-        let entries = (1...80).map { #"{"id":\#($0),"url":"x"}"# }.joined(separator: ",")
+    func testCapsIdsPreservingOrder() {
+        let entries = (1...260).map { #"{"id":\#($0),"url":"x"}"# }.joined(separator: ",")
         let json = "{\"workItems\":[\(entries)]}".data(using: .utf8)!
-        let ids = WiqlIdParser.parse(json)
-        XCTAssertEqual(ids?.count, 50)
-        XCTAssertEqual(ids?.first, 1)
-        XCTAssertEqual(ids?.last, 50)
+        let parsed = WiqlIdParser.parse(json)
+        XCTAssertEqual(parsed?.ids.count, WiqlIdParser.idLimit)
+        XCTAssertEqual(parsed?.ids.first, 1)
+        XCTAssertEqual(parsed?.ids.last, WiqlIdParser.idLimit)
+    }
+
+    /// The header count must describe everything assigned to you, not just the
+    /// rows that survived the batch cap.
+    func testTotalCountsEveryMatchNotJustTheCappedIds() {
+        let entries = (1...260).map { #"{"id":\#($0),"url":"x"}"# }.joined(separator: ",")
+        let json = "{\"workItems\":[\(entries)]}".data(using: .utf8)!
+        XCTAssertEqual(WiqlIdParser.parse(json)?.total, 260)
     }
 
     func testMalformedJSONIsNil() {
@@ -109,41 +118,37 @@ final class WiqlIdParserTests: XCTestCase {
     }
 }
 
-// MARK: - Iteration calendar
+// MARK: - Current sprint
 
-final class IterationMapParserTests: XCTestCase {
-    func testMapsPathToFinishDate() {
+final class CurrentSprintParserTests: XCTestCase {
+    func testReadsTheCurrentIterationName() {
         let json = """
         {"count":1,"value":[
-          {"id":"a","name":"Sprint 42","path":"Contoso\\\\Sprint 42",
-           "attributes":{"startDate":"2026-08-10T00:00:00Z","finishDate":"2026-08-24T00:00:00Z"}}
+          {"id":"a","name":"Sprint 57","path":"ForesightManifold\\\\Sprint 57",
+           "attributes":{"startDate":"2026-07-27T00:00:00Z","finishDate":"2026-08-24T00:00:00Z","timeFrame":"current"}}
         ]}
         """.data(using: .utf8)!
-        let map = IterationMapParser.parse(json)
-        XCTAssertEqual(map["Contoso\\Sprint 42"], Date(timeIntervalSince1970: 1_787_529_600))
+        XCTAssertEqual(CurrentSprintParser.parse(json), "Sprint 57")
     }
 
-    func testEntryWithoutAttributesIsSkippedNotFatal() {
-        let json = """
-        {"value":[
-          {"path":"A\\\\One"},
-          {"path":"A\\\\Two","attributes":{"finishDate":"2026-08-24T00:00:00Z"}}
-        ]}
-        """.data(using: .utf8)!
-        let map = IterationMapParser.parse(json)
-        XCTAssertNil(map["A\\One"])
-        XCTAssertNotNil(map["A\\Two"], "one bad entry must not lose the good ones")
+    /// A team between sprints has no current iteration — the header simply
+    /// shows nothing rather than a stale or invented sprint.
+    func testEmptyValueIsNil() {
+        XCTAssertNil(CurrentSprintParser.parse(Data(#"{"count":0,"value":[]}"#.utf8)))
     }
 
-    func testNullFinishDateIsSkipped() {
-        let json = #"{"value":[{"path":"A\\One","attributes":{"finishDate":null}}]}"#.data(using: .utf8)!
-        XCTAssertTrue(IterationMapParser.parse(json).isEmpty)
+    func testEntryWithoutANameIsNil() {
+        XCTAssertNil(CurrentSprintParser.parse(Data(#"{"value":[{"id":"a"}]}"#.utf8)))
     }
 
-    /// This parser's failure mode is "no fallback dates", never "fetch failed" —
-    /// the sprint calendar is best-effort and must not blank a working list.
-    func testMalformedJSONIsAnEmptyMapNotNil() {
-        XCTAssertTrue(IterationMapParser.parse(Data("nope".utf8)).isEmpty)
+    /// Best-effort, like every optional decoration on the face.
+    func testMalformedJSONIsNil() {
+        XCTAssertNil(CurrentSprintParser.parse(Data("nope".utf8)))
+    }
+
+    func testFallsBackToTheLeafOfThePathWhenNameIsAbsent() {
+        let json = #"{"value":[{"path":"ForesightManifold\\Sprint 60"}]}"#.data(using: .utf8)!
+        XCTAssertEqual(CurrentSprintParser.parse(json), "Sprint 60")
     }
 }
 
@@ -154,8 +159,8 @@ final class WorkItemParserTests: XCTestCase {
         try! AzureTarget.normalise(organization: "Contoso", project: "My Project")
     }
 
-    private func parse(_ json: String, ends: [String: Date] = [:]) -> [TaskItem]? {
-        WorkItemParser.parse(Data(json.utf8), target: target, iterationEnds: ends)
+    private func parse(_ json: String) -> [TaskItem]? {
+        WorkItemParser.parse(Data(json.utf8), target: target)
     }
 
     func testParsesAFullItem() throws {
@@ -176,8 +181,7 @@ final class WorkItemParserTests: XCTestCase {
         XCTAssertEqual(item.state, "Active")
         XCTAssertEqual(item.itemType, "Bug")
         XCTAssertEqual(item.provider, .azureDevOps)
-        XCTAssertEqual(item.dueSource, .explicit)
-        XCTAssertEqual(item.dueDate, Date(timeIntervalSince1970: 1_787_529_600))
+        XCTAssertEqual(item.changedAt, Date(timeIntervalSince1970: 1_787_217_300))
     }
 
     /// The batch payload's own `url` is the API endpoint. The stored url must be
@@ -193,27 +197,7 @@ final class WorkItemParserTests: XCTestCase {
         )
     }
 
-    func testFallsBackToTargetDateThenIteration() throws {
-        let items = parse("""
-        {"value":[
-          {"id":1,"fields":{"System.Title":"A","System.State":"New","System.WorkItemType":"Task",
-            "Microsoft.VSTS.Scheduling.TargetDate":"2026-08-24T00:00:00Z"}},
-          {"id":2,"fields":{"System.Title":"B","System.State":"New","System.WorkItemType":"Task",
-            "System.IterationPath":"Contoso\\\\Sprint 42"}}
-        ]}
-        """, ends: ["Contoso\\Sprint 42": Date(timeIntervalSince1970: 1_787_529_600)])
-        XCTAssertEqual(items?[0].dueSource, .target)
-        XCTAssertEqual(items?[1].dueSource, .iteration)
-        XCTAssertEqual(items?[1].dueDate, Date(timeIntervalSince1970: 1_787_529_600))
-    }
 
-    func testItemWithNoResolvableDateIsUndated() throws {
-        let items = parse("""
-        {"value":[{"id":1,"fields":{"System.Title":"A","System.State":"New","System.WorkItemType":"Task"}}]}
-        """)
-        XCTAssertNil(try XCTUnwrap(items?.first).dueDate)
-        XCTAssertEqual(items?.first?.dueSource, .unset)
-    }
 
     /// An item without a title is not a task — dropping is honest, defaulting
     /// to "Untitled" would put a phantom row on the face.
@@ -254,39 +238,56 @@ final class WorkItemParserTests: XCTestCase {
 
     // Azure DevOps is inconsistent about fractional seconds across fields, and
     // system fields can carry seven digits.
-    func testParsesDatesWithoutFractionalSeconds() throws {
+
+
+
+
+    // Azure DevOps is inconsistent about fractional seconds across fields, and
+    // system fields can carry seven digits — more than ISO8601DateFormatter
+    // accepts on its own.
+    func testParsesChangedDateWithoutFractionalSeconds() {
         let items = parse("""
         {"value":[{"id":1,"fields":{"System.Title":"A","System.State":"New","System.WorkItemType":"Task",
-          "Microsoft.VSTS.Scheduling.DueDate":"2026-08-24T00:00:00Z"}}]}
+          "System.ChangedDate":"2026-08-20T09:15:00Z"}}]}
         """)
-        XCTAssertEqual(items?.first?.dueDate, Date(timeIntervalSince1970: 1_787_529_600))
+        XCTAssertEqual(items?.first?.changedAt, Date(timeIntervalSince1970: 1_787_217_300))
     }
 
-    func testParsesDatesWithMillisecondPrecision() throws {
+    func testParsesChangedDateWithMillisecondPrecision() {
         let items = parse("""
         {"value":[{"id":1,"fields":{"System.Title":"A","System.State":"New","System.WorkItemType":"Task",
-          "Microsoft.VSTS.Scheduling.DueDate":"2026-08-24T00:00:00.000Z"}}]}
+          "System.ChangedDate":"2026-08-20T09:15:00.000Z"}}]}
         """)
-        XCTAssertEqual(items?.first?.dueDate, Date(timeIntervalSince1970: 1_787_529_600))
+        XCTAssertEqual(items?.first?.changedAt, Date(timeIntervalSince1970: 1_787_217_300))
     }
 
-    func testParsesDatesWithSevenDigitFractionalSeconds() throws {
+    func testParsesChangedDateWithSevenDigitFractionalSeconds() {
         let items = parse("""
         {"value":[{"id":1,"fields":{"System.Title":"A","System.State":"New","System.WorkItemType":"Task",
-          "Microsoft.VSTS.Scheduling.DueDate":"2026-08-24T00:00:00.0000000Z"}}]}
+          "System.ChangedDate":"2026-08-20T09:15:00.0000000Z"}}]}
         """)
         XCTAssertEqual(
-            items?.first?.dueDate, Date(timeIntervalSince1970: 1_787_529_600),
+            items?.first?.changedAt, Date(timeIntervalSince1970: 1_787_217_300),
             "Azure DevOps system fields return seven fractional digits"
         )
     }
 
-    func testAnUnparseableDateLeavesTheItemUndatedRatherThanDroppingIt() throws {
+    func testAnUnparseableChangedDateLeavesTheRowIntact() {
         let items = parse("""
         {"value":[{"id":1,"fields":{"System.Title":"A","System.State":"New","System.WorkItemType":"Task",
-          "Microsoft.VSTS.Scheduling.DueDate":"soon-ish"}}]}
+          "System.ChangedDate":"recently"}}]}
         """)
         XCTAssertEqual(items?.count, 1, "a bad date must not cost the whole row")
-        XCTAssertNil(items?.first?.dueDate)
+        XCTAssertNil(items?.first?.changedAt)
+    }
+
+    /// State is stored raw and mapped at render time, so a renamed process
+    /// state is a settings edit rather than a rebuild.
+    func testStateIsStoredRaw() {
+        let items = parse("""
+        {"value":[{"id":1,"fields":{"System.Title":"A","System.State":"Committed","System.WorkItemType":"Product Backlog Item"}}]}
+        """)
+        XCTAssertEqual(items?.first?.state, "Committed")
+        XCTAssertEqual(items?.first?.itemType, "Product Backlog Item")
     }
 }

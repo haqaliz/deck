@@ -799,7 +799,7 @@ private struct TaskBoxSettingsView: View {
                 Text("Empty organization, project or token = the widget shows no data. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Shows work items assigned to whoever owns the PAT \u{2014} not whoever is signed in to the browser or the az CLI.")
+                Text("Shows open work items assigned to whoever owns the PAT \u{2014} not whoever is signed in to the browser or the az CLI \u{2014} in the project above only.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 FetchStatusCaption(
@@ -808,16 +808,29 @@ private struct TaskBoxSettingsView: View {
                 )
             }
             Section("Tasks") {
+                Toggle("Show lane legend", isOn: $settings.showLegend)
                 Toggle("Show task list", isOn: $settings.showList)
+                Toggle("Show work item type", isOn: $settings.showItemType)
                 Stepper("Task count: \(settings.taskCount)", value: $settings.taskCount, in: 2...8)
                     .disabled(!settings.showList)
-                Stepper("Due soon window: \(settings.soonWindowDays)d", value: $settings.soonWindowDays, in: 1...30)
             }
-            Section("Due colors") {
-                ColorPicker("Overdue", selection: $settings.overdueColor.color)
-                ColorPicker("Today", selection: $settings.todayColor.color)
-                ColorPicker("Soon", selection: $settings.soonColor.color)
-                ColorPicker("Later", selection: $settings.laterColor.color)
+            Section("Lanes") {
+                TextField("To do states", text: $settings.stateMapping.todo)
+                TextField("In progress states", text: $settings.stateMapping.inProgress)
+                TextField("Testing states", text: $settings.stateMapping.testing)
+                Text("Comma-separated, case-insensitive. Azure DevOps runs two vocabularies on one board \u{2014} tasks move To Do \u{2192} In Progress, while backlog items move New \u{2192} Approved \u{2192} Committed \u{2014} so these lists collapse both into the lanes shown on the widget.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("A state in none of the three lists is counted under OTHER, which only appears when something lands there. Nothing is ever dropped, so the legend always adds up to the tasks it describes.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Reset to defaults") { settings.stateMapping = TaskStateMapping() }
+            }
+            Section("Lane colors") {
+                ColorPicker("To do", selection: $settings.todoColor.color)
+                ColorPicker("In progress", selection: $settings.inProgressColor.color)
+                ColorPicker("Testing", selection: $settings.testingColor.color)
+                ColorPicker("Other", selection: $settings.otherColor.color)
             }
         }
         .formStyle(.grouped)

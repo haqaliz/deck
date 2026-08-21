@@ -1,7 +1,9 @@
 import XCTest
 
-// TaskBox pure logic: model + tolerant decode, due resolution, buckets, sort,
-// formatting. Every test injects `now` and a Calendar — none reads the clock.
+// TaskBox pure logic: model + tolerant decode, state grouping, sorting.
+// There is deliberately no due-date concept here: Azure DevOps populates no
+// dependable due field for this org, and the sprint-end fallback made every
+// item in a sprint show the same meaningless date.
 
 // MARK: - Model + tolerant decode
 
@@ -11,20 +13,14 @@ final class TaskItemDecodeTests: XCTestCase {
         return try JSONDecoder().decode(TaskItem.self, from: data)
     }
 
-    private func sample(
-        id: String = "123",
-        dueDate: Date? = Date(timeIntervalSince1970: 1_770_000_000),
-        dueSource: DueSource = .explicit
-    ) -> TaskItem {
+    private func sample(id: String = "7444") -> TaskItem {
         TaskItem(
             id: id,
-            title: "Widget alignment spike",
-            state: "Active",
-            itemType: "Bug",
-            url: "https://dev.azure.com/org/proj/_workitems/edit/123",
+            title: "Use feed API in all Providers",
+            state: "Committed",
+            itemType: "Product Backlog Item",
+            url: "https://dev.azure.com/org/proj/_workitems/edit/7444",
             provider: .azureDevOps,
-            dueDate: dueDate,
-            dueSource: dueSource,
             changedAt: Date(timeIntervalSince1970: 1_769_000_000)
         )
     }
@@ -34,40 +30,18 @@ final class TaskItemDecodeTests: XCTestCase {
         XCTAssertEqual(try roundTrip(item), item)
     }
 
-    func testRoundTripsUndatedItem() throws {
-        let item = sample(dueDate: nil, dueSource: .unset)
-        let decoded = try roundTrip(item)
-        XCTAssertNil(decoded.dueDate)
-        XCTAssertEqual(decoded.dueSource, .unset)
-    }
-
     /// A snapshot written by a future agent that ships a second provider must
     /// still decode on this build — one unknown string must not throw away the
     /// whole task list.
     func testUnknownProviderDecodesAsUnknown() throws {
-        let json = """
-        {"id":"1","title":"T","state":"Active","itemType":"Bug","url":"",
-         "provider":"jira","dueSource":"unset"}
-        """.data(using: .utf8)!
-        let item = try JSONDecoder().decode(TaskItem.self, from: json)
+        let json = #"{"id":"1","title":"T","state":"Active","itemType":"Bug","url":"","provider":"jira"}"#
+        let item = try JSONDecoder().decode(TaskItem.self, from: Data(json.utf8))
         XCTAssertEqual(item.provider, .unknown)
     }
 
-    func testUnknownDueSourceDecodesAsUnset() throws {
-        let json = """
-        {"id":"1","title":"T","state":"Active","itemType":"Bug","url":"",
-         "provider":"azureDevOps","dueSource":"quantum"}
-        """.data(using: .utf8)!
-        let item = try JSONDecoder().decode(TaskItem.self, from: json)
-        XCTAssertEqual(item.dueSource, .unset)
-    }
-
     func testMissingIdIsFatalToTheItem() {
-        let json = """
-        {"title":"T","state":"Active","itemType":"Bug","url":"",
-         "provider":"azureDevOps","dueSource":"unset"}
-        """.data(using: .utf8)!
-        XCTAssertThrowsError(try JSONDecoder().decode(TaskItem.self, from: json))
+        let json = #"{"title":"T","state":"Active","itemType":"Bug","url":"","provider":"azureDevOps"}"#
+        XCTAssertThrowsError(try JSONDecoder().decode(TaskItem.self, from: Data(json.utf8)))
     }
 }
 
@@ -75,213 +49,179 @@ final class TaskBoxSnapshotDecodeTests: XCTestCase {
     func testRoundTripsSnapshot() throws {
         let snapshot = TaskBoxSnapshot(
             writtenAt: Date(timeIntervalSince1970: 1_770_000_000),
-            scope: "Manifold",
+            scope: "ForesightManifold",
+            totalCount: 25,
+            sprint: "Sprint 57",
             tasks: []
         )
         let data = try JSONEncoder().encode(snapshot)
         XCTAssertEqual(try JSONDecoder().decode(TaskBoxSnapshot.self, from: data), snapshot)
     }
 
-    /// "Nothing assigned" is a real answer, so an empty task list must survive
-    /// the round trip as an empty array rather than a nil.
-    func testEmptyTaskListSurvives() throws {
-        let snapshot = TaskBoxSnapshot(writtenAt: Date(), scope: "P", tasks: [])
+    /// The header count is the uncapped WIQL total, so it can legitimately
+    /// exceed the number of rows the snapshot carries.
+    func testTotalCountMayExceedTheStoredTaskCount() throws {
+        let snapshot = TaskBoxSnapshot(
+            writtenAt: Date(), scope: "P", totalCount: 210, sprint: nil, tasks: []
+        )
         let data = try JSONEncoder().encode(snapshot)
-        XCTAssertEqual(try JSONDecoder().decode(TaskBoxSnapshot.self, from: data).tasks, [])
+        XCTAssertEqual(try JSONDecoder().decode(TaskBoxSnapshot.self, from: data).totalCount, 210)
+    }
+
+    func testAbsentSprintDecodesAsNil() throws {
+        let json = #"{"writtenAt":0,"scope":"P","totalCount":0,"tasks":[]}"#
+        XCTAssertNil(try JSONDecoder().decode(TaskBoxSnapshot.self, from: Data(json.utf8)).sprint)
     }
 }
 
-// MARK: - Due resolution
+// MARK: - State grouping
 //
-// Azure DevOps has no universal due date: DueDate exists only on some work-item
-// types, TargetDate on others, and the iteration path is a string that must be
-// looked up in the sprint calendar. The chain is DueDate → TargetDate →
-// iteration end → nothing, and which one won is recorded.
+// Azure DevOps mixes two vocabularies on one board: Tasks move To Do →
+// In Progress → Done, while PBIs/Bugs/Features move New → Approved →
+// Committed → Done. The widget shows one lifecycle, and which raw state feeds
+// which group is editable in settings — process templates get customised.
 
-final class DueResolutionTests: XCTestCase {
-    private let due = Date(timeIntervalSince1970: 1_700_000_000)
-    private let target = Date(timeIntervalSince1970: 1_710_000_000)
-    private let sprintEnd = Date(timeIntervalSince1970: 1_720_000_000)
-    private var ends: [String: Date] { ["Manifold\\Sprint 42": sprintEnd] }
+final class TaskStateMappingTests: XCTestCase {
+    private let mapping = TaskStateMapping()
 
-    func testExplicitDueDateWins() {
-        let resolved = TaskFormatting.resolveDue(
-            dueDate: due, targetDate: target,
-            iterationPath: "Manifold\\Sprint 42", iterationEnds: ends
-        )
-        XCTAssertEqual(resolved.date, due)
-        XCTAssertEqual(resolved.source, .explicit)
+    private func lane(_ state: String, _ mapping: TaskStateMapping? = nil) -> TaskLane {
+        (mapping ?? self.mapping).lane(for: state)
     }
 
-    func testTargetDateWinsWhenDueDateAbsent() {
-        let resolved = TaskFormatting.resolveDue(
-            dueDate: nil, targetDate: target,
-            iterationPath: "Manifold\\Sprint 42", iterationEnds: ends
-        )
-        XCTAssertEqual(resolved.date, target)
-        XCTAssertEqual(resolved.source, .target)
+    func testDefaultsCoverTheTaskVocabulary() {
+        XCTAssertEqual(lane("To Do"), .todo)
+        XCTAssertEqual(lane("In Progress"), .inProgress)
     }
 
-    func testIterationEndWinsWhenBothDateFieldsAbsent() {
-        let resolved = TaskFormatting.resolveDue(
-            dueDate: nil, targetDate: nil,
-            iterationPath: "Manifold\\Sprint 42", iterationEnds: ends
-        )
-        XCTAssertEqual(resolved.date, sprintEnd)
-        XCTAssertEqual(resolved.source, .iteration)
+    func testDefaultsCoverTheBacklogVocabulary() {
+        XCTAssertEqual(lane("New"), .todo)
+        XCTAssertEqual(lane("Approved"), .todo)
+        XCTAssertEqual(lane("Committed"), .inProgress)
     }
 
-    func testUnsetWhenNothingResolves() {
-        let resolved = TaskFormatting.resolveDue(
-            dueDate: nil, targetDate: nil, iterationPath: nil, iterationEnds: ends
-        )
-        XCTAssertNil(resolved.date)
-        XCTAssertEqual(resolved.source, .unset)
+    func testDefaultsCoverTestingSynonyms() {
+        XCTAssertEqual(lane("Testing"), .testing)
+        XCTAssertEqual(lane("QA"), .testing)
     }
 
-    /// The sprint calendar is fetched best-effort; when that call fails the map
-    /// is empty and items must fall through to undated, not crash or invent.
-    func testUnsetWhenIterationPathIsNotInTheCalendar() {
-        let resolved = TaskFormatting.resolveDue(
-            dueDate: nil, targetDate: nil,
-            iterationPath: "Manifold\\Sprint 99", iterationEnds: ends
-        )
-        XCTAssertNil(resolved.date)
-        XCTAssertEqual(resolved.source, .unset)
+    /// Board columns and states differ in casing and spacing across templates.
+    func testMatchingIsCaseAndWhitespaceInsensitive() {
+        XCTAssertEqual(lane("  in progress  "), .inProgress)
+        XCTAssertEqual(lane("TO DO"), .todo)
     }
 
-    /// Iteration paths are backslash-separated and must match System.IterationPath
-    /// byte for byte — no normalising, no separator translation.
-    func testIterationLookupIsExactOnBackslashPaths() {
-        let resolved = TaskFormatting.resolveDue(
-            dueDate: nil, targetDate: nil,
-            iterationPath: "Manifold/Sprint 42", iterationEnds: ends
+    /// An unrecognised state must still be counted, under "other" — silently
+    /// dropping it would make the legend disagree with the total.
+    func testUnrecognisedStateFallsToOther() {
+        XCTAssertEqual(lane("Blocked"), .other)
+    }
+
+    func testEmptyStateFallsToOther() {
+        XCTAssertEqual(lane(""), .other)
+    }
+
+    func testMappingIsEditable() {
+        let custom = TaskStateMapping(
+            todo: "Icebox, Backlog", inProgress: "Cooking", testing: "Verify"
         )
-        XCTAssertNil(resolved.date, "a forward-slash path must not match a backslash key")
+        XCTAssertEqual(lane("Backlog", custom), .todo)
+        XCTAssertEqual(lane("Cooking", custom), .inProgress)
+        XCTAssertEqual(lane("Verify", custom), .testing)
+        // The defaults are replaced, not merged.
+        XCTAssertEqual(lane("Committed", custom), .other)
+    }
+
+    func testBlankMappingEntriesAreIgnoredRatherThanMatchingEverything() {
+        let custom = TaskStateMapping(todo: "A, , ,B", inProgress: "", testing: "")
+        XCTAssertEqual(lane("A", custom), .todo)
+        XCTAssertEqual(lane("B", custom), .todo)
+        XCTAssertEqual(lane("", custom), .other, "an empty entry must not swallow empty states")
+        XCTAssertEqual(lane("Committed", custom), .other)
+    }
+
+    func testAStateListedTwiceResolvesToTheFirstGroup() {
+        let custom = TaskStateMapping(todo: "Review", inProgress: "Review", testing: "")
+        XCTAssertEqual(lane("Review", custom), .todo)
     }
 }
 
-// MARK: - Due buckets
-//
-// Bucketing is DAY-granular, not 24-hour: a task due at 09:00 today is still
-// "today" at 12:00, not overdue. Everything below runs in a fixed UTC Gregorian
-// calendar against an injected `now` so it can't drift with the machine.
-
-final class DueBucketTests: XCTestCase {
-    private var calendar: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC")!
-        return calendar
-    }()
-
-    /// 2026-08-22 12:00 UTC
-    private var now: Date { date(2026, 8, 22, 12, 0) }
-
-    private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date {
-        calendar.date(from: DateComponents(year: y, month: m, day: d, hour: h, minute: min))!
+final class TaskLaneCountsTests: XCTestCase {
+    private func task(_ state: String) -> TaskItem {
+        TaskItem(id: "1", title: "T", state: state, itemType: "Task", url: "",
+                 provider: .azureDevOps, changedAt: nil)
     }
 
-    private func bucket(_ due: Date?, window: Int = 7) -> DueBucket {
-        TaskFormatting.bucket(due: due, now: now, calendar: calendar, soonWindowDays: window)
+    /// The shape actually returned by the dev org, post project-scoping.
+    private var realistic: [TaskItem] {
+        Array(repeating: task("New"), count: 7)
+            + Array(repeating: task("To Do"), count: 12)
+            + Array(repeating: task("Approved"), count: 3)
+            + Array(repeating: task("Committed"), count: 2)
+            + Array(repeating: task("In Progress"), count: 1)
     }
 
-    func testUndatedWhenNoDueDate() {
-        XCTAssertEqual(bucket(nil), .undated)
+    func testCountsCollapseBothVocabularies() {
+        let counts = TaskFormatting.laneCounts(tasks: realistic, mapping: TaskStateMapping())
+        XCTAssertEqual(counts[.todo], 22)
+        XCTAssertEqual(counts[.inProgress], 3)
+        XCTAssertEqual(counts[.testing], 0)
+        XCTAssertEqual(counts[.other], 0)
     }
 
-    func testYesterdayEndOfDayIsOverdue() {
-        XCTAssertEqual(bucket(date(2026, 8, 21, 23, 59)), .overdue)
+    /// Every task lands in exactly one group, so the legend always reconciles
+    /// with the number of rows it describes.
+    func testEveryTaskIsCountedExactlyOnce() {
+        let tasks = realistic + [task("Blocked"), task("Testing")]
+        let counts = TaskFormatting.laneCounts(tasks: tasks, mapping: TaskStateMapping())
+        XCTAssertEqual(TaskLane.allCases.reduce(0) { $0 + (counts[$1] ?? 0) }, tasks.count)
     }
 
-    /// The day-granular guarantee: earlier *today* is not overdue.
-    func testEarlierTodayIsTodayNotOverdue() {
-        XCTAssertEqual(bucket(date(2026, 8, 22, 9, 0)), .today)
+    func testEmptyInputCountsZeroEverywhere() {
+        let counts = TaskFormatting.laneCounts(tasks: [], mapping: TaskStateMapping())
+        for group in TaskLane.allCases { XCTAssertEqual(counts[group], 0, "\(group)") }
     }
 
-    func testStartOfTodayIsToday() {
-        XCTAssertEqual(bucket(date(2026, 8, 22, 0, 1)), .today)
+    /// Legend order is the lifecycle, not whatever the dictionary yields.
+    func testLegendOrderFollowsTheLifecycle() {
+        XCTAssertEqual(TaskLane.allCases, [.todo, .inProgress, .testing, .other])
     }
 
-    func testEndOfTodayIsToday() {
-        XCTAssertEqual(bucket(date(2026, 8, 22, 23, 59)), .today)
-    }
-
-    func testTomorrowIsSoon() {
-        XCTAssertEqual(bucket(date(2026, 8, 23, 0, 1)), .soon)
-    }
-
-    func testLastDayOfWindowIsSoon() {
-        XCTAssertEqual(bucket(date(2026, 8, 29)), .soon, "day 7 of a 7-day window is still soon")
-    }
-
-    func testDayAfterWindowIsLater() {
-        XCTAssertEqual(bucket(date(2026, 8, 30)), .later, "day 8 of a 7-day window is later")
-    }
-
-    func testWindowIsHonouredAtANonDefaultSetting() {
-        XCTAssertEqual(bucket(date(2026, 8, 23), window: 1), .soon)
-        XCTAssertEqual(bucket(date(2026, 8, 24), window: 1), .later)
-    }
-
-    /// Crossing a month boundary must not confuse the day arithmetic.
-    func testWindowSpansAMonthBoundary() {
-        XCTAssertEqual(bucket(date(2026, 9, 1), window: 14), .soon)
+    func testLabels() {
+        XCTAssertEqual(TaskLane.todo.label, "TO DO")
+        XCTAssertEqual(TaskLane.inProgress.label, "IN PROGRESS")
+        XCTAssertEqual(TaskLane.testing.label, "TESTING")
+        XCTAssertEqual(TaskLane.other.label, "OTHER")
     }
 }
 
 // MARK: - Sort
 
 final class TaskSortTests: XCTestCase {
-    private func task(_ id: String, due: Date?, changed: Date? = nil) -> TaskItem {
-        TaskItem(
-            id: id, title: "Task \(id)", state: "Active", itemType: "Task",
-            url: "", provider: .azureDevOps,
-            dueDate: due, dueSource: due == nil ? .unset : .explicit,
-            changedAt: changed
-        )
+    private func task(_ id: String, changed: Date?) -> TaskItem {
+        TaskItem(id: id, title: "Task \(id)", state: "To Do", itemType: "Task",
+                 url: "", provider: .azureDevOps, changedAt: changed)
     }
 
     private func day(_ d: Int) -> Date { Date(timeIntervalSince1970: Double(d) * 86_400) }
 
-    func testSortsByDueDateAscending() {
+    func testMostRecentlyChangedFirst() {
         let sorted = TaskFormatting.sorted([
-            task("c", due: day(30)), task("a", due: day(10)), task("b", due: day(20)),
+            task("old", changed: day(1)), task("new", changed: day(9)), task("mid", changed: day(5)),
         ])
-        XCTAssertEqual(sorted.map(\.id), ["a", "b", "c"])
+        XCTAssertEqual(sorted.map(\.id), ["new", "mid", "old"])
     }
 
-    func testUndatedTasksSortLast() {
-        let sorted = TaskFormatting.sorted([
-            task("undated", due: nil), task("dated", due: day(30)),
-        ])
+    func testItemsWithNoChangeDateSortLast() {
+        let sorted = TaskFormatting.sorted([task("undated", changed: nil), task("dated", changed: day(1))])
         XCTAssertEqual(sorted.map(\.id), ["dated", "undated"])
     }
 
-    func testEqualDueDatesBreakTieOnMostRecentlyChanged() {
-        let sorted = TaskFormatting.sorted([
-            task("stale", due: day(10), changed: day(1)),
-            task("fresh", due: day(10), changed: day(5)),
-        ])
-        XCTAssertEqual(sorted.map(\.id), ["fresh", "stale"])
-    }
-
-    func testUndatedTasksAlsoBreakTieOnMostRecentlyChanged() {
-        let sorted = TaskFormatting.sorted([
-            task("stale", due: nil, changed: day(1)),
-            task("fresh", due: nil, changed: day(5)),
-        ])
-        XCTAssertEqual(sorted.map(\.id), ["fresh", "stale"])
-    }
-
-    /// The order must not depend on the input order. A comparator that wobbles
-    /// would reshuffle the face between two identical ticks and defeat the
-    /// agent's unchanged-snapshot comparison.
+    /// A wobbling comparator would reshuffle the face between two identical
+    /// ticks and defeat the agent's unchanged-snapshot comparison.
     func testSortIsTotalRegardlessOfInputOrder() {
         let tasks = [
-            task("a", due: day(10), changed: day(3)),
-            task("b", due: day(20), changed: day(2)),
-            task("c", due: nil, changed: day(9)),
-            task("d", due: day(10), changed: day(1)),
+            task("a", changed: day(3)), task("b", changed: day(3)),
+            task("c", changed: nil), task("d", changed: day(1)),
         ]
         XCTAssertEqual(
             TaskFormatting.sorted(tasks).map(\.id),
@@ -294,113 +234,18 @@ final class TaskSortTests: XCTestCase {
     }
 }
 
-// MARK: - Formatting
+// MARK: - Header
 
-final class TaskFormattingTests: XCTestCase {
-    private var calendar: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC")!
-        return calendar
-    }()
-
-    private var now: Date { date(2026, 8, 22, 12, 0) }
-
-    private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date {
-        calendar.date(from: DateComponents(year: y, month: m, day: d, hour: h, minute: min))!
+final class TaskHeaderTests: XCTestCase {
+    func testTotalLineNamesTheOpenCount() {
+        XCTAssertEqual(TaskFormatting.totalLine(totalCount: 25), "25 open")
     }
 
-    private func relative(_ due: Date?) -> String {
-        TaskFormatting.relativeDay(due: due, now: now, calendar: calendar)
+    func testTotalLineIsSingularForOne() {
+        XCTAssertEqual(TaskFormatting.totalLine(totalCount: 1), "1 open")
     }
 
-    func testRelativeDayForOverdue() {
-        XCTAssertEqual(relative(date(2026, 8, 20)), "-2d")
-        XCTAssertEqual(relative(date(2026, 8, 21)), "-1d")
-    }
-
-    func testRelativeDayForToday() {
-        XCTAssertEqual(relative(date(2026, 8, 22, 9, 0)), "today")
-    }
-
-    func testRelativeDayForFuture() {
-        XCTAssertEqual(relative(date(2026, 8, 23)), "+1d")
-        XCTAssertEqual(relative(date(2026, 8, 25)), "+3d")
-    }
-
-    func testRelativeDayForUndated() {
-        XCTAssertEqual(relative(nil), "—")
-    }
-
-    /// The trailing column is fixed width; a task due in three years must not
-    /// blow the row out.
-    func testRelativeDayClampsAtNinetyNineDays() {
-        XCTAssertEqual(relative(date(2029, 8, 22)), "+99d")
-        XCTAssertEqual(relative(date(2023, 8, 22)), "-99d")
-    }
-
-    // MARK: counts
-
-    private func task(due: Date?) -> TaskItem {
-        TaskItem(
-            id: "1", title: "T", state: "Active", itemType: "Task", url: "",
-            provider: .azureDevOps, dueDate: due,
-            dueSource: due == nil ? .unset : .explicit, changedAt: nil
-        )
-    }
-
-    private func countsLine(_ tasks: [TaskItem], window: Int = 7) -> String {
-        TaskFormatting.countsLine(
-            tasks: tasks, now: now, calendar: calendar, soonWindowDays: window
-        )
-    }
-
-    func testCountsLineShowsOverdueAndDueSoon() {
-        let tasks = [
-            task(due: date(2026, 8, 20)), task(due: date(2026, 8, 21)),
-            task(due: date(2026, 8, 22)), task(due: date(2026, 8, 25)),
-            task(due: date(2026, 12, 1)),
-        ]
-        XCTAssertEqual(countsLine(tasks), "2 overdue · 2 due ≤7d")
-    }
-
-    func testCountsLineSkipsOverdueWhenZero() {
-        XCTAssertEqual(countsLine([task(due: date(2026, 8, 25))]), "1 due ≤7d")
-    }
-
-    func testCountsLineSkipsDueSoonWhenZero() {
-        XCTAssertEqual(countsLine([task(due: date(2026, 8, 20))]), "1 overdue")
-    }
-
-    /// The window comes from the setting, not a hardcoded 7.
-    func testCountsLineInterpolatesANonDefaultWindow() {
-        XCTAssertEqual(countsLine([task(due: date(2026, 8, 25))], window: 30), "1 due ≤30d")
-    }
-
-    /// The designed answer to "this org populates no date field": TaskBox
-    /// degrades to a useful assigned-work list rather than claiming zero of
-    /// everything.
-    func testCountsLineFallsBackToOpenCountWhenNothingIsDue() {
-        let tasks = [task(due: nil), task(due: nil), task(due: date(2026, 12, 1))]
-        XCTAssertEqual(countsLine(tasks), "3 open")
-    }
-
-    func testCountsLineForNoTasks() {
-        XCTAssertEqual(countsLine([]), "0 open")
-    }
-
-    func testCountsBreakDownEveryBucket() {
-        let tasks = [
-            task(due: date(2026, 8, 20)), task(due: date(2026, 8, 22)),
-            task(due: date(2026, 8, 25)), task(due: date(2026, 12, 1)),
-            task(due: nil),
-        ]
-        let counts = TaskFormatting.counts(
-            tasks: tasks, now: now, calendar: calendar, soonWindowDays: 7
-        )
-        XCTAssertEqual(counts.overdue, 1)
-        XCTAssertEqual(counts.today, 1)
-        XCTAssertEqual(counts.soon, 1)
-        XCTAssertEqual(counts.later, 1)
-        XCTAssertEqual(counts.undated, 1)
+    func testTotalLineForNothingAssigned() {
+        XCTAssertEqual(TaskFormatting.totalLine(totalCount: 0), "0 open")
     }
 }

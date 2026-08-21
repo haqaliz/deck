@@ -10,6 +10,11 @@ import Foundation
 // The model is deliberately provider-agnostic: `id` is a String (so Jira's
 // "PROJ-1" fits without a reshape) and `provider` names the source, so GitHub
 // Issues / Linear / Reminders extend the enum rather than migrating the store.
+//
+// There is no due-date concept, on purpose. Azure DevOps has no dependable due
+// field: DueDate and TargetDate are sparse, and falling back to the sprint end
+// gave every item in a sprint the same date, which looked like information and
+// wasn't. Progress through the board is the real signal.
 
 enum TaskProvider: String, Codable, Equatable {
     case azureDevOps
@@ -18,51 +23,21 @@ enum TaskProvider: String, Codable, Equatable {
     case unknown
 }
 
-/// Which field supplied `TaskItem.dueDate`. Azure DevOps has no universal due
-/// date, so the resolution chain is recorded rather than lost.
-enum DueSource: String, Codable, Equatable {
-    /// Microsoft.VSTS.Scheduling.DueDate
-    case explicit
-    /// Microsoft.VSTS.Scheduling.TargetDate
-    case target
-    /// The iteration path's finishDate.
-    case iteration
-    /// No date could be resolved. (Named `unset` rather than `none` so it
-    /// never collides with `Optional.none` at a call site.)
-    case unset
-}
-
-/// How urgent a task is, once a due date has been resolved. Drives the row dot
-/// colour and the header counts.
-enum DueBucket: Equatable {
-    case overdue
-    case today
-    case soon
-    case later
-    case undated
-}
-
 struct TaskItem: Codable, Equatable {
     var id: String
     var title: String
+    /// Raw provider state ("To Do", "Committed", "In Progress"). Kept raw and
+    /// mapped at render time, so a renamed process state is a settings edit
+    /// rather than a rebuild.
     var state: String
     var itemType: String
     var url: String
     var provider: TaskProvider
-    var dueDate: Date?
-    var dueSource: DueSource
     var changedAt: Date?
 
     init(
-        id: String,
-        title: String,
-        state: String,
-        itemType: String,
-        url: String,
-        provider: TaskProvider,
-        dueDate: Date?,
-        dueSource: DueSource,
-        changedAt: Date?
+        id: String, title: String, state: String, itemType: String,
+        url: String, provider: TaskProvider, changedAt: Date?
     ) {
         self.id = id
         self.title = title
@@ -70,14 +45,12 @@ struct TaskItem: Codable, Equatable {
         self.itemType = itemType
         self.url = url
         self.provider = provider
-        self.dueDate = dueDate
-        self.dueSource = dueSource
         self.changedAt = changedAt
     }
 
-    /// Tolerant on the two enums only: an unknown provider or due source reads
-    /// as `.unknown` / `.unset` so a snapshot from a newer agent still renders.
-    /// `id` and `title` stay required — an item without them is not a task.
+    /// Tolerant on `provider` only: an unknown one reads as `.unknown` so a
+    /// snapshot from a newer agent still renders. `id` and `title` stay
+    /// required — an item without them is not a task.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -87,22 +60,40 @@ struct TaskItem: Codable, Equatable {
         url = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
         let rawProvider = try c.decodeIfPresent(String.self, forKey: .provider) ?? ""
         provider = TaskProvider(rawValue: rawProvider) ?? .unknown
-        dueDate = try c.decodeIfPresent(Date.self, forKey: .dueDate)
-        let rawDueSource = try c.decodeIfPresent(String.self, forKey: .dueSource) ?? ""
-        dueSource = DueSource(rawValue: rawDueSource) ?? .unset
         changedAt = try c.decodeIfPresent(Date.self, forKey: .changedAt)
     }
 }
 
 struct TaskBoxSnapshot: Codable, Equatable {
     var writtenAt: Date
-    /// "{project}", or "{org} / {project}" when they differ. Rendered by the
-    /// face, so the header names what the data *is* rather than what settings
-    /// say it will be after the next tick.
+    /// "{project}", or "{org} / {project}" when they differ.
     var scope: String
+    /// Every open item assigned to the user — uncapped, so it can exceed
+    /// `tasks.count` when the fetch limit trims the stored rows.
+    var totalCount: Int
+    /// Current sprint name, e.g. "Sprint 57". nil when the team has no current
+    /// iteration or the call failed.
+    var sprint: String?
     /// Pre-sorted by `TaskFormatting.sorted` — the widget renders, it does not
     /// decide.
     var tasks: [TaskItem]
+
+    init(writtenAt: Date, scope: String, totalCount: Int, sprint: String?, tasks: [TaskItem]) {
+        self.writtenAt = writtenAt
+        self.scope = scope
+        self.totalCount = totalCount
+        self.sprint = sprint
+        self.tasks = tasks
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        writtenAt = try c.decode(Date.self, forKey: .writtenAt)
+        scope = try c.decodeIfPresent(String.self, forKey: .scope) ?? ""
+        totalCount = try c.decodeIfPresent(Int.self, forKey: .totalCount) ?? 0
+        sprint = try c.decodeIfPresent(String.self, forKey: .sprint)
+        tasks = try c.decodeIfPresent([TaskItem].self, forKey: .tasks) ?? []
+    }
 }
 
 enum TaskBoxSnapshotStore {
@@ -121,68 +112,88 @@ enum TaskBoxSnapshotStore {
     }
 }
 
-// MARK: - Due resolution / bucketing / formatting (pure, used by the widget face)
+// MARK: - Lanes
+//
+// Azure DevOps runs two vocabularies on one board: Tasks move
+// To Do → In Progress → Done, while PBIs / Bugs / Features move
+// New → Approved → Committed → Done. The widget shows one lifecycle.
+
+enum TaskLane: String, Codable, CaseIterable, Equatable {
+    case todo
+    case inProgress
+    case testing
+    /// Anything the mapping doesn't recognise. Counted rather than dropped, so
+    /// the legend always reconciles with the rows it describes.
+    case other
+
+    var label: String {
+        switch self {
+        case .todo: "TO DO"
+        case .inProgress: "IN PROGRESS"
+        case .testing: "TESTING"
+        case .other: "OTHER"
+        }
+    }
+}
+
+/// Which raw states feed which lane. Editable in settings because process
+/// templates get customised and board columns get renamed — that should be a
+/// text edit, not a new build.
+struct TaskStateMapping: Codable, Equatable {
+    var todo: String
+    var inProgress: String
+    var testing: String
+
+    init(
+        todo: String = "New, Approved, To Do, Open, Proposed",
+        inProgress: String = "Committed, In Progress, Doing, Active, Started",
+        testing: String = "Testing, In Test, QA, In Review, Review"
+    ) {
+        self.todo = todo
+        self.inProgress = inProgress
+        self.testing = testing
+    }
+
+    /// Tolerant per field: a mapping written by an older build, or one the user
+    /// has only partly customised, keeps the defaults for the lanes it doesn't
+    /// mention. Falling back to an empty string instead would silently send
+    /// every state to "other".
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = TaskStateMapping()
+        todo = try c.decodeIfPresent(String.self, forKey: .todo) ?? defaults.todo
+        inProgress = try c.decodeIfPresent(String.self, forKey: .inProgress) ?? defaults.inProgress
+        testing = try c.decodeIfPresent(String.self, forKey: .testing) ?? defaults.testing
+    }
+
+    /// Comma-separated, trimmed, case-insensitive. Blank entries are dropped so
+    /// a trailing comma can't create a rule that matches the empty state.
+    static func terms(_ raw: String) -> [String] {
+        raw.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+    }
+
+    /// First lane wins, so a state listed in two fields resolves predictably
+    /// rather than by dictionary order.
+    func lane(for state: String) -> TaskLane {
+        let needle = state.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !needle.isEmpty else { return .other }
+        if Self.terms(todo).contains(needle) { return .todo }
+        if Self.terms(inProgress).contains(needle) { return .inProgress }
+        if Self.terms(testing).contains(needle) { return .testing }
+        return .other
+    }
+}
+
+// MARK: - Formatting (pure, used by the widget face)
 
 enum TaskFormatting {
-    /// Azure DevOps has no universal due date, so the face resolves one from a
-    /// chain and records which link supplied it: an explicit DueDate, else a
-    /// TargetDate, else the end of the item's iteration, else nothing.
-    ///
-    /// `iterationEnds` is looked up by the raw `System.IterationPath` string —
-    /// backslash-separated, matched exactly. The map is empty whenever the
-    /// best-effort iterations call failed, and items simply fall through to
-    /// undated.
-    static func resolveDue(
-        dueDate: Date?,
-        targetDate: Date?,
-        iterationPath: String?,
-        iterationEnds: [String: Date]
-    ) -> (date: Date?, source: DueSource) {
-        if let dueDate { return (dueDate, .explicit) }
-        if let targetDate { return (targetDate, .target) }
-        if let iterationPath, let end = iterationEnds[iterationPath] {
-            return (end, .iteration)
-        }
-        return (nil, .unset)
-    }
-
-    /// How urgent a task is. Day-granular on purpose: "overdue" means a whole
-    /// day has passed, not that 24 hours have elapsed, so a task due at 09:00
-    /// today still reads as due today at 17:00.
-    static func bucket(
-        due: Date?,
-        now: Date,
-        calendar: Calendar,
-        soonWindowDays: Int
-    ) -> DueBucket {
-        guard let due else { return .undated }
-        let today = calendar.startOfDay(for: now)
-        let dueDay = calendar.startOfDay(for: due)
-        guard let days = calendar.dateComponents([.day], from: today, to: dueDay).day else {
-            return .undated
-        }
-        if days < 0 { return .overdue }
-        if days == 0 { return .today }
-        return days <= soonWindowDays ? .soon : .later
-    }
-
-    /// Face order: soonest first, undated last, ties broken by most recently
-    /// touched. Deterministic and total — the comparator never depends on the
-    /// input order, so two identical ticks produce an identical list rather
-    /// than reshuffling under the user.
+    /// Face order: most recently touched first, undated last. Deterministic and
+    /// total — the comparator never depends on input order, so two identical
+    /// ticks produce an identical list rather than reshuffling under the user.
     static func sorted(_ tasks: [TaskItem]) -> [TaskItem] {
         tasks.sorted { lhs, rhs in
-            switch (lhs.dueDate, rhs.dueDate) {
-            case let (l?, r?) where l != r:
-                return l < r
-            case (nil, .some):
-                return false
-            case (.some, nil):
-                return true
-            default:
-                break
-            }
-            // Same due date, or both undated: most recently changed first.
             let lc = lhs.changedAt ?? .distantPast
             let rc = rhs.changedAt ?? .distantPast
             if lc != rc { return lc > rc }
@@ -191,69 +202,18 @@ enum TaskFormatting {
         }
     }
 
-    /// Row trailing text: "-2d" / "today" / "+3d" / "—". Day-granular, and
-    /// clamped so a task due years out can't widen the column.
-    static func relativeDay(due: Date?, now: Date, calendar: Calendar) -> String {
-        guard let due else { return "\u{2014}" }
-        let today = calendar.startOfDay(for: now)
-        let dueDay = calendar.startOfDay(for: due)
-        guard let days = calendar.dateComponents([.day], from: today, to: dueDay).day else {
-            return "\u{2014}"
-        }
-        if days == 0 { return "today" }
-        let clamped = max(-99, min(99, days))
-        return clamped < 0 ? "\(clamped)d" : "+\(clamped)d"
-    }
-
-    struct Counts: Equatable {
-        var overdue = 0
-        var today = 0
-        var soon = 0
-        var later = 0
-        var undated = 0
-
-        /// What the header means by "due": today plus everything inside the
-        /// window. Overdue is counted separately — it is a different question.
-        var dueSoon: Int { today + soon }
-        var total: Int { overdue + today + soon + later + undated }
-    }
-
-    static func counts(
-        tasks: [TaskItem],
-        now: Date,
-        calendar: Calendar,
-        soonWindowDays: Int
-    ) -> Counts {
-        var counts = Counts()
+    /// Every lane present, including zeroes, so the legend keeps a stable width
+    /// instead of reflowing as work moves between columns.
+    static func laneCounts(tasks: [TaskItem], mapping: TaskStateMapping) -> [TaskLane: Int] {
+        var counts: [TaskLane: Int] = Dictionary(uniqueKeysWithValues: TaskLane.allCases.map { ($0, 0) })
         for task in tasks {
-            switch bucket(due: task.dueDate, now: now, calendar: calendar, soonWindowDays: soonWindowDays) {
-            case .overdue: counts.overdue += 1
-            case .today: counts.today += 1
-            case .soon: counts.soon += 1
-            case .later: counts.later += 1
-            case .undated: counts.undated += 1
-            }
+            counts[mapping.lane(for: task.state), default: 0] += 1
         }
         return counts
     }
 
-    /// Header line: "3 overdue \u{00B7} 7 due \u{2264}7d". Zero parts are skipped, and the
-    /// window is interpolated from the setting rather than hardcoded.
-    ///
-    /// When nothing is overdue or due, it falls back to "N open" — the honest
-    /// face for an org that populates no scheduling field at all, where a row
-    /// of zeroes would read as broken rather than as calm.
-    static func countsLine(
-        tasks: [TaskItem],
-        now: Date,
-        calendar: Calendar,
-        soonWindowDays: Int
-    ) -> String {
-        let counts = counts(tasks: tasks, now: now, calendar: calendar, soonWindowDays: soonWindowDays)
-        var parts: [String] = []
-        if counts.overdue > 0 { parts.append("\(counts.overdue) overdue") }
-        if counts.dueSoon > 0 { parts.append("\(counts.dueSoon) due \u{2264}\(soonWindowDays)d") }
-        guard !parts.isEmpty else { return "\(counts.total) open" }
-        return parts.joined(separator: " \u{00B7} ")
+    /// Header, left: how much is on your plate.
+    static func totalLine(totalCount: Int) -> String {
+        "\(totalCount) open"
     }
 }

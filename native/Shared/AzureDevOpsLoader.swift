@@ -117,46 +117,50 @@ enum AzureDate {
 
 // MARK: - WIQL id parser (pure)
 
-enum WiqlIdParser {
-    /// Hard cap: the batch endpoint takes 200 ids and the face shows at most 8.
-    static let idLimit = 50
+struct ParsedWiql: Equatable {
+    /// Every match, before the batch cap — this is what the header counts.
+    var total: Int
+    /// The ids actually fetched, capped, in WIQL order (most recently changed
+    /// first).
+    var ids: [Int]
+}
 
-    /// `nil` means the payload could not be read. `[]` means the query ran and
-    /// matched nothing — "nothing assigned" is a success, not a failure.
-    static func parse(_ data: Data) -> [Int]? {
+enum WiqlIdParser {
+    /// The workitemsbatch endpoint's own ceiling. The face shows at most 8
+    /// rows, but the lane counts describe everything fetched, so the cap is set
+    /// as high as the API allows rather than as low as the list needs.
+    static let idLimit = 200
+
+    /// `nil` means the payload could not be read. An empty `ids` means the
+    /// query ran and matched nothing — "nothing assigned" is a success.
+    static func parse(_ data: Data) -> ParsedWiql? {
         guard
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let items = json["workItems"] as? [[String: Any]]
         else { return nil }
         let ids = items.compactMap { ($0["id"] as? NSNumber)?.intValue }
-        return Array(ids.prefix(idLimit))
+        return ParsedWiql(total: ids.count, ids: Array(ids.prefix(idLimit)))
     }
 }
 
-// MARK: - Iteration calendar parser (pure)
+// MARK: - Current sprint parser (pure)
 
-enum IterationMapParser {
-    /// `System.IterationPath` → the iteration's finish date.
-    ///
-    /// Returns a map, never an optional: this call is best-effort, so its
-    /// failure mode is "no fallback dates available", never "the fetch failed".
-    /// Keys are the raw backslash-separated paths, matched later byte for byte.
-    static func parse(_ data: Data) -> [String: Date] {
+enum CurrentSprintParser {
+    /// The team's current iteration name, e.g. "Sprint 57". Best-effort: a team
+    /// between sprints has none, and the header then shows nothing rather than
+    /// a stale or invented sprint.
+    static func parse(_ data: Data) -> String? {
         guard
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let values = json["value"] as? [[String: Any]]
-        else { return [:] }
-
-        var map: [String: Date] = [:]
-        for entry in values {
-            guard
-                let path = entry["path"] as? String,
-                let attributes = entry["attributes"] as? [String: Any],
-                let finish = AzureDate.parse(attributes["finishDate"])
-            else { continue }
-            map[path] = finish
+            let values = json["value"] as? [[String: Any]],
+            let first = values.first
+        else { return nil }
+        if let name = first["name"] as? String, !name.isEmpty { return name }
+        // Fall back to the leaf of the backslash-separated path.
+        if let path = first["path"] as? String, let leaf = path.split(separator: "\\").last {
+            return String(leaf)
         }
-        return map
+        return nil
     }
 }
 
@@ -166,23 +170,15 @@ enum WorkItemParser {
     /// Contract notes: `fields` is a flat dictionary keyed by reference name;
     /// absent fields are omitted rather than null; `id` is a number; the
     /// entry's own `url` is the *API* endpoint, not a browsable link.
-    static func parse(
-        _ data: Data,
-        target: AzureTarget,
-        iterationEnds: [String: Date]
-    ) -> [TaskItem]? {
+    static func parse(_ data: Data, target: AzureTarget) -> [TaskItem]? {
         guard
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let values = json["value"] as? [[String: Any]]
         else { return nil }
-        return values.compactMap { item(from: $0, target: target, iterationEnds: iterationEnds) }
+        return values.compactMap { item(from: $0, target: target) }
     }
 
-    private static func item(
-        from entry: [String: Any],
-        target: AzureTarget,
-        iterationEnds: [String: Date]
-    ) -> TaskItem? {
+    private static func item(from entry: [String: Any], target: AzureTarget) -> TaskItem? {
         guard let fields = entry["fields"] as? [String: Any] else { return nil }
         // No title, no task. Defaulting to "Untitled" would put a phantom row
         // on the face.
@@ -192,13 +188,6 @@ enum WorkItemParser {
             ?? (fields["System.Id"] as? NSNumber)?.intValue
         guard let id else { return nil }
 
-        let due = TaskFormatting.resolveDue(
-            dueDate: AzureDate.parse(fields["Microsoft.VSTS.Scheduling.DueDate"]),
-            targetDate: AzureDate.parse(fields["Microsoft.VSTS.Scheduling.TargetDate"]),
-            iterationPath: fields["System.IterationPath"] as? String,
-            iterationEnds: iterationEnds
-        )
-
         return TaskItem(
             id: String(id),
             title: title,
@@ -206,8 +195,6 @@ enum WorkItemParser {
             itemType: (fields["System.WorkItemType"] as? String) ?? "",
             url: "\(target.projectBase)/_workitems/edit/\(id)",
             provider: .azureDevOps,
-            dueDate: due.date,
-            dueSource: due.source,
             changedAt: AzureDate.parse(fields["System.ChangedDate"])
         )
     }
@@ -216,8 +203,8 @@ enum WorkItemParser {
 // MARK: - Fetch (host/agent only — unsandboxed)
 
 enum HostAzureDevOpsLoader {
-    /// Work items assigned to the PAT's owner, newest-changed first, resolved
-    /// against the sprint calendar and pre-sorted for the face.
+    /// Open work items assigned to the PAT's owner in the configured project,
+    /// most recently changed first, plus the team's current sprint.
     ///
     /// `@Me` resolves to whoever owns the PAT — not to whoever is signed in to
     /// the `az` CLI or the browser.
@@ -229,51 +216,55 @@ enum HostAzureDevOpsLoader {
         let target = try AzureTarget.normalise(organization: organization, project: project)
         let auth = "Basic " + Data(":\(token)".utf8).base64EncodedString()
 
-        let ids = try await workItemIDs(target: target, auth: auth)
-        // Nothing assigned is a real answer, and it costs exactly one request:
-        // no ids means no batch and no sprint calendar to look anything up in.
-        guard !ids.isEmpty else {
-            return TaskBoxSnapshot(writtenAt: Date(), scope: target.scope, tasks: [])
+        let wiql = try await workItemIDs(target: target, auth: auth)
+        let sprint = await currentSprint(target: target, auth: auth)
+
+        // Nothing assigned is a real answer, and it skips the batch entirely.
+        guard !wiql.ids.isEmpty else {
+            return TaskBoxSnapshot(
+                writtenAt: Date(), scope: target.scope,
+                totalCount: wiql.total, sprint: sprint, tasks: []
+            )
         }
 
-        let iterationEnds = await iterationCalendar(target: target, auth: auth)
-        let tasks = try await workItems(
-            ids: ids, target: target, auth: auth, iterationEnds: iterationEnds
-        )
-
+        let tasks = try await workItems(ids: wiql.ids, target: target, auth: auth)
         return TaskBoxSnapshot(
             writtenAt: Date(),
             scope: target.scope,
+            totalCount: wiql.total,
+            sprint: sprint,
             tasks: TaskFormatting.sorted(tasks)
         )
     }
 
-    /// The query is fixed in code rather than user-editable: a hand-written
-    /// WIQL that matches nothing is indistinguishable from one that is wrong,
-    /// and the failure copy could not tell the user which.
-    private static let wiql = """
+    /// Fixed in code rather than user-editable: a hand-written WIQL that
+    /// matches nothing is indistinguishable from one that is wrong, and the
+    /// failure copy could not tell the user which.
+    ///
+    /// `[System.TeamProject] = @project` is load-bearing. The project in the
+    /// request URL only sets the macro context; without this clause the query
+    /// spans every project the PAT can read, which on the dev org returned 67
+    /// items across three projects instead of the 25 actually in the
+    /// configured one.
+    private static let wiqlQuery = """
     SELECT [System.Id] FROM WorkItems \
-    WHERE [System.AssignedTo] = @Me \
+    WHERE [System.TeamProject] = @project \
+    AND [System.AssignedTo] = @Me \
     AND [System.State] NOT IN ('Closed', 'Removed', 'Done') \
     ORDER BY [System.ChangedDate] DESC
     """
 
-    private static func workItemIDs(target: AzureTarget, auth: String) async throws -> [Int] {
+    private static func workItemIDs(target: AzureTarget, auth: String) async throws -> ParsedWiql {
         guard let url = URL(string: "\(target.projectBase)/_apis/wit/wiql?api-version=7.1") else {
             throw AzureDevOpsError.invalidTarget
         }
-        let data = try await send(
-            url: url, auth: auth, body: ["query": wiql]
-        )
-        guard let ids = WiqlIdParser.parse(data) else { throw AzureDevOpsError.invalidPayload }
-        return ids
+        let data = try await send(url: url, auth: auth, body: ["query": wiqlQuery])
+        guard let parsed = WiqlIdParser.parse(data) else { throw AzureDevOpsError.invalidPayload }
+        return parsed
     }
 
     private static func workItems(
-        ids: [Int],
-        target: AzureTarget,
-        auth: String,
-        iterationEnds: [String: Date]
+        ids: [Int], target: AzureTarget, auth: String
     ) async throws -> [TaskItem] {
         guard let url = URL(string: "\(target.orgBase)/_apis/wit/workitemsbatch?api-version=7.1") else {
             throw AzureDevOpsError.invalidTarget
@@ -285,10 +276,7 @@ enum HostAzureDevOpsLoader {
                 "System.Title",
                 "System.State",
                 "System.WorkItemType",
-                "System.IterationPath",
                 "System.ChangedDate",
-                "Microsoft.VSTS.Scheduling.DueDate",
-                "Microsoft.VSTS.Scheduling.TargetDate",
             ],
             // Required, not cosmetic: without it the whole batch fails when a
             // single id is inaccessible or was deleted between the WIQL call
@@ -296,21 +284,21 @@ enum HostAzureDevOpsLoader {
             "errorPolicy": "omit",
         ]
         let data = try await send(url: url, auth: auth, body: body)
-        guard let tasks = WorkItemParser.parse(data, target: target, iterationEnds: iterationEnds) else {
+        guard let tasks = WorkItemParser.parse(data, target: target) else {
             throw AzureDevOpsError.invalidPayload
         }
         return tasks
     }
 
-    /// Best-effort: any failure yields an empty calendar, so items fall back to
-    /// undated. A missing sprint calendar must never fail the tick or blank a
-    /// working task list — it is only a source of fallback dates.
-    private static func iterationCalendar(target: AzureTarget, auth: String) async -> [String: Date] {
+    /// Best-effort: any failure yields nil and the header simply omits the
+    /// sprint. A missing iteration must never fail the tick or blank a working
+    /// task list.
+    private static func currentSprint(target: AzureTarget, auth: String) async -> String? {
         guard let url = URL(
-            string: "\(target.projectBase)/_apis/work/teamsettings/iterations?api-version=7.1"
-        ) else { return [:] }
-        guard let data = try? await send(url: url, auth: auth, body: nil) else { return [:] }
-        return IterationMapParser.parse(data)
+            string: "\(target.projectBase)/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1"
+        ) else { return nil }
+        guard let data = try? await send(url: url, auth: auth, body: nil) else { return nil }
+        return CurrentSprintParser.parse(data)
     }
 
     /// `body == nil` sends a GET; otherwise a JSON POST.

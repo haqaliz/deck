@@ -403,19 +403,25 @@ struct TaskBoxSettings: Codable, Equatable {
     /// Azure DevOps organization — a bare name or a full dev.azure.com URL.
     /// Empty → agent skips the fetch.
     var organization = ""
-    /// Project within the organization. Empty → agent skips the fetch.
+    /// Project within the organization. Empty → agent skips the fetch. The
+    /// query is scoped to it, so items in the org's other projects stay out.
     var project = ""
     /// Personal access token — required; no default is ever sent. A read-only
     /// Work Items (Read) scope is enough.
     var token = ""
+    /// The lane legend under the header.
+    var showLegend = true
     var showList = true
+    /// A short Bug / PBI / Task marker on each row.
+    var showItemType = true
     var taskCount = 5
-    /// How far ahead counts as "due soon", in days.
-    var soonWindowDays = 7
-    var overdueColor = RGBA(.red)
-    var todayColor = RGBA(.orange)
-    var soonColor = RGBA(.yellow)
-    var laterColor = RGBA(.green)
+    /// Which raw Azure DevOps states feed which lane. Editable because process
+    /// templates get customised and board columns get renamed.
+    var stateMapping = TaskStateMapping()
+    var todoColor = RGBA(.blue)
+    var inProgressColor = RGBA(.orange)
+    var testingColor = RGBA(.purple)
+    var otherColor = RGBA(.gray)
 
     init() {}
 
@@ -424,13 +430,26 @@ struct TaskBoxSettings: Codable, Equatable {
         organization = try c.decodeIfPresent(String.self, forKey: .organization) ?? ""
         project = try c.decodeIfPresent(String.self, forKey: .project) ?? ""
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+        showLegend = try c.decodeIfPresent(Bool.self, forKey: .showLegend) ?? true
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
+        showItemType = try c.decodeIfPresent(Bool.self, forKey: .showItemType) ?? true
         taskCount = try c.decodeIfPresent(Int.self, forKey: .taskCount) ?? 5
-        soonWindowDays = try c.decodeIfPresent(Int.self, forKey: .soonWindowDays) ?? 7
-        overdueColor = try c.decodeIfPresent(RGBA.self, forKey: .overdueColor) ?? RGBA(.red)
-        todayColor = try c.decodeIfPresent(RGBA.self, forKey: .todayColor) ?? RGBA(.orange)
-        soonColor = try c.decodeIfPresent(RGBA.self, forKey: .soonColor) ?? RGBA(.yellow)
-        laterColor = try c.decodeIfPresent(RGBA.self, forKey: .laterColor) ?? RGBA(.green)
+        stateMapping = try c.decodeIfPresent(TaskStateMapping.self, forKey: .stateMapping) ?? TaskStateMapping()
+        todoColor = try c.decodeIfPresent(RGBA.self, forKey: .todoColor) ?? RGBA(.blue)
+        inProgressColor = try c.decodeIfPresent(RGBA.self, forKey: .inProgressColor) ?? RGBA(.orange)
+        testingColor = try c.decodeIfPresent(RGBA.self, forKey: .testingColor) ?? RGBA(.purple)
+        otherColor = try c.decodeIfPresent(RGBA.self, forKey: .otherColor) ?? RGBA(.gray)
+    }
+
+    /// Lane → configured dot colour, in one place so the legend and the rows
+    /// can never disagree.
+    func color(for lane: TaskLane) -> RGBA {
+        switch lane {
+        case .todo: todoColor
+        case .inProgress: inProgressColor
+        case .testing: testingColor
+        case .other: otherColor
+        }
     }
 }
 
