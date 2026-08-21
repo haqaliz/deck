@@ -212,3 +212,137 @@ enum WorkItemParser {
         )
     }
 }
+
+// MARK: - Fetch (host/agent only — unsandboxed)
+
+enum HostAzureDevOpsLoader {
+    /// Work items assigned to the PAT's owner, newest-changed first, resolved
+    /// against the sprint calendar and pre-sorted for the face.
+    ///
+    /// `@Me` resolves to whoever owns the PAT — not to whoever is signed in to
+    /// the `az` CLI or the browser.
+    static func fetch(
+        organization: String,
+        project: String,
+        token: String
+    ) async throws -> TaskBoxSnapshot {
+        let target = try AzureTarget.normalise(organization: organization, project: project)
+        let auth = "Basic " + Data(":\(token)".utf8).base64EncodedString()
+
+        let ids = try await workItemIDs(target: target, auth: auth)
+        // Nothing assigned is a real answer, and it costs exactly one request:
+        // no ids means no batch and no sprint calendar to look anything up in.
+        guard !ids.isEmpty else {
+            return TaskBoxSnapshot(writtenAt: Date(), scope: target.scope, tasks: [])
+        }
+
+        let iterationEnds = await iterationCalendar(target: target, auth: auth)
+        let tasks = try await workItems(
+            ids: ids, target: target, auth: auth, iterationEnds: iterationEnds
+        )
+
+        return TaskBoxSnapshot(
+            writtenAt: Date(),
+            scope: target.scope,
+            tasks: TaskFormatting.sorted(tasks)
+        )
+    }
+
+    /// The query is fixed in code rather than user-editable: a hand-written
+    /// WIQL that matches nothing is indistinguishable from one that is wrong,
+    /// and the failure copy could not tell the user which.
+    private static let wiql = """
+    SELECT [System.Id] FROM WorkItems \
+    WHERE [System.AssignedTo] = @Me \
+    AND [System.State] NOT IN ('Closed', 'Removed', 'Done') \
+    ORDER BY [System.ChangedDate] DESC
+    """
+
+    private static func workItemIDs(target: AzureTarget, auth: String) async throws -> [Int] {
+        guard let url = URL(string: "\(target.projectBase)/_apis/wit/wiql?api-version=7.1") else {
+            throw AzureDevOpsError.invalidTarget
+        }
+        let data = try await send(
+            url: url, auth: auth, body: ["query": wiql]
+        )
+        guard let ids = WiqlIdParser.parse(data) else { throw AzureDevOpsError.invalidPayload }
+        return ids
+    }
+
+    private static func workItems(
+        ids: [Int],
+        target: AzureTarget,
+        auth: String,
+        iterationEnds: [String: Date]
+    ) async throws -> [TaskItem] {
+        guard let url = URL(string: "\(target.orgBase)/_apis/wit/workitemsbatch?api-version=7.1") else {
+            throw AzureDevOpsError.invalidTarget
+        }
+        let body: [String: Any] = [
+            "ids": ids,
+            "fields": [
+                "System.Id",
+                "System.Title",
+                "System.State",
+                "System.WorkItemType",
+                "System.IterationPath",
+                "System.ChangedDate",
+                "Microsoft.VSTS.Scheduling.DueDate",
+                "Microsoft.VSTS.Scheduling.TargetDate",
+            ],
+            // Required, not cosmetic: without it the whole batch fails when a
+            // single id is inaccessible or was deleted between the WIQL call
+            // and this one — a real race at a 60s cadence.
+            "errorPolicy": "omit",
+        ]
+        let data = try await send(url: url, auth: auth, body: body)
+        guard let tasks = WorkItemParser.parse(data, target: target, iterationEnds: iterationEnds) else {
+            throw AzureDevOpsError.invalidPayload
+        }
+        return tasks
+    }
+
+    /// Best-effort: any failure yields an empty calendar, so items fall back to
+    /// undated. A missing sprint calendar must never fail the tick or blank a
+    /// working task list — it is only a source of fallback dates.
+    private static func iterationCalendar(target: AzureTarget, auth: String) async -> [String: Date] {
+        guard let url = URL(
+            string: "\(target.projectBase)/_apis/work/teamsettings/iterations?api-version=7.1"
+        ) else { return [:] }
+        guard let data = try? await send(url: url, auth: auth, body: nil) else { return [:] }
+        return IterationMapParser.parse(data)
+    }
+
+    /// `body == nil` sends a GET; otherwise a JSON POST.
+    private static func send(url: URL, auth: String, body: [String: Any]?) async throws -> Data {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        request.setValue(auth, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let body {
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            guard let encoded = try? JSONSerialization.data(withJSONObject: body) else {
+                throw AzureDevOpsError.invalidPayload
+            }
+            request.httpBody = encoded
+        }
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw AzureDevOpsError.transport(error.localizedDescription)
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw AzureDevOpsError.transport("Not an HTTP response")
+        }
+        // Anything but a clean 200 is an error, including the 203 sign-in page
+        // Azure DevOps serves for a bad PAT — the classifier reads the code.
+        guard http.statusCode == 200 else {
+            throw AzureDevOpsError.serverError(http.statusCode)
+        }
+        return data
+    }
+}
