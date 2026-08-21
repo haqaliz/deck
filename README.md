@@ -22,8 +22,9 @@ WidgetKit widgets with native colors, corners and materials.
 | **ClipBox** | clipboard history: recent copies with previews, item kinds, relative times |
 | **HomeBox** | weather for your location (conditions + 3-day forecast) and a world clock; a failed fetch says why |
 | **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
+| **TaskBox** | Azure DevOps work items assigned to you: overdue / due-soon counts and the next few items with due-day dots; a failed fetch says why |
 
-All nine come in **small / medium / large** sizes.
+All ten come in **small / medium / large** sizes.
 
 ## Install
 
@@ -43,7 +44,7 @@ pluginkit -m -i com.deck.app.widgets   # verify the extension registered
 ```
 
 Then: right-click desktop → **Edit Widgets…** → search "Deck" → add
-LiveBox/OpenBox/NetBox/BatBox/GitBox/DevBox/ClipBox/HomeBox/ShipBox.
+LiveBox/OpenBox/NetBox/BatBox/GitBox/DevBox/ClipBox/HomeBox/ShipBox/TaskBox.
 
 ## Settings
 
@@ -78,7 +79,15 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 - **ShipBox** needs a repo (`owner/repo`) and a GitHub token in settings —
   without a token nothing is fetched (the token goes only to api.github.com
   over TLS). Runs refresh via the agent every 60s.
-- **When a fetch fails**, ShipBox, HomeBox and OpenBox (remote mode) say why in
+- **TaskBox** needs an Azure DevOps organization, a project and a personal
+  access token in settings — without all three nothing is fetched (the token
+  goes only to dev.azure.com over TLS, and a read-only *Work Items (Read)*
+  scope is enough). It shows work items assigned to whoever owns the PAT, not
+  whoever is signed in to the browser. Azure DevOps has no universal due-date
+  field, so the due day is resolved from `DueDate`, then `TargetDate`, then the
+  end of the item's sprint; items with none of those show `—` and the header
+  counts fall back to *"N open"*. Refreshes via the agent every 60s.
+- **When a fetch fails**, ShipBox, TaskBox, HomeBox and OpenBox (remote mode) say why in
   one short line instead of a generic "no data": *"Add a repo + token in
   settings"* (nothing configured), *"Check repo + token"* / *"Check the
   location"* (credentials or target wrong — 401/403/404), *"Can't reach
@@ -96,7 +105,8 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 
 - **Self-sampled widgets** (LiveBox/NetBox/BatBox) read mach, getifaddrs and
   IOKit directly inside the widget — no other process needed.
-- **Agent-pumped data** (OpenBox, process list, GitBox, ClipBox, weather, ShipBox): the widget
+- **Agent-pumped data** (OpenBox, process list, GitBox, ClipBox, weather, ShipBox,
+  TaskBox): the widget
   sandbox forbids subprocesses and reading other apps' data, so a silent CLI
   (`DeckAgent`, embedded in the app) runs every 60s via a LaunchAgent and
   writes snapshots the widgets render. The top-process snapshot is sampled

@@ -111,15 +111,26 @@ the next slate. Ordered by priority, not by cost.
       Info.plist** (project.yml), so an EventKit TCC prompt needs an
       embedded `__TEXT,__info_plist` section (a project.yml change) or the
       read must move to DeckApp / the widget extension.
-- [ ] **TaskBox** — tasks: due/overdue counts + the next few items.
-      First provider is **Azure DevOps** (work items assigned to me, via WIQL
-      `[System.AssignedTo] = @Me` + the workitems batch endpoint, PAT over
-      Basic auth — the same static-token shape as ShipBox, no OAuth).
-      Dev machine already targets org `Manifold`, project `Manifold`.
-      Design the snapshot around a **provider-agnostic `TaskItem`** (id,
-      title, state, url, provider) so GitHub Issues / Jira / Linear /
-      Reminders drop in later without reshaping the store. Only the Azure
-      DevOps provider ships in slice 1.
+- [x] **TaskBox** — tasks: due/overdue counts + the next few items.
+      Shipped 2026-08-22 (`docs/planning/taskbox/`). Azure DevOps only, via
+      WIQL `[System.AssignedTo] = @Me` → `workitemsbatch` (with
+      `errorPolicy: omit`) → team iterations, PAT over Basic auth. The
+      snapshot is provider-agnostic (`TaskItem` with a String `id` and a
+      `provider`), so a second provider extends the enum rather than
+      migrating the store.
+      **Open follow-ups:**
+      - ⚠️ **Never verified against a live org.** The API was unreachable from
+        the dev machine while building (`az boards` unauthorized, no usable
+        PAT), so every payload shape comes from the documented contract, not a
+        real response. The parsers are defensive and fixture-tested, and the
+        settings tab names the failure, but the first real PAT is still the
+        first live test. Confirm which scheduling fields the org populates.
+      - Due dates resolve `DueDate → TargetDate → sprint end → undated`. If an
+        org populates none of them TaskBox degrades to an assigned-work list
+        (`"N open"`, `—` rows) — by design, but it means the headline
+        due/overdue feature may render nothing until this is checked.
+      - Deferred: deep links (`widgetURL`), multi-project/multi-org, custom
+        WIQL, a second provider, Keychain storage for the PAT.
 - [ ] **PRBox** — GitHub review queue: your open PRs + PRs awaiting review.
       Cheapest of the slate: reuses ShipBox's token, `HostGitHubLoader`, and
       the `FetchClassifier` error path against the pulls/search endpoints.
@@ -156,6 +167,19 @@ Deferred behind the new widgets by decision on 2026-08-22.
       resync each tick (`docs/planning/openbox-remote/prd.md:105`).
 - [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic
       (`docs/planning/devbox/prd.md:106`).
+
+### Fixed in passing
+
+- **Top-level `DeckSettings` decode was not tolerant** (fixed 2026-08-22 with
+  TaskBox). `settings-schema-migration` made the nine per-widget structs decode
+  tolerantly but deliberately left `DeckSettings` itself on the synthesized
+  decoder, which throws `keyNotFound` for any absent section. Because
+  `DeckSettings.load()` falls back to `DeckSettings()` on *any* decode error,
+  adding a widget section silently reset **every** setting — colors, tokens,
+  repo paths — for anyone whose `settings.json` predated it, then overwrote the
+  file on the next save. Every widget added since ShipBox would have done this.
+  The container now decodes each section with `decodeIfPresent`; three
+  regression tests pin it.
 
 ## Feature backlog (existing widgets)
 
