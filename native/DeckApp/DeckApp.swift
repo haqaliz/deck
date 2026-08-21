@@ -44,6 +44,7 @@ struct ContentView: View {
             case .clipbox: ClipBoxSettingsView(settings: $settings.clipbox)
             case .homebox: HomeBoxSettingsView(settings: $settings.homebox)
             case .shipbox: ShipBoxSettingsView(settings: $settings.shipbox)
+            case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -56,6 +57,7 @@ struct ContentView: View {
             refreshClipBox()
             Task { await refreshHomeBox() }
             Task { await refreshShipBox() }
+            Task { await refreshTaskBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshGitBox()
@@ -63,6 +65,7 @@ struct ContentView: View {
                 refreshClipBox()
                 Task { await refreshHomeBox() }
                 Task { await refreshShipBox() }
+                Task { await refreshTaskBox() }
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -187,6 +190,34 @@ struct ContentView: View {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    /// Fetch Azure DevOps work items (host is unsandboxed) for the TaskBox
+    /// widget. Requires the user's own org, project and PAT — never a default
+    /// token. Always written on success so writtenAt drives the staleness
+    /// windows; a failure leaves the last-good snapshot untouched.
+    private func refreshTaskBox() async {
+        let taskbox = settings.taskbox
+        let organization = taskbox.organization.trimmingCharacters(in: .whitespacesAndNewlines)
+        let project = taskbox.project.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !organization.isEmpty, !project.isEmpty, !taskbox.token.isEmpty else {
+            FetchStatusStore.record(.notConfigured, for: .taskbox)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+        let snapshot: TaskBoxSnapshot
+        do {
+            snapshot = try await HostAzureDevOpsLoader.fetch(
+                organization: organization, project: project, token: taskbox.token
+            )
+        } catch {
+            FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .taskbox)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+        TaskBoxSnapshotStore.save(snapshot)
+        FetchStatusStore.record(.ok, for: .taskbox)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     /// Install/remove the background refresh agent (launch at login) with the
     /// configured refresh interval.
     private func applyAgent() {
@@ -296,7 +327,7 @@ struct ContentView: View {
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox, homebox, shipbox
+    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox, homebox, shipbox, taskbox
 
     var id: String { rawValue }
 
@@ -312,6 +343,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .clipbox: "ClipBox"
         case .homebox: "HomeBox"
         case .shipbox: "ShipBox"
+        case .taskbox: "TaskBox"
         }
     }
 
@@ -327,6 +359,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .clipbox: "doc.on.clipboard"
         case .homebox: "cloud.sun"
         case .shipbox: "shippingbox"
+        case .taskbox: "checklist"
         }
     }
 }
@@ -746,6 +779,59 @@ private struct ShipBoxSettingsView: View {
                 ColorPicker("Running", selection: $settings.runningColor.color)
                 ColorPicker("Success", selection: $settings.successColor.color)
                 ColorPicker("Failure", selection: $settings.failureColor.color)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+}
+
+private struct TaskBoxSettingsView: View {
+    @Binding var settings: TaskBoxSettings
+
+    var body: some View {
+        Form {
+            Section("Azure DevOps") {
+                TextField("Organization", text: $settings.organization)
+                TextField("Project", text: $settings.project)
+                SecureField("Personal access token", text: $settings.token)
+                    .textContentType(.password)
+                Text("Empty organization, project or token = the widget shows no data. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("Shows open work items assigned to whoever owns the PAT \u{2014} not whoever is signed in to the browser or the az CLI \u{2014} in the project above only.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                FetchStatusCaption(
+                    source: .taskbox,
+                    clearOn: "\(settings.organization)\u{0}\(settings.project)\u{0}\(settings.token)"
+                )
+            }
+            Section("Tasks") {
+                Toggle("Show lane legend", isOn: $settings.showLegend)
+                Toggle("Show task list", isOn: $settings.showList)
+                Stepper("Task count: \(settings.taskCount)", value: $settings.taskCount, in: 2...15)
+                    .disabled(!settings.showList)
+            }
+            Section("Lanes") {
+                TextField("To do states", text: $settings.stateMapping.todo)
+                TextField("In progress states", text: $settings.stateMapping.inProgress)
+                TextField("Testing states", text: $settings.stateMapping.testing)
+                TextField("Done states", text: $settings.stateMapping.done)
+                Text("Comma-separated, case-insensitive. Azure DevOps runs two vocabularies on one board \u{2014} tasks move To Do \u{2192} In Progress, while backlog items move New \u{2192} Approved \u{2192} Committed \u{2014} so these lists collapse both into the lanes shown on the widget. Only Done rows get a checkmark.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("A state in none of these lists is counted under OTHER, which only appears when something lands there. Nothing is ever dropped, so the legend always adds up to the tasks it describes.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Reset to defaults") { settings.stateMapping = TaskStateMapping() }
+            }
+            Section("Lane colors") {
+                ColorPicker("To do", selection: $settings.todoColor.color)
+                ColorPicker("In progress", selection: $settings.inProgressColor.color)
+                ColorPicker("Testing", selection: $settings.testingColor.color)
+                ColorPicker("Done", selection: $settings.doneColor.color)
+                ColorPicker("Other", selection: $settings.otherColor.color)
             }
         }
         .formStyle(.grouped)

@@ -340,3 +340,56 @@ final class FetchStatusHintTests: XCTestCase {
         )
     }
 }
+
+final class AzureDevOpsClassifierTests: XCTestCase {
+    func testInvalidTargetIsAuthOrTarget() {
+        XCTAssertEqual(FetchClassifier.outcome(for: AzureDevOpsError.invalidTarget), .authOrTarget)
+    }
+
+    func testServerErrorUsesStatusCode() {
+        XCTAssertEqual(FetchClassifier.outcome(for: AzureDevOpsError.serverError(401)), .authOrTarget)
+        XCTAssertEqual(FetchClassifier.outcome(for: AzureDevOpsError.serverError(404)), .authOrTarget)
+        XCTAssertEqual(FetchClassifier.outcome(for: AzureDevOpsError.serverError(503)), .unreachable)
+        XCTAssertEqual(FetchClassifier.outcome(for: AzureDevOpsError.serverError(429)), .unreachable)
+    }
+
+    /// Azure DevOps answers a bad or expired PAT with 203 and an HTML sign-in
+    /// page rather than 401. The shared status-code table calls that
+    /// badResponse ("Unexpected response"), which would send the user looking
+    /// for a server fault instead of at the token field.
+    func testNonOKSuccessCodesAreAuthOrTarget() {
+        XCTAssertEqual(FetchClassifier.outcome(for: AzureDevOpsError.serverError(203)), .authOrTarget)
+        XCTAssertEqual(FetchClassifier.outcome(for: AzureDevOpsError.serverError(302)), .authOrTarget)
+    }
+
+    /// The 203 special case belongs to Azure DevOps, not to every source.
+    func testGitHubIsUnaffectedByThe203Rule() {
+        XCTAssertEqual(FetchClassifier.outcome(for: HostGitHubLoader.GitHubError.serverError(203)), .badResponse)
+    }
+
+    func testTransportIsUnreachable() {
+        XCTAssertEqual(FetchClassifier.outcome(for: AzureDevOpsError.transport("offline")), .unreachable)
+    }
+
+    func testInvalidPayloadIsBadResponse() {
+        XCTAssertEqual(FetchClassifier.outcome(for: AzureDevOpsError.invalidPayload), .badResponse)
+    }
+}
+
+final class TaskBoxCopyTests: XCTestCase {
+    func testTaskBoxCopy() {
+        XCTAssertEqual(FetchStatusCopy.line(source: .taskbox, outcome: .notConfigured), "Add org, project + PAT in settings")
+        XCTAssertEqual(FetchStatusCopy.line(source: .taskbox, outcome: .authOrTarget), "Check org, project + PAT")
+        XCTAssertEqual(FetchStatusCopy.line(source: .taskbox, outcome: .unreachable), "Can't reach Azure DevOps")
+        XCTAssertEqual(FetchStatusCopy.line(source: .taskbox, outcome: .badResponse), "Unexpected Azure DevOps response")
+    }
+
+    /// The settings window has room for a full sentence and the offending
+    /// fields on screen; it must speak exactly when the widget chip speaks.
+    func testTaskBoxHintSpeaksWheneverTheLineDoes() {
+        for outcome: FetchOutcome in [.notConfigured, .authOrTarget, .unreachable, .badResponse] {
+            XCTAssertNotNil(FetchStatusCopy.hint(source: .taskbox, outcome: outcome), "\(outcome.rawValue)")
+        }
+        XCTAssertNil(FetchStatusCopy.hint(source: .taskbox, outcome: .ok))
+    }
+}

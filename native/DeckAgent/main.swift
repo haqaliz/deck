@@ -153,6 +153,34 @@ Task {
         agentLog.info("skipped shipbox snapshot (not configured)")
     }
 
+    // TaskBox: requires the user's own org + project + PAT — never a default token.
+    let taskboxOrg = settings.taskbox.organization
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    let taskboxProject = settings.taskbox.project
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    if !taskboxOrg.isEmpty && !taskboxProject.isEmpty && !settings.taskbox.token.isEmpty {
+        do {
+            // Always written: writtenAt drives the staleness windows, so a
+            // successful fetch must refresh it even when the task list is
+            // unchanged — otherwise a quiet day reads as a stale widget.
+            let taskbox = try await HostAzureDevOpsLoader.fetch(
+                organization: taskboxOrg,
+                project: taskboxProject,
+                token: settings.taskbox.token
+            )
+            TaskBoxSnapshotStore.save(taskbox)
+            FetchStatusStore.record(.ok, for: .taskbox)
+            agentLog.info("written taskbox snapshot")
+        } catch {
+            let outcome = FetchClassifier.outcome(for: error)
+            FetchStatusStore.record(outcome, for: .taskbox)
+            agentLog.info("failed taskbox snapshot (\(outcome.rawValue, privacy: .public))")
+        }
+    } else {
+        FetchStatusStore.record(.notConfigured, for: .taskbox)
+        agentLog.info("skipped taskbox snapshot (not configured)")
+    }
+
     let elapsed = Date().timeIntervalSince(start)
     agentLog.info("full refresh done in \(elapsed, format: .fixed(precision: 2))s")
     semaphore.signal()

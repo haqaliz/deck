@@ -16,7 +16,7 @@ import Foundation
 //   4. a missing file means exactly the pre-status behaviour.
 
 enum FetchSource: String, Codable, CaseIterable {
-    case shipbox, weather, opencodeRemote
+    case shipbox, weather, opencodeRemote, taskbox
 }
 
 enum FetchOutcome: String, Codable {
@@ -92,6 +92,20 @@ enum FetchClassifier {
             case .transport: return .unreachable
             case .invalidPayload: return .badResponse
             }
+        case let error as AzureDevOpsError:
+            switch error {
+            case .invalidTarget: return .authOrTarget
+            case .serverError(let code):
+                // Azure DevOps answers a bad or expired PAT with 203 and an
+                // HTML sign-in page rather than 401, and redirects to the same
+                // page. The shared table would call those "unexpected
+                // response" and send the user hunting for a server fault
+                // instead of looking at the token field.
+                if (201...399).contains(code) { return .authOrTarget }
+                return outcome(forStatusCode: code)
+            case .transport: return .unreachable
+            case .invalidPayload: return .badResponse
+            }
         case let error as RemoteOpenCodeLoader.RemoteError:
             switch error {
             case .invalidURL, .unauthorized: return .authOrTarget
@@ -120,24 +134,28 @@ enum FetchStatusCopy {
             // An empty location is valid — wttr.in geolocates.
             case .weather: return nil
             case .opencodeRemote: return "Paste your opencode token"
+            case .taskbox: return "Add org, project + PAT in settings"
             }
         case .authOrTarget:
             switch source {
             case .shipbox: return "Check repo + token"
             case .weather: return "Check the location"
             case .opencodeRemote: return "Check server URL + token"
+            case .taskbox: return "Check org, project + PAT"
             }
         case .unreachable:
             switch source {
             case .shipbox: return "Can't reach GitHub"
             case .weather: return "Can't reach wttr.in"
             case .opencodeRemote: return "Can't reach the opencode server"
+            case .taskbox: return "Can't reach Azure DevOps"
             }
         case .badResponse:
             switch source {
             case .shipbox: return "Unexpected GitHub response"
             case .weather: return "Unexpected wttr.in response"
             case .opencodeRemote: return "Unexpected server response"
+            case .taskbox: return "Unexpected Azure DevOps response"
             }
         }
     }
@@ -154,6 +172,7 @@ enum FetchStatusCopy {
             case .shipbox: return "Nothing is fetched until both a repo and a token are set."
             case .weather: return nil
             case .opencodeRemote: return "Remote mode fetches nothing until you paste your own token."
+            case .taskbox: return "Nothing is fetched until an organization, a project and a token are all set."
             }
         case .authOrTarget:
             switch source {
@@ -163,18 +182,22 @@ enum FetchStatusCopy {
                 return "wttr.in didn't recognise that location — try a city name, or leave it empty to geolocate."
             case .opencodeRemote:
                 return "The opencode server rejected the request: check the server URL and your token."
+            case .taskbox:
+                return "Azure DevOps rejected the request: check the organization and project names, and that the PAT is valid and not expired."
             }
         case .unreachable:
             switch source {
             case .shipbox: return "Couldn't reach api.github.com — offline, rate-limited, or GitHub is down."
             case .weather: return "Couldn't reach wttr.in — offline, or the service is down."
             case .opencodeRemote: return "Couldn't reach the opencode server — check it is running and reachable."
+            case .taskbox: return "Couldn't reach dev.azure.com — offline, rate-limited, or Azure DevOps is down."
             }
         case .badResponse:
             switch source {
             case .shipbox: return "Reached GitHub, but the response couldn't be read. Retrying every minute."
             case .weather: return "Reached wttr.in, but the response couldn't be read. Retrying every minute."
             case .opencodeRemote: return "Reached the server, but the response couldn't be read. Retrying every minute."
+            case .taskbox: return "Reached Azure DevOps, but the response couldn't be read. Retrying every minute."
             }
         }
     }

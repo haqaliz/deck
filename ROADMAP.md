@@ -111,15 +111,35 @@ the next slate. Ordered by priority, not by cost.
       Info.plist** (project.yml), so an EventKit TCC prompt needs an
       embedded `__TEXT,__info_plist` section (a project.yml change) or the
       read must move to DeckApp / the widget extension.
-- [ ] **TaskBox** — tasks: due/overdue counts + the next few items.
-      First provider is **Azure DevOps** (work items assigned to me, via WIQL
-      `[System.AssignedTo] = @Me` + the workitems batch endpoint, PAT over
-      Basic auth — the same static-token shape as ShipBox, no OAuth).
-      Dev machine already targets org `Manifold`, project `Manifold`.
-      Design the snapshot around a **provider-agnostic `TaskItem`** (id,
-      title, state, url, provider) so GitHub Issues / Jira / Linear /
-      Reminders drop in later without reshaping the store. Only the Azure
-      DevOps provider ships in slice 1.
+- [x] **TaskBox** — tasks: due/overdue counts + the next few items.
+      Shipped 2026-08-22 (`docs/planning/taskbox/`). Azure DevOps only, via
+      WIQL `[System.AssignedTo] = @Me` → `workitemsbatch` (with
+      `errorPolicy: omit`) → team iterations, PAT over Basic auth. The
+      snapshot is provider-agnostic (`TaskItem` with a String `id` and a
+      `provider`), so a second provider extends the enum rather than
+      migrating the store.
+      **Verified against the live org on 2026-08-22** (org `ForesightAnalytics`,
+      project `ForesightManifold`) — the earlier "never tested against a real
+      API" caveat is closed, and testing it changed the design:
+      - **Due dates were removed entirely.** `DueDate`/`TargetDate` are sparse,
+        and the sprint-end fallback gave every item in a sprint the same date.
+        The face now shows board lanes instead.
+      - **Cross-project leak fixed.** A project-scoped WIQL *URL* does not
+        filter by project — the clause `[System.TeamProject] = @project` is
+        required. Without it the dev org returned 67 items across three
+        projects instead of the 25 in the configured one. Worth remembering
+        for any future WIQL.
+      - **`System.BoardColumn` is not usable** as a lane source: null on 24 of
+        50 sampled items, and reads `Doing` where the board header says
+        `In Progress`. States are stored raw and mapped at render time, with
+        the mapping editable in settings.
+      - **The WIQL exclusion list is narrower than it looks.** It drops
+        `Closed`, `Removed` and `Done` but not `Resolved` or `Completed`, so a
+        team using those words really does receive finished items. TaskBox
+        gives them a `done` lane (checked before the open lanes) and renders
+        them struck through rather than letting them read as outstanding.
+      **Open follow-ups:** deep links (`widgetURL`), multi-project/multi-org,
+      custom WIQL, a second provider, Keychain storage for the PAT.
 - [ ] **PRBox** — GitHub review queue: your open PRs + PRs awaiting review.
       Cheapest of the slate: reuses ShipBox's token, `HostGitHubLoader`, and
       the `FetchClassifier` error path against the pulls/search endpoints.
@@ -156,6 +176,19 @@ Deferred behind the new widgets by decision on 2026-08-22.
       resync each tick (`docs/planning/openbox-remote/prd.md:105`).
 - [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic
       (`docs/planning/devbox/prd.md:106`).
+
+### Fixed in passing
+
+- **Top-level `DeckSettings` decode was not tolerant** (fixed 2026-08-22 with
+  TaskBox). `settings-schema-migration` made the nine per-widget structs decode
+  tolerantly but deliberately left `DeckSettings` itself on the synthesized
+  decoder, which throws `keyNotFound` for any absent section. Because
+  `DeckSettings.load()` falls back to `DeckSettings()` on *any* decode error,
+  adding a widget section silently reset **every** setting — colors, tokens,
+  repo paths — for anyone whose `settings.json` predated it, then overwrote the
+  file on the next save. Every widget added since ShipBox would have done this.
+  The container now decodes each section with `decodeIfPresent`; three
+  regression tests pin it.
 
 ## Feature backlog (existing widgets)
 
