@@ -48,6 +48,40 @@ enum NetworkMetricsLoader {
         return result
     }
 
+    /// Names of interfaces that are both up-and-running and carry an IP.
+    ///
+    /// Deliberately computed fresh each render rather than stored on
+    /// `InterfaceSample`: that struct is `Codable` and persisted in
+    /// UserDefaults, so adding a field would break decoding of samples
+    /// already on disk. Nothing here needs to survive a restart.
+    static func liveInterfaces() -> Set<String> {
+        var head: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&head) == 0, let first = head else { return [] }
+        defer { freeifaddrs(head) }
+
+        var running: Set<String> = []
+        var addressed: Set<String> = []
+        var ptr: UnsafeMutablePointer<ifaddrs>? = first
+        while let current = ptr {
+            let ifa = current.pointee
+            if let namePtr = ifa.ifa_name {
+                let name = String(cString: namePtr)
+                if !excludedPrefixes.contains(where: { name.hasPrefix($0) }) {
+                    let flags = Int32(ifa.ifa_flags)
+                    if flags & IFF_UP != 0 && flags & IFF_RUNNING != 0 {
+                        running.insert(name)
+                    }
+                    let family = ifa.ifa_addr?.pointee.sa_family
+                    if family == UInt8(AF_INET) || family == UInt8(AF_INET6) {
+                        addressed.insert(name)
+                    }
+                }
+            }
+            ptr = ifa.ifa_next
+        }
+        return running.intersection(addressed)
+    }
+
     static func rates(previous: InterfaceSample, current: InterfaceSample, interval: TimeInterval) -> InterfaceRates {
         let down = rate(previousBytes: previous.rxBytes, currentBytes: current.rxBytes, interval: interval)
         let up = rate(previousBytes: previous.txBytes, currentBytes: current.txBytes, interval: interval)
@@ -99,5 +133,28 @@ enum NetBoxFormatters {
         if n >= 1_000_000 { return String(format: "%.1f MB/s", n / 1_000_000) }
         if n >= 1_000 { return String(format: "%.1f KB/s", n / 1_000) }
         return String(format: "%.0f B/s", n)
+    }
+}
+
+
+/// Which interface is "the" active one, and in what order the list renders.
+///
+/// Sorting on traffic alone is an all-ties sort whenever the machine is idle,
+/// so the winner collapsed to whatever `getifaddrs` returned first — a dead
+/// `en4` bridge outranking the Wi-Fi actually carrying the connection. A live
+/// link (up, running, and addressed) always outranks a dead one; traffic only
+/// breaks ties within each group.
+enum NetBoxActiveInterface {
+    static func sorted(rates: [InterfaceRates], live: Set<String>) -> [InterfaceRates] {
+        rates.sorted { lhs, rhs in
+            let lhsLive = live.contains(lhs.name)
+            let rhsLive = live.contains(rhs.name)
+            if lhsLive != rhsLive { return lhsLive }
+            return max(lhs.up, lhs.down) > max(rhs.up, rhs.down)
+        }
+    }
+
+    static func select(rates: [InterfaceRates], live: Set<String>) -> InterfaceRates? {
+        sorted(rates: rates, live: live).first
     }
 }

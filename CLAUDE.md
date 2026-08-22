@@ -119,6 +119,22 @@ and remove `~/Library/LaunchAgents/com.deck.agent.plist`.
   Check with
   `log show --last 2m --info --debug --predicate 'process == "chronod"' | grep -c <Name>BoxWidget`;
   zero means the descriptors are stale.
+- **Never `rm -rf` the widget container.** It deletes the directory tree but
+  cannot delete `.com.apple.containermanagerd.metadata.plist` (SIP-protected,
+  fails with "Operation not permitted"). Because that plist survives,
+  containermanagerd still thinks the container is provisioned and never
+  rebuilds the skeleton, so `Data/SystemData/com.apple.chrono/` — where chronod
+  writes every rendered timeline — no longer exists. **Every widget then
+  renders as an empty rounded rect at every size, gallery previews included**,
+  while codesign, `pluginkit`, LaunchServices and crash reports all look
+  perfectly healthy. chronod reports it as `CHSErrorDomain (1300)
+  "extensionNotFound"`, which is a red herring; the real line is one above:
+  `could not create file handle because
+  ChronoKit.WidgetCacheManager.CacheManagementError.unsupportedEntryKey`.
+  Repair with `scripts/container-repair.sh`. When uninstalling, remove the
+  widgets from the desktop *first* and leave the container alone unless you
+  actually want to reset settings — note it holds the OpenBox/ShipBox/TaskBox
+  tokens, so back up `settings.json` before wiping it.
 - **`build.noindex` does not prevent LaunchServices pollution.** The `.noindex`
   suffix only hides the directory from Spotlight; xcodebuild still runs an
   explicit `RegisterWithLaunchServices` phase that registers the dev copy. Run

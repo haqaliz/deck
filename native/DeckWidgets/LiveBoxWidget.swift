@@ -509,10 +509,12 @@ struct LiveBoxFace: View {
         }
     }
 
+    /// The dot follows the tier alongside the value: a red 96% next to a green
+    /// dot reads as two different states of the same metric.
     private func metricRow(metric: LiveBoxMetric, title: String, value: Double, color: Color) -> some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(color)
+                .fill(tierColor(metric: metric, value: value) ?? color)
                 .frame(width: 7, height: 7)
             Text(title)
                 .foregroundStyle(.secondary)

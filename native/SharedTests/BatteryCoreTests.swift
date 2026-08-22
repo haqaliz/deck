@@ -76,12 +76,30 @@ final class BatteryMathTests: XCTestCase {
         XCTAssertNil(BatteryMath.percent(current: 100, maxCapacity: -1))
     }
 
-    func testTimeMinutes() {
-        XCTAssertNil(BatteryMath.timeMinutes(seconds: 0))
-        XCTAssertNil(BatteryMath.timeMinutes(seconds: -5))
-        XCTAssertEqual(BatteryMath.timeMinutes(seconds: 60), 1)
-        XCTAssertEqual(BatteryMath.timeMinutes(seconds: 90), 2)
-        XCTAssertEqual(BatteryMath.timeMinutes(seconds: 30), 1)
-        XCTAssertEqual(BatteryMath.timeMinutes(seconds: 1), 0)
+    /// IOPowerSources reports kIOPSTimeToEmpty / kIOPSTimeToFullCharge in
+    /// MINUTES, not seconds. Dividing by 60 turned a real "1:02 remaining"
+    /// into "1m" — a 60x understatement. Verified against the live IOPS
+    /// dictionary ("Time to Full Charge = 62") alongside `pmset -g batt`
+    /// reporting 1:02.
+    func testReportedMinutesPassThroughUnscaled() {
+        XCTAssertEqual(BatteryMath.timeMinutes(reported: 62), 62)
+        XCTAssertEqual(BatteryMath.timeMinutes(reported: 1), 1)
+        XCTAssertEqual(BatteryMath.timeMinutes(reported: 214), 214)
+    }
+
+    /// IOKit uses 0 for "not applicable" and -1 for "still calculating";
+    /// both mean "no estimate", which the face renders as an em dash.
+    func testNonPositiveReportedValuesAreNoEstimate() {
+        XCTAssertNil(BatteryMath.timeMinutes(reported: 0))
+        XCTAssertNil(BatteryMath.timeMinutes(reported: -1))
+        XCTAssertNil(BatteryMath.timeMinutes(reported: -5))
+    }
+
+    /// The pairing that made the bug visible: 62 minutes must format as
+    /// "1h 2m", never "1m".
+    func testReportedMinutesFormatAsHoursAndMinutes() {
+        XCTAssertEqual(BatteryFormatters.formatTime(minutes: BatteryMath.timeMinutes(reported: 62)), "1h 2m")
+        XCTAssertEqual(BatteryFormatters.formatTime(minutes: BatteryMath.timeMinutes(reported: 214)), "3h 34m")
+        XCTAssertEqual(BatteryFormatters.formatTime(minutes: BatteryMath.timeMinutes(reported: 0)), "—")
     }
 }

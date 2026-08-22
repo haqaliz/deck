@@ -12,29 +12,33 @@ struct NetSample: Codable {
 enum NetBoxHistoryStore {
     static let capacity = 60
 
-    static var fileURL: URL {
+    /// Per widget family. Every NetBox instance shares one process, so a
+    /// single history file had small/medium/large all appending to the same
+    /// series — each size double-feeding the others' charts.
+    static func fileURL(family: WidgetFamily) -> URL {
         let base = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first ?? FileManager.default.homeDirectoryForCurrentUser
-        return base.appendingPathComponent("NetBoxWidget/history.json")
+        return base.appendingPathComponent("NetBoxWidget/history-\(family).json")
     }
 
-    static func load() -> [NetSample] {
+    static func load(family: WidgetFamily) -> [NetSample] {
         guard
-            let data = try? Data(contentsOf: fileURL),
+            let data = try? Data(contentsOf: fileURL(family: family)),
             let samples = try? JSONDecoder().decode([NetSample].self, from: data)
         else { return [] }
         return samples
     }
 
-    static func save(_ samples: [NetSample]) {
+    static func save(_ samples: [NetSample], family: WidgetFamily) {
+        let url = fileURL(family: family)
         guard let data = try? JSONEncoder().encode(samples) else { return }
         try? FileManager.default.createDirectory(
-            at: fileURL.deletingLastPathComponent(),
+            at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        try? data.write(to: fileURL)
+        try? data.write(to: url)
     }
 }
 
@@ -60,7 +64,14 @@ struct NetBoxProvider: TimelineProvider {
         let interfaces: [InterfaceSample]
     }
 
-    private static let storageKey = "NetBox.previousSample"
+    /// Per widget family. With one shared key, two NetBox widgets stomped on
+    /// each other's previous sample: whichever regenerated second saw a ~0s
+    /// interval and a ~0 byte delta, so every rate computed to 0 — which then
+    /// made the "most active" sort an all-ties sort and ACTIVE showed an
+    /// arbitrary dead interface.
+    private static func storageKey(family: WidgetFamily) -> String {
+        "NetBox.previousSample.\(family)"
+    }
 
     func placeholder(in context: Context) -> NetBoxEntry {
         var history: [NetSample] = []
@@ -86,21 +97,21 @@ struct NetBoxProvider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (NetBoxEntry) -> Void) {
-        completion(makeEntry())
+        completion(makeEntry(family: context.family))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<NetBoxEntry>) -> Void) {
-        let entry = makeEntry()
+        let entry = makeEntry(family: context.family)
         let policy = TimelineReloadPolicy.after(Date().addingTimeInterval(60))
         completion(Timeline(entries: [entry], policy: policy))
     }
 
-    private func makeEntry() -> NetBoxEntry {
+    private func makeEntry(family: WidgetFamily) -> NetBoxEntry {
         let settings = DeckSettings.load().netbox
         let current = NetworkMetricsLoader.sample()
         let now = Date()
 
-        var stored = UserDefaults.standard.data(forKey: Self.storageKey)
+        var stored = UserDefaults.standard.data(forKey: Self.storageKey(family: family))
             .flatMap { try? JSONDecoder().decode(StoredSample.self, from: $0) }
 
         if let sample = stored, sample.date.timeIntervalSince(now) > 300 {
@@ -124,21 +135,21 @@ struct NetBoxProvider: TimelineProvider {
         if let data = try? JSONEncoder().encode(
             StoredSample(date: now, interfaces: current)
         ) {
-            UserDefaults.standard.set(data, forKey: Self.storageKey)
+            UserDefaults.standard.set(data, forKey: Self.storageKey(family: family))
         }
 
         let pinned = NetBoxPinnedInterface.select(pinned: settings.pinnedInterface, interfaces: rates)
         let totalUp = pinned.reduce(0) { $0 + $1.up }
         let totalDown = pinned.reduce(0) { $0 + $1.down }
 
-        var history = NetBoxHistoryStore.load()
+        var history = NetBoxHistoryStore.load(family: family)
         history.append(NetSample(up: totalUp, down: totalDown))
         if history.count > NetBoxHistoryStore.capacity {
             history.removeFirst(history.count - NetBoxHistoryStore.capacity)
         }
-        NetBoxHistoryStore.save(history)
+        NetBoxHistoryStore.save(history, family: family)
 
-        let sorted = pinned.sorted { max($0.up, $0.down) > max($1.up, $1.down) }
+        let sorted = NetBoxActiveInterface.sorted(rates: pinned, live: NetworkMetricsLoader.liveInterfaces())
 
         return NetBoxEntry(
             date: now,
@@ -323,10 +334,11 @@ struct NetBoxWidgetEntryView: View {
         .frame(height: 80)
     }
 
+    /// Dot follows the tier alongside the value, matching LiveBox.
     private func rateRow(title: String, value: Double, color: Color) -> some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(color)
+                .fill(tierColor(for: value) ?? color)
                 .frame(width: 7, height: 7)
             Text(title)
                 .foregroundStyle(.secondary)
