@@ -10,41 +10,76 @@ Source: inline brief. Prior finding: `IOPSCopyPowerSourcesList` returns exactly
 one power source on this machine (the internal battery), so accessories are
 not reachable through the API BatBox already uses.
 
-## Data source
+## Data source — REVISED after the spike
 
-Measured, not assumed:
+The original draft chose `system_profiler SPBluetoothDataType -json` via
+DeckAgent. **That was wrong, and the spike disproved it.** With an MX Master 3S
+actually connected, `system_profiler` reports no battery keys at all — only
+address, firmware, minor type and vendor/product IDs. IORegistry's
+`BatteryPercent` is likewise empty. Both candidate sources return nothing for
+a real device.
 
-| Source | Cost | Covers | Sandbox |
-|---|---|---|---|
-| `system_profiler SPBluetoothDataType -json` | 50–120ms | everything, incl. AirPods cells | subprocess → agent only |
-| IORegistry `BatteryPercent` | ~10ms | Apple HID only (Magic Mouse/Keyboard/Trackpad) | works in-widget |
+`pmset -g accps` *does* show it, which pointed at the true source:
 
-**Chosen: `system_profiler` via DeckAgent.** It covers AirPods, which the
-IORegistry key does not, and at ~60ms it is cheaper than the `docker ps`
-DevBox's agent already runs — so the usual reason to prefer an in-process
-IOKit read does not apply. Rejecting the IORegistry option also avoids
-maintaining two parsers whose coverage overlaps.
+```
+-MX Master 3S (id=37819294)	75%;
+```
 
-Payload shape (verified on this machine):
-`SPBluetoothDataType[0]` holds `controller_properties`, plus
-`device_connected` and/or `device_not_connected` — each a list of
-single-key dicts mapping display name to a field dict. **`device_connected`
-is absent entirely when nothing is connected**; that must not be treated as
-an error.
+**Accessories are a first-class IOKit power-source type.** The original probe
+missed them because `IOPSCopyPowerSourcesList` returns only the internal
+battery. The by-type variant returns accessories:
 
-Refresh: 60s, with the rest of the agent's snapshots.
+```swift
+@_silgen_name("IOPSCopyPowerSourcesByType")
+func IOPSCopyPowerSourcesByType(_ type: Int32) -> Unmanaged<CFTypeRef>?
+// 0 = all, 1 = internal, 2 = UPS, 3 = internal+UPS, 4 = accessories
+```
 
-## Architecture: hybrid, deliberately
+Verified output for a connected mouse:
 
-BatBox keeps reading the Mac's own battery from IOKit **inside the widget**
-and gains accessories from an agent snapshot. Moving everything to the agent
-for uniformity was considered and rejected: BatBox currently works with the
-agent stopped, and that robustness is worth more than tidiness. If the agent
-dies, the Mac battery keeps ticking and only the accessory section goes stale.
+| Key | Value | Type |
+|---|---|---|
+| `Name` | `MX Master 3S` | String |
+| `Current Capacity` | `75` | Number |
+| `Max Capacity` | `100` | Number |
+| `Low Warn Level` | `20` | Number |
+| `Accessory Category` | `Mouse` | String |
+| `Accessory Identifier` | `A3B7312D-…` | String |
+| `Transport Type` | `Bluetooth LE` | String |
+| `Power Source State` | `Battery Power` | String |
 
-BatBox therefore becomes the first widget spanning **both** data paths.
-CLAUDE.md describes the two-path split as a property of whole widgets, so that
-description needs updating.
+### What this changes
+
+- **No subprocess, so no agent and no snapshot.** BatBox stays entirely on the
+  self-sampled path. No `AccessorySnapshot`, no store, no `DeckAgent` block, no
+  staleness plumbing — the whole of critique R3 evaporates.
+- **Detection is automatic and live**, which is the requirement: the list is
+  whatever IOKit reports at render time. Nothing is ever configured by hand.
+- **`Low Warn Level` is the device's own threshold**, so the planned
+  `lowThreshold` setting is unnecessary — use what the device reports.
+- **`Accessory Category`** ("Mouse", "Keyboard", "Headphones") gives a real
+  basis for an SF Symbol per row rather than a generic dot.
+- Values are proper `NSNumber`s, not strings, so critique A2 (string-or-number
+  parsing) does not apply to this source.
+
+### The cost: this is SPI, not public API
+
+`IOPSCopyPowerSourcesByType` is exported by IOKit — `pmset` links it — but is
+**absent from the public SDK headers**, so it must be declared with
+`@_silgen_name`. Consequences, stated plainly rather than buried:
+
+- It can change or vanish in any macOS update, with no deprecation warning.
+- It is not App Store safe. Deck ships via a personal signing identity and is
+  not distributed, so this is acceptable *here* and would not be elsewhere.
+- **Unverified:** whether the symbol resolves inside the sandboxed widget
+  extension. `IOPSCopyPowerSourcesInfo` already works there and this is the
+  same framework, so it very likely does — but "very likely" is exactly the
+  kind of claim that cost hours earlier today. First implementation step is to
+  prove it in the extension, not the host app.
+
+Mitigation: treat a nil blob or unresolved symbol as "no accessories" and hide
+the section. A macOS update that removes the symbol degrades BatBox to what it
+does today rather than breaking it.
 
 ## User-visible spec
 
@@ -76,25 +111,24 @@ section mostly noise.
 |---|---|
 | Show accessories | on |
 | Accessory rows | 4 |
-| Low threshold (%) | 20 |
 
-The low threshold drives the dot colour (amber/red) and the small face's
-`LOW` figure, reusing the existing `ThresholdTier` colour language rather
-than inventing a second one.
+No low-threshold setting: each accessory reports its own `Low Warn Level`
+(20 for the MX Master), which is more accurate than one global number and is
+what the device manufacturer intends. Colour still comes from the shared
+`ThresholdTier` language.
 
 ## States
 
 Three distinct outcomes, none of them a blank section:
 
-- Agent never ran, or the snapshot is older than its max age →
-  `Waiting for the Deck agent…`, matching the other agent-pumped widgets.
-- Agent ran, nothing connected → the section is hidden entirely, not an
-  empty header.
+- Nothing connected → the section is hidden entirely, not an empty header.
 - Bluetooth off → indistinguishable from nothing connected, and deliberately
   not special-cased.
+- SPI unavailable (symbol gone after a macOS update) → also hidden, so BatBox
+  degrades to its current behaviour rather than breaking.
 
-A disconnected device disappears on the next refresh rather than lingering
-at a stale percentage.
+There is no staleness state: the data is read live at render time, so a
+disconnected device is simply absent from the next render.
 
 ## Shell fit
 
