@@ -10,7 +10,6 @@ struct CalBoxEntry: TimelineEntry {
     let writtenAt: Date?
     /// One line explaining the last read attempt, or nil when all is well.
     let chip: String?
-    let next: CalEvent?
     let split: AgendaSplit
     let settings: CalBoxSettings
 }
@@ -20,10 +19,9 @@ struct CalBoxEntry: TimelineEntry {
 // Events arrive via the agent-pumped snapshot: reading EventKit is TCC-gated
 // and the widget sandbox can neither hold the grant nor show a prompt.
 //
-// Unlike the other pumped widgets, one entry per tick is not enough here. A
-// countdown is only true at the instant it is rendered, so the timeline carries
-// an entry at every event boundary and at midnight (TimelineBoundaries) — the
-// face then rolls over at the right second even if the agent never runs again.
+// One entry per reload is enough: the 60s policy re-runs the provider, which
+// re-splits the stored snapshot against the current time, so the lists stay
+// correct — and keep rolling over at midnight — even with the agent dead.
 
 struct CalBoxProvider: TimelineProvider {
     func placeholder(in context: Context) -> CalBoxEntry {
@@ -57,10 +55,16 @@ struct CalBoxProvider: TimelineProvider {
             return
         }
 
-        let dates = TimelineBoundaries.entries(events: snapshot.events, now: now, calendar: .current)
-        let entries = dates.map { makeEntry(from: snapshot, settings: settings, chip: chip, now: $0) }
-        // The 60s floor still applies: it is what picks up a new snapshot.
-        completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(60))))
+        // One entry, like every other Deck widget. An earlier version emitted
+        // an entry at every event boundary so a live countdown could roll over
+        // at the exact second; that archived 24 full views into a 1.4 MB
+        // timeline — 24x TaskBox's — which WidgetKit accepted and then drew as
+        // an empty widget. The countdown is gone and the lists only need to be
+        // right to the minute, which the 60s reload already gives.
+        completion(Timeline(
+            entries: [makeEntry(from: snapshot, settings: settings, chip: chip, now: now)],
+            policy: .after(now.addingTimeInterval(60))
+        ))
     }
 
     private func currentEntry() -> CalBoxEntry {
@@ -85,7 +89,6 @@ struct CalBoxProvider: TimelineProvider {
             stale: false,
             writtenAt: nil,
             chip: chip,
-            next: nil,
             split: AgendaSplit(allDay: [], today: [], tomorrow: []),
             settings: settings
         )
@@ -98,7 +101,6 @@ struct CalBoxProvider: TimelineProvider {
             stale: now.timeIntervalSince(snapshot.writtenAt) > 5 * 60,
             writtenAt: snapshot.writtenAt,
             chip: chip,
-            next: NextEvent.select(events: snapshot.events, now: now),
             split: Agenda.split(events: snapshot.events, now: now, calendar: .current),
             settings: settings
         )
@@ -115,7 +117,7 @@ struct CalBoxWidget: Widget {
             CalBoxWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("CalBox")
-        .description("Your next event, with a live countdown and today's agenda.")
+        .description("Today's and tomorrow's events from your calendars.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -147,38 +149,53 @@ struct CalBoxWidgetEntryView: View {
     }
 
     // MARK: Faces
+    //
+    // Two labelled sections and nothing else. An earlier face led with a live
+    // countdown to the next event under an unlabelled block; the block read as
+    // belonging to nothing, and the countdown restated what the row beneath it
+    // already said ("20:00  Dinner time").
 
     private var smallView: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            headerLine
-            countdownBlock
-            Spacer(minLength: 0)
-        }
+        sections(todayLimit: 3, tomorrowLimit: 2)
     }
 
     private var mediumView: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            headerLine
-            countdownBlock
-            allDayRow
-            if entry.settings.showAgenda {
-                eventList(entry.agendaAfterNext, title: "NEXT UP", limit: entry.settings.eventCount)
-            }
-            Spacer(minLength: 0)
-        }
+        sections(todayLimit: 5, tomorrowLimit: 4)
     }
 
     private var largeView: some View {
+        sections(todayLimit: CalBoxSettings.maxCount, tomorrowLimit: CalBoxSettings.maxCount)
+    }
+
+    /// Both sections, each capped by the user's setting and by what the face
+    /// can physically hold — past that the rows are clipped by the frame
+    /// rather than by the setting.
+    private func sections(todayLimit: Int, tomorrowLimit: Int) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            headerLine
-            countdownBlock
-            allDayRow
-            if entry.settings.showAgenda {
-                eventList(entry.agendaAfterNext, title: "TODAY", limit: Self.largeTodayCap)
+            if let chip = entry.chip {
+                Text(chip)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
             }
-            if entry.settings.showTomorrow && !entry.split.tomorrow.isEmpty {
-                Divider()
-                eventList(entry.split.tomorrow, title: "TOMORROW", limit: 3)
+            if entry.settings.showToday {
+                section(
+                    title: "TODAY",
+                    events: entry.split.today,
+                    allDay: entry.settings.showAllDay ? entry.split.allDay : [],
+                    limit: min(entry.settings.todayCount, todayLimit),
+                    emptyText: "Nothing left today"
+                )
+            }
+            if entry.settings.showTomorrow {
+                if entry.settings.showToday { Divider() }
+                section(
+                    title: "TOMORROW",
+                    events: entry.split.tomorrow,
+                    allDay: [],
+                    limit: min(entry.settings.tomorrowCount, tomorrowLimit),
+                    emptyText: "Nothing scheduled"
+                )
             }
             Spacer(minLength: 0)
         }
@@ -186,9 +203,6 @@ struct CalBoxWidgetEntryView: View {
 
     private var unavailableView: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("CalBox")
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
             Text("No calendar data")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
             Text(entry.chip ?? "Open Deck settings to pick your calendars.")
@@ -200,133 +214,59 @@ struct CalBoxWidgetEntryView: View {
 
     // MARK: Pieces
 
-    private var headerLine: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text("CALBOX")
+    /// One titled section: all-day rows first (they have no time to sort by),
+    /// then timed rows, then an overflow count.
+    @ViewBuilder
+    private func section(
+        title: String,
+        events: [CalEvent],
+        allDay: [CalEvent],
+        limit: Int,
+        emptyText: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .foregroundStyle(.secondary)
                 .tracking(1)
-            Spacer(minLength: 4)
-            if let chip = entry.chip {
-                Text(chip)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            if entry.stale, let writtenAt = entry.writtenAt {
-                Text("· \(Self.timeString(writtenAt))")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.tertiary)
-            }
-        }
-    }
 
-    @ViewBuilder
-    private var countdownBlock: some View {
-        if let next = entry.next {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(dotColor(for: next))
-                        .frame(width: 7, height: 7)
-                    Text(next.title)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-                // Only Text(_:style:) ticks on its own. Rendering
-                // Countdown.text here would freeze it between timeline
-                // entries -- and entries land on event boundaries, so a
-                // countdown could sit unchanged for an hour and be an hour
-                // wrong. Liveness is the whole point of this widget, so the
-                // visible text is a system timer; Countdown.text supplies the
-                // accessibility label, where exact wording matters more than
-                // the last few seconds of precision.
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Text(next.start > entry.date ? next.start : next.end, style: .timer)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .fixedSize()
-                    Text(next.start > entry.date ? "TO GO" : "LEFT")
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .foregroundStyle(.tertiary)
-                        .tracking(1)
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(next.title), \(Countdown.text(start: next.start, now: entry.date))")
-
-                Text("\(Self.timeString(next.start)) – \(Self.timeString(next.end))")
+            if allDay.isEmpty && events.isEmpty {
+                Text(emptyText)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
             }
-        } else {
-            // A clear day is a success, not a failure: no chip, no apology.
-            Text("Nothing left today")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+
+            ForEach(allDay.prefix(limit), id: \.id) { event in
+                row(event, time: "all-day")
+            }
+            // All-day rows spend the section's budget before timed ones do.
+            let remaining = max(0, limit - min(allDay.count, limit))
+            ForEach(events.prefix(remaining), id: \.id) { event in
+                row(event, time: Self.timeString(event.start))
+            }
+            let hidden = (allDay.count + events.count) - (min(allDay.count, limit) + min(events.count, remaining))
+            if hidden > 0 {
+                Text("+\(hidden) more")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    private func row(_ event: CalEvent, time: String) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(dotColor(for: event))
+                .frame(width: 7, height: 7)
+            Text(time)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .monospacedDigit()
                 .foregroundStyle(.secondary)
-        }
-    }
-
-    @ViewBuilder
-    private var allDayRow: some View {
-        if entry.settings.showAllDay && !entry.split.allDay.isEmpty && family != .systemSmall {
-            HStack(spacing: 6) {
-                ForEach(entry.split.allDay.prefix(2), id: \.id) { event in
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(dotColor(for: event))
-                            .frame(width: 6, height: 6)
-                        Text(event.title)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                }
-                if entry.split.allDay.count > 2 {
-                    Text("+\(entry.split.allDay.count - 2)")
-                        .foregroundStyle(.tertiary)
-                }
-                Spacer(minLength: 0)
-            }
-            .font(.system(size: 10, weight: .medium, design: .rounded))
-            .foregroundStyle(.secondary)
-        }
-    }
-
-    @ViewBuilder
-    private func eventList(_ events: [CalEvent], title: String, limit: Int) -> some View {
-        if !events.isEmpty {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .tracking(1)
-                ForEach(events.prefix(limit), id: \.id) { event in
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(dotColor(for: event))
-                            .frame(width: 7, height: 7)
-                        Text(Self.timeString(event.start))
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                        Text(event.title)
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        Spacer(minLength: 0)
-                    }
-                }
-                if events.count > limit {
-                    Text("+\(events.count - limit) more")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundStyle(.tertiary)
-                }
-            }
+            Text(event.title)
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 0)
         }
     }
 
@@ -346,11 +286,3 @@ struct CalBoxWidgetEntryView: View {
     }()
 }
 
-private extension CalBoxEntry {
-    /// Today's remaining events minus the one already shown in the countdown
-    /// block — repeating it as the first list row is pure noise.
-    var agendaAfterNext: [CalEvent] {
-        guard let next else { return split.today }
-        return split.today.filter { $0.id != next.id }
-    }
-}

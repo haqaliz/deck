@@ -91,8 +91,8 @@ Deferred from the tests milestone (all covered as of v1.10):
 Widgets come before improvements: M3's candidate list is exhausted, so this is
 the next slate. Ordered by priority, not by cost.
 
-- [x] **CalBox** — calendar: next event + live countdown, all-day row, today's
-      remaining agenda and tomorrow's first few. **Route: EventKit** (shipped).
+- [x] **CalBox** — calendar: two sections, TODAY and TOMORROW, each with its
+      own show/hide and row count. **Route: EventKit** (shipped).
 
       *Correction to this file's earlier caveat.* It recorded that
       `~/Library/Calendars/` was "empty on the dev machine — no account is
@@ -120,11 +120,19 @@ the next slate. Ordered by priority, not by cost.
         `isSubscribed` miss holiday calendars delivered as plain CalDAV.
       - Recurring occurrences share one `eventIdentifier` (17 events → 10 ids
         on this machine), so ids are keyed by occurrence.
-      - An in-progress event wins the countdown only if it ends within 90
-        minutes; a long overnight block yields to what is actually next.
-      - The countdown is `Text(_:style: .timer)`, not a rendered string:
-        timeline entries land on event boundaries, so a static string could sit
-        an hour out of date.
+      - **The countdown was removed after review.** The face led with a live
+        `Text(_:style: .timer)` under an unlabelled block: the block read as
+        belonging to nothing, and the countdown restated what the row beneath
+        it already said. With it went `NextEvent` (which picked what to count
+        down to, including a 90-minute in-progress grace rule) and `Countdown`
+        (which worded it) — deleted rather than left as unused tested code.
+      - **One timeline entry, like every other Deck widget.** An earlier
+        version emitted an entry at each event boundary so the countdown could
+        roll over exactly; that archived 24 full views into a 1.4 MB timeline
+        (24x TaskBox's), which WidgetKit accepted and then drew as an empty
+        widget. Watch archive size under
+        `~/Library/Containers/com.deck.app.widgets/Data/SystemData/com.apple.chrono/timelines/`
+        when a widget renders blank — it is a fast tell.
 - [x] **TaskBox** — tasks: due/overdue counts + the next few items.
       Shipped 2026-08-22 (`docs/planning/taskbox/`). Azure DevOps only, via
       WIQL `[System.AssignedTo] = @Me` → `workitemsbatch` (with

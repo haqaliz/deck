@@ -131,106 +131,6 @@ final class NormalisationTests: XCTestCase {
     }
 }
 
-// MARK: - Next event
-
-final class NextEventTests: XCTestCase {
-    func testPicksSoonestUpcoming() {
-        let later = event("Later", at(2026, 8, 22, 14), at(2026, 8, 22, 15))
-        let sooner = event("Sooner", at(2026, 8, 22, 10), at(2026, 8, 22, 11))
-        XCTAssertEqual(NextEvent.select(events: [later, sooner], now: now)?.title, "Sooner")
-    }
-
-    // A short event you are already inside is the thing you are supposed to
-    // be doing, so it outranks one that hasn't started.
-    func testShortInProgressBeatsUpcoming() {
-        let inProgress = event("Standup", at(2026, 8, 22, 8, 30), at(2026, 8, 22, 9, 30))
-        let upcoming = event("Review", at(2026, 8, 22, 10), at(2026, 8, 22, 11))
-        XCTAssertEqual(NextEvent.select(events: [upcoming, inProgress], now: now)?.title, "Standup")
-    }
-
-    // "Holidays in Iran" must never be the thing counting down.
-    // ...but a long block you happen to be inside should not hide what is
-    // actually next. Observed on real data: a 22:30-06:30 "Aliz sleep time"
-    // owned the countdown all night and hid breakfast.
-    func testLongInProgressYieldsToUpcoming() {
-        let overnight = event("Aliz sleep time", at(2026, 8, 21, 22, 30), at(2026, 8, 22, 18))
-        let upcoming = event("Breakfast", at(2026, 8, 22, 10), at(2026, 8, 22, 11))
-        XCTAssertEqual(NextEvent.select(events: [overnight, upcoming], now: now)?.title, "Breakfast")
-    }
-
-    // With nothing upcoming, the long block is still better than showing
-    // "nothing left today" while you are demonstrably inside something.
-    func testLongInProgressWinsWhenNothingIsUpcoming() {
-        let overnight = event("Aliz sleep time", at(2026, 8, 21, 22, 30), at(2026, 8, 22, 18))
-        XCTAssertEqual(NextEvent.select(events: [overnight], now: now)?.title, "Aliz sleep time")
-    }
-
-    func testInProgressEndingExactlyAtTheGraceBoundaryStillWins() {
-        let ending = event("Workshop", at(2026, 8, 22, 7), now.addingTimeInterval(NextEvent.inProgressGrace))
-        let upcoming = event("Breakfast", at(2026, 8, 22, 9, 30), at(2026, 8, 22, 10))
-        XCTAssertEqual(NextEvent.select(events: [ending, upcoming], now: now)?.title, "Workshop")
-    }
-
-    func testAllDayNeverWins() {
-        let allDay = event("Holidays in Iran", at(2026, 8, 22, 0), at(2026, 8, 23, 0), allDay: true)
-        let timed = event("Review", at(2026, 8, 22, 14), at(2026, 8, 22, 15))
-        XCTAssertEqual(NextEvent.select(events: [allDay, timed], now: now)?.title, "Review")
-    }
-
-    func testAllDayOnlyYieldsNil() {
-        let allDay = event("Holidays in Iran", at(2026, 8, 22, 0), at(2026, 8, 23, 0), allDay: true)
-        XCTAssertNil(NextEvent.select(events: [allDay], now: now))
-    }
-
-    func testFinishedEventsIgnored() {
-        let done = event("Breakfast", at(2026, 8, 22, 7), at(2026, 8, 22, 8))
-        XCTAssertNil(NextEvent.select(events: [done], now: now))
-    }
-
-    func testEmptyYieldsNil() {
-        XCTAssertNil(NextEvent.select(events: [], now: now))
-    }
-
-    // Ties must break deterministically or the face flickers between two
-    // events on consecutive ticks.
-    func testTieBreaksStablyRegardlessOfInputOrder() {
-        let a = event("Alpha", at(2026, 8, 22, 10), at(2026, 8, 22, 11), id: "a")
-        let b = event("Beta", at(2026, 8, 22, 10), at(2026, 8, 22, 11), calendarID: "cal-b", id: "b")
-        XCTAssertEqual(NextEvent.select(events: [a, b], now: now)?.title, "Alpha")
-        XCTAssertEqual(NextEvent.select(events: [b, a], now: now)?.title, "Alpha")
-    }
-}
-
-// MARK: - Countdown
-
-final class CountdownTests: XCTestCase {
-    func testMoreThanAnHour() {
-        XCTAssertEqual(Countdown.text(start: at(2026, 8, 22, 11, 5), now: now), "in 2h 05m")
-    }
-
-    func testUnderAnHour() {
-        XCTAssertEqual(Countdown.text(start: at(2026, 8, 22, 9, 42), now: now), "in 42m")
-    }
-
-    func testExactlyOneHourReadsAsMinutes() {
-        XCTAssertEqual(Countdown.text(start: at(2026, 8, 22, 10), now: now), "in 60m")
-    }
-
-    func testWithinAMinuteReadsNow() {
-        XCTAssertEqual(Countdown.text(start: at(2026, 8, 22, 9, 0), now: now), "now")
-        XCTAssertEqual(Countdown.text(start: now.addingTimeInterval(59), now: now), "now")
-        XCTAssertEqual(Countdown.text(start: now.addingTimeInterval(-59), now: now), "now")
-    }
-
-    func testStartedReadsElapsed() {
-        XCTAssertEqual(Countdown.text(start: at(2026, 8, 22, 8, 48), now: now), "12m in")
-    }
-
-    func testJustOverAMinuteAway() {
-        XCTAssertEqual(Countdown.text(start: now.addingTimeInterval(61), now: now), "in 1m")
-    }
-}
-
 // MARK: - Agenda split
 
 final class AgendaTests: XCTestCase {
@@ -282,45 +182,68 @@ final class AgendaTests: XCTestCase {
     }
 }
 
-// MARK: - Timeline boundaries
+// MARK: - Settings migration
+//
+// CalBox first shipped with a single agenda list (`showAgenda` + `eventCount`)
+// before the face split into TODAY and TOMORROW. An existing settings.json
+// must carry over rather than silently resetting someone's choice.
 
-final class TimelineBoundariesTests: XCTestCase {
-    func testIncludesNowStartsEndsAndMidnight() {
-        let e = event("Review", at(2026, 8, 22, 14), at(2026, 8, 22, 15))
-        let entries = TimelineBoundaries.entries(events: [e], now: now, calendar: cal)
-        XCTAssertEqual(entries.first, now)
-        XCTAssertTrue(entries.contains(at(2026, 8, 22, 14)))
-        XCTAssertTrue(entries.contains(at(2026, 8, 22, 15)))
-        XCTAssertTrue(entries.contains(at(2026, 8, 23, 0)), "next midnight must be an entry")
+final class CalBoxSettingsDecodeTests: XCTestCase {
+    private func decode(_ json: String) throws -> CalBoxSettings {
+        try JSONDecoder().decode(CalBoxSettings.self, from: Data(json.utf8))
     }
 
-    func testSortedAndDeduplicated() {
-        let a = event("A", at(2026, 8, 22, 14), at(2026, 8, 22, 15))
-        let b = event("B", at(2026, 8, 22, 14), at(2026, 8, 22, 15), calendarID: "cal-b")
-        let entries = TimelineBoundaries.entries(events: [a, b], now: now, calendar: cal)
-        XCTAssertEqual(entries, entries.sorted())
-        XCTAssertEqual(entries.count, Set(entries).count)
+    func testDefaults() throws {
+        let s = try decode("{}")
+        XCTAssertTrue(s.showToday)
+        XCTAssertTrue(s.showTomorrow)
+        XCTAssertEqual(s.todayCount, 6)
+        XCTAssertEqual(s.tomorrowCount, 4)
+        XCTAssertFalse(s.hasChosenCalendars)
     }
 
-    func testPastBoundariesExcluded() {
-        let done = event("Breakfast", at(2026, 8, 22, 7), at(2026, 8, 22, 8))
-        let entries = TimelineBoundaries.entries(events: [done], now: now, calendar: cal)
-        XCTAssertFalse(entries.contains(at(2026, 8, 22, 7)))
-        XCTAssertFalse(entries.contains(at(2026, 8, 22, 8)))
+    func testLegacyEventCountBecomesTodayCount() throws {
+        let s = try decode(#"{"eventCount": 8}"#)
+        XCTAssertEqual(s.todayCount, 8)
     }
 
-    func testCappedAt24() {
-        let many = (0..<40).map { i in
-            event("E\(i)", now.addingTimeInterval(Double(i + 1) * 600), now.addingTimeInterval(Double(i + 1) * 600 + 300), calendarID: "cal-\(i)")
-        }
-        let entries = TimelineBoundaries.entries(events: many, now: now, calendar: cal)
-        XCTAssertEqual(entries.count, TimelineBoundaries.maxEntries)
-        XCTAssertEqual(entries.count, 24)
+    func testLegacyShowAgendaBecomesShowToday() throws {
+        let s = try decode(#"{"showAgenda": false}"#)
+        XCTAssertFalse(s.showToday)
     }
 
-    func testNeverEmpty() {
-        let entries = TimelineBoundaries.entries(events: [], now: now, calendar: cal)
-        XCTAssertEqual(entries.first, now)
-        XCTAssertFalse(entries.isEmpty)
+    func testCurrentKeysWinOverLegacyOnes() throws {
+        let s = try decode(#"{"eventCount": 8, "todayCount": 3, "showAgenda": false, "showToday": true}"#)
+        XCTAssertEqual(s.todayCount, 3)
+        XCTAssertTrue(s.showToday)
+    }
+
+    // A hand-edited file must not produce a face that clips.
+    func testCountsAreClampedToTheAllowedRange() throws {
+        XCTAssertEqual(try decode(#"{"todayCount": 99}"#).todayCount, CalBoxSettings.maxCount)
+        XCTAssertEqual(try decode(#"{"tomorrowCount": 0}"#).tomorrowCount, 1)
+        XCTAssertEqual(try decode(#"{"todayCount": -5}"#).todayCount, 1)
+    }
+
+    // Legacy keys are read once and then dropped, so a file migrates and stays
+    // clean rather than carrying both shapes forever.
+    func testLegacyKeysAreNotWrittenBack() throws {
+        let s = try decode(#"{"eventCount": 8, "showAgenda": false}"#)
+        let data = try JSONEncoder().encode(s)
+        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        XCTAssertFalse(json.contains("eventCount"))
+        XCTAssertFalse(json.contains("showAgenda"))
+        XCTAssertTrue(json.contains("todayCount"))
+    }
+
+    func testRoundTripPreservesChoices() throws {
+        var s = CalBoxSettings()
+        s.calendarIDs = ["a", "b"]
+        s.hasChosenCalendars = true
+        s.todayCount = 10
+        s.tomorrowCount = 1
+        s.showTomorrow = false
+        let decoded = try JSONDecoder().decode(CalBoxSettings.self, from: JSONEncoder().encode(s))
+        XCTAssertEqual(decoded, s)
     }
 }

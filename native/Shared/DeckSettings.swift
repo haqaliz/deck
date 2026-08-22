@@ -457,17 +457,23 @@ struct TaskBoxSettings: Codable, Equatable {
 struct CalBoxSettings: Codable, Equatable {
     /// `EKCalendar.calendarIdentifier`s to read — empty → agent skips the read.
     var calendarIDs: [String] = []
-    /// Set once the defaults have been applied, so a user who unticks every
-    /// calendar is never silently re-defaulted back on at the next launch.
+    /// Set once the defaults have been applied. After that the user's list is
+    /// authoritative: nothing is ever enabled behind their back, so a calendar
+    /// added to macOS later shows up in settings unticked and waits.
     var hasChosenCalendars = false
+    /// All-day events, shown at the top of TODAY.
     var showAllDay = true
-    var showAgenda = true
-    /// Events on the medium face. The large face has its own fixed cap.
-    var eventCount = 4
+    var showToday = true
     var showTomorrow = true
+    /// Rows per section on the large face. Smaller faces cap lower — past that
+    /// the rows are clipped by the frame rather than by the setting.
+    var todayCount = 6
+    var tomorrowCount = 4
     /// Off → every dot uses `accentColor` instead of the calendar's own colour.
     var useCalendarColors = true
     var accentColor = RGBA(.blue)
+
+    static let maxCount = 10
 
     init() {}
 
@@ -476,11 +482,44 @@ struct CalBoxSettings: Codable, Equatable {
         calendarIDs = try c.decodeIfPresent([String].self, forKey: .calendarIDs) ?? []
         hasChosenCalendars = try c.decodeIfPresent(Bool.self, forKey: .hasChosenCalendars) ?? false
         showAllDay = try c.decodeIfPresent(Bool.self, forKey: .showAllDay) ?? true
-        showAgenda = try c.decodeIfPresent(Bool.self, forKey: .showAgenda) ?? true
-        eventCount = try c.decodeIfPresent(Int.self, forKey: .eventCount) ?? 4
+        // `showAgenda` and `eventCount` were the single-list shape this widget
+        // shipped with before the face split into TODAY and TOMORROW. Carry
+        // them over rather than silently resetting someone's choice.
+        let legacyShowAgenda = try c.decodeIfPresent(Bool.self, forKey: .legacyShowAgenda)
+        let legacyEventCount = try c.decodeIfPresent(Int.self, forKey: .legacyEventCount)
+        showToday = try c.decodeIfPresent(Bool.self, forKey: .showToday) ?? legacyShowAgenda ?? true
         showTomorrow = try c.decodeIfPresent(Bool.self, forKey: .showTomorrow) ?? true
+        todayCount = try c.decodeIfPresent(Int.self, forKey: .todayCount) ?? legacyEventCount ?? 6
+        tomorrowCount = try c.decodeIfPresent(Int.self, forKey: .tomorrowCount) ?? 4
         useCalendarColors = try c.decodeIfPresent(Bool.self, forKey: .useCalendarColors) ?? true
         accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA(.blue)
+        // A hand-edited or older file must not produce a face that clips.
+        todayCount = min(max(todayCount, 1), Self.maxCount)
+        tomorrowCount = min(max(tomorrowCount, 1), Self.maxCount)
+    }
+
+    /// Writes only the current shape: the legacy keys are read on the way in
+    /// (see `init(from:)`) and dropped on the way out, so a file migrates once
+    /// and then stays clean.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(calendarIDs, forKey: .calendarIDs)
+        try c.encode(hasChosenCalendars, forKey: .hasChosenCalendars)
+        try c.encode(showAllDay, forKey: .showAllDay)
+        try c.encode(showToday, forKey: .showToday)
+        try c.encode(showTomorrow, forKey: .showTomorrow)
+        try c.encode(todayCount, forKey: .todayCount)
+        try c.encode(tomorrowCount, forKey: .tomorrowCount)
+        try c.encode(useCalendarColors, forKey: .useCalendarColors)
+        try c.encode(accentColor, forKey: .accentColor)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case calendarIDs, hasChosenCalendars, showAllDay
+        case showToday, showTomorrow, todayCount, tomorrowCount
+        case useCalendarColors, accentColor
+        case legacyShowAgenda = "showAgenda"
+        case legacyEventCount = "eventCount"
     }
 }
 

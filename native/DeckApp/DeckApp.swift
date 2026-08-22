@@ -905,12 +905,22 @@ private struct CalBoxSettingsView: View {
                     .foregroundStyle(.secondary)
                 FetchStatusCaption(source: .calbox, clearOn: settings.calendarIDs.joined(separator: "\u{0}"))
             }
-            Section("Agenda") {
+            Section("Today") {
+                Toggle("Show today", isOn: $settings.showToday)
+                Stepper("Events: \(settings.todayCount)", value: $settings.todayCount, in: 1...CalBoxSettings.maxCount)
+                    .disabled(!settings.showToday)
                 Toggle("Show all-day events", isOn: $settings.showAllDay)
-                Toggle("Show agenda list", isOn: $settings.showAgenda)
-                Stepper("Events on medium: \(settings.eventCount)", value: $settings.eventCount, in: 2...8)
-                    .disabled(!settings.showAgenda)
-                Toggle("Show tomorrow (large)", isOn: $settings.showTomorrow)
+                    .disabled(!settings.showToday)
+            }
+            Section("Tomorrow") {
+                Toggle("Show tomorrow", isOn: $settings.showTomorrow)
+                Stepper("Events: \(settings.tomorrowCount)", value: $settings.tomorrowCount, in: 1...CalBoxSettings.maxCount)
+                    .disabled(!settings.showTomorrow)
+            }
+            Section {
+                Text("Small and medium widgets show fewer rows than these counts — past that the rows would be clipped by the frame rather than by your setting.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Colors") {
                 Toggle("Use each calendar's color", isOn: $settings.useCalendarColors)

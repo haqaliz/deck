@@ -340,3 +340,45 @@ documented fallback past it.
   binaries; mitigated by saying so in the settings tab.
 - **A snapshot is rendered however old it is.** Matches the M4 behaviour change
   for the agent-fetched widgets; the chip carries the honesty.
+
+## 11. Revision — the face after first use (2026-08-22)
+
+Shipping it and looking at it changed the design. Recorded here rather than
+edited into §2 above, so the reasoning survives.
+
+**The countdown is gone.** §2 made a live countdown the headline, and §5 argued
+at length for a multi-entry timeline to keep it honest. Both were wrong:
+
+- The countdown restated the row beneath it. `3:53:45 TO GO` and
+  `20:00  Dinner time` are the same fact, and the row is the readable one.
+- It sat in an unlabelled block above a `TOMORROW` heading, so the top half of
+  the face read as belonging to nothing — the widget's worst legibility problem
+  and one no amount of polish inside the block would have fixed.
+- The multi-entry timeline that existed to serve it archived 24 full views into
+  a **1.4 MB** timeline — 24x TaskBox's — which WidgetKit accepted, reported as
+  `success`, and then drew as an empty widget. §5's premise was also simply
+  false: the 60s reload re-runs the provider, which re-derives everything from
+  the stored snapshot against the current time, so rollover already worked with
+  the agent dead.
+
+`NextEvent` (with its 90-minute in-progress grace rule) and `Countdown` were
+deleted along with it rather than left as unused tested code.
+
+**The face is now two labelled sections**, TODAY and TOMORROW, each with its own
+show/hide toggle and row count (1–10, default 6 and 4). All-day events sit at
+the top of TODAY and spend that section's budget first. Small and medium cap
+lower than the setting, because past that the rows are clipped by the frame
+rather than by the user — the TaskBox precedent.
+
+**The widget name came off the face.** A widget's identity belongs in the
+gallery, not in a header line that costs a row on every size.
+
+**Settings migrate rather than reset**: `showAgenda` → `showToday` and
+`eventCount` → `todayCount` are read once, clamped to 1–10, and dropped on the
+next write. Covered by `CalBoxSettingsDecodeTests`.
+
+**Operational lessons, both the hard way:**
+- Adding a widget needs a `CFBundleVersion` bump or the Widget Center never
+  re-enumerates it — the gallery caches descriptors per extension version.
+- A widget instance placed while a broken build was live stays wedged: clearing
+  the timeline cache does not unstick it, only removing and re-adding does.

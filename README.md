@@ -23,7 +23,7 @@ WidgetKit widgets with native colors, corners and materials.
 | **HomeBox** | weather for your location (conditions + 3-day forecast) and a world clock; a failed fetch says why |
 | **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
 | **TaskBox** | Azure DevOps work items assigned to you: open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
-| **CalBox** | your next event with a live countdown, all-day events, today's remaining agenda and tomorrow's first few — from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV) |
+| **CalBox** | two sections, TODAY and TOMORROW, from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
 
 All eleven come in **small / medium / large** sizes.
 
@@ -114,6 +114,11 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   read-only ones (holidays, birthdays, subscriptions) start off, so their
   all-day entries don't crowd out real events — change that in the CalBox tab.
   Events stay in the widget container and are never sent anywhere.
+- **CalBox sections** are independent: show or hide TODAY and TOMORROW, and set
+  each one's row count up to 10. Small and medium widgets show fewer rows than
+  those counts, because past that the rows would be clipped by the frame rather
+  than by your setting. All-day events sit at the top of TODAY and spend the
+  section's budget before timed events do.
 - **When a fetch fails**, ShipBox, TaskBox, CalBox, HomeBox and OpenBox (remote
   mode) say why in one short line instead of a generic "no data": *"Add a repo + token in
   settings"* (nothing configured), *"Check repo + token"* / *"Check the
