@@ -412,6 +412,8 @@ struct ClockBoxSettings: Codable, Equatable {
     /// `ClockBoxCore.maxCities` on decode so a hand-edited file cannot push
     /// more faces into the widget than it can lay out.
     var cityIDs = [ClockBoxCore.localID, "UTC"]
+    /// Which city the small face shows. Empty → auto (first non-local).
+    var mainCityID = ""
     var showRelativeDay = true
     var showOffset = true
     var timeColor = RGBA(.teal)
@@ -427,6 +429,7 @@ struct ClockBoxSettings: Codable, Equatable {
         let decoded = try c.decodeIfPresent([String].self, forKey: .cityIDs)
             ?? [ClockBoxCore.localID, "UTC"]
         cityIDs = Array(decoded.prefix(ClockBoxCore.maxCities))
+        mainCityID = try c.decodeIfPresent(String.self, forKey: .mainCityID) ?? ""
         showRelativeDay = try c.decodeIfPresent(Bool.self, forKey: .showRelativeDay) ?? true
         showOffset = try c.decodeIfPresent(Bool.self, forKey: .showOffset) ?? true
         timeColor = try c.decodeIfPresent(RGBA.self, forKey: .timeColor) ?? RGBA(.teal)

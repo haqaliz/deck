@@ -49,8 +49,11 @@ enum ClockBoxCore {
     /// Deliberately not an IANA identifier: the machine's zone can change.
     static let localID = "local"
 
-    /// The native World Clock widget shows four; so do we.
-    static let maxCities = 4
+    /// How many cities may be stored. The large face shows all of them; the
+    /// medium face shows fewer because three columns is what fits legibly.
+    static let maxCities = 6
+    static let mediumCapacity = 3
+    static let largeCapacity = 6
 
     // MARK: Resolution
 
@@ -130,11 +133,20 @@ enum ClockBoxCore {
     // MARK: Rows
 
     /// Builds one row per identifier, dropping anything that will not resolve,
-    /// keeping input order, capped at `maxCities`.
-    static func rows(ids: [String], relativeTo reference: TimeZone, at date: Date) -> [ClockRow] {
+    /// keeping input order, capped at `limit`.
+    ///
+    /// The limit is the caller's to choose because each widget family fits a
+    /// different number of columns, and `Shared` cannot import WidgetKit to
+    /// learn the family itself.
+    static func rows(
+        ids: [String],
+        relativeTo reference: TimeZone,
+        at date: Date,
+        limit: Int = maxCities
+    ) -> [ClockRow] {
         var rows: [ClockRow] = []
         for id in ids {
-            guard rows.count < maxCities, resolve(id: id) != nil else { continue }
+            guard rows.count < limit, resolve(id: id) != nil else { continue }
             rows.append(
                 ClockRow(
                     id: id,
@@ -148,11 +160,21 @@ enum ClockBoxCore {
         return rows
     }
 
-    /// The city the small face shows. A small widget rendering your own zone
-    /// at "+0HRS" tells you nothing, so the first *non-local* city wins; local
-    /// is used only when it is all there is.
-    static func smallCityID(ids: [String]) -> String? {
+    /// The "main" clock — what the small face shows.
+    ///
+    /// An explicit choice from settings wins, including the user's own zone if
+    /// that is what they picked. A stale choice (a city since removed from the
+    /// list, or an unresolvable id) is ignored rather than blanking the face.
+    ///
+    /// With no explicit choice, auto keeps the original rule: the first
+    /// *non-local* city, because a small widget rendering your own zone at
+    /// "+0HRS" tells you nothing. Local is used only when it is all there is.
+    static func mainCityID(ids: [String], preferred: String?) -> String? {
         let valid = ids.filter { resolve(id: $0) != nil }
+        if let preferred, !preferred.trimmingCharacters(in: .whitespaces).isEmpty,
+           valid.contains(preferred), resolve(id: preferred) != nil {
+            return preferred
+        }
         return valid.first { $0.trimmingCharacters(in: .whitespaces) != localID } ?? valid.first
     }
 

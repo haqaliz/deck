@@ -80,7 +80,7 @@ struct ClockBoxWidget: Widget {
             ClockBoxWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("ClockBox")
-        .description("World clocks for up to four cities.")
+        .description("World clocks for up to six cities.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -100,7 +100,7 @@ struct ClockBoxWidgetEntryView: View {
                 case .systemSmall:
                     smallView
                 case .systemMedium:
-                    mediumView(timeSize: 20, spacing: 10)
+                    columns(limit: ClockBoxCore.mediumCapacity, timeSize: 20, spacing: 10)
                 default:
                     largeView
                 }
@@ -128,11 +128,13 @@ struct ClockBoxWidgetEntryView: View {
         }
     }
 
-    /// Small shows one city. `ClockBoxCore.smallCityID` prefers the first
-    /// non-local entry — a small widget rendering your own zone at "+0HRS"
-    /// tells you nothing.
+    /// Small shows the main clock — the one chosen in settings, or the first
+    /// non-local city when left on auto.
     private var smallView: some View {
-        let id = ClockBoxCore.smallCityID(ids: entry.settings.cityIDs)
+        let id = ClockBoxCore.mainCityID(
+            ids: entry.settings.cityIDs,
+            preferred: entry.settings.mainCityID
+        )
         let row = entry.rows.first { $0.id == id } ?? entry.rows[0]
         return VStack(alignment: .leading, spacing: 2) {
             Text(row.name)
@@ -160,22 +162,47 @@ struct ClockBoxWidgetEntryView: View {
         }
     }
 
-    private func mediumView(timeSize: CGFloat, spacing: CGFloat) -> some View {
+    /// One row of columns, capped at the face's capacity.
+    private func columns(limit: Int, timeSize: CGFloat, spacing: CGFloat) -> some View {
         HStack(alignment: .top, spacing: spacing) {
-            ForEach(entry.rows, id: \.id) { row in
+            ForEach(Array(entry.rows.prefix(limit)), id: \.id) { row in
                 column(row, timeSize: timeSize)
             }
         }
     }
 
+    /// Large fits six as two rows of three — six across would squeeze each
+    /// column past legibility at this width.
     private var largeView: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let shown = Array(entry.rows.prefix(ClockBoxCore.largeCapacity))
+        let top = Array(shown.prefix(3))
+        let bottom = Array(shown.dropFirst(3))
+        return VStack(alignment: .leading, spacing: 10) {
             Text("WORLD CLOCKS")
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .foregroundStyle(.secondary)
                 .tracking(1)
-            mediumView(timeSize: 24, spacing: 12)
+            row(of: top, timeSize: 24, spacing: 12)
+            if !bottom.isEmpty {
+                Divider()
+                row(of: bottom, timeSize: 24, spacing: 12)
+            }
             Spacer(minLength: 0)
+        }
+    }
+
+    private func row(of rows: [ClockRow], timeSize: CGFloat, spacing: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: spacing) {
+            ForEach(rows, id: \.id) { row in
+                column(row, timeSize: timeSize)
+            }
+            // Keeps a short final row left-aligned under the one above it
+            // instead of spreading three columns across the full width.
+            if rows.count < 3 {
+                ForEach(0..<(3 - rows.count), id: \.self) { _ in
+                    Color.clear.frame(maxWidth: .infinity)
+                }
+            }
         }
     }
 

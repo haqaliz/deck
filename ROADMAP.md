@@ -45,7 +45,7 @@ shell and only add a data source + a layout.
 - [x] **DevBox** — open ports/processes, Docker containers (docker stats)
 - [x] **ClipBox** — clipboard history with previews (local only)
 - [x] **WeatherBox** — weather (wttr.in); was HomeBox before the clock split
-- [x] **ClockBox** — world clocks, up to 4 cities (no data path at all)
+- [x] **ClockBox** — world clocks, up to 6 cities (no data path at all)
 - [x] **ShipBox** — build/deploy status: GitHub Actions runs for a repo
 
 ### M4 — Polish

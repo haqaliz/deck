@@ -21,7 +21,7 @@ WidgetKit widgets with native colors, corners and materials.
 | **DevBox** | open TCP listening ports (process + port) and running Docker containers (CPU/mem) |
 | **ClipBox** | clipboard history: recent copies with previews, item kinds, relative times |
 | **WeatherBox** | weather for your location (conditions + 3-day forecast); a failed fetch says why |
-| **ClockBox** | world clocks for up to four cities: time, relative day, offset from your own zone |
+| **ClockBox** | world clocks for up to six cities (3 on medium, 6 on large): time, relative day, offset from your own zone |
 | **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
 | **TaskBox** | Azure DevOps work items assigned to you: open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW, from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |

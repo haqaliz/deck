@@ -350,6 +350,7 @@ final class ClockBoxSettingsDecodeTests: XCTestCase {
         XCTAssertFalse(s.showOffset)
         XCTAssertTrue(s.showRelativeDay)
         XCTAssertEqual(s.cityIDs, [ClockBoxCore.localID, "UTC"])
+        XCTAssertEqual(s.mainCityID, "", "absent main clock means auto")
         XCTAssertEqual(s.timeColor, RGBA(.teal))
     }
 }
@@ -488,6 +489,7 @@ final class DeckSettingsRoundTripTests: XCTestCase {
         s.weatherbox.location = "Reykjavik"
         s.weatherbox.unitsFahrenheit = true
         s.clockbox.cityIDs = ["Asia/Tokyo", "Europe/Paris"]
+        s.clockbox.mainCityID = "Europe/Paris"
         s.clockbox.showOffset = false
         s.shipbox.repo = "owner/name"
         s.shipbox.runCount = 13
@@ -583,11 +585,12 @@ final class HomeBoxSplitMigrationTests: XCTestCase {
     /// in — but a hand-edited file with more than 4 must still be clamped.
     func testCityListIsClampedToTheMaximum() throws {
         let json = """
-        {"clockbox":{"cityIDs":["UTC","Asia/Tokyo","Europe/Paris","America/Toronto","Asia/Tehran"]}}
+        {"clockbox":{"cityIDs":["UTC","Asia/Tokyo","Europe/Paris","America/Toronto","Asia/Tehran",
+                                "Australia/Sydney","Europe/Berlin"]}}
         """
         let s = try decode(json, as: DeckSettings.self)
         XCTAssertEqual(s.clockbox.cityIDs.count, ClockBoxCore.maxCities)
-        XCTAssertEqual(s.clockbox.cityIDs.last, "America/Toronto")
+        XCTAssertEqual(s.clockbox.cityIDs.last, "Australia/Sydney")
     }
 
     /// The retired keys must not be written back out.

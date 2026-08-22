@@ -712,14 +712,34 @@ private struct ClockBoxSettingsView: View {
                     }
                 }
             }
+            Section("Main clock") {
+                // Drives the small face only; medium and large follow slot
+                // order, so ordering is how you choose what those show.
+                Picker("Main clock", selection: $settings.mainCityID) {
+                    Text("Auto (first non-local)").tag("")
+                    ForEach(selectedCities, id: \.self) { id in
+                        Text(ClockBoxCore.displayName(id: id)).tag(id)
+                    }
+                }
+                Text("Shown on the small widget.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("Display") {
                 Toggle("Show relative day", isOn: $settings.showRelativeDay)
                 Toggle("Show offset from your zone", isOn: $settings.showOffset)
                 ColorPicker("Time color", selection: timeColorBinding, supportsOpacity: false)
+                Text("Medium shows \(ClockBoxCore.mediumCapacity); large shows \(ClockBoxCore.largeCapacity).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+    }
+
+    private var selectedCities: [String] {
+        settings.cityIDs.filter { !$0.isEmpty }
     }
 
     /// Slots are positional: an empty pick clears that slot and the remaining
@@ -732,6 +752,13 @@ private struct ClockBoxSettingsView: View {
                 while ids.count < ClockBoxCore.maxCities { ids.append("") }
                 ids[slot] = newValue
                 settings.cityIDs = ids.filter { !$0.isEmpty }
+                // A main clock pointing at a city that is no longer selected
+                // would silently fall back to auto; clear it so the picker
+                // shows what the widget actually does.
+                if !settings.mainCityID.isEmpty,
+                   !settings.cityIDs.contains(settings.mainCityID) {
+                    settings.mainCityID = ""
+                }
             }
         )
     }

@@ -25,9 +25,10 @@ widget.
   running Docker containers (subprocesses, via the agent).
 - **WeatherBox** — weather: conditions and a 3-day forecast for your location
   (wttr.in, fetched by the agent). Was HomeBox until its clock half split out.
-- **ClockBox** — world clocks: up to four cities, each with its time, relative
-  day and offset from your own zone. The only widget on **neither** data path
-  — pure `TimeZone` + `Date`, no snapshot, no sampler, no network.
+- **ClockBox** — world clocks: up to six cities (3 on medium, 6 on large),
+  each with its time, relative day and offset from your own zone; a chosen
+  "main" clock drives the small face. The only widget on **neither** data
+  path — pure `TimeZone` + `Date`, no snapshot, no sampler, no network.
 - **ShipBox** — build/deploy status: GitHub Actions runs for a repo (fetched
   by the agent with the user's token).
 - **TaskBox** — tasks: Azure DevOps work items assigned to you, with open

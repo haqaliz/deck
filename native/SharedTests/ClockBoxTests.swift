@@ -166,15 +166,35 @@ final class ClockBoxCoreTests: XCTestCase {
         XCTAssertEqual(rows.map(\.name), ["UTC"])
     }
 
-    /// The old ZoneRows cap was 3; ClockBox shows up to 4.
-    func testRowsCapAtFourKeepingOrder() {
+    /// Storage holds up to 6; each face applies its own limit.
+    func testRowsCapAtSixKeepingOrder() {
         let rows = ClockBoxCore.rows(
-            ids: ["UTC", "Asia/Tokyo", "Europe/Amsterdam", "America/New_York", "Asia/Tehran"],
+            ids: ["UTC", "Asia/Tokyo", "Europe/Amsterdam", "America/New_York", "Asia/Tehran",
+                  "Australia/Sydney", "Europe/Paris"],
             relativeTo: TimeZone(secondsFromGMT: 0)!,
             at: noonUTC
         )
         XCTAssertEqual(rows.count, ClockBoxCore.maxCities)
-        XCTAssertEqual(rows.map(\.name), ["UTC", "Tokyo", "Amsterdam", "New York"])
+        XCTAssertEqual(rows.count, 6)
+        XCTAssertEqual(rows.map(\.name).last, "Sydney")
+    }
+
+    /// Medium shows 3, large shows 6 — the caller passes its own limit rather
+    /// than the core knowing about widget families (Shared has no WidgetKit).
+    func testRowsRespectAnExplicitLimit() {
+        let ids = ["UTC", "Asia/Tokyo", "Europe/Amsterdam", "America/New_York", "Asia/Tehran", "Europe/Paris"]
+        let medium = ClockBoxCore.rows(ids: ids, relativeTo: TimeZone(secondsFromGMT: 0)!, at: noonUTC, limit: ClockBoxCore.mediumCapacity)
+        XCTAssertEqual(medium.count, 3)
+        XCTAssertEqual(medium.map(\.name), ["UTC", "Tokyo", "Amsterdam"])
+
+        let large = ClockBoxCore.rows(ids: ids, relativeTo: TimeZone(secondsFromGMT: 0)!, at: noonUTC, limit: ClockBoxCore.largeCapacity)
+        XCTAssertEqual(large.count, 6)
+    }
+
+    func testCapacitiesAreThreeAndSix() {
+        XCTAssertEqual(ClockBoxCore.mediumCapacity, 3)
+        XCTAssertEqual(ClockBoxCore.largeCapacity, 6)
+        XCTAssertEqual(ClockBoxCore.maxCities, 6)
     }
 
     func testRowsEmptyInputYieldsNoRows() {
@@ -183,26 +203,57 @@ final class ClockBoxCoreTests: XCTestCase {
         XCTAssertTrue(ClockBoxCore.rows(ids: ["Bad/Zone"], relativeTo: utc, at: noonUTC).isEmpty)
     }
 
-    // MARK: - small-face city pick
+    // MARK: - main clock (drives the small face)
 
-    /// A small widget showing your own zone at +0HRS tells you nothing, so the
-    /// first non-local city wins even when local is listed first.
-    func testSmallCityPrefersFirstNonLocal() {
-        XCTAssertEqual(ClockBoxCore.smallCityID(ids: [ClockBoxCore.localID, "UTC"]), "UTC")
-        XCTAssertEqual(ClockBoxCore.smallCityID(ids: ["Asia/Tokyo", "UTC"]), "Asia/Tokyo")
+    /// An explicit main choice wins, whatever its position in the list.
+    func testExplicitMainWins() {
+        XCTAssertEqual(
+            ClockBoxCore.mainCityID(ids: ["Asia/Tokyo", "UTC", "Europe/Paris"], preferred: "Europe/Paris"),
+            "Europe/Paris"
+        )
     }
 
-    func testSmallCityFallsBackToLocalWhenItIsTheOnlyEntry() {
-        XCTAssertEqual(ClockBoxCore.smallCityID(ids: [ClockBoxCore.localID]), ClockBoxCore.localID)
+    /// The user may legitimately choose their own zone as the main clock.
+    func testExplicitMainMayBeLocal() {
+        XCTAssertEqual(
+            ClockBoxCore.mainCityID(ids: [ClockBoxCore.localID, "UTC"], preferred: ClockBoxCore.localID),
+            ClockBoxCore.localID
+        )
     }
 
-    func testSmallCityIsNilWhenNothingIsSelected() {
-        XCTAssertNil(ClockBoxCore.smallCityID(ids: []))
+    /// A main that is no longer in the city list must not win — it would show
+    /// a clock the user has since removed.
+    func testStaleMainFallsBackToAuto() {
+        XCTAssertEqual(
+            ClockBoxCore.mainCityID(ids: ["Asia/Tokyo", "UTC"], preferred: "Europe/Paris"),
+            "Asia/Tokyo"
+        )
     }
 
-    /// An all-invalid list must not resolve to a bogus small face.
-    func testSmallCitySkipsInvalidIdentifiers() {
-        XCTAssertNil(ClockBoxCore.smallCityID(ids: ["Bad/Zone", ""]))
+    /// Auto (no explicit choice) keeps the old rule: first non-local, because
+    /// a small widget showing your own zone at +0HRS tells you nothing.
+    func testAutoPrefersFirstNonLocal() {
+        XCTAssertEqual(ClockBoxCore.mainCityID(ids: [ClockBoxCore.localID, "UTC"], preferred: nil), "UTC")
+        XCTAssertEqual(ClockBoxCore.mainCityID(ids: [ClockBoxCore.localID, "UTC"], preferred: ""), "UTC")
+        XCTAssertEqual(ClockBoxCore.mainCityID(ids: ["Asia/Tokyo", "UTC"], preferred: nil), "Asia/Tokyo")
+    }
+
+    func testAutoFallsBackToLocalWhenItIsTheOnlyEntry() {
+        XCTAssertEqual(ClockBoxCore.mainCityID(ids: [ClockBoxCore.localID], preferred: nil), ClockBoxCore.localID)
+    }
+
+    func testMainIsNilWhenNothingIsSelected() {
+        XCTAssertNil(ClockBoxCore.mainCityID(ids: [], preferred: nil))
+        XCTAssertNil(ClockBoxCore.mainCityID(ids: [], preferred: "Europe/Paris"))
+    }
+
+    /// An invalid explicit main is ignored rather than blanking the face.
+    func testInvalidMainFallsBackToAuto() {
+        XCTAssertEqual(ClockBoxCore.mainCityID(ids: ["UTC"], preferred: "Mars/Olympus"), "UTC")
+    }
+
+    func testMainSkipsInvalidIdentifiers() {
+        XCTAssertNil(ClockBoxCore.mainCityID(ids: ["Bad/Zone", ""], preferred: nil))
     }
 
     // MARK: - curated city table
