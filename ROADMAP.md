@@ -206,6 +206,11 @@ Deferred behind the new widgets by decision on 2026-08-22.
 Deck is feature-complete for a public launch; what is missing is everything
 around the binary. Ordered by what blocks what.
 
+**Everything gated on the paid Apple Developer Program has a step-by-step
+runbook: [`docs/planning/notarization/runbook.md`](docs/planning/notarization/runbook.md)** —
+enrollment choice, certificate, project settings, the two-pass notarize/staple
+in CI, the verification gates, and what the identity change resets.
+
 - [x] **DMG releases.** `Deck-<tag>.dmg` (app + `/Applications` symlink) with
       `SHA256SUMS.txt` and install instructions, replacing `Deck-macos.zip`.
 - [x] **Repo hygiene.** Apache-2.0 `LICENSE` + `NOTICE`, `CONTRIBUTING.md`,
@@ -237,7 +242,8 @@ around the binary. Ordered by what blocks what.
       Application certificate, `ENABLE_HARDENED_RUNTIME: YES` on all three
       targets, `notarytool submit --wait` + `stapler staple` in the release
       job, drop `-allowProvisioningDeviceRegistration`. This also removes the
-      hard expiry below.
+      hard expiry below. Full runbook:
+      [`docs/planning/notarization/runbook.md`](docs/planning/notarization/runbook.md).
 - [ ] **The expiry cliff.** Xcode signs development builds with no secure
       timestamp (`Signed Time=`, not `Timestamp=`), so signature validity is
       tied to the certificate: **2027-08-09**, after which every copy of Deck
