@@ -27,8 +27,8 @@ targets:
       properties:
         CFBundleDisplayName: Deck
         CFBundleIconFile: AppIcon
-        CFBundleShortVersionString: "1.19"
-        CFBundleVersion: "19"
+        CFBundleShortVersionString: "1.20"
+        CFBundleVersion: "20"
         LSMinimumSystemVersion: "15.0"
         NSHighResolutionCapable: true
         NSCalendarsFullAccessUsageDescription: "Deck reads your calendar to show your next event in the CalBox widget."
@@ -44,6 +44,13 @@ targets:
         SWIFT_VERSION: "5.10"
         GENERATE_INFOPLIST_FILE: NO
         MACOSX_DEPLOYMENT_TARGET: "15.0"
+      configs:
+        Release:
+          # Xcode injects com.apple.security.get-task-allow for development
+          # signing, which lets any local process attach a debugger to a
+          # shipped Deck — the process holding the calendar grant, the
+          # clipboard history and three API tokens. Debug builds keep it.
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
   DeckWidgets:
     type: app-extension
     platform: macOS
@@ -57,8 +64,8 @@ targets:
       properties:
         CFBundleDisplayName: Deck Widgets
         CFBundleIconFile: AppIcon
-        CFBundleShortVersionString: "1.19"
-        CFBundleVersion: "19"
+        CFBundleShortVersionString: "1.20"
+        CFBundleVersion: "20"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         LSMinimumSystemVersion: "15.0"
@@ -76,6 +83,13 @@ targets:
         SKIP_INSTALL: YES
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks"
         OTHER_LDFLAGS: "$(inherited) -lsqlite3"
+      configs:
+        Release:
+          # Xcode injects com.apple.security.get-task-allow for development
+          # signing, which lets any local process attach a debugger to a
+          # shipped Deck — the process holding the calendar grant, the
+          # clipboard history and three API tokens. Debug builds keep it.
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
   DeckAgent:
     type: tool
     platform: macOS
@@ -88,8 +102,8 @@ targets:
         CFBundleIdentifier: com.deck.agent
         CFBundleName: DeckAgent
         CFBundleExecutable: DeckAgent
-        CFBundleShortVersionString: "1.19"
-        CFBundleVersion: "19"
+        CFBundleShortVersionString: "1.20"
+        CFBundleVersion: "20"
         NSCalendarsFullAccessUsageDescription: "Deck reads your calendar to show your next event in the CalBox widget."
     settings:
       base:
@@ -102,6 +116,13 @@ targets:
         SWIFT_VERSION: "5.10"
         MACOSX_DEPLOYMENT_TARGET: "15.0"
         OTHER_LDFLAGS: "$(inherited) -lsqlite3"
+      configs:
+        Release:
+          # Xcode injects com.apple.security.get-task-allow for development
+          # signing, which lets any local process attach a debugger to a
+          # shipped Deck — the process holding the calendar grant, the
+          # clipboard history and three API tokens. Debug builds keep it.
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
   DeckSharedTests:
     type: bundle.unit-test
     platform: macOS

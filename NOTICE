@@ -1,0 +1,15 @@
+Deck
+Copyright 2026 Ali Haqiqi
+
+This product includes software developed by the Deck authors and contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this software except in compliance with the License. A copy of the License is
+included in the LICENSE file at the root of this repository, and is also
+available at http://www.apache.org/licenses/LICENSE-2.0.
+
+Deck reads data from services and tools that are the property of their
+respective owners — GitHub Actions, Azure DevOps, opencode, Docker, wttr.in and
+the calendars macOS syncs. Deck is not affiliated with, endorsed by, or
+sponsored by any of them; it talks to their documented interfaces with
+credentials you supply, and relicenses nothing.
