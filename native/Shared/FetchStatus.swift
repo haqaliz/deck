@@ -16,7 +16,7 @@ import Foundation
 //   4. a missing file means exactly the pre-status behaviour.
 
 enum FetchSource: String, Codable, CaseIterable {
-    case shipbox, weather, opencodeRemote, taskbox
+    case shipbox, weather, opencodeRemote, taskbox, calbox
 }
 
 enum FetchOutcome: String, Codable {
@@ -106,6 +106,12 @@ enum FetchClassifier {
             case .transport: return .unreachable
             case .invalidPayload: return .badResponse
             }
+        case let error as HostCalendarLoader.CalendarError:
+            switch error {
+            case .notConfigured: return .notConfigured
+            case .accessDenied: return .authOrTarget
+            case .readFailed: return .badResponse
+            }
         case let error as RemoteOpenCodeLoader.RemoteError:
             switch error {
             case .invalidURL, .unauthorized: return .authOrTarget
@@ -135,6 +141,7 @@ enum FetchStatusCopy {
             case .weather: return nil
             case .opencodeRemote: return "Paste your opencode token"
             case .taskbox: return "Add org, project + PAT in settings"
+            case .calbox: return "Pick a calendar in settings"
             }
         case .authOrTarget:
             switch source {
@@ -142,6 +149,7 @@ enum FetchStatusCopy {
             case .weather: return "Check the location"
             case .opencodeRemote: return "Check server URL + token"
             case .taskbox: return "Check org, project + PAT"
+            case .calbox: return "Allow calendar access"
             }
         case .unreachable:
             switch source {
@@ -149,6 +157,8 @@ enum FetchStatusCopy {
             case .weather: return "Can't reach wttr.in"
             case .opencodeRemote: return "Can't reach the opencode server"
             case .taskbox: return "Can't reach Azure DevOps"
+            // No network in this path — kept only so the switch is total.
+            case .calbox: return "Can't read the calendar"
             }
         case .badResponse:
             switch source {
@@ -156,6 +166,7 @@ enum FetchStatusCopy {
             case .weather: return "Unexpected wttr.in response"
             case .opencodeRemote: return "Unexpected server response"
             case .taskbox: return "Unexpected Azure DevOps response"
+            case .calbox: return "Couldn't read the calendar"
             }
         }
     }
@@ -173,6 +184,7 @@ enum FetchStatusCopy {
             case .weather: return nil
             case .opencodeRemote: return "Remote mode fetches nothing until you paste your own token."
             case .taskbox: return "Nothing is fetched until an organization, a project and a token are all set."
+            case .calbox: return "Nothing is read until at least one calendar is ticked."
             }
         case .authOrTarget:
             switch source {
@@ -184,6 +196,8 @@ enum FetchStatusCopy {
                 return "The opencode server rejected the request: check the server URL and your token."
             case .taskbox:
                 return "Azure DevOps rejected the request: check the organization and project names, and that the PAT is valid and not expired."
+            case .calbox:
+                return "macOS is blocking calendar access. Grant it in System Settings → Privacy & Security → Calendars, for both Deck and DeckAgent."
             }
         case .unreachable:
             switch source {
@@ -191,6 +205,7 @@ enum FetchStatusCopy {
             case .weather: return "Couldn't reach wttr.in — offline, or the service is down."
             case .opencodeRemote: return "Couldn't reach the opencode server — check it is running and reachable."
             case .taskbox: return "Couldn't reach dev.azure.com — offline, rate-limited, or Azure DevOps is down."
+            case .calbox: return "Couldn't read the calendar store. Retrying every minute."
             }
         case .badResponse:
             switch source {
@@ -198,6 +213,7 @@ enum FetchStatusCopy {
             case .weather: return "Reached wttr.in, but the response couldn't be read. Retrying every minute."
             case .opencodeRemote: return "Reached the server, but the response couldn't be read. Retrying every minute."
             case .taskbox: return "Reached Azure DevOps, but the response couldn't be read. Retrying every minute."
+            case .calbox: return "Reached the calendar store but couldn't read it. Retrying every minute."
             }
         }
     }

@@ -23,8 +23,9 @@ WidgetKit widgets with native colors, corners and materials.
 | **HomeBox** | weather for your location (conditions + 3-day forecast) and a world clock; a failed fetch says why |
 | **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
 | **TaskBox** | Azure DevOps work items assigned to you: open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
+| **CalBox** | two sections, TODAY and TOMORROW, from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
 
-All ten come in **small / medium / large** sizes.
+All eleven come in **small / medium / large** sizes.
 
 ## Install
 
@@ -44,7 +45,7 @@ pluginkit -m -i com.deck.app.widgets   # verify the extension registered
 ```
 
 Then: right-click desktop → **Edit Widgets…** → search "Deck" → add
-LiveBox/OpenBox/NetBox/BatBox/GitBox/DevBox/ClipBox/HomeBox/ShipBox/TaskBox.
+LiveBox/OpenBox/NetBox/BatBox/GitBox/DevBox/ClipBox/HomeBox/ShipBox/TaskBox/CalBox.
 
 ## Settings
 
@@ -104,8 +105,22 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   dependable due field: `DueDate` and `TargetDate` are sparse, and falling back
   to the sprint end gave every item in a sprint the same meaningless date.
   Progress through the board is the real signal.
-- **When a fetch fails**, ShipBox, TaskBox, HomeBox and OpenBox (remote mode) say why in
-  one short line instead of a generic "no data": *"Add a repo + token in
+- **CalBox** reads your calendars through EventKit, so it shows whatever macOS
+  already syncs — add a Google account in System Settings → Internet Accounts
+  and it appears alongside iCloud, Exchange and CalDAV. Nothing is fetched from
+  Google directly and no OAuth is involved. macOS asks for calendar access
+  twice, once for Deck and once for its background agent: they are separately
+  signed, so each needs its own grant. Writable calendars start ticked and
+  read-only ones (holidays, birthdays, subscriptions) start off, so their
+  all-day entries don't crowd out real events — change that in the CalBox tab.
+  Events stay in the widget container and are never sent anywhere.
+- **CalBox sections** are independent: show or hide TODAY and TOMORROW, and set
+  each one's row count up to 10. Small and medium widgets show fewer rows than
+  those counts, because past that the rows would be clipped by the frame rather
+  than by your setting. All-day events sit at the top of TODAY and spend the
+  section's budget before timed events do.
+- **When a fetch fails**, ShipBox, TaskBox, CalBox, HomeBox and OpenBox (remote
+  mode) say why in one short line instead of a generic "no data": *"Add a repo + token in
   settings"* (nothing configured), *"Check repo + token"* / *"Check the
   location"* (credentials or target wrong — 401/403/404), *"Can't reach
   GitHub"* (offline, rate-limited, or the service is down), *"Unexpected
@@ -122,8 +137,8 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 
 - **Self-sampled widgets** (LiveBox/NetBox/BatBox) read mach, getifaddrs and
   IOKit directly inside the widget — no other process needed.
-- **Agent-pumped data** (OpenBox, process list, GitBox, ClipBox, weather, ShipBox,
-  TaskBox): the widget
+- **Agent-pumped data** (OpenBox, process list, GitBox, ClipBox, weather,
+  ShipBox, TaskBox, CalBox): the widget
   sandbox forbids subprocesses and reading other apps' data, so a silent CLI
   (`DeckAgent`, embedded in the app) runs every 60s via a LaunchAgent and
   writes snapshots the widgets render. The top-process snapshot is sampled

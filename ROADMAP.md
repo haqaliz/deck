@@ -1,7 +1,7 @@
 # Deck Roadmap
 
 Small, beautiful macOS desktop widgets that behave like native ones. The
-product value is **one WidgetKit extension** (nine widgets in the Widget
+product value is **one WidgetKit extension** (eleven widgets in the Widget
 Center) plus **one metric story per widget**. New widgets reuse the widget
 shell and only add a data source + a layout.
 
@@ -91,26 +91,48 @@ Deferred from the tests milestone (all covered as of v1.10):
 Widgets come before improvements: M3's candidate list is exhausted, so this is
 the next slate. Ordered by priority, not by cost.
 
-- [ ] **CalBox** — calendar: next event + countdown, today's agenda.
-      Target is **Google Calendar**. Three routes, to be settled in the PRD:
-      1. **EventKit** — reads whatever macOS Calendar syncs (Google via
-         Internet Accounts, plus iCloud/Exchange/CalDAV) with one TCC grant
-         and no OAuth. *Verified caveat: `~/Library/Calendars/` is empty on
-         the dev machine — no account is configured today, so this route
-         renders nothing until the user adds their Google account to
-         System Settings → Internet Accounts.*
-      2. **Secret ICS URL** — Google's private iCal address, agent-fetched
-         over HTTP exactly like HomeBox/wttr.in. No OAuth, no TCC; read-only
-         and Google caches it (freshness measured in hours). The URL is a
-         bearer secret and must be stored like the ShipBox token.
-      3. **Google Calendar API (OAuth)** — freshest and richest, but the
-         first OAuth flow in the repo: PKCE, browser round-trip, refresh
-         token in the Keychain. Heaviest; a later slice unless the PRD
-         proves 1 and 2 both fail.
-      Shell caveat (verified): `DeckAgent` is `type: tool` with **no
-      Info.plist** (project.yml), so an EventKit TCC prompt needs an
-      embedded `__TEXT,__info_plist` section (a project.yml change) or the
-      read must move to DeckApp / the widget extension.
+- [x] **CalBox** — calendar: two sections, TODAY and TOMORROW, each with its
+      own show/hide and row count. **Route: EventKit** (shipped).
+
+      *Correction to this file's earlier caveat.* It recorded that
+      `~/Library/Calendars/` was "empty on the dev machine — no account is
+      configured today". That was wrong: the directory is TCC-protected, and
+      `ls` reporting `Operation not permitted` was misread as absence. A signed
+      EventKit probe returned `granted: true`, **11 calendars**, 61 events in
+      7 days — including the Google account `aliz@foresightanalytics.ca`
+      synced through Internet Accounts. Routes 2 (secret ICS URL) and 3
+      (Google OAuth) were dropped: EventKit sees *more* than the ICS route
+      (which reaches one calendar and is cached by Google for hours) at a
+      fraction of OAuth's cost. **Do not re-litigate the transport** without
+      new evidence.
+
+      The shell caveat was real and is resolved: `DeckAgent` is `type: tool`
+      with no Info.plist, so it now carries
+      `NSCalendarsFullAccessUsageDescription` in a `__TEXT,__info_plist`
+      section (`CREATE_INFOPLIST_SECTION_IN_BINARY`, project.yml). Verified
+      under launchd, not just from a terminal, so the grant belongs to
+      `com.deck.agent` rather than to a parent process. Deck and DeckAgent are
+      separately signed and therefore need one TCC grant each.
+
+      Design notes worth keeping (`docs/planning/calbox/`):
+      - Calendars default on by `allowsContentModifications`, not by title —
+        a `"Holidays…"` prefix match is locale-fragile, and `sourceType` /
+        `isSubscribed` miss holiday calendars delivered as plain CalDAV.
+      - Recurring occurrences share one `eventIdentifier` (17 events → 10 ids
+        on this machine), so ids are keyed by occurrence.
+      - **The countdown was removed after review.** The face led with a live
+        `Text(_:style: .timer)` under an unlabelled block: the block read as
+        belonging to nothing, and the countdown restated what the row beneath
+        it already said. With it went `NextEvent` (which picked what to count
+        down to, including a 90-minute in-progress grace rule) and `Countdown`
+        (which worded it) — deleted rather than left as unused tested code.
+      - **One timeline entry, like every other Deck widget.** An earlier
+        version emitted an entry at each event boundary so the countdown could
+        roll over exactly; that archived 24 full views into a 1.4 MB timeline
+        (24x TaskBox's), which WidgetKit accepted and then drew as an empty
+        widget. Watch archive size under
+        `~/Library/Containers/com.deck.app.widgets/Data/SystemData/com.apple.chrono/timelines/`
+        when a widget renders blank — it is a fast tell.
 - [x] **TaskBox** — tasks: due/overdue counts + the next few items.
       Shipped 2026-08-22 (`docs/planning/taskbox/`). Azure DevOps only, via
       WIQL `[System.AssignedTo] = @Me` → `workitemsbatch` (with

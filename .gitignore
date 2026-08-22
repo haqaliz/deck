@@ -3,3 +3,4 @@ native/build/
 native/build.noindex/
 .claude/worktrees/
 .DS_Store
+CalBoxCore/.build/

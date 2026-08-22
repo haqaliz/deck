@@ -45,6 +45,7 @@ struct ContentView: View {
             case .homebox: HomeBoxSettingsView(settings: $settings.homebox)
             case .shipbox: ShipBoxSettingsView(settings: $settings.shipbox)
             case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox)
+            case .calbox: CalBoxSettingsView(settings: $settings.calbox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -58,6 +59,7 @@ struct ContentView: View {
             Task { await refreshHomeBox() }
             Task { await refreshShipBox() }
             Task { await refreshTaskBox() }
+            Task { await refreshCalBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshGitBox()
@@ -66,6 +68,7 @@ struct ContentView: View {
                 Task { await refreshHomeBox() }
                 Task { await refreshShipBox() }
                 Task { await refreshTaskBox() }
+                Task { await refreshCalBox() }
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -324,10 +327,24 @@ struct ContentView: View {
     }
 }
 
+/// Read the calendar (host is unsandboxed) for the CalBox widget.
+///
+/// The app pumps the same snapshot the agent does, so opening settings gives
+/// an immediate result instead of waiting up to a minute for the next tick.
+private func refreshCalBox() async {
+    do {
+        let snapshot = try await HostCalendarLoader.fetch(settings: DeckSettings.load().calbox)
+        CalBoxSnapshotStore.save(snapshot)
+        FetchStatusStore.record(.ok, for: .calbox)
+    } catch {
+        FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .calbox)
+    }
+}
+
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox, homebox, shipbox, taskbox
+    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox, homebox, shipbox, taskbox, calbox
 
     var id: String { rawValue }
 
@@ -344,6 +361,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .homebox: "HomeBox"
         case .shipbox: "ShipBox"
         case .taskbox: "TaskBox"
+        case .calbox: "CalBox"
         }
     }
 
@@ -360,6 +378,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .homebox: "cloud.sun"
         case .shipbox: "shippingbox"
         case .taskbox: "checklist"
+        case .calbox: "calendar"
         }
     }
 }
@@ -836,5 +855,125 @@ private struct TaskBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+    }
+}
+
+// MARK: - CalBox settings
+
+private struct CalBoxSettingsView: View {
+    @Binding var settings: CalBoxSettings
+
+    @State private var choices: [CalendarChoice] = []
+    @State private var accessGranted = true
+
+    var body: some View {
+        Form {
+            Section("Calendars") {
+                if !accessGranted {
+                    Text("Deck can't read your calendars yet. Allow access when macOS asks, or turn it on in System Settings → Privacy & Security → Calendars.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if choices.isEmpty {
+                    Text("No calendars found. Add an account in System Settings → Internet Accounts.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(groupedChoices, id: \.source) { group in
+                    // Source titles ("Google", "iCloud") tell you which account
+                    // a calendar came from — two accounts commonly hold a
+                    // calendar of the same name.
+                    Text(group.source.uppercased())
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.secondary)
+                        .tracking(1)
+                    ForEach(group.calendars) { choice in
+                        Toggle(isOn: binding(for: choice)) {
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(choice.color.color)
+                                    .frame(width: 8, height: 8)
+                                Text(choice.title)
+                            }
+                        }
+                    }
+                }
+                Text("Read-only calendars — holidays, birthdays, subscriptions — start off, so their all-day entries don't crowd out your real events.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("Both Deck and its background agent need calendar access: they are separately signed, so macOS asks once for each.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                FetchStatusCaption(source: .calbox, clearOn: settings.calendarIDs.joined(separator: "\u{0}"))
+            }
+            Section("Today") {
+                Toggle("Show today", isOn: $settings.showToday)
+                Stepper("Events: \(settings.todayCount)", value: $settings.todayCount, in: 1...CalBoxSettings.maxCount)
+                    .disabled(!settings.showToday)
+                Toggle("Show all-day events", isOn: $settings.showAllDay)
+                    .disabled(!settings.showToday)
+            }
+            Section("Tomorrow") {
+                Toggle("Show tomorrow", isOn: $settings.showTomorrow)
+                Stepper("Events: \(settings.tomorrowCount)", value: $settings.tomorrowCount, in: 1...CalBoxSettings.maxCount)
+                    .disabled(!settings.showTomorrow)
+            }
+            Section {
+                Text("Small and medium widgets show fewer rows than these counts — past that the rows would be clipped by the frame rather than by your setting.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("Colors") {
+                Toggle("Use each calendar's color", isOn: $settings.useCalendarColors)
+                ColorPicker("Accent", selection: $settings.accentColor.color)
+                    .disabled(settings.useCalendarColors)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+        .task { await load() }
+    }
+
+    private struct Group: Identifiable {
+        var source: String
+        var calendars: [CalendarChoice]
+        var id: String { source }
+    }
+
+    private var groupedChoices: [Group] {
+        Dictionary(grouping: choices, by: \.sourceTitle)
+            .map { Group(source: $0.key, calendars: $0.value.sorted { $0.title < $1.title }) }
+            .sorted { $0.source < $1.source }
+    }
+
+    private func binding(for choice: CalendarChoice) -> Binding<Bool> {
+        Binding(
+            get: { settings.calendarIDs.contains(choice.id) },
+            set: { isOn in
+                if isOn {
+                    if !settings.calendarIDs.contains(choice.id) {
+                        settings.calendarIDs.append(choice.id)
+                    }
+                } else {
+                    settings.calendarIDs.removeAll { $0 == choice.id }
+                }
+                // Any deliberate change counts as having chosen, so unticking
+                // everything is respected instead of being re-defaulted on at
+                // the next launch.
+                settings.hasChosenCalendars = true
+            }
+        )
+    }
+
+    /// Prompts for access (this is the in-context place to ask), lists the
+    /// calendars, and applies the default selection exactly once.
+    private func load() async {
+        accessGranted = await HostCalendarLoader.requestAccess()
+        guard accessGranted else { return }
+        choices = HostCalendarLoader.calendars().sorted { $0.title < $1.title }
+        guard !settings.hasChosenCalendars else { return }
+        settings.calendarIDs = choices
+            .filter { CalendarDefaults.shouldEnableByDefault(allowsContentModifications: $0.allowsContentModifications) }
+            .map(\.id)
+        settings.hasChosenCalendars = true
     }
 }
