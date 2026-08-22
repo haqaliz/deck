@@ -23,8 +23,11 @@ widget.
   (sampled from NSPasteboard by the agent).
 - **DevBox** — dev environment: open TCP listening ports (process + port) and
   running Docker containers (subprocesses, via the agent).
-- **HomeBox** — weather + world clocks: conditions and a 3-day forecast
-  (wttr.in, fetched by the agent).
+- **WeatherBox** — weather: conditions and a 3-day forecast for your location
+  (wttr.in, fetched by the agent). Was HomeBox until its clock half split out.
+- **ClockBox** — world clocks: up to four cities, each with its time, relative
+  day and offset from your own zone. The only widget on **neither** data path
+  — pure `TimeZone` + `Date`, no snapshot, no sampler, no network.
 - **ShipBox** — build/deploy status: GitHub Actions runs for a repo (fetched
   by the agent with the user's token).
 - **TaskBox** — tasks: Azure DevOps work items assigned to you, with open
@@ -33,7 +36,7 @@ widget.
   show/hide and row count (EventKit, read by the agent; covers whatever macOS
   syncs).
 
-All eleven ship in one WidgetKit extension: `Deck.app` (host + settings window)
+All twelve ship in one WidgetKit extension: `Deck.app` (host + settings window)
 → `DeckWidgets.appex`.
 
 ## Architecture
@@ -43,7 +46,7 @@ targets:
 
 ```
 DeckApp/        # host app: settings window (tabs per widget), agent installer
-DeckWidgets/    # WidgetKit extension: 11 widgets + Loaders/ (mach, getifaddrs, IOKit)
+DeckWidgets/    # WidgetKit extension: 12 widgets + Loaders/ (mach, getifaddrs, IOKit)
 DeckAgent/      # silent CLI: refreshes sandbox-blocked data snapshots, then exits
 Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
 ```

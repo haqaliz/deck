@@ -335,12 +335,22 @@ final class ClipBoxSettingsDecodeTests: XCTestCase {
     }
 }
 
-final class HomeBoxSettingsDecodeTests: XCTestCase {
+final class WeatherBoxSettingsDecodeTests: XCTestCase {
     func testMissingKeysFallBackToDefaults() throws {
-        let s = try decode(#"{"unitsFahrenheit":true}"#, as: HomeBoxSettings.self)
+        let s = try decode(#"{"unitsFahrenheit":true}"#, as: WeatherBoxSettings.self)
         XCTAssertTrue(s.unitsFahrenheit)
-        XCTAssertEqual(s.timezoneIDs, ["local", "UTC"])
+        XCTAssertTrue(s.showForecast)
         XCTAssertEqual(s.location, "")
+    }
+}
+
+final class ClockBoxSettingsDecodeTests: XCTestCase {
+    func testMissingKeysFallBackToDefaults() throws {
+        let s = try decode(#"{"showOffset":false}"#, as: ClockBoxSettings.self)
+        XCTAssertFalse(s.showOffset)
+        XCTAssertTrue(s.showRelativeDay)
+        XCTAssertEqual(s.cityIDs, [ClockBoxCore.localID, "UTC"])
+        XCTAssertEqual(s.timeColor, RGBA(.teal))
     }
 }
 
@@ -409,7 +419,7 @@ final class DeckSettingsSchemaEvolutionTests: XCTestCase {
         XCTAssertFalse(s.livebox.showCPU)
         XCTAssertEqual(s.openbox.token, "abc")
         XCTAssertEqual(s.gitbox.scanDepth, 4)
-        XCTAssertEqual(s.homebox.location, "Tehran")
+        XCTAssertEqual(s.weatherbox.location, "Tehran", "legacy homebox key migrates")
         XCTAssertEqual(s.shipbox.repo, "a/b")
         XCTAssertFalse(s.agentAtLogin)
         XCTAssertEqual(s.taskbox, TaskBoxSettings(), "the new section defaults")
@@ -475,8 +485,10 @@ final class DeckSettingsRoundTripTests: XCTestCase {
         s.devbox.showContainers = false
         s.clipbox.historyCount = 12
         s.clipbox.textColor = RGBA(red: 0.77, green: 0.88, blue: 0.99)
-        s.homebox.location = "Reykjavik"
-        s.homebox.unitsFahrenheit = true
+        s.weatherbox.location = "Reykjavik"
+        s.weatherbox.unitsFahrenheit = true
+        s.clockbox.cityIDs = ["Asia/Tokyo", "Europe/Paris"]
+        s.clockbox.showOffset = false
         s.shipbox.repo = "owner/name"
         s.shipbox.runCount = 13
         s.taskbox.organization = "org"
@@ -508,10 +520,82 @@ final class DeckSettingsRoundTripTests: XCTestCase {
         XCTAssertEqual(d.gitbox, original.gitbox, "gitbox dropped on decode")
         XCTAssertEqual(d.devbox, original.devbox, "devbox dropped on decode")
         XCTAssertEqual(d.clipbox, original.clipbox, "clipbox dropped on decode")
-        XCTAssertEqual(d.homebox, original.homebox, "homebox dropped on decode")
+        XCTAssertEqual(d.weatherbox, original.weatherbox, "weatherbox dropped on decode")
+        XCTAssertEqual(d.clockbox, original.clockbox, "clockbox dropped on decode")
         XCTAssertEqual(d.shipbox, original.shipbox, "shipbox dropped on decode")
         XCTAssertEqual(d.taskbox, original.taskbox, "taskbox dropped on decode")
         XCTAssertEqual(d.calbox, original.calbox, "calbox dropped on decode")
         XCTAssertEqual(d.agentAtLogin, original.agentAtLogin, "agentAtLogin dropped on decode")
+    }
+}
+
+// MARK: - homebox -> weatherbox + clockbox migration
+
+final class HomeBoxSplitMigrationTests: XCTestCase {
+    /// A settings.json written before the split has no `weatherbox` and no
+    /// `clockbox`. Both must come from the retired `homebox` blob rather than
+    /// resetting the user's location, units and zones to defaults.
+    private let preSplit = """
+    {"homebox":{"location":"Reykjavik","unitsFahrenheit":true,"showForecast":false,
+                "timezoneIDs":["local","Asia/Tokyo","Europe/Paris"],"showZones":true},
+     "livebox":{"processCount":9}}
+    """
+
+    func testWeatherSettingsCarryOver() throws {
+        let s = try decode(preSplit, as: DeckSettings.self)
+        XCTAssertEqual(s.weatherbox.location, "Reykjavik")
+        XCTAssertTrue(s.weatherbox.unitsFahrenheit)
+        XCTAssertFalse(s.weatherbox.showForecast)
+    }
+
+    func testZonesBecomeClockCities() throws {
+        let s = try decode(preSplit, as: DeckSettings.self)
+        XCTAssertEqual(s.clockbox.cityIDs, ["local", "Asia/Tokyo", "Europe/Paris"])
+    }
+
+    /// The migration must not disturb unrelated sections.
+    func testOtherSectionsAreUntouched() throws {
+        let s = try decode(preSplit, as: DeckSettings.self)
+        XCTAssertEqual(s.livebox.processCount, 9)
+        XCTAssertEqual(s.netbox, NetBoxSettings())
+    }
+
+    /// A file with the new keys ignores any stale `homebox` left beside them.
+    func testNewKeysWinOverLegacyBlob() throws {
+        let json = """
+        {"homebox":{"location":"Old","timezoneIDs":["UTC"]},
+         "weatherbox":{"location":"New"},
+         "clockbox":{"cityIDs":["Asia/Tehran"]}}
+        """
+        let s = try decode(json, as: DeckSettings.self)
+        XCTAssertEqual(s.weatherbox.location, "New")
+        XCTAssertEqual(s.clockbox.cityIDs, ["Asia/Tehran"])
+    }
+
+    /// A file with neither shape decodes to defaults, not to an error.
+    func testAbsentEverythingDecodesDefaults() throws {
+        let s = try decode(#"{}"#, as: DeckSettings.self)
+        XCTAssertEqual(s.weatherbox, WeatherBoxSettings())
+        XCTAssertEqual(s.clockbox, ClockBoxSettings())
+    }
+
+    /// The old cap was 3 and the new one is 4, so nothing truncates on the way
+    /// in — but a hand-edited file with more than 4 must still be clamped.
+    func testCityListIsClampedToTheMaximum() throws {
+        let json = """
+        {"clockbox":{"cityIDs":["UTC","Asia/Tokyo","Europe/Paris","America/Toronto","Asia/Tehran"]}}
+        """
+        let s = try decode(json, as: DeckSettings.self)
+        XCTAssertEqual(s.clockbox.cityIDs.count, ClockBoxCore.maxCities)
+        XCTAssertEqual(s.clockbox.cityIDs.last, "America/Toronto")
+    }
+
+    /// The retired keys must not be written back out.
+    func testEncodedOutputHasNoHomeboxKey() throws {
+        let data = try JSONEncoder().encode(try decode(preSplit, as: DeckSettings.self))
+        let json = String(decoding: data, as: UTF8.self)
+        XCTAssertFalse(json.contains("\"homebox\""))
+        XCTAssertTrue(json.contains("\"weatherbox\""))
+        XCTAssertTrue(json.contains("\"clockbox\""))
     }
 }

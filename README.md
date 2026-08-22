@@ -20,12 +20,13 @@ WidgetKit widgets with native colors, corners and materials.
 | **GitBox** | commits per day (14 days), today's count, streak, active repos |
 | **DevBox** | open TCP listening ports (process + port) and running Docker containers (CPU/mem) |
 | **ClipBox** | clipboard history: recent copies with previews, item kinds, relative times |
-| **HomeBox** | weather for your location (conditions + 3-day forecast) and a world clock; a failed fetch says why |
+| **WeatherBox** | weather for your location (conditions + 3-day forecast); a failed fetch says why |
+| **ClockBox** | world clocks for up to four cities: time, relative day, offset from your own zone |
 | **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
 | **TaskBox** | Azure DevOps work items assigned to you: open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW, from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
 
-All eleven come in **small / medium / large** sizes.
+All twelve come in **small / medium / large** sizes.
 
 ## Install
 
@@ -45,7 +46,7 @@ pluginkit -m -i com.deck.app.widgets   # verify the extension registered
 ```
 
 Then: right-click desktop → **Edit Widgets…** → search "Deck" → add
-LiveBox/OpenBox/NetBox/BatBox/GitBox/DevBox/ClipBox/HomeBox/ShipBox/TaskBox/CalBox.
+LiveBox/OpenBox/NetBox/BatBox/GitBox/DevBox/ClipBox/WeatherBox/ClockBox/ShipBox/TaskBox/CalBox.
 
 ## Settings
 
@@ -75,8 +76,12 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   comma-separated paths in settings).
 - **ClipBox** history lives local-only in the widget container (plaintext, up
   to 20 items); clear it from the ClipBox settings tab.
-- **HomeBox** fetches weather from wttr.in via the agent (empty location = auto
-  geolocate); timezone rows are local-only (`local` = your zone).
+- **WeatherBox** fetches weather from wttr.in via the agent (empty location =
+  auto geolocate).
+- **ClockBox** needs no data source at all: it resolves `TimeZone` and `Date`
+  inside the widget, so it works with the agent stopped and the network down.
+  Its timeline carries an hour of entries on minute boundaries, so the displayed
+  minute is never stale.
 - **ShipBox** needs a repo (`owner/repo`) and a GitHub token in settings —
   without a token nothing is fetched (the token goes only to api.github.com
   over TLS). Runs refresh via the agent every 60s.
@@ -119,7 +124,7 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   those counts, because past that the rows would be clipped by the frame rather
   than by your setting. All-day events sit at the top of TODAY and spend the
   section's budget before timed events do.
-- **When a fetch fails**, ShipBox, TaskBox, CalBox, HomeBox and OpenBox (remote
+- **When a fetch fails**, ShipBox, TaskBox, CalBox, WeatherBox and OpenBox (remote
   mode) say why in one short line instead of a generic "no data": *"Add a repo + token in
   settings"* (nothing configured), *"Check repo + token"* / *"Check the
   location"* (credentials or target wrong — 401/403/404), *"Can't reach

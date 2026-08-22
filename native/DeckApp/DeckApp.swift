@@ -42,7 +42,8 @@ struct ContentView: View {
             case .gitbox: GitBoxSettingsView(settings: $settings.gitbox)
             case .devbox: DevBoxSettingsView(settings: $settings.devbox)
             case .clipbox: ClipBoxSettingsView(settings: $settings.clipbox)
-            case .homebox: HomeBoxSettingsView(settings: $settings.homebox)
+            case .weatherbox: WeatherBoxSettingsView(settings: $settings.weatherbox)
+            case .clockbox: ClockBoxSettingsView(settings: $settings.clockbox)
             case .shipbox: ShipBoxSettingsView(settings: $settings.shipbox)
             case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox)
             case .calbox: CalBoxSettingsView(settings: $settings.calbox)
@@ -56,7 +57,7 @@ struct ContentView: View {
             refreshGitBox()
             refreshDevBox()
             refreshClipBox()
-            Task { await refreshHomeBox() }
+            Task { await refreshWeather() }
             Task { await refreshShipBox() }
             Task { await refreshTaskBox() }
             Task { await refreshCalBox() }
@@ -65,7 +66,7 @@ struct ContentView: View {
                 refreshGitBox()
                 refreshDevBox()
                 refreshClipBox()
-                Task { await refreshHomeBox() }
+                Task { await refreshWeather() }
                 Task { await refreshShipBox() }
                 Task { await refreshTaskBox() }
                 Task { await refreshCalBox() }
@@ -153,18 +154,18 @@ struct ContentView: View {
         }
     }
 
-    /// Fetch weather (host is unsandboxed) for the HomeBox widget. Always
+    /// Fetch weather (host is unsandboxed) for the WeatherBox widget. Always
     /// written on success so writtenAt drives the staleness windows.
-    private func refreshHomeBox() async {
-        let snapshot: HomeBoxSnapshot
+    private func refreshWeather() async {
+        let snapshot: WeatherSnapshot
         do {
-            snapshot = try await HostWeatherLoader.fetch(location: settings.homebox.location)
+            snapshot = try await HostWeatherLoader.fetch(location: settings.weatherbox.location)
         } catch {
             FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .weather)
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
-        HomeBoxSnapshotStore.save(snapshot)
+        WeatherSnapshotStore.save(snapshot)
         FetchStatusStore.record(.ok, for: .weather)
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -344,7 +345,8 @@ private func refreshCalBox() async {
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox, homebox, shipbox, taskbox, calbox
+    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
+    case weatherbox, clockbox, shipbox, taskbox, calbox
 
     var id: String { rawValue }
 
@@ -358,7 +360,8 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .gitbox: "GitBox"
         case .devbox: "DevBox"
         case .clipbox: "ClipBox"
-        case .homebox: "HomeBox"
+        case .weatherbox: "WeatherBox"
+        case .clockbox: "ClockBox"
         case .shipbox: "ShipBox"
         case .taskbox: "TaskBox"
         case .calbox: "CalBox"
@@ -375,7 +378,8 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .gitbox: "chevron.left.forwardslash.chevron.right"
         case .devbox: "server.rack"
         case .clipbox: "doc.on.clipboard"
-        case .homebox: "cloud.sun"
+        case .weatherbox: "cloud.sun"
+        case .clockbox: "globe"
         case .shipbox: "shippingbox"
         case .taskbox: "checklist"
         case .calbox: "calendar"
@@ -667,8 +671,8 @@ private struct DevBoxSettingsView: View {
     }
 }
 
-private struct HomeBoxSettingsView: View {
-    @Binding var settings: HomeBoxSettings
+private struct WeatherBoxSettingsView: View {
+    @Binding var settings: WeatherBoxSettings
 
     var body: some View {
         Form {
@@ -682,25 +686,60 @@ private struct HomeBoxSettingsView: View {
                 Toggle("Show 3-day forecast", isOn: $settings.showForecast)
                 FetchStatusCaption(source: .weather, clearOn: settings.location)
             }
-            Section("World clock") {
-                Toggle("Show zones", isOn: $settings.showZones)
-                TextField("Zones (comma separated, local = current)", text: zonesBinding)
-                    .disabled(!settings.showZones)
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+}
+
+private struct ClockBoxSettingsView: View {
+    @Binding var settings: ClockBoxSettings
+
+    var body: some View {
+        Form {
+            Section("Cities") {
+                // One picker per slot rather than a drag-to-reorder list: slot
+                // order *is* display order, so a plain indexed list keeps the
+                // two in sync without a reorder affordance to maintain.
+                ForEach(0..<ClockBoxCore.maxCities, id: \.self) { slot in
+                    Picker("Clock \(slot + 1)", selection: cityBinding(slot: slot)) {
+                        Text("None").tag("")
+                        Text("Current location").tag(ClockBoxCore.localID)
+                        Divider()
+                        ForEach(ClockBoxCities.curated, id: \.id) { city in
+                            Text(city.displayName).tag(city.id)
+                        }
+                    }
+                }
+            }
+            Section("Display") {
+                Toggle("Show relative day", isOn: $settings.showRelativeDay)
+                Toggle("Show offset from your zone", isOn: $settings.showOffset)
+                ColorPicker("Time color", selection: timeColorBinding, supportsOpacity: false)
             }
         }
         .formStyle(.grouped)
         .padding(.top, 4)
     }
 
-    private var zonesBinding: Binding<String> {
+    /// Slots are positional: an empty pick clears that slot and the remaining
+    /// cities close up, so the widget never renders a gap.
+    private func cityBinding(slot: Int) -> Binding<String> {
         Binding(
-            get: { settings.timezoneIDs.joined(separator: ", ") },
-            set: {
-                settings.timezoneIDs = $0
-                    .split(separator: ",")
-                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                    .filter { !$0.isEmpty }
+            get: { slot < settings.cityIDs.count ? settings.cityIDs[slot] : "" },
+            set: { newValue in
+                var ids = settings.cityIDs
+                while ids.count < ClockBoxCore.maxCities { ids.append("") }
+                ids[slot] = newValue
+                settings.cityIDs = ids.filter { !$0.isEmpty }
             }
+        )
+    }
+
+    private var timeColorBinding: Binding<Color> {
+        Binding(
+            get: { settings.timeColor.color },
+            set: { settings.timeColor = RGBA($0) }
         )
     }
 }

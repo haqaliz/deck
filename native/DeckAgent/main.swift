@@ -117,8 +117,8 @@ Task {
     do {
         // Always written: writtenAt drives the widget's staleness windows, so
         // a successful fetch must refresh it even when weather is unchanged.
-        let homebox = try await HostWeatherLoader.fetch(location: settings.homebox.location)
-        HomeBoxSnapshotStore.save(homebox)
+        let weather = try await HostWeatherLoader.fetch(location: settings.weatherbox.location)
+        WeatherSnapshotStore.save(weather)
         FetchStatusStore.record(.ok, for: .weather)
         agentLog.info("written weather snapshot")
     } catch {

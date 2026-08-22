@@ -1,13 +1,14 @@
 import Foundation
 
-// MARK: - HomeBox snapshot
+// MARK: - Weather snapshot
 //
 // wttr.in is a network fetch — the widget sandbox has no network entitlement —
 // so the host agent fetches weather every 60s and writes this snapshot into the
-// container. The HomeBox widget renders it; the world-clock rows need no data
-// at all (local TimeZone identifiers).
+// container. The WeatherBox widget renders it. The file stays named
+// weather.json across the HomeBox -> WeatherBox rename, so the agent's output
+// path is unchanged.
 
-struct HomeBoxSnapshot: Codable, Equatable {
+struct WeatherSnapshot: Codable, Equatable {
     var writtenAt: Date
     var location: String
     var country: String
@@ -42,17 +43,17 @@ struct WeatherDay: Codable, Equatable {
     var desc: String
 }
 
-enum HomeBoxSnapshotStore {
+enum WeatherSnapshotStore {
     static var fileURL: URL {
         DeckSettings.containerDirectory.appendingPathComponent("weather.json")
     }
 
-    static func load() -> HomeBoxSnapshot? {
+    static func load() -> WeatherSnapshot? {
         guard let data = try? Data(contentsOf: fileURL) else { return nil }
-        return try? JSONDecoder().decode(HomeBoxSnapshot.self, from: data)
+        return try? JSONDecoder().decode(WeatherSnapshot.self, from: data)
     }
 
-    static func save(_ snapshot: HomeBoxSnapshot) {
+    static func save(_ snapshot: WeatherSnapshot) {
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         _ = AtomicFile.write(data, to: fileURL)
     }
@@ -70,7 +71,7 @@ enum HostWeatherLoader {
 
     /// Fetches current conditions + 3-day forecast for `location`
     /// (free-text city or "lat,lon"; empty → wttr.in geolocates).
-    static func fetch(location: String) async throws -> HomeBoxSnapshot {
+    static func fetch(location: String) async throws -> WeatherSnapshot {
         let url = try makeURL(location: location)
 
         var request = URLRequest(url: url)
@@ -92,7 +93,7 @@ enum HostWeatherLoader {
         guard let parsed = WttrParser.parse(data) else {
             throw WeatherError.invalidPayload
         }
-        return HomeBoxSnapshot(
+        return WeatherSnapshot(
             writtenAt: Date(),
             location: parsed.location,
             country: parsed.country,
