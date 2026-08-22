@@ -69,6 +69,7 @@ struct DeckSettings: Codable, Equatable {
         homebox = try c.decodeIfPresent(HomeBoxSettings.self, forKey: .homebox) ?? HomeBoxSettings()
         shipbox = try c.decodeIfPresent(ShipBoxSettings.self, forKey: .shipbox) ?? ShipBoxSettings()
         taskbox = try c.decodeIfPresent(TaskBoxSettings.self, forKey: .taskbox) ?? TaskBoxSettings()
+        calbox = try c.decodeIfPresent(CalBoxSettings.self, forKey: .calbox) ?? CalBoxSettings()
         agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
     }
 

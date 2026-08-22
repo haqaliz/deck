@@ -443,3 +443,75 @@ final class TaskStateMappingDecodeTests: XCTestCase {
         XCTAssertEqual(s.stateMapping.lane(for: "Committed"), .inProgress)
     }
 }
+
+// MARK: - Container-level round trip
+//
+// `DeckSettings.init(from:)` assigns each section by hand. A section that is
+// declared as a property but forgotten in that initializer still *encodes*
+// (the property exists) while silently decoding back to its defaults — the
+// user's settings are written to disk and then ignored on every load. That
+// is not hypothetical: `calbox` shipped with exactly this omission.
+//
+// One test closes the whole class of bug: mutate every section away from its
+// defaults, encode, decode, and require the result to be identical. Any
+// forgotten section fails here, including sections added in the future.
+
+final class DeckSettingsRoundTripTests: XCTestCase {
+    /// Every section set to something that is *not* its default, so a dropped
+    /// section can never coincidentally compare equal.
+    private func mutatedSettings() -> DeckSettings {
+        var s = DeckSettings()
+        s.livebox.processCount = 9
+        s.livebox.cpuColor = RGBA(red: 0.11, green: 0.22, blue: 0.33)
+        s.openbox.token = "round-trip-token"
+        s.openbox.modelCount = 7
+        s.netbox.interfaceCount = 8
+        s.netbox.pinnedInterface = "en7"
+        s.batbox.showChart = false
+        s.batbox.levelColor = RGBA(red: 0.44, green: 0.55, blue: 0.66)
+        s.gitbox.repoPaths = ["/tmp/one", "/tmp/two"]
+        s.gitbox.scanDepth = 6
+        s.devbox.portCount = 11
+        s.devbox.showContainers = false
+        s.clipbox.historyCount = 12
+        s.clipbox.textColor = RGBA(red: 0.77, green: 0.88, blue: 0.99)
+        s.homebox.location = "Reykjavik"
+        s.homebox.unitsFahrenheit = true
+        s.shipbox.repo = "owner/name"
+        s.shipbox.runCount = 13
+        s.taskbox.organization = "org"
+        s.taskbox.project = "proj"
+        s.calbox.todayCount = 3
+        s.calbox.showTomorrow = false
+        s.calbox.accentColor = RGBA(red: 0.01, green: 0.02, blue: 0.03)
+        s.agentAtLogin = false
+        return s
+    }
+
+    func testEverySectionSurvivesRoundTrip() throws {
+        let original = mutatedSettings()
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(DeckSettings.self, from: data)
+        XCTAssertEqual(decoded, original)
+    }
+
+    /// Pins the failure to the exact section rather than the whole blob, so a
+    /// future regression reports *which* section was dropped.
+    func testEachSectionIndividually() throws {
+        let original = mutatedSettings()
+        let data = try JSONEncoder().encode(original)
+        let d = try JSONDecoder().decode(DeckSettings.self, from: data)
+        XCTAssertEqual(d.livebox, original.livebox, "livebox dropped on decode")
+        XCTAssertEqual(d.openbox, original.openbox, "openbox dropped on decode")
+        XCTAssertEqual(d.netbox, original.netbox, "netbox dropped on decode")
+        XCTAssertEqual(d.batbox, original.batbox, "batbox dropped on decode")
+        XCTAssertEqual(d.gitbox, original.gitbox, "gitbox dropped on decode")
+        XCTAssertEqual(d.devbox, original.devbox, "devbox dropped on decode")
+        XCTAssertEqual(d.clipbox, original.clipbox, "clipbox dropped on decode")
+        XCTAssertEqual(d.homebox, original.homebox, "homebox dropped on decode")
+        XCTAssertEqual(d.shipbox, original.shipbox, "shipbox dropped on decode")
+        XCTAssertEqual(d.taskbox, original.taskbox, "taskbox dropped on decode")
+        XCTAssertEqual(d.calbox, original.calbox, "calbox dropped on decode")
+        XCTAssertEqual(d.agentAtLogin, original.agentAtLogin, "agentAtLogin dropped on decode")
+    }
+}
