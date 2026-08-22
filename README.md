@@ -1,13 +1,29 @@
-# deck — macOS desktop widgets
+<div align="center">
 
-<p align="center">
-  <img src="docs/deck.svg" width="120" alt="Deck logo">
-</p>
+<img src="docs/deck.svg" width="108" alt="Deck" />
 
-A collection of small, beautiful macOS desktop widgets, delivered as one native
-app — **Deck** — and added from the macOS **Widget Center** (right-click the
-desktop → **Edit Widgets…**, or click the clock in the menu bar). Real
-WidgetKit widgets with native colors, corners and materials.
+# Deck
+
+**Twelve small, beautiful macOS desktop widgets — one native app, no floating windows.**
+
+Deck adds real WidgetKit widgets to your desktop: your machine, your network, your
+battery, your commits, your ports, your calendar, your tasks and your builds — with
+native colors, corners and materials, at three sizes each.
+
+[![Release](https://img.shields.io/github/v/release/haqaliz/deck?color=3fb950&label=release)](https://github.com/haqaliz/deck/releases/latest)
+[![CI](https://github.com/haqaliz/deck/actions/workflows/deck.yml/badge.svg)](https://github.com/haqaliz/deck/actions/workflows/deck.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![macOS](https://img.shields.io/badge/macOS-15%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/)
+[![Swift](https://img.shields.io/badge/Swift-5.10-F05138?logo=swift&logoColor=white)](https://swift.org)
+[![WidgetKit](https://img.shields.io/badge/WidgetKit-native-0A84FF)](https://developer.apple.com/documentation/widgetkit)
+[![Downloads](https://img.shields.io/github/downloads/haqaliz/deck/total?color=3fb950&label=downloads)](https://github.com/haqaliz/deck/releases)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-3fb950)](CONTRIBUTING.md)
+
+[Install](#install) · [Widgets](#widgets) · [Settings](#settings) · [Privacy](#privacy) · [How it works](#how-it-works) · [Troubleshooting](#troubleshooting) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md)
+
+</div>
+
+---
 
 ## Widgets
 
@@ -30,23 +46,57 @@ All twelve come in **small / medium / large** sizes.
 
 ## Install
 
-**Requires signing with an Apple developer identity** (the system refuses
-self-signed/ad-hoc widget extensions — `pluginkit` won't register them; a free
-Apple ID works):
+### Homebrew (recommended)
 
 ```bash
+brew install --cask --no-quarantine haqaliz/deck/deck
+```
+
+### Download
+
+Grab `Deck-vX.Y.dmg` from the [latest release](https://github.com/haqaliz/deck/releases/latest),
+open it, and drag **Deck** to Applications. Then clear the quarantine flag once
+and launch:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Deck.app
+open /Applications/Deck.app
+```
+
+Finally: right-click the desktop → **Edit Widgets…** → search "Deck" → add the
+widgets you want. Each comes in small, medium and large.
+
+> **Why the extra command?** Deck is signed with an Apple Development
+> certificate and is **not notarized yet**, so macOS quarantines it on download
+> and refuses to open it. On macOS 15 the old Control-click → Open shortcut is
+> gone, so it is the command above or System Settings → Privacy & Security →
+> **Open Anyway** after a blocked launch. `--no-quarantine` is Homebrew doing
+> the same thing for you. Notarization is the next release milestone; when it
+> lands, both of these disappear.
+
+Verify a download against `SHA256SUMS.txt` on the release.
+
+### Build from source
+
+Requires macOS 15+, Xcode 16+, and an Apple signing identity — a free Apple ID
+works, but ad-hoc and self-signed extensions are rejected by `pluginkit` and
+never appear in the Widget Center.
+
+```bash
+brew install xcodegen
 xcodegen generate --spec native/project.yml
 xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release \
   -derivedDataPath native/build.noindex -allowProvisioningUpdates \
   -allowProvisioningDeviceRegistration build
 
+rm -rf /Applications/Deck.app
 cp -R native/build.noindex/Build/Products/Release/Deck.app /Applications/
-open /Applications/Deck.app     # first run installs the refresh agent
+open /Applications/Deck.app            # first run installs the refresh agent
+scripts/lsclean.sh                     # required after every release build
 pluginkit -m -i com.deck.app.widgets   # verify the extension registered
 ```
 
-Then: right-click desktop → **Edit Widgets…** → search "Deck" → add
-LiveBox/OpenBox/NetBox/BatBox/GitBox/DevBox/ClipBox/WeatherBox/ClockBox/ShipBox/TaskBox/CalBox.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Settings
 
@@ -153,6 +203,48 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 - Everything refreshes on a ~60s cadence (WidgetKit throttles faster requests
   on macOS).
 
+## Privacy
+
+Deck reads personal data, so here is exactly what happens to it.
+
+**What leaves your machine — only what you configure, only to where you point it:**
+
+| Widget | Sends | To |
+|---|---|---|
+| WeatherBox | your location (or nothing, and your IP geolocates) | `wttr.in` |
+| ShipBox | your GitHub token, your `owner/repo` | `api.github.com` |
+| TaskBox | your Azure DevOps PAT, org and project | `dev.azure.com` |
+| OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
+
+Nothing else makes a network request. There is no analytics, no telemetry, no
+crash reporting, and no Deck server — the project has no backend at all. The
+other eight widgets never touch the network.
+
+**What stays on disk:** every snapshot lives in the widget's own container at
+`~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/`.
+Calendar events, work items, clipboard history, commit counts and process lists
+are written there and read by the widgets. Nothing is uploaded.
+
+**Clipboard.** ClipBox skips any copy marked `ConcealedType`, `TransientType`
+or `AutoGeneratedType` — the convention password managers use precisely so that
+history tools ignore them — so passwords copied from 1Password, Bitwarden,
+KeePassXC or Keychain Access are never recorded. Everything else it does keep is
+plain text, capped at 20 items, and clearable from the ClipBox settings tab.
+
+**Tokens** are stored in `settings.json` in that container, owner-readable only
+(mode 0600). Moving them to the Keychain is on the roadmap; until then, treat
+that file as a secret and use read-only scopes (for Azure DevOps, *Work Items
+(Read)* is enough).
+
+**Permissions macOS will ask for:** calendar access (CalBox) and "access data
+from other apps" (the process list runs `ps`). Deck and its background agent are
+signed separately, so macOS asks once for each. Deny them and only those two
+features go dark.
+
+**Uninstalling** is a button: Deck → Settings → General → Uninstall removes the
+background agents, and "Erase Deck data" deletes every snapshot, setting and
+token.
+
 ## Troubleshooting
 
 **Every widget shows grey placeholder blocks instead of text** (charts still
@@ -176,13 +268,32 @@ the widget container.
 
 ## Uninstall
 
+Installed with Homebrew:
+
+```bash
+brew uninstall --cask deck        # app + background agents
+brew uninstall --zap --cask deck  # also erases settings, snapshots and tokens
+```
+
+Otherwise, in the app: **Deck → General → Uninstall** — "Remove background
+agents" stops and deletes both LaunchAgents, "Erase Deck data…" clears every
+snapshot, setting and token. Then remove the widgets from your desktop and drag
+Deck to the Trash.
+
+By hand, if you prefer:
+
 ```bash
 launchctl bootout gui/$(id -u)/com.deck.agent
 launchctl bootout gui/$(id -u)/com.deck.agent.processes
 rm -f ~/Library/LaunchAgents/com.deck.agent.plist
 rm -f ~/Library/LaunchAgents/com.deck.agent.processes.plist
 rm -rf /Applications/Deck.app
+rm -rf ~/Library/Logs/Deck
 ```
+
+Remove the widgets from your desktop **before** uninstalling, and leave the
+widget container alone unless you mean to erase your settings — see the note in
+`CLAUDE.md` about why `rm -rf` on the container breaks every widget permanently.
 
 ## CI & Releases
 
@@ -190,8 +301,9 @@ rm -rf /Applications/Deck.app
   installs xcodegen, generates the project, and builds Release. With the signing
   secrets configured it signs and auto-provisions; without them it builds
   unsigned (compile check only — unsigned widgets can't register in `pluginkit`).
-- **Releases**: push a `v*` tag (e.g. `git tag v1.3 && git push origin v1.3`) to
-  build, sign, and upload `Deck-macos.zip` (with SHA256) to a GitHub Release.
+- **Releases**: push a `v*` tag (e.g. `git tag v1.20 && git push origin v1.20`) to
+  build, sign, package `Deck-vX.Y.dmg` (with `SHA256SUMS.txt`) and publish it to a
+  GitHub Release, install instructions included.
   Required secrets: `APPLE_CERT_P12_BASE64`, `APPLE_CERT_PASSWORD`, `APPLE_ID`,
   `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (see the workflow header).
 
@@ -212,3 +324,14 @@ runs + 50 overlapping launches, JSON integrity + exit-code assertions) and
 runs in a few minutes; it isolates the LaunchAgents and the snapshot
 container during the run and restores them afterwards. For the full 24h
 stability soak see `docs/planning/crash-robustness-pass/runbook-24h.md`.
+
+## Contributing
+
+Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md)
+for the development guide, the two data paths, and the platform traps that will
+otherwise cost you a day. Participation is covered by the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+[Apache License 2.0](LICENSE) © 2026 Ali Haqiqi. See [NOTICE](NOTICE).

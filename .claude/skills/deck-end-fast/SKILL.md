@@ -58,10 +58,12 @@ If `worktree remove` refuses (uncommitted/untracked files) or `branch -d` refuse
 ### Phase 4 — Release
 
 Ship the merged work as a GitHub Release. The CI workflow (`deck.yml`) builds,
-signs, and uploads `Deck-macos.zip` + SHA256 to a GitHub Release when a `v*`
-tag is pushed (README.md → "Releases"). One release per feature cluster — not
-per commit. Skip only for pure-internal work with no user-facing change (e.g.
-tests-only milestones still deserve one when a release is overdue).
+signs, packages **`Deck-<tag>.dmg`** (app + `/Applications` symlink) with
+`SHA256SUMS.txt`, and publishes both plus install instructions when a `v*` tag
+is pushed (README.md → "Releases"). The DMG is the only artifact — the old
+`Deck-macos.zip` was dropped. One release per feature cluster — not per commit.
+Skip only for pure-internal work with no user-facing change (e.g. tests-only
+milestones still deserve one when a release is overdue).
 
 ```bash
 # 1. Decide the version: patch bump from the latest tag (small fixes) or a
@@ -79,13 +81,22 @@ git push
 # 3. Tag + ship (v* tags trigger the signed Release build)
 git tag v1.4 && git push origin v1.4
 
-# 4. Verify the release landed
+# 4. Verify the release landed — the DMG must be there, not just a green run
 gh run list --workflow deck.yml --limit 1    # wait for green
-gh release view v1.4                         # Deck-macos.zip + .sha256 present
+gh release view v1.4 --json assets --jq '.assets[].name'
+#    expect exactly: Deck-v1.4.dmg  and  SHA256SUMS.txt
+#    a release without the .dmg is a failed release — do not announce it
 
 # 5. Install the signed build locally
+rm -rf /Applications/Deck.app
 cp -R native/build.noindex/Build/Products/Release/Deck.app /Applications/
 open /Applications/Deck.app                  # re-registers widgets via pluginkit
+scripts/lsclean.sh                           # required after every release build
+
+# 6. Update the Homebrew cask (homebrew/deck.rb): bump `version`, paste the
+#    sha256 from the release's SHA256SUMS.txt, then mirror the file to the tap
+#    repo haqaliz/homebrew-deck as Casks/deck.rb.
+gh release download "v1.4" --pattern SHA256SUMS.txt --output - --repo haqaliz/deck
 ```
 
 **Version numbering rule**: `CFBundleShortVersionString` = tag without the `v`
@@ -105,3 +116,5 @@ the signing secrets (`APPLE_CERT_P12_BASE64`, `APPLE_APP_SPECIFIC_PASSWORD`,
 | Forgetting ROADMAP/README updates | Phase 3 exists for a reason |
 | Tagging without bumping project.yml | The installed app would report the old version — bump first |
 | Tagging a version with no signing secrets | The workflow fails; only the cert-secreted runner signs |
+| Announcing a release without checking its assets | A green run can still publish no DMG — check step 4 |
+| Forgetting the Homebrew cask | `brew install` keeps serving the previous version — step 6 |

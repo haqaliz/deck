@@ -84,18 +84,69 @@ jobs:
           xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release \
             -derivedDataPath native/build.noindex CODE_SIGNING_ALLOWED=NO build
 
-      - name: Package Deck.app
+      - name: Package Deck.app (DMG)
         if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          VERSION: ${{ github.ref_name }}
+          SIGNED: ${{ steps.signing.outputs.available }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           cd native/build.noindex/Build/Products/Release
-          zip -r Deck-macos.zip Deck.app
-          shasum -a 256 Deck-macos.zip > Deck-macos.zip.sha256
+
+          # DMG: a staging folder holding the app next to an /Applications
+          # symlink, so the mounted volume is the usual drag-to-install window.
+          rm -rf dmg-stage && mkdir dmg-stage
+          cp -R Deck.app dmg-stage/
+          ln -s /Applications dmg-stage/Applications
+          hdiutil create -volname Deck -srcfolder dmg-stage -ov \
+            -format UDZO -fs HFS+ "Deck-${VERSION}.dmg"
+          rm -rf dmg-stage
+
+          # Signing the DMG is cosmetic while the app is Apple Development
+          # signed (Gatekeeper rejects it either way), but it is the line that
+          # starts mattering the day this switches to Developer ID + notarytool.
+          if [ "$SIGNED" = "true" ]; then
+            codesign --force --sign "$APPLE_TEAM_ID" --timestamp "Deck-${VERSION}.dmg" \
+              || echo "::warning::DMG signing failed; shipping it unsigned"
+          fi
+
+          # Checksums last, so they cover the final bytes of every artifact.
+          shasum -a 256 "Deck-${VERSION}.dmg" > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
         run: |
           cd native/build.noindex/Build/Products/Release
-          gh release create "$GITHUB_REF_NAME" Deck-macos.zip Deck-macos.zip.sha256 \
-            --repo "$GITHUB_REPOSITORY" --generate-notes
+          # The heredoc body carries the block scalar's indentation; strip it
+          # so the release notes are markdown and not one big code block.
+          sed 's/^ \{10\}//' > notes.md <<'NOTES'
+          ## Install
+
+          Download `Deck-VERSION_PLACEHOLDER.dmg`, open it, drag **Deck** to Applications.
+
+          Deck is signed with an Apple Development certificate and is **not
+          notarized**, so macOS quarantines it on download and refuses to open
+          it. Clear the quarantine flag once, then launch:
+
+          ```bash
+          xattr -dr com.apple.quarantine /Applications/Deck.app
+          open /Applications/Deck.app
+          ```
+
+          On macOS 15 there is no Control-click shortcut for this any more; the
+          command above (or System Settings -> Privacy & Security -> Open
+          Anyway) is the only path until Deck ships notarized.
+
+          Then right-click the desktop -> **Edit Widgets...** -> search "Deck".
+
+          Verify the download against `SHA256SUMS.txt`.
+          NOTES
+          sed -i '' "s/VERSION_PLACEHOLDER/${VERSION}/g" notes.md
+
+          gh release create "$GITHUB_REF_NAME" \
+            "Deck-${VERSION}.dmg" SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --notes-file notes.md --generate-notes

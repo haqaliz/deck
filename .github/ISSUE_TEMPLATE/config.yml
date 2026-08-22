@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Install and Gatekeeper problems
+    url: https://github.com/haqaliz/deck#install
+    about: "\"Deck is damaged\", widgets missing from the gallery, or grey placeholder blocks — the README covers all three."
+  - name: Security vulnerability
+    url: https://github.com/haqaliz/deck/blob/master/CONTRIBUTING.md#security
+    about: Please report privately, not as a public issue.

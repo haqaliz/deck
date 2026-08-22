@@ -34,7 +34,11 @@ struct ContentView: View {
             .navigationSplitViewColumnWidth(min: 190, ideal: 190, max: 190)
         } detail: {
             switch selection {
-            case .general: GeneralSettingsView(agentAtLogin: $settings.agentAtLogin)
+            case .general: GeneralSettingsView(
+                agentAtLogin: $settings.agentAtLogin,
+                onRemoveAgents: uninstallAgents,
+                onEraseData: eraseDeckData
+            )
             case .livebox: LiveBoxSettingsView(settings: $settings.livebox)
             case .openbox: OpenBoxSettingsView(settings: $settings.openbox)
             case .netbox: NetBoxSettingsView(settings: $settings.netbox)
@@ -52,6 +56,7 @@ struct ContentView: View {
         .navigationSplitViewStyle(.balanced)
         .frame(width: 640, height: 500)
         .onAppear {
+            DeckSettings.tightenPermissions()
             installAgentIfNeeded()
             Task { await refreshOpenCode() }
             refreshGitBox()
@@ -246,14 +251,34 @@ struct ContentView: View {
         60
     }
 
+    /// Agent logs. Not `/tmp`: that directory is world-writable, so any local
+    /// process could pre-create the predictable path and have launchd append
+    /// the agent's output to a file it controls.
+    private var logDirectory: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Logs/Deck")
+    }
+
     private func installAgentIfNeeded() {
-        installAgent(plistURL: agentPlistURL, label: "com.deck.agent", interval: agentInterval, extraArguments: [], logPath: "/tmp/deck-agent.log", restartIfChanged: false)
+        try? FileManager.default.createDirectory(
+            at: logDirectory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: NSNumber(value: 0o700)]
+        )
+        installAgent(
+            plistURL: agentPlistURL,
+            label: "com.deck.agent",
+            interval: agentInterval,
+            extraArguments: [],
+            logPath: logDirectory.appendingPathComponent("agent.log").path,
+            restartIfChanged: false
+        )
         installAgent(
             plistURL: processAgentPlistURL,
             label: "com.deck.agent.processes",
             interval: settings.livebox.processRefreshInterval,
             extraArguments: ["--processes"],
-            logPath: "/tmp/deck-agent-processes.log",
+            logPath: logDirectory.appendingPathComponent("agent-processes.log").path,
             restartIfChanged: true
         )
     }
@@ -263,7 +288,11 @@ struct ContentView: View {
             at: plistURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        if restartIfChanged && currentStartInterval(of: plistURL) != interval {
+        // A rewritten plist does not affect a job launchd already loaded, so
+        // reload when anything in it actually changed — including the log path,
+        // which is how installs predating ~/Library/Logs/Deck migrate off /tmp.
+        let intervalChanged = restartIfChanged && currentStartInterval(of: plistURL) != interval
+        if intervalChanged || currentLogPath(of: plistURL) != logPath {
             runLaunchctl(["bootout", "gui/\(getuid())/\(label)"])
         }
         let args = (["/Applications/Deck.app/Contents/MacOS/DeckAgent"] + extraArguments)
@@ -295,6 +324,18 @@ struct ContentView: View {
         runLaunchctl(["bootstrap", "gui/\(getuid())", plistURL.path])
     }
 
+    private func currentLogPath(of plistURL: URL) -> String? {
+        plistValue(of: plistURL)?["StandardOutPath"] as? String
+    }
+
+    private func plistValue(of plistURL: URL) -> [String: Any]? {
+        guard
+            let data = try? Data(contentsOf: plistURL),
+            let plist = try? PropertyListSerialization.propertyList(from: data, format: nil)
+        else { return nil }
+        return plist as? [String: Any]
+    }
+
     private func currentStartInterval(of plistURL: URL) -> Int? {
         guard
             let data = try? Data(contentsOf: plistURL),
@@ -309,6 +350,33 @@ struct ContentView: View {
         process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
         process.arguments = arguments
         try? process.run()
+    }
+
+    /// Uninstall: stop and forget both LaunchAgents. Also clears the toggle so
+    /// the next settings change does not quietly reinstall them.
+    private func uninstallAgents() {
+        settings.agentAtLogin = false
+        removeAgent()
+    }
+
+    /// Uninstall: delete Deck's data directory inside the widget container.
+    ///
+    /// This removes the *contents* Deck owns — settings.json, every snapshot,
+    /// the clipboard history and the saved tokens. It deliberately does not
+    /// touch the container itself: that directory's metadata plist is
+    /// SIP-protected and survives deletion, after which containermanagerd
+    /// never rebuilds the skeleton and every widget renders blank forever.
+    private func eraseDeckData() {
+        uninstallAgents()
+        let directory = DeckSettings.containerDirectory
+        let contents = (try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        for item in contents {
+            try? FileManager.default.removeItem(at: item)
+        }
+        settings = DeckSettings()
     }
 
     private func removeAgent() {
@@ -391,6 +459,11 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
 
 private struct GeneralSettingsView: View {
     @Binding var agentAtLogin: Bool
+    var onRemoveAgents: () -> Void
+    var onEraseData: () -> Void
+
+    @State private var confirmingErase = false
+    @State private var agentsRemoved = false
 
     var body: some View {
         Form {
@@ -400,9 +473,45 @@ private struct GeneralSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            // Deck installs two LaunchAgents on first run. Leaving the only
+            // removal path in the README as four terminal commands is not a
+            // fair deal for something that starts itself at login.
+            Section("Uninstall") {
+                Button("Remove background agents") {
+                    onRemoveAgents()
+                    agentsRemoved = true
+                }
+                Text(agentsRemoved
+                     ? "Removed. Widgets keep their last data but stop refreshing."
+                     : "Stops com.deck.agent and com.deck.agent.processes and deletes their LaunchAgent files.")
+                    .font(.caption)
+                    .foregroundStyle(agentsRemoved ? .green : .secondary)
+
+                Button("Erase Deck data…", role: .destructive) {
+                    confirmingErase = true
+                }
+                Text("Deletes settings, snapshots and clipboard history. This includes your ShipBox, TaskBox and OpenBox tokens.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text("To finish: remove the Deck widgets from your desktop, then drag Deck to the Trash.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+        .confirmationDialog(
+            "Erase all Deck data?",
+            isPresented: $confirmingErase,
+            titleVisibility: .visible
+        ) {
+            Button("Erase", role: .destructive) { onEraseData() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your settings, every widget snapshot, your clipboard history and your saved tokens will be deleted. This cannot be undone.")
+        }
     }
 }
 

@@ -127,9 +127,22 @@ struct DeckSettings: Codable, Equatable {
         return (try? JSONDecoder().decode(DeckSettings.self, from: data)) ?? DeckSettings()
     }
 
+    /// Tightens an existing `settings.json` that predates Deck restricting the
+    /// mode — a file written at 0644 keeps that mode until it is rewritten.
+    /// Idempotent and cheap; the host app calls it once at launch.
+    static func tightenPermissions() {
+        try? FileManager.default.setAttributes(
+            [.posixPermissions: NSNumber(value: 0o600)],
+            ofItemAtPath: fileURL.path
+        )
+    }
+
     func save() {
         guard let data = try? JSONEncoder().encode(self) else { return }
-        _ = AtomicFile.write(data, to: Self.fileURL)
+        // 0o600: settings.json carries the ShipBox GitHub token, the TaskBox
+        // Azure DevOps PAT and the OpenBox server token in clear text. Until
+        // those move to the Keychain, at least do not leave them mode 644.
+        _ = AtomicFile.write(data, to: Self.fileURL, posixPermissions: 0o600)
     }
 }
 
