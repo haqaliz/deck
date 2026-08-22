@@ -14,6 +14,7 @@
 		0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		117970D84E0920F72D67A760 /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
 		14D533149620BDF218F5C8A1 /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
+		15C7BB212EDB3631F9DE1647 /* ClockBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */; };
 		15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
 		17266D39A2BF38493202D4A1 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = F44048FEBB8DD2831A60146B /* AppIcon.icns */; };
 		17D71C4767C8E41123882FAB /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
@@ -38,6 +39,8 @@
 		3731452DDEEE62491DBC4FD7 /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
 		37A84AFF0995EEEBF909BDE7 /* TaskBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5089372A785C079676513337 /* TaskBoxSnapshot.swift */; };
 		38CA6F050AB3377F30390895 /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
+		39DA22900FC1560C2B18F53A /* ClockBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */; };
+		3B5B4D3223749E809A021C84 /* ClockBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */; };
 		3D2D11CA3FAADA3275D66E63 /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
 		3D3C97CD45D9FC5B6AF3C06D /* SystemMetricsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */; };
 		3F9D2C27AE013737B357EA4D /* ProcessSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */; };
@@ -46,6 +49,7 @@
 		4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		45D576EA50BECDA826166348 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
+		4679230BBFA043E0D068F18F /* ClockBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */; };
 		47A9B9675547988F1A1C1786 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		4908B2BE0C5A785B8F08F91D /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
 		4D29DC5858E1A5667D21B72A /* HomeBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E1012194CD52DAFA3C04BA7 /* HomeBoxWidget.swift */; };
@@ -89,6 +93,7 @@
 		96B73870192265B41638143C /* NetBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */; };
 		99C485D084282BAF9BDD5AA3 /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
 		A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5089372A785C079676513337 /* TaskBoxSnapshot.swift */; };
+		A3610AE8477308D69CE6301A /* ClockBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */; };
 		A366F0122DCFF1970B2158B5 /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
 		A5D18790439106076A579311 /* FetchStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0F7208894404301344CB11 /* FetchStatusTests.swift */; };
 		A5D6283DF0774FCB9F273152 /* ShipBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */; };
@@ -198,6 +203,7 @@
 		34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckWidgets.swift; sourceTree = "<group>"; };
 		361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxDiskCore.swift; sourceTree = "<group>"; };
 		37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeLoader.swift; sourceTree = "<group>"; };
+		37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockBoxCore.swift; sourceTree = "<group>"; };
 		3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshotTests.swift; sourceTree = "<group>"; };
 		38FE485560E13BED32845511 /* DeckSharedTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeckSharedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxWidget.swift; sourceTree = "<group>"; };
@@ -231,6 +237,7 @@
 		AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxWidget.swift; sourceTree = "<group>"; };
 		AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxCoreTests.swift; sourceTree = "<group>"; };
 		AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCountTests.swift; sourceTree = "<group>"; };
+		AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockBoxTests.swift; sourceTree = "<group>"; };
 		B662E23A53ACAA091EAFA898 /* DeckApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeckApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetricsCore.swift; sourceTree = "<group>"; };
 		C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxThresholdTests.swift; sourceTree = "<group>"; };
@@ -284,6 +291,7 @@
 				23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */,
 				ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */,
 				7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */,
+				37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */,
 				4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */,
 				0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */,
 				C38F2902EF0F4B804DB8942F /* FetchStatus.swift */,
@@ -313,6 +321,7 @@
 				4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */,
 				79E814CE71C9E15746C2443A /* CalBoxTests.swift */,
 				F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */,
+				AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */,
 				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
 				0B881092482BA9425E3F5918 /* DecodeTests.swift */,
 				290D71C97A8936CF963F219D /* DevBoxSnapshotTests.swift */,
@@ -603,6 +612,7 @@
 				AF427E1E2B40CE7467D6F1AC /* CalBoxWidget.swift in Sources */,
 				A94346AFBE99A456A37C9F3A /* ClipBoxSnapshot.swift in Sources */,
 				321052A8E1D6C63E19452D77 /* ClipBoxWidget.swift in Sources */,
+				15C7BB212EDB3631F9DE1647 /* ClockBoxCore.swift in Sources */,
 				53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */,
 				BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */,
 				D2669CB46930616C7A93FD65 /* DevBoxSnapshot.swift in Sources */,
@@ -647,6 +657,8 @@
 				30201B65F9B4481BA816125F /* CalBoxTests.swift in Sources */,
 				EA90CCDFFC5A2B29D6F7908F /* ClipBoxSnapshot.swift in Sources */,
 				F4968C6168797484C304D6B5 /* ClipBoxSnapshotTests.swift in Sources */,
+				39DA22900FC1560C2B18F53A /* ClockBoxCore.swift in Sources */,
+				3B5B4D3223749E809A021C84 /* ClockBoxTests.swift in Sources */,
 				AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */,
 				E9C9897EA5B6B4BB0A42B780 /* DeckSettings.swift in Sources */,
 				503A811FFA42B6C95C900C31 /* DecodeTests.swift in Sources */,
@@ -699,6 +711,7 @@
 				4908B2BE0C5A785B8F08F91D /* BatteryCore.swift in Sources */,
 				36AA8FE38FBF4541D88EA3BB /* CalBoxSnapshot.swift in Sources */,
 				0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */,
+				A3610AE8477308D69CE6301A /* ClockBoxCore.swift in Sources */,
 				2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */,
 				EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */,
 				18600374BCF4CECC18E75B9B /* DevBoxSnapshot.swift in Sources */,
@@ -729,6 +742,7 @@
 				D284040183253CE7DFFEABB2 /* BatteryCore.swift in Sources */,
 				5C0FC13FD9210AD4499E5B6E /* CalBoxSnapshot.swift in Sources */,
 				90A811EBE7E73139D552827E /* ClipBoxSnapshot.swift in Sources */,
+				4679230BBFA043E0D068F18F /* ClockBoxCore.swift in Sources */,
 				4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */,
 				F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */,
 				C42FB5B9E249E0FE9710B663 /* FetchStatus.swift in Sources */,
