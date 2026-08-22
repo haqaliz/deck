@@ -27,10 +27,13 @@ widget.
   (wttr.in, fetched by the agent).
 - **ShipBox** — build/deploy status: GitHub Actions runs for a repo (fetched
   by the agent with the user's token).
-- **CalBox** — calendar: next event + live countdown, all-day row, today's
-  agenda (EventKit, read by the agent; covers whatever macOS syncs).
+- **TaskBox** — tasks: Azure DevOps work items assigned to you, with open
+  count, current sprint and board lanes (PAT, fetched by the agent).
+- **CalBox** — calendar: TODAY and TOMORROW sections, each with its own
+  show/hide and row count (EventKit, read by the agent; covers whatever macOS
+  syncs).
 
-All ten ship in one WidgetKit extension: `Deck.app` (host + settings window)
+All eleven ship in one WidgetKit extension: `Deck.app` (host + settings window)
 → `DeckWidgets.appex`.
 
 ## Architecture
@@ -40,7 +43,7 @@ targets:
 
 ```
 DeckApp/        # host app: settings window (tabs per widget), agent installer
-DeckWidgets/    # WidgetKit extension: 10 widgets + Loaders/ (mach, getifaddrs, IOKit)
+DeckWidgets/    # WidgetKit extension: 11 widgets + Loaders/ (mach, getifaddrs, IOKit)
 DeckAgent/      # silent CLI: refreshes sandbox-blocked data snapshots, then exits
 Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
 ```
@@ -54,7 +57,7 @@ Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
    and reading other apps' data (opencode DB, `ps`/process info, `git log`).
    The unsandboxed `DeckAgent` (LaunchAgent `com.deck.agent`, every 60s) reads
    those and writes snapshots into the widget's container:
-   `~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox,calbox}.json`
+   `~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox,taskbox,calbox}.json`
    The widgets render the snapshots.
 
 **Settings live in the Deck app window only** (per-widget tabs: show toggles,
