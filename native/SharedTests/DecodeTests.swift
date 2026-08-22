@@ -479,6 +479,8 @@ final class DeckSettingsRoundTripTests: XCTestCase {
         s.netbox.interfaceCount = 8
         s.netbox.pinnedInterface = "en7"
         s.batbox.showChart = false
+        s.batbox.showAccessories = false
+        s.batbox.accessoryCount = 7
         s.batbox.levelColor = RGBA(red: 0.44, green: 0.55, blue: 0.66)
         s.gitbox.repoPaths = ["/tmp/one", "/tmp/two"]
         s.gitbox.scanDepth = 6

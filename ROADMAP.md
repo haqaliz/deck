@@ -40,7 +40,8 @@ shell and only add a data source + a layout.
 
 ### M3 — More widgets (DONE — candidate list exhausted)
 - [x] **NetBox** — network: up/down rates + history, interfaces
-- [x] **BatBox** — battery: level, time remaining, charge state
+- [x] **BatBox** — battery: level, time remaining, charge state, plus
+      Bluetooth accessory batteries (IOKit accessory power sources, SPI)
 - [x] **GitBox** — git activity: today + streak, 14-day chart, active repos
 - [x] **DevBox** — open ports/processes, Docker containers (docker stats)
 - [x] **ClipBox** — clipboard history with previews (local only)

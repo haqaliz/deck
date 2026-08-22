@@ -601,6 +601,14 @@ private struct BatBoxSettingsView: View {
             Section("Status") {
                 Toggle("Show status", isOn: $settings.showStatus)
             }
+            Section("Accessories") {
+                Toggle("Show Bluetooth accessories", isOn: $settings.showAccessories)
+                Stepper("Rows: \(settings.accessoryCount)", value: $settings.accessoryCount, in: 1...8)
+                    .disabled(!settings.showAccessories)
+                Text("Detected automatically. Each accessory uses its own low-battery threshold.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .padding(.top, 4)

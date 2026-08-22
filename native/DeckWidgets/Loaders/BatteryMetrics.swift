@@ -1,5 +1,60 @@
 import Foundation
 import IOKit.ps
+// MARK: - Bluetooth accessory batteries
+//
+// `IOPSCopyPowerSourcesList` deliberately returns only the internal battery.
+// Accessories are a separate power-source type, reachable through a by-type
+// variant that IOKit exports but the public SDK headers do not declare — hence
+// @_silgen_name. Verified inside this (sandboxed) extension, not merely in a
+// CLI: the probe read "MX Master 3S = 75% cat=Mouse warn=20", matching
+// `pmset -g accps`.
+//
+// Two dead ends, recorded so nobody re-walks them: `system_profiler
+// SPBluetoothDataType -json` reports NO battery keys for a real connected
+// mouse, and IORegistry exposes no `BatteryPercent` for it either.
+//
+// Being SPI, this can vanish in any macOS update. Every failure path returns
+// an empty array, so BatBox then degrades to exactly what it does today.
+@_silgen_name("IOPSCopyPowerSourcesByType")
+private func IOPSCopyPowerSourcesByType(_ type: Int32) -> Unmanaged<CFTypeRef>?
+
+enum AccessoryMetricsLoader {
+    /// IOPSPowerSourceIndex: 0 all, 1 internal, 2 UPS, 3 internal+UPS,
+    /// 4 accessories.
+    private static let accessoryType: Int32 = 4
+
+    static func snapshot() -> [BatteryAccessory] {
+        guard
+            let blob = IOPSCopyPowerSourcesByType(accessoryType)?.takeRetainedValue(),
+            let list = IOPSCopyPowerSourcesList(blob)?.takeRetainedValue() as? [CFTypeRef]
+        else { return [] }
+
+        var result: [BatteryAccessory] = []
+        for source in list {
+            guard
+                let desc = IOPSGetPowerSourceDescription(blob, source)?
+                    .takeUnretainedValue() as? [String: Any],
+                let name = desc["Name"] as? String,
+                let current = (desc[kIOPSCurrentCapacityKey] as? NSNumber)?.doubleValue,
+                let maxCapacity = (desc[kIOPSMaxCapacityKey] as? NSNumber)?.doubleValue,
+                // Not assuming Max Capacity == 100; reuse the existing maths.
+                let percent = BatteryMath.percent(current: current, maxCapacity: maxCapacity)
+            else { continue }
+
+            let identifier = (desc["Accessory Identifier"] as? String) ?? name
+            result.append(
+                BatteryAccessory(
+                    id: identifier,
+                    name: name,
+                    percent: percent,
+                    lowWarnLevel: (desc["Low Warn Level"] as? NSNumber)?.intValue ?? 0,
+                    category: (desc["Accessory Category"] as? String) ?? ""
+                )
+            )
+        }
+        return AccessoryCore.sorted(result)
+    }
+}
 
 // MARK: - Battery state (IOKit power source, no subprocess)
 
