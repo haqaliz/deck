@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Timeline entry
 
-struct HomeBoxEntry: TimelineEntry {
+struct WeatherBoxEntry: TimelineEntry {
     let date: Date
     let available: Bool
     let stale: Bool
@@ -13,8 +13,7 @@ struct HomeBoxEntry: TimelineEntry {
     let location: String
     let condition: WeatherCondition?
     let days: [WeatherDay]
-    let zoneRows: [ZoneRow]
-    let settings: HomeBoxSettings
+    let settings: WeatherBoxSettings
 }
 
 // MARK: - Provider
@@ -23,9 +22,9 @@ struct HomeBoxEntry: TimelineEntry {
 // computed locally. A snapshot that exists is always rendered — the age hint
 // past 5 min and the fetch-status chip carry the honesty instead of blanking.
 
-struct HomeBoxProvider: TimelineProvider {
-    func placeholder(in context: Context) -> HomeBoxEntry {
-        HomeBoxEntry(
+struct WeatherBoxProvider: TimelineProvider {
+    func placeholder(in context: Context) -> WeatherBoxEntry {
+        WeatherBoxEntry(
             date: .now,
             available: true,
             stale: false,
@@ -48,26 +47,24 @@ struct HomeBoxProvider: TimelineProvider {
                 WeatherDay(date: "2026-08-14", code: 113, maxTempC: 33, maxTempF: 92, minTempC: 20, minTempF: 68, desc: "Sunny"),
                 WeatherDay(date: "2026-08-15", code: 176, maxTempC: 27, maxTempF: 81, minTempC: 18, minTempF: 64, desc: "Patchy rain nearby"),
             ],
-            zoneRows: ZoneRows.build(identifiers: ["local", "UTC"]),
-            settings: HomeBoxSettings()
+            settings: WeatherBoxSettings()
         )
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (HomeBoxEntry) -> Void) {
+    func getSnapshot(in context: Context, completion: @escaping (WeatherBoxEntry) -> Void) {
         completion(makeEntry())
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<HomeBoxEntry>) -> Void) {
+    func getTimeline(in context: Context, completion: @escaping (Timeline<WeatherBoxEntry>) -> Void) {
         let entry = makeEntry()
         let policy = TimelineReloadPolicy.after(Date().addingTimeInterval(60))
         completion(Timeline(entries: [entry], policy: policy))
     }
 
-    private func makeEntry() -> HomeBoxEntry {
-        let snapshot = HomeBoxSnapshotStore.load()
-        let settings = DeckSettings.load().homebox
+    private func makeEntry() -> WeatherBoxEntry {
+        let snapshot = WeatherSnapshotStore.load()
+        let settings = DeckSettings.load().weatherbox
         let now = Date()
-        let zoneRows = ZoneRows.build(identifiers: settings.timezoneIDs, at: now)
         let chip = FetchChip.text(
             source: .weather,
             status: FetchStatusStore.load(.weather),
@@ -76,7 +73,7 @@ struct HomeBoxProvider: TimelineProvider {
         )
 
         guard let snapshot else {
-            return HomeBoxEntry(
+            return WeatherBoxEntry(
                 date: now,
                 available: false,
                 stale: false,
@@ -85,12 +82,11 @@ struct HomeBoxProvider: TimelineProvider {
                 location: "",
                 condition: nil,
                 days: [],
-                zoneRows: zoneRows,
-                settings: settings
+                    settings: settings
             )
         }
 
-        return HomeBoxEntry(
+        return WeatherBoxEntry(
             date: now,
             available: true,
             stale: now.timeIntervalSince(snapshot.writtenAt) > 5 * 60,
@@ -99,7 +95,6 @@ struct HomeBoxProvider: TimelineProvider {
             location: snapshot.location,
             condition: snapshot.condition,
             days: snapshot.days,
-            zoneRows: zoneRows,
             settings: settings
         )
     }
@@ -107,24 +102,24 @@ struct HomeBoxProvider: TimelineProvider {
 
 // MARK: - Widget
 
-struct HomeBoxWidget: Widget {
-    let kind = "HomeBoxWidget"
+struct WeatherBoxWidget: Widget {
+    let kind = "WeatherBoxWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: HomeBoxProvider()) { entry in
-            HomeBoxWidgetEntryView(entry: entry)
+        StaticConfiguration(kind: kind, provider: WeatherBoxProvider()) { entry in
+            WeatherBoxWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("HomeBox")
-        .description("Weather for your location plus a world clock.")
+        .configurationDisplayName("WeatherBox")
+        .description("Current conditions and a 3-day forecast for your location.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
 // MARK: - Views
 
-struct HomeBoxWidgetEntryView: View {
+struct WeatherBoxWidgetEntryView: View {
     @Environment(\.widgetFamily) private var family
-    let entry: HomeBoxEntry
+    let entry: WeatherBoxEntry
 
     var body: some View {
         Group {
@@ -148,7 +143,7 @@ struct HomeBoxWidgetEntryView: View {
 
     private var unavailableView: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("HomeBox")
+            Text("WeatherBox")
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
             Text("No weather data")
@@ -156,10 +151,6 @@ struct HomeBoxWidgetEntryView: View {
             Text(entry.chip ?? "Waiting for the Deck agent…")
                 .font(.system(size: 11, design: .rounded))
                 .foregroundStyle(.secondary)
-            if !entry.zoneRows.isEmpty {
-                Divider()
-                zoneRowsList
-            }
             Spacer(minLength: 0)
         }
     }
@@ -184,10 +175,6 @@ struct HomeBoxWidgetEntryView: View {
                 }
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-            }
-            if !entry.zoneRows.isEmpty {
-                Divider()
-                zoneRowsList
             }
         }
         .font(.system(size: 12, weight: .semibold, design: .rounded))
@@ -220,10 +207,6 @@ struct HomeBoxWidgetEntryView: View {
                     .multilineTextAlignment(.trailing)
             }
 
-            if entry.settings.showZones && !entry.zoneRows.isEmpty {
-                Divider()
-                zoneRowsList
-            }
             Spacer(minLength: 0)
         }
     }
@@ -259,10 +242,6 @@ struct HomeBoxWidgetEntryView: View {
                 forecastStrip
             }
 
-            if entry.settings.showZones && !entry.zoneRows.isEmpty {
-                Divider()
-                zoneRowsList
-            }
 
             HStack {
                 Text("wttr.in")
@@ -297,29 +276,6 @@ struct HomeBoxWidgetEntryView: View {
         }
     }
 
-    private var zoneRowsList: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("CLOCKS")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(.secondary)
-                .tracking(1)
-            ForEach(Array(entry.zoneRows.enumerated()), id: \.offset) { _, row in
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(.teal)
-                        .frame(width: 7, height: 7)
-                    Text(row.label)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .lineLimit(1)
-                    Spacer()
-                    Text(row.time)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(.primary)
-                }
-            }
-        }
-    }
 
     private var forecastStrip: some View {
         VStack(alignment: .leading, spacing: 4) {

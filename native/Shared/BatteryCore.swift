@@ -44,9 +44,14 @@ enum BatteryMath {
         return min(100, max(0, current / maxCapacity * 100))
     }
 
-    /// Whole minutes from a seconds value; 0 (or less) means "not applicable".
-    static func timeMinutes(seconds: Int) -> Int? {
-        guard seconds > 0 else { return nil }
-        return Int(round(Double(seconds) / 60))
+    /// Normalises IOKit's reported time estimate.
+    ///
+    /// `kIOPSTimeToEmptyKey` / `kIOPSTimeToFullChargeKey` are already in
+    /// MINUTES — this used to divide by 60 as though they were seconds, which
+    /// rendered a real "1:02 remaining" as "1m". IOKit uses 0 for "not
+    /// applicable" and -1 for "still calculating"; both mean no estimate.
+    static func timeMinutes(reported: Int) -> Int? {
+        guard reported > 0 else { return nil }
+        return reported
     }
 }

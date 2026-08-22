@@ -1,7 +1,7 @@
 # Deck Roadmap
 
 Small, beautiful macOS desktop widgets that behave like native ones. The
-product value is **one WidgetKit extension** (eleven widgets in the Widget
+product value is **one WidgetKit extension** (twelve widgets in the Widget
 Center) plus **one metric story per widget**. New widgets reuse the widget
 shell and only add a data source + a layout.
 
@@ -44,7 +44,8 @@ shell and only add a data source + a layout.
 - [x] **GitBox** — git activity: today + streak, 14-day chart, active repos
 - [x] **DevBox** — open ports/processes, Docker containers (docker stats)
 - [x] **ClipBox** — clipboard history with previews (local only)
-- [x] **HomeBox** — weather + timezones (wttr.in)
+- [x] **WeatherBox** — weather (wttr.in); was HomeBox before the clock split
+- [x] **ClockBox** — world clocks, up to 6 cities (no data path at all)
 - [x] **ShipBox** — build/deploy status: GitHub Actions runs for a repo
 
 ### M4 — Polish
@@ -60,7 +61,7 @@ shell and only add a data source + a layout.
       (`com.deck.agent.processes` LaunchAgent at the process refresh interval,
       default 15s; the widget tick, staleness guard, and history window follow
       the same interval)
-- [x] Agent-fetched widgets say *why* a fetch failed (ShipBox / HomeBox /
+- [x] Agent-fetched widgets say *why* a fetch failed (ShipBox / WeatherBox /
       OpenBox remote): the agent classifies each loader's typed error into four
       coarse outcomes (not configured / auth or target / unreachable / bad
       response) and records them per source in `fetch-{source}.json`; the
@@ -166,7 +167,7 @@ the next slate. Ordered by priority, not by cost.
       Cheapest of the slate: reuses ShipBox's token, `HostGitHubLoader`, and
       the `FetchClassifier` error path against the pulls/search endpoints.
 - [ ] **MarketBox** — configured tickers/crypto: price, day change, sparkline.
-      Near line-for-line clone of the HomeBox agent fetch block.
+      Near line-for-line clone of the WeatherBox agent fetch block.
 - [ ] **BlueBox** — peripheral battery (AirPods, Magic Mouse/Keyboard).
       **Needs a feasibility spike first:** on the dev machine both
       `system_profiler SPBluetoothDataType -json` and

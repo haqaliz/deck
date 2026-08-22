@@ -335,12 +335,23 @@ final class ClipBoxSettingsDecodeTests: XCTestCase {
     }
 }
 
-final class HomeBoxSettingsDecodeTests: XCTestCase {
+final class WeatherBoxSettingsDecodeTests: XCTestCase {
     func testMissingKeysFallBackToDefaults() throws {
-        let s = try decode(#"{"unitsFahrenheit":true}"#, as: HomeBoxSettings.self)
+        let s = try decode(#"{"unitsFahrenheit":true}"#, as: WeatherBoxSettings.self)
         XCTAssertTrue(s.unitsFahrenheit)
-        XCTAssertEqual(s.timezoneIDs, ["local", "UTC"])
+        XCTAssertTrue(s.showForecast)
         XCTAssertEqual(s.location, "")
+    }
+}
+
+final class ClockBoxSettingsDecodeTests: XCTestCase {
+    func testMissingKeysFallBackToDefaults() throws {
+        let s = try decode(#"{"showOffset":false}"#, as: ClockBoxSettings.self)
+        XCTAssertFalse(s.showOffset)
+        XCTAssertTrue(s.showRelativeDay)
+        XCTAssertEqual(s.cityIDs, [ClockBoxCore.localID, "UTC"])
+        XCTAssertEqual(s.mainCityID, "", "absent main clock means auto")
+        XCTAssertEqual(s.timeColor, RGBA(.teal))
     }
 }
 
@@ -409,7 +420,7 @@ final class DeckSettingsSchemaEvolutionTests: XCTestCase {
         XCTAssertFalse(s.livebox.showCPU)
         XCTAssertEqual(s.openbox.token, "abc")
         XCTAssertEqual(s.gitbox.scanDepth, 4)
-        XCTAssertEqual(s.homebox.location, "Tehran")
+        XCTAssertEqual(s.weatherbox.location, "Tehran", "legacy homebox key migrates")
         XCTAssertEqual(s.shipbox.repo, "a/b")
         XCTAssertFalse(s.agentAtLogin)
         XCTAssertEqual(s.taskbox, TaskBoxSettings(), "the new section defaults")
@@ -441,5 +452,153 @@ final class TaskStateMappingDecodeTests: XCTestCase {
     func testAbsentMappingDecodesToDefaults() throws {
         let s = try decode(#"{"organization":"C"}"#, as: TaskBoxSettings.self)
         XCTAssertEqual(s.stateMapping.lane(for: "Committed"), .inProgress)
+    }
+}
+
+// MARK: - Container-level round trip
+//
+// `DeckSettings.init(from:)` assigns each section by hand. A section that is
+// declared as a property but forgotten in that initializer still *encodes*
+// (the property exists) while silently decoding back to its defaults — the
+// user's settings are written to disk and then ignored on every load. That
+// is not hypothetical: `calbox` shipped with exactly this omission.
+//
+// One test closes the whole class of bug: mutate every section away from its
+// defaults, encode, decode, and require the result to be identical. Any
+// forgotten section fails here, including sections added in the future.
+
+final class DeckSettingsRoundTripTests: XCTestCase {
+    /// Every section set to something that is *not* its default, so a dropped
+    /// section can never coincidentally compare equal.
+    private func mutatedSettings() -> DeckSettings {
+        var s = DeckSettings()
+        s.livebox.processCount = 9
+        s.livebox.cpuColor = RGBA(red: 0.11, green: 0.22, blue: 0.33)
+        s.openbox.token = "round-trip-token"
+        s.openbox.modelCount = 7
+        s.netbox.interfaceCount = 8
+        s.netbox.pinnedInterface = "en7"
+        s.batbox.showChart = false
+        s.batbox.levelColor = RGBA(red: 0.44, green: 0.55, blue: 0.66)
+        s.gitbox.repoPaths = ["/tmp/one", "/tmp/two"]
+        s.gitbox.scanDepth = 6
+        s.devbox.portCount = 11
+        s.devbox.showContainers = false
+        s.clipbox.historyCount = 12
+        s.clipbox.textColor = RGBA(red: 0.77, green: 0.88, blue: 0.99)
+        s.weatherbox.location = "Reykjavik"
+        s.weatherbox.unitsFahrenheit = true
+        s.clockbox.cityIDs = ["Asia/Tokyo", "Europe/Paris"]
+        s.clockbox.mainCityID = "Europe/Paris"
+        s.clockbox.showOffset = false
+        s.shipbox.repo = "owner/name"
+        s.shipbox.runCount = 13
+        s.taskbox.organization = "org"
+        s.taskbox.project = "proj"
+        s.calbox.todayCount = 3
+        s.calbox.showTomorrow = false
+        s.calbox.accentColor = RGBA(red: 0.01, green: 0.02, blue: 0.03)
+        s.agentAtLogin = false
+        return s
+    }
+
+    func testEverySectionSurvivesRoundTrip() throws {
+        let original = mutatedSettings()
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(DeckSettings.self, from: data)
+        XCTAssertEqual(decoded, original)
+    }
+
+    /// Pins the failure to the exact section rather than the whole blob, so a
+    /// future regression reports *which* section was dropped.
+    func testEachSectionIndividually() throws {
+        let original = mutatedSettings()
+        let data = try JSONEncoder().encode(original)
+        let d = try JSONDecoder().decode(DeckSettings.self, from: data)
+        XCTAssertEqual(d.livebox, original.livebox, "livebox dropped on decode")
+        XCTAssertEqual(d.openbox, original.openbox, "openbox dropped on decode")
+        XCTAssertEqual(d.netbox, original.netbox, "netbox dropped on decode")
+        XCTAssertEqual(d.batbox, original.batbox, "batbox dropped on decode")
+        XCTAssertEqual(d.gitbox, original.gitbox, "gitbox dropped on decode")
+        XCTAssertEqual(d.devbox, original.devbox, "devbox dropped on decode")
+        XCTAssertEqual(d.clipbox, original.clipbox, "clipbox dropped on decode")
+        XCTAssertEqual(d.weatherbox, original.weatherbox, "weatherbox dropped on decode")
+        XCTAssertEqual(d.clockbox, original.clockbox, "clockbox dropped on decode")
+        XCTAssertEqual(d.shipbox, original.shipbox, "shipbox dropped on decode")
+        XCTAssertEqual(d.taskbox, original.taskbox, "taskbox dropped on decode")
+        XCTAssertEqual(d.calbox, original.calbox, "calbox dropped on decode")
+        XCTAssertEqual(d.agentAtLogin, original.agentAtLogin, "agentAtLogin dropped on decode")
+    }
+}
+
+// MARK: - homebox -> weatherbox + clockbox migration
+
+final class HomeBoxSplitMigrationTests: XCTestCase {
+    /// A settings.json written before the split has no `weatherbox` and no
+    /// `clockbox`. Both must come from the retired `homebox` blob rather than
+    /// resetting the user's location, units and zones to defaults.
+    private let preSplit = """
+    {"homebox":{"location":"Reykjavik","unitsFahrenheit":true,"showForecast":false,
+                "timezoneIDs":["local","Asia/Tokyo","Europe/Paris"],"showZones":true},
+     "livebox":{"processCount":9}}
+    """
+
+    func testWeatherSettingsCarryOver() throws {
+        let s = try decode(preSplit, as: DeckSettings.self)
+        XCTAssertEqual(s.weatherbox.location, "Reykjavik")
+        XCTAssertTrue(s.weatherbox.unitsFahrenheit)
+        XCTAssertFalse(s.weatherbox.showForecast)
+    }
+
+    func testZonesBecomeClockCities() throws {
+        let s = try decode(preSplit, as: DeckSettings.self)
+        XCTAssertEqual(s.clockbox.cityIDs, ["local", "Asia/Tokyo", "Europe/Paris"])
+    }
+
+    /// The migration must not disturb unrelated sections.
+    func testOtherSectionsAreUntouched() throws {
+        let s = try decode(preSplit, as: DeckSettings.self)
+        XCTAssertEqual(s.livebox.processCount, 9)
+        XCTAssertEqual(s.netbox, NetBoxSettings())
+    }
+
+    /// A file with the new keys ignores any stale `homebox` left beside them.
+    func testNewKeysWinOverLegacyBlob() throws {
+        let json = """
+        {"homebox":{"location":"Old","timezoneIDs":["UTC"]},
+         "weatherbox":{"location":"New"},
+         "clockbox":{"cityIDs":["Asia/Tehran"]}}
+        """
+        let s = try decode(json, as: DeckSettings.self)
+        XCTAssertEqual(s.weatherbox.location, "New")
+        XCTAssertEqual(s.clockbox.cityIDs, ["Asia/Tehran"])
+    }
+
+    /// A file with neither shape decodes to defaults, not to an error.
+    func testAbsentEverythingDecodesDefaults() throws {
+        let s = try decode(#"{}"#, as: DeckSettings.self)
+        XCTAssertEqual(s.weatherbox, WeatherBoxSettings())
+        XCTAssertEqual(s.clockbox, ClockBoxSettings())
+    }
+
+    /// The old cap was 3 and the new one is 4, so nothing truncates on the way
+    /// in — but a hand-edited file with more than 4 must still be clamped.
+    func testCityListIsClampedToTheMaximum() throws {
+        let json = """
+        {"clockbox":{"cityIDs":["UTC","Asia/Tokyo","Europe/Paris","America/Toronto","Asia/Tehran",
+                                "Australia/Sydney","Europe/Berlin"]}}
+        """
+        let s = try decode(json, as: DeckSettings.self)
+        XCTAssertEqual(s.clockbox.cityIDs.count, ClockBoxCore.maxCities)
+        XCTAssertEqual(s.clockbox.cityIDs.last, "Australia/Sydney")
+    }
+
+    /// The retired keys must not be written back out.
+    func testEncodedOutputHasNoHomeboxKey() throws {
+        let data = try JSONEncoder().encode(try decode(preSplit, as: DeckSettings.self))
+        let json = String(decoding: data, as: UTF8.self)
+        XCTAssertFalse(json.contains("\"homebox\""))
+        XCTAssertTrue(json.contains("\"weatherbox\""))
+        XCTAssertTrue(json.contains("\"clockbox\""))
     }
 }

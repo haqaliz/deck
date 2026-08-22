@@ -23,8 +23,12 @@ widget.
   (sampled from NSPasteboard by the agent).
 - **DevBox** — dev environment: open TCP listening ports (process + port) and
   running Docker containers (subprocesses, via the agent).
-- **HomeBox** — weather + world clocks: conditions and a 3-day forecast
-  (wttr.in, fetched by the agent).
+- **WeatherBox** — weather: conditions and a 3-day forecast for your location
+  (wttr.in, fetched by the agent). Was HomeBox until its clock half split out.
+- **ClockBox** — world clocks: up to six cities (3 on medium, 6 on large),
+  each with its time, relative day and offset from your own zone; a chosen
+  "main" clock drives the small face. The only widget on **neither** data
+  path — pure `TimeZone` + `Date`, no snapshot, no sampler, no network.
 - **ShipBox** — build/deploy status: GitHub Actions runs for a repo (fetched
   by the agent with the user's token).
 - **TaskBox** — tasks: Azure DevOps work items assigned to you, with open
@@ -33,7 +37,7 @@ widget.
   show/hide and row count (EventKit, read by the agent; covers whatever macOS
   syncs).
 
-All eleven ship in one WidgetKit extension: `Deck.app` (host + settings window)
+All twelve ship in one WidgetKit extension: `Deck.app` (host + settings window)
 → `DeckWidgets.appex`.
 
 ## Architecture
@@ -43,7 +47,7 @@ targets:
 
 ```
 DeckApp/        # host app: settings window (tabs per widget), agent installer
-DeckWidgets/    # WidgetKit extension: 11 widgets + Loaders/ (mach, getifaddrs, IOKit)
+DeckWidgets/    # WidgetKit extension: 12 widgets + Loaders/ (mach, getifaddrs, IOKit)
 DeckAgent/      # silent CLI: refreshes sandbox-blocked data snapshots, then exits
 Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
 ```
@@ -116,6 +120,22 @@ and remove `~/Library/LaunchAgents/com.deck.agent.plist`.
   Check with
   `log show --last 2m --info --debug --predicate 'process == "chronod"' | grep -c <Name>BoxWidget`;
   zero means the descriptors are stale.
+- **Never `rm -rf` the widget container.** It deletes the directory tree but
+  cannot delete `.com.apple.containermanagerd.metadata.plist` (SIP-protected,
+  fails with "Operation not permitted"). Because that plist survives,
+  containermanagerd still thinks the container is provisioned and never
+  rebuilds the skeleton, so `Data/SystemData/com.apple.chrono/` — where chronod
+  writes every rendered timeline — no longer exists. **Every widget then
+  renders as an empty rounded rect at every size, gallery previews included**,
+  while codesign, `pluginkit`, LaunchServices and crash reports all look
+  perfectly healthy. chronod reports it as `CHSErrorDomain (1300)
+  "extensionNotFound"`, which is a red herring; the real line is one above:
+  `could not create file handle because
+  ChronoKit.WidgetCacheManager.CacheManagementError.unsupportedEntryKey`.
+  Repair with `scripts/container-repair.sh`. When uninstalling, remove the
+  widgets from the desktop *first* and leave the container alone unless you
+  actually want to reset settings — note it holds the OpenBox/ShipBox/TaskBox
+  tokens, so back up `settings.json` before wiping it.
 - **`build.noindex` does not prevent LaunchServices pollution.** The `.noindex`
   suffix only hides the directory from Spotlight; xcodebuild still runs an
   explicit `RegisterWithLaunchServices` phase that registers the dev copy. Run

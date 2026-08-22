@@ -22,15 +22,10 @@ enum BatteryMetricsLoader {
         var isCharged = false
         var isPresent = true
         var powerSource: PowerSource = .battery
-        var timeToEmptySeconds: Int?
-        var timeToFullSeconds: Int?
+        var timeToEmptyReported: Int?
+        var timeToFullReported: Int?
 
-        if
-            let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
-            let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef],
-            let first = list.first,
-            let desc = IOPSGetPowerSourceDescription(info, first)?.takeUnretainedValue() as? [String: Any]
-        {
+        if let desc = internalBatteryDescription() {
             current = number(desc[kIOPSCurrentCapacityKey])
             maxCapacity = number(desc[kIOPSMaxCapacityKey])
             isCharging = bool(desc[kIOPSIsChargingKey])
@@ -39,8 +34,8 @@ enum BatteryMetricsLoader {
             if (desc[kIOPSPowerSourceStateKey] as? String) == "AC Power" {
                 powerSource = .ac
             }
-            timeToEmptySeconds = int(desc[kIOPSTimeToEmptyKey])
-            timeToFullSeconds = int(desc[kIOPSTimeToFullChargeKey])
+            timeToEmptyReported = int(desc[kIOPSTimeToEmptyKey])
+            timeToFullReported = int(desc[kIOPSTimeToFullChargeKey])
         } else {
             isPresent = false
         }
@@ -51,13 +46,28 @@ enum BatteryMetricsLoader {
 
         return BatterySnapshot(
             levelPercent: level,
-            timeToEmptyMinutes: timeToEmptySeconds.flatMap(BatteryMath.timeMinutes),
-            timeToFullMinutes: timeToFullSeconds.flatMap(BatteryMath.timeMinutes),
+            timeToEmptyMinutes: timeToEmptyReported.flatMap(BatteryMath.timeMinutes),
+            timeToFullMinutes: timeToFullReported.flatMap(BatteryMath.timeMinutes),
             isCharging: isCharging,
             isCharged: isCharged || (level ?? 0) >= 100,
             isPresent: isPresent,
             powerSource: powerSource
         )
+    }
+
+    /// The INTERNAL battery's description, not merely power source zero: a UPS
+    /// or an attached accessory would otherwise be read as the Mac's own.
+    private static func internalBatteryDescription() -> [String: Any]? {
+        guard
+            let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+            let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef]
+        else { return nil }
+        for source in list {
+            guard let desc = IOPSGetPowerSourceDescription(info, source)?
+                .takeUnretainedValue() as? [String: Any] else { continue }
+            if (desc[kIOPSTypeKey] as? String) == kIOPSInternalBatteryType { return desc }
+        }
+        return nil
     }
 
     private static func number(_ value: Any?) -> Double? {

@@ -39,7 +39,8 @@ struct DeckSettings: Codable, Equatable {
     var gitbox = GitBoxSettings()
     var devbox = DevBoxSettings()
     var clipbox = ClipBoxSettings()
-    var homebox = HomeBoxSettings()
+    var weatherbox = WeatherBoxSettings()
+    var clockbox = ClockBoxSettings()
     var shipbox = ShipBoxSettings()
     var taskbox = TaskBoxSettings()
     var calbox = CalBoxSettings()
@@ -57,6 +58,20 @@ struct DeckSettings: Codable, Equatable {
     /// `settings.json` predates it. Adding `taskbox` is exactly that case, so
     /// a missing section now falls back to its defaults and leaves the rest of
     /// the user's configuration intact.
+    /// Explicit rather than synthesized: the decoder needs a second key set
+    /// for the retired `homebox` section, and putting that legacy case in the
+    /// main enum would make the synthesized *encoder* try to write a property
+    /// that no longer exists.
+    enum CodingKeys: String, CodingKey {
+        case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
+        case weatherbox, clockbox, shipbox, taskbox, calbox, agentAtLogin
+    }
+
+    /// Decode-only. See `LegacyHomeBoxSettings`.
+    private enum LegacyCodingKeys: String, CodingKey {
+        case homebox
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         livebox = try c.decodeIfPresent(LiveBoxSettings.self, forKey: .livebox) ?? LiveBoxSettings()
@@ -66,9 +81,26 @@ struct DeckSettings: Codable, Equatable {
         gitbox = try c.decodeIfPresent(GitBoxSettings.self, forKey: .gitbox) ?? GitBoxSettings()
         devbox = try c.decodeIfPresent(DevBoxSettings.self, forKey: .devbox) ?? DevBoxSettings()
         clipbox = try c.decodeIfPresent(ClipBoxSettings.self, forKey: .clipbox) ?? ClipBoxSettings()
-        homebox = try c.decodeIfPresent(HomeBoxSettings.self, forKey: .homebox) ?? HomeBoxSettings()
+        // `homebox` split into `weatherbox` + `clockbox`. A pre-split file has
+        // neither new key, so both fall back to the legacy blob rather than
+        // silently resetting the user's location, units and zones.
+        let legacy = try? decoder.container(keyedBy: LegacyCodingKeys.self)
+        let legacyHome = try? legacy?.decodeIfPresent(LegacyHomeBoxSettings.self, forKey: .homebox)
+        weatherbox = try c.decodeIfPresent(WeatherBoxSettings.self, forKey: .weatherbox)
+            ?? (legacyHome.flatMap { $0 }).map {
+                WeatherBoxSettings(
+                    location: $0.location,
+                    unitsFahrenheit: $0.unitsFahrenheit,
+                    showForecast: $0.showForecast
+                )
+            }
+            ?? WeatherBoxSettings()
+        clockbox = try c.decodeIfPresent(ClockBoxSettings.self, forKey: .clockbox)
+            ?? (legacyHome.flatMap { $0 }).map { ClockBoxSettings(cityIDs: $0.timezoneIDs) }
+            ?? ClockBoxSettings()
         shipbox = try c.decodeIfPresent(ShipBoxSettings.self, forKey: .shipbox) ?? ShipBoxSettings()
         taskbox = try c.decodeIfPresent(TaskBoxSettings.self, forKey: .taskbox) ?? TaskBoxSettings()
+        calbox = try c.decodeIfPresent(CalBoxSettings.self, forKey: .calbox) ?? CalBoxSettings()
         agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
     }
 
@@ -354,22 +386,76 @@ struct ClipBoxSettings: Codable, Equatable {
     }
 }
 
-struct HomeBoxSettings: Codable, Equatable {
+struct WeatherBoxSettings: Codable, Equatable {
     var location = ""
     var unitsFahrenheit = false
-    var timezoneIDs = ["local", "UTC"]
     var showForecast = true
-    var showZones = true
 
     init() {}
+
+    init(location: String, unitsFahrenheit: Bool, showForecast: Bool) {
+        self.location = location
+        self.unitsFahrenheit = unitsFahrenheit
+        self.showForecast = showForecast
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         location = try c.decodeIfPresent(String.self, forKey: .location) ?? ""
         unitsFahrenheit = try c.decodeIfPresent(Bool.self, forKey: .unitsFahrenheit) ?? false
-        timezoneIDs = try c.decodeIfPresent([String].self, forKey: .timezoneIDs) ?? ["local", "UTC"]
         showForecast = try c.decodeIfPresent(Bool.self, forKey: .showForecast) ?? true
-        showZones = try c.decodeIfPresent(Bool.self, forKey: .showZones) ?? true
+    }
+}
+
+struct ClockBoxSettings: Codable, Equatable {
+    /// IANA identifiers, plus the `ClockBoxCore.localID` sentinel. Capped at
+    /// `ClockBoxCore.maxCities` on decode so a hand-edited file cannot push
+    /// more faces into the widget than it can lay out.
+    var cityIDs = [ClockBoxCore.localID, "UTC"]
+    /// Which city the small face shows. Empty → auto (first non-local).
+    var mainCityID = ""
+    var showRelativeDay = true
+    var showOffset = true
+    var timeColor = RGBA(.teal)
+
+    init() {}
+
+    init(cityIDs: [String]) {
+        self.cityIDs = Array(cityIDs.prefix(ClockBoxCore.maxCities))
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let decoded = try c.decodeIfPresent([String].self, forKey: .cityIDs)
+            ?? [ClockBoxCore.localID, "UTC"]
+        cityIDs = Array(decoded.prefix(ClockBoxCore.maxCities))
+        mainCityID = try c.decodeIfPresent(String.self, forKey: .mainCityID) ?? ""
+        showRelativeDay = try c.decodeIfPresent(Bool.self, forKey: .showRelativeDay) ?? true
+        showOffset = try c.decodeIfPresent(Bool.self, forKey: .showOffset) ?? true
+        timeColor = try c.decodeIfPresent(RGBA.self, forKey: .timeColor) ?? RGBA(.teal)
+    }
+}
+
+/// Decode-only shape of the retired `homebox` section, used once to carry a
+/// pre-split `settings.json` across to `weatherbox` + `clockbox`. Never
+/// encoded — the migration is one-way.
+private struct LegacyHomeBoxSettings: Decodable {
+    var location = ""
+    var unitsFahrenheit = false
+    var timezoneIDs = [ClockBoxCore.localID, "UTC"]
+    var showForecast = true
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        location = try c.decodeIfPresent(String.self, forKey: .location) ?? ""
+        unitsFahrenheit = try c.decodeIfPresent(Bool.self, forKey: .unitsFahrenheit) ?? false
+        timezoneIDs = try c.decodeIfPresent([String].self, forKey: .timezoneIDs)
+            ?? [ClockBoxCore.localID, "UTC"]
+        showForecast = try c.decodeIfPresent(Bool.self, forKey: .showForecast) ?? true
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case location, unitsFahrenheit, timezoneIDs, showForecast
     }
 }
 

@@ -1,13 +1,14 @@
 import Foundation
 
-// MARK: - HomeBox snapshot
+// MARK: - Weather snapshot
 //
 // wttr.in is a network fetch — the widget sandbox has no network entitlement —
 // so the host agent fetches weather every 60s and writes this snapshot into the
-// container. The HomeBox widget renders it; the world-clock rows need no data
-// at all (local TimeZone identifiers).
+// container. The WeatherBox widget renders it. The file stays named
+// weather.json across the HomeBox -> WeatherBox rename, so the agent's output
+// path is unchanged.
 
-struct HomeBoxSnapshot: Codable, Equatable {
+struct WeatherSnapshot: Codable, Equatable {
     var writtenAt: Date
     var location: String
     var country: String
@@ -42,17 +43,17 @@ struct WeatherDay: Codable, Equatable {
     var desc: String
 }
 
-enum HomeBoxSnapshotStore {
+enum WeatherSnapshotStore {
     static var fileURL: URL {
         DeckSettings.containerDirectory.appendingPathComponent("weather.json")
     }
 
-    static func load() -> HomeBoxSnapshot? {
+    static func load() -> WeatherSnapshot? {
         guard let data = try? Data(contentsOf: fileURL) else { return nil }
-        return try? JSONDecoder().decode(HomeBoxSnapshot.self, from: data)
+        return try? JSONDecoder().decode(WeatherSnapshot.self, from: data)
     }
 
-    static func save(_ snapshot: HomeBoxSnapshot) {
+    static func save(_ snapshot: WeatherSnapshot) {
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         _ = AtomicFile.write(data, to: fileURL)
     }
@@ -70,7 +71,7 @@ enum HostWeatherLoader {
 
     /// Fetches current conditions + 3-day forecast for `location`
     /// (free-text city or "lat,lon"; empty → wttr.in geolocates).
-    static func fetch(location: String) async throws -> HomeBoxSnapshot {
+    static func fetch(location: String) async throws -> WeatherSnapshot {
         let url = try makeURL(location: location)
 
         var request = URLRequest(url: url)
@@ -92,7 +93,7 @@ enum HostWeatherLoader {
         guard let parsed = WttrParser.parse(data) else {
             throw WeatherError.invalidPayload
         }
-        return HomeBoxSnapshot(
+        return WeatherSnapshot(
             writtenAt: Date(),
             location: parsed.location,
             country: parsed.country,
@@ -271,61 +272,4 @@ enum WeatherIcon {
         392: "cloud.bolt.snow",
         395: "cloud.bolt.snow.fill",
     ]
-}
-
-// MARK: - World clock rows (local-only, zero fetch — used by the widget face)
-
-struct ZoneRow: Equatable {
-    /// Display label: last identifier path component, "Local" for the
-    /// current zone.
-    var label: String
-    /// Local wall-clock time "HH:MM" in that zone.
-    var time: String
-}
-
-enum ZoneRows {
-    static let maxCount = 3
-
-    /// Builds time rows for the given identifiers, resolving "local" to the
-    /// current zone. Invalid identifiers are dropped; the result keeps input
-    /// order but with local rows first; capped at `maxCount`.
-    static func build(identifiers: [String], at date: Date = Date()) -> [ZoneRow] {
-        var localRows: [ZoneRow] = []
-        var otherRows: [ZoneRow] = []
-        for identifier in identifiers {
-            let trimmed = identifier.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty else { continue }
-            let zone: TimeZone?
-            let label: String
-            if trimmed == "local" {
-                zone = .current
-                label = "Local"
-            } else {
-                guard let resolved = TimeZone(identifier: trimmed) else { continue }
-                zone = resolved
-                label = trimmed.split(separator: "/").last.map(String.init) ?? trimmed
-            }
-            guard let zone else { continue }
-            let row = ZoneRow(label: label, time: Self.timeString(for: date, in: zone))
-            if trimmed == "local" {
-                localRows.append(row)
-            } else {
-                otherRows.append(row)
-            }
-        }
-        return Array((localRows + otherRows).prefix(maxCount))
-    }
-
-    private static func timeString(for date: Date, in zone: TimeZone) -> String {
-        let formatter = Self.formatter
-        formatter.timeZone = zone
-        return formatter.string(from: date)
-    }
-
-    private static let formatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
 }
