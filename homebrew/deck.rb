@@ -11,7 +11,7 @@
 # this note from the README and the tap the day notarization lands.
 cask "deck" do
   version "1.20"
-  sha256 "REPLACE_WITH_SHA256_FROM_RELEASE"
+  sha256 "3d8fea330341cb048b5b1b16a61f661063b5893e441734fd2f4df4f54792360b"
 
   url "https://github.com/haqaliz/deck/releases/download/v#{version}/Deck-v#{version}.dmg"
   name "Deck"
