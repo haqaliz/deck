@@ -306,6 +306,10 @@ widget container alone unless you mean to erase your settings — see the note i
   GitHub Release, install instructions included.
   Required secrets: `APPLE_CERT_P12_BASE64`, `APPLE_CERT_PASSWORD`, `APPLE_ID`,
   `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (see the workflow header).
+- **Notarization** is not enabled yet — see
+  [`docs/planning/notarization/runbook.md`](docs/planning/notarization/runbook.md)
+  for exactly what changes the day the paid Apple Developer Program is in place,
+  and why the current signature stops validating on 2027-08-09.
 
 ## Development
 
