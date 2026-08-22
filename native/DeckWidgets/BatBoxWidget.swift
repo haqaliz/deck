@@ -39,6 +39,7 @@ struct BatBoxEntry: TimelineEntry {
     let date: Date
     let snapshot: BatterySnapshot
     let history: [Double]
+    let accessories: [BatteryAccessory]
     let settings: BatBoxSettings
 }
 
@@ -58,6 +59,9 @@ struct BatBoxProvider: TimelineProvider {
                 powerSource: .battery
             ),
             history: (0..<20).map { Double(40 + ($0 % 6) * 8) },
+            accessories: [
+                BatteryAccessory(id: "p", name: "MX Master 3S", percent: 75, lowWarnLevel: 20, category: "Mouse")
+            ],
             settings: BatBoxSettings()
         )
     }
@@ -88,6 +92,7 @@ struct BatBoxProvider: TimelineProvider {
             date: .now,
             snapshot: snapshot,
             history: history,
+            accessories: AccessoryMetricsLoader.snapshot(),
             settings: DeckSettings.load().batbox
         )
     }
@@ -165,6 +170,14 @@ struct BatBoxWidgetEntryView: View {
             ))
             .font(.system(size: 12, weight: .medium, design: .rounded))
             .foregroundStyle(.secondary)
+
+            if entry.settings.showAccessories, let summary = AccessoryCore.summary(entry.accessories) {
+                Text(summary)
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
         }
         .monospacedDigit()
     }
@@ -216,6 +229,8 @@ struct BatBoxWidgetEntryView: View {
             }
             .font(.system(size: 12, weight: .semibold, design: .rounded))
             .monospacedDigit()
+
+            accessorySection
         }
     }
 
@@ -263,7 +278,52 @@ struct BatBoxWidgetEntryView: View {
                 }
             }
 
+            accessorySection
+
             Spacer(minLength: 0)
+        }
+    }
+
+    /// Hidden entirely when nothing is connected — an empty header would be
+    /// worse than no section. Rows are ordered lowest-battery-first by the
+    /// loader, so the row cap keeps whatever is closest to dying.
+    @ViewBuilder
+    private var accessorySection: some View {
+        if entry.settings.showAccessories && !entry.accessories.isEmpty {
+            Divider()
+            VStack(alignment: .leading, spacing: 4) {
+                Text("ACCESSORIES")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .tracking(1)
+                ForEach(entry.accessories.prefix(entry.settings.accessoryCount), id: \.id) { accessory in
+                    HStack(spacing: 6) {
+                        Image(systemName: AccessoryCore.symbol(for: accessory.category))
+                            .font(.system(size: 11))
+                            .foregroundStyle(accessoryColor(accessory))
+                            .frame(width: 16)
+                        Text(accessory.name)
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer()
+                        Text(BatteryFormatters.formatPercent(accessory.percent))
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(accessoryColor(accessory))
+                    }
+                }
+            }
+        }
+    }
+
+    /// Each accessory is judged against its OWN reported warn level, not a
+    /// global setting — the manufacturer's threshold beats ours.
+    private func accessoryColor(_ accessory: BatteryAccessory) -> Color {
+        switch AccessoryCore.tier(percent: accessory.percent, lowWarnLevel: accessory.lowWarnLevel) {
+        case .normal: return .secondary
+        case .warn: return ThresholdTier.warnColor.color
+        case .alarm: return ThresholdTier.alarmColor.color
         }
     }
 

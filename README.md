@@ -16,7 +16,7 @@ WidgetKit widgets with native colors, corners and materials.
 | **LiveBox** | CPU / MEM / DISK usage with a live chart (per-core CPU lines) and top processes (CPU/MEM tabs); metric rows and chart lines turn amber/red past each metric's own warn/alarm thresholds; the large widget can list per-volume disk rows (internal + external volumes) instead of the aggregate DISK row; the process list refreshes at your chosen cadence (default 15s); an optional thermal-pressure row (off by default) shows the system state as NOMINAL/FAIR/SERIOUS/CRITICAL |
 | **OpenBox** | opencode usage: today's in/out tokens + cost, 14-day chart (tokens or cost-per-day stacked by model), top models, tool usage counts, top sessions by tokens; in remote mode a failed fetch says why |
 | **NetBox** | per-interface up/down rates, history chart, most active interfaces; rates turn amber/red past your warn/alarm thresholds |
-| **BatBox** | battery level, time remaining, charge state, level chart |
+| **BatBox** | battery level, time remaining, charge state, and Bluetooth accessory batteries detected automatically |
 | **GitBox** | commits per day (14 days), today's count, streak, active repos |
 | **DevBox** | open TCP listening ports (process + port) and running Docker containers (CPU/mem) |
 | **ClipBox** | clipboard history: recent copies with previews, item kinds, relative times |

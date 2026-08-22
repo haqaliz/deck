@@ -15,8 +15,9 @@ widget.
   top models (parsed from the opencode DB).
 - **NetBox** — network monitor: per-interface up/down rates + history,
   top interfaces (getifaddrs counters).
-- **BatBox** — battery monitor: level, time remaining, charge state
-  (IOKit power source).
+- **BatBox** — battery monitor: level, time remaining, charge state, plus
+  Bluetooth accessory batteries (mouse/keyboard/AirPods), detected
+  automatically (IOKit power sources).
 - **GitBox** — git activity: commits per day for 14 days, today's count,
   streak, and active repos (scanned under `~/dev` by default).
 - **ClipBox** — clipboard history: recent copies with previews, local only
@@ -56,7 +57,8 @@ Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
 
 1. **Sandbox-safe, self-sampled** — LiveBox/NetBox/BatBox read mach,
    getifaddrs and IOKit directly inside the widget. LiveBox additionally
-   re-samples on a `TimelineView` tick so it feels live.
+   re-samples on a `TimelineView` tick so it feels live. BatBox also reads
+   *accessory* power sources — see the SPI note below.
 2. **Sandbox-blocked, agent-pumped** — the widget sandbox forbids subprocesses
    and reading other apps' data (opencode DB, `ps`/process info, `git log`).
    The unsandboxed `DeckAgent` (LaunchAgent `com.deck.agent`, every 60s) reads
@@ -136,6 +138,18 @@ and remove `~/Library/LaunchAgents/com.deck.agent.plist`.
   widgets from the desktop *first* and leave the container alone unless you
   actually want to reset settings — note it holds the OpenBox/ShipBox/TaskBox
   tokens, so back up `settings.json` before wiping it.
+- **Accessory batteries need an SPI, and two obvious sources are dead ends.**
+  `IOPSCopyPowerSourcesList` returns only the internal battery — accessories
+  are a separate power-source type reached via `IOPSCopyPowerSourcesByType(4)`,
+  which IOKit exports but the public SDK headers do not declare, so it is bound
+  with `@_silgen_name`. Verified working *inside the sandboxed extension*, not
+  merely in a CLI. Before reaching for something else: `system_profiler
+  SPBluetoothDataType -json` reports **no battery keys at all** for a real
+  connected mouse (only address/firmware/type/IDs), and IORegistry exposes no
+  `BatteryPercent` for it either — both were tried and both fail. `pmset -g
+  accps` is the quickest ground truth. Being SPI it can vanish in any macOS
+  update, so every failure path returns an empty list and the section simply
+  hides.
 - **`build.noindex` does not prevent LaunchServices pollution.** The `.noindex`
   suffix only hides the directory from Spotlight; xcodebuild still runs an
   explicit `RegisterWithLaunchServices` phase that registers the dev copy. Run

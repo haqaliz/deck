@@ -310,6 +310,8 @@ struct BatBoxSettings: Codable, Equatable {
     var showChart = true
     var showStatus = true
     var levelColor = RGBA(.green)
+    var showAccessories = true
+    var accessoryCount = 4
 
     init() {}
 
@@ -318,6 +320,8 @@ struct BatBoxSettings: Codable, Equatable {
         showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
         showStatus = try c.decodeIfPresent(Bool.self, forKey: .showStatus) ?? true
         levelColor = try c.decodeIfPresent(RGBA.self, forKey: .levelColor) ?? RGBA(.green)
+        showAccessories = try c.decodeIfPresent(Bool.self, forKey: .showAccessories) ?? true
+        accessoryCount = try c.decodeIfPresent(Int.self, forKey: .accessoryCount) ?? 4
     }
 }
 
