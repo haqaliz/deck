@@ -104,6 +104,20 @@ and remove `~/Library/LaunchAgents/com.deck.agent.plist`.
   `__TEXT,__info_plist` section (`CREATE_INFOPLIST_SECTION_IN_BINARY` in
   project.yml) — without it the request is denied without ever prompting.
   Deck.app and DeckAgent are separately signed, so macOS asks once for each.
+- **Adding a widget requires a version bump.** WidgetKit caches the widget
+  descriptor set per extension version, so a new widget added without raising
+  `CFBundleShortVersionString` / `CFBundleVersion` in `project.yml` never
+  appears in the Widget Center — the gallery reuses the cached list. Everything
+  else looks healthy while this is happening: the binary contains the widget,
+  `pluginkit` registers the extension, snapshots pump, chronod logs no errors.
+  Check with
+  `log show --last 2m --info --debug --predicate 'process == "chronod"' | grep -c <Name>BoxWidget`;
+  zero means the descriptors are stale.
+- **`build.noindex` does not prevent LaunchServices pollution.** The `.noindex`
+  suffix only hides the directory from Spotlight; xcodebuild still runs an
+  explicit `RegisterWithLaunchServices` phase that registers the dev copy. Run
+  `scripts/lsclean.sh` after every release build — not only when widgets start
+  rendering as placeholders.
 - Build only into `native/build.noindex` (the `.noindex` suffix keeps Spotlight,
   and therefore LaunchServices, from registering throwaway dev copies of
   `com.deck.app`). A registered dev copy — especially one whose worktree was
