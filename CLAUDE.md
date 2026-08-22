@@ -97,6 +97,22 @@ pluginkit -m -i com.deck.app.widgets           # verify the extension registered
 Uninstall the background agent: `launchctl bootout gui/$(id -u)/com.deck.agent`
 and remove `~/Library/LaunchAgents/com.deck.agent.plist`.
 
+### Repair scripts
+
+```bash
+scripts/lsclean.sh          # after EVERY release build — unregisters dev copies
+                            # of Deck.app that xcodebuild registered, then
+                            # re-registers /Applications and restarts chronod
+scripts/container-repair.sh # rebuilds the widget container skeleton when a
+                            # partial uninstall left it unprovisioned and every
+                            # widget renders blank
+scripts/soak.sh             # long-running sanity loop over the snapshots
+```
+
+Reinstalling: replace **only** the app bundle —
+`rm -rf /Applications/Deck.app && cp -R native/build.noindex/Build/Products/Release/Deck.app /Applications/`.
+Do not delete the container; see the trap below.
+
 ## Signing & install notes
 
 - Automatic signing, team `K6X49DG8VF` (personal team), "Apple Development"
