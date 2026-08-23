@@ -17,6 +17,10 @@ import Foundation
 
 enum FetchSource: String, Codable, CaseIterable {
     case shipbox, weather, opencodeRemote, taskbox, calbox
+    /// PRBox is the first widget with two sources at once. They stay separate
+    /// keys so a GitHub failure never clears an Azure success and each
+    /// settings sub-tab shows its own sentence under its own fields.
+    case prboxGitHub, prboxAzure
 }
 
 enum FetchOutcome: String, Codable {
@@ -137,6 +141,8 @@ enum FetchStatusCopy {
         case .notConfigured:
             switch source {
             case .shipbox: return "Add a repo + token in settings"
+            case .prboxGitHub: return "add a token in settings"
+            case .prboxAzure: return "add org, project + PAT in settings"
             // An empty location is valid — wttr.in geolocates.
             case .weather: return nil
             case .opencodeRemote: return "Paste your opencode token"
@@ -146,6 +152,8 @@ enum FetchStatusCopy {
         case .authOrTarget:
             switch source {
             case .shipbox: return "Check repo + token"
+            case .prboxGitHub: return "check token"
+            case .prboxAzure: return "check org, project + PAT"
             case .weather: return "Check the location"
             case .opencodeRemote: return "Check server URL + token"
             case .taskbox: return "Check org, project + PAT"
@@ -154,6 +162,8 @@ enum FetchStatusCopy {
         case .unreachable:
             switch source {
             case .shipbox: return "Can't reach GitHub"
+            case .prboxGitHub: return "offline"
+            case .prboxAzure: return "can't reach Azure DevOps"
             case .weather: return "Can't reach wttr.in"
             case .opencodeRemote: return "Can't reach the opencode server"
             case .taskbox: return "Can't reach Azure DevOps"
@@ -163,6 +173,8 @@ enum FetchStatusCopy {
         case .badResponse:
             switch source {
             case .shipbox: return "Unexpected GitHub response"
+            case .prboxGitHub: return "unexpected GitHub response"
+            case .prboxAzure: return "unexpected Azure DevOps response"
             case .weather: return "Unexpected wttr.in response"
             case .opencodeRemote: return "Unexpected server response"
             case .taskbox: return "Unexpected Azure DevOps response"
@@ -181,6 +193,8 @@ enum FetchStatusCopy {
         case .notConfigured:
             switch source {
             case .shipbox: return "Nothing is fetched until both a repo and a token are set."
+            case .prboxGitHub: return "Nothing is fetched until a token is set."
+            case .prboxAzure: return "Nothing is fetched until an organization, a project and a token are all set."
             case .weather: return nil
             case .opencodeRemote: return "Remote mode fetches nothing until you paste your own token."
             case .taskbox: return "Nothing is fetched until an organization, a project and a token are all set."
@@ -190,6 +204,10 @@ enum FetchStatusCopy {
             switch source {
             case .shipbox:
                 return "GitHub rejected the request: check owner/repo and that the token is valid and can see it."
+            case .prboxGitHub:
+                return "GitHub rejected the request: check that the token is valid and can see the repositories you expect."
+            case .prboxAzure:
+                return "Azure DevOps rejected the request, or the PAT's owner could not be identified: check the organization and project names, and that the PAT is valid and not expired. A read-only PAT that can see Code is enough."
             case .weather:
                 return "wttr.in didn't recognise that location — try a city name, or leave it empty to geolocate."
             case .opencodeRemote:
@@ -202,6 +220,8 @@ enum FetchStatusCopy {
         case .unreachable:
             switch source {
             case .shipbox: return "Couldn't reach api.github.com — offline, rate-limited, or GitHub is down."
+            case .prboxGitHub: return "Couldn't reach api.github.com — offline, rate-limited, or GitHub is down."
+            case .prboxAzure: return "Couldn't reach dev.azure.com — offline, rate-limited, or Azure DevOps is down."
             case .weather: return "Couldn't reach wttr.in — offline, or the service is down."
             case .opencodeRemote: return "Couldn't reach the opencode server — check it is running and reachable."
             case .taskbox: return "Couldn't reach dev.azure.com — offline, rate-limited, or Azure DevOps is down."
@@ -210,6 +230,8 @@ enum FetchStatusCopy {
         case .badResponse:
             switch source {
             case .shipbox: return "Reached GitHub, but the response couldn't be read. Retrying every minute."
+            case .prboxGitHub: return "Reached GitHub, but the response couldn't be read. Retrying every minute."
+            case .prboxAzure: return "Reached Azure DevOps, but the response couldn't be read. Retrying every minute."
             case .weather: return "Reached wttr.in, but the response couldn't be read. Retrying every minute."
             case .opencodeRemote: return "Reached the server, but the response couldn't be read. Retrying every minute."
             case .taskbox: return "Reached Azure DevOps, but the response couldn't be read. Retrying every minute."
@@ -278,5 +300,73 @@ enum FetchStatusStore {
     static func record(_ outcome: FetchOutcome, for source: FetchSource, at date: Date = Date()) -> FetchOutcome {
         save(FetchStatus(source: source, outcome: outcome, attemptedAt: date))
         return outcome
+    }
+}
+
+// MARK: - PRBox chip (pure)
+//
+// PRBox is the first widget fed by two sources at once, so it is the first
+// that can be half-broken: the header counts are a union, and a REVIEW count
+// of 2 while GitHub is failing is not wrong, only partial. Nothing else on the
+// face can say that, so the chip names the provider whose pull requests are
+// missing.
+
+enum PRFetchChip {
+    /// One line for two providers, in strict precedence:
+    ///
+    /// 1. the agent is silent — every per-provider reason is stale by
+    ///    definition, and blaming a token would send the user to the wrong
+    ///    settings field;
+    /// 2. nothing is configured;
+    /// 3. both enabled providers are failing;
+    /// 4. one is failing — named, because the counts quietly exclude it;
+    /// 5. nothing to say.
+    ///
+    /// A disabled provider is ignored entirely, so switching one off also
+    /// silences the failure it left behind.
+    static func text(
+        github: FetchStatus?,
+        azure: FetchStatus?,
+        githubEnabled: Bool,
+        azureEnabled: Bool,
+        dataWrittenAt: Date?,
+        now: Date
+    ) -> String? {
+        guard githubEnabled || azureEnabled else { return "Not configured" }
+
+        let attempts = [
+            githubEnabled ? github?.attemptedAt : nil,
+            azureEnabled ? azure?.attemptedAt : nil,
+        ].compactMap { $0 }
+
+        let newest = ([dataWrittenAt] + attempts.map { Optional($0) }).compactMap { $0 }.max()
+        guard let newest else { return "Agent hasn't run" }
+        if now.timeIntervalSince(newest) > FetchChip.deadAgentThreshold {
+            return "Agent hasn't run"
+        }
+
+        var failures: [(name: String, source: FetchSource, outcome: FetchOutcome)] = []
+        if githubEnabled, let github, github.outcome != .ok {
+            failures.append(("GitHub", .prboxGitHub, github.outcome))
+        }
+        if azureEnabled, let azure, azure.outcome != .ok {
+            failures.append(("Azure", .prboxAzure, azure.outcome))
+        }
+        guard let first = failures.first else { return nil }
+
+        guard let reason = FetchStatusCopy.line(source: first.source, outcome: first.outcome) else {
+            return nil
+        }
+
+        // Both down for the same reason is one fact, not two.
+        if failures.count == 2, failures[0].outcome == failures[1].outcome {
+            return "GitHub + Azure: \(reason)"
+        }
+        // Two different reasons cannot both fit; name one rather than imply
+        // they share a cause.
+        if failures.count == 2 {
+            return "\(first.name): \(reason) +1 more"
+        }
+        return "\(first.name): \(reason)"
     }
 }

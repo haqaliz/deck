@@ -162,6 +162,7 @@
 		F1F428C889E3145415BD9E40 /* LiveBoxThermalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C80445C9EC1F419FFAC0DB /* LiveBoxThermalTests.swift */; };
 		F4968C6168797484C304D6B5 /* ClipBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */; };
 		F4AB6B9FEEF6A118BD4F284B /* ProcessSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */; };
+		F54A57E18318AB833DE8AF5A /* PRBoxChipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77088C4EE6AAF5F06DCA7953 /* PRBoxChipTests.swift */; };
 		F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		F7C61B7366E45966CD60DCB8 /* OpenCodeSQLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */; };
 		F7D714F5EC3F20D7242F6E85 /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
@@ -242,6 +243,7 @@
 		7073AE9469C6B027A42C9684 /* AtomicFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicFile.swift; sourceTree = "<group>"; };
 		72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdTierTests.swift; sourceTree = "<group>"; };
 		7416BC1BF6361C4AA3485A19 /* azure_prs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = azure_prs.json; sourceTree = "<group>"; };
+		77088C4EE6AAF5F06DCA7953 /* PRBoxChipTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxChipTests.swift; sourceTree = "<group>"; };
 		772E2CD7B7548ED00950F6F7 /* amsterdam_j1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = amsterdam_j1.json; sourceTree = "<group>"; };
 		79E814CE71C9E15746C2443A /* CalBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalBoxTests.swift; sourceTree = "<group>"; };
 		7A8F7E47D5B1EFC7E9E91DF3 /* CalBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalBoxWidget.swift; sourceTree = "<group>"; };
@@ -367,6 +369,7 @@
 				16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */,
 				CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */,
 				C46F38858426CA0E8C705B6F /* PRBoxAzureTests.swift */,
+				77088C4EE6AAF5F06DCA7953 /* PRBoxChipTests.swift */,
 				52463282A2101289BD5E16DD /* PRBoxGitHubTests.swift */,
 				B129C36246D87142F352B506 /* PRBoxSnapshotTests.swift */,
 				21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */,
@@ -732,6 +735,7 @@
 				F7C61B7366E45966CD60DCB8 /* OpenCodeSQLTests.swift in Sources */,
 				3256C001A7523B07D0D86C89 /* OpenCodeSnapshot.swift in Sources */,
 				201551751585A84F66EDF7E1 /* PRBoxAzureTests.swift in Sources */,
+				F54A57E18318AB833DE8AF5A /* PRBoxChipTests.swift in Sources */,
 				A5B35DC87D98A640C07225DE /* PRBoxGitHubTests.swift in Sources */,
 				1B8565F372BC3AA492625092 /* PRBoxSnapshot.swift in Sources */,
 				CB54BF2A77B52929C1500593 /* PRBoxSnapshotTests.swift in Sources */,
