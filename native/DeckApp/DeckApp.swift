@@ -4,11 +4,69 @@ import AppKit
 
 @main
 struct DeckApp: App {
+    @NSApplicationDelegateAdaptor(DeckAppDelegate.self) private var appDelegate
+
     var body: some Scene {
         WindowGroup("Deck") {
             ContentView()
         }
         .windowResizability(.contentSize)
+        // Deck's settings window is not a document and must never be opened
+        // *by* an external event. Without this, every widget URL delivered to
+        // the app made SwiftUI manufacture another settings window on top of
+        // the one already on screen. The URL is handled in the app delegate
+        // instead, which forwards it to the browser.
+        .handlesExternalEvents(matching: [])
+    }
+}
+
+/// Exists for one reason: WidgetKit on macOS delivers a widget's URL to the
+/// containing app rather than to the browser. Without this, clicking a PRBox
+/// row launched Deck, dropped the URL on the floor, and — because the scene is
+/// a plain `WindowGroup` — left a new settings window behind every time.
+///
+/// So Deck forwards the URL and gets out of the way: if it was launched purely
+/// to carry that click, it opens the page and quits instead of leaving a
+/// window nobody asked for.
+final class DeckAppDelegate: NSObject, NSApplicationDelegate {
+    /// True when the process was started to deliver a URL rather than by
+    /// someone opening Deck. `application(_:open:)` runs before
+    /// `applicationDidFinishLaunching`, so this is known in time to decide
+    /// whether a window is wanted at all.
+    private var launchedToOpenAURL = false
+    private var finishedLaunching = false
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let webURLs = DeckURLForwarding.webURLs(from: urls)
+        for url in webURLs {
+            NSWorkspace.shared.open(url)
+        }
+
+        // Nothing usable in the batch: behave exactly as before rather than
+        // quitting an app the user may have opened deliberately.
+        guard !webURLs.isEmpty else { return }
+
+        if finishedLaunching {
+            // Already running with a window on screen: the user gets their
+            // page and keeps whatever they were doing.
+            return
+        }
+        launchedToOpenAURL = true
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        finishedLaunching = true
+        guard launchedToOpenAURL else { return }
+        // The page is already opening in the browser; a settings window would
+        // be pure noise.
+        NSApplication.shared.windows.forEach { $0.close() }
+        NSApplication.shared.terminate(nil)
+    }
+
+    /// Clicking the Dock icon of a running Deck should raise the window it
+    /// already has, not manufacture another one.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        flag
     }
 }
 

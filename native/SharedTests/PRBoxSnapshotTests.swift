@@ -423,3 +423,48 @@ final class PRSourceURLTests: XCTestCase {
         XCTAssertTrue(items.allSatisfy { PRFormatting.destination(for: $0) != nil })
     }
 }
+
+// MARK: - Forwarding widget URLs to a browser
+//
+// WidgetKit on macOS delivers a widget's URL to the *containing app*, never
+// straight to the browser. Deck therefore has to receive it and forward it —
+// and must be as careful about what it forwards as the widget was about what
+// it linked, because the URL originates in a snapshot file on disk.
+
+final class DeckURLForwardingTests: XCTestCase {
+    func testForwardsWebURLs() {
+        let urls = [URL(string: "https://github.com/haqaliz/deck/pull/33")!]
+        XCTAssertEqual(DeckURLForwarding.webURLs(from: urls), urls)
+    }
+
+    func testForwardsPlainHTTP() {
+        let urls = [URL(string: "http://ghe.internal/org/repo/pull/2")!]
+        XCTAssertEqual(DeckURLForwarding.webURLs(from: urls), urls)
+    }
+
+    /// The app must not become a general-purpose opener for anything a
+    /// snapshot happens to contain.
+    func testDropsNonWebSchemes() {
+        let urls = [
+            URL(string: "file:///etc/passwd")!,
+            URL(string: "ftp://example.com/x")!,
+            URL(string: "mailto:someone@example.com")!,
+        ]
+        XCTAssertTrue(DeckURLForwarding.webURLs(from: urls).isEmpty)
+    }
+
+    func testDropsURLsWithoutAHost() {
+        guard let hostless = URL(string: "https://") else { return }
+        XCTAssertTrue(DeckURLForwarding.webURLs(from: [hostless]).isEmpty)
+    }
+
+    func testKeepsOnlyTheWebOnesFromAMixedBatch() {
+        let good = URL(string: "https://dev.azure.com/o/p/_git/r/pullrequest/1")!
+        let urls = [URL(string: "file:///tmp/x")!, good]
+        XCTAssertEqual(DeckURLForwarding.webURLs(from: urls), [good])
+    }
+
+    func testEmptyInputForwardsNothing() {
+        XCTAssertTrue(DeckURLForwarding.webURLs(from: []).isEmpty)
+    }
+}

@@ -462,3 +462,22 @@ enum PRSnapshotBuilder {
         )
     }
 }
+
+// MARK: - Forwarding widget URLs
+//
+// WidgetKit on macOS hands a widget's URL to the **containing app**, not to
+// the browser: clicking a row launches Deck, and if Deck ignores the URL the
+// click appears to do nothing except open a window. So the app receives it and
+// forwards it — applying the same restriction the widget did, because the URL
+// comes out of a snapshot file and Deck must not become a general-purpose
+// opener for whatever that file contains.
+
+enum DeckURLForwarding {
+    static func webURLs(from urls: [URL]) -> [URL] {
+        urls.filter { url in
+            guard let scheme = url.scheme?.lowercased() else { return false }
+            guard scheme == "https" || scheme == "http" else { return false }
+            return url.host?.isEmpty == false
+        }
+    }
+}

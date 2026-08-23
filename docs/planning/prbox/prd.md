@@ -262,6 +262,16 @@ its own sentence under its own fields.
   widget to deep-link at all. `PRFormatting.destination(for:)` restricts it to
   http(s) with a host: the snapshot is data, not instruction, so a row opens a
   pull request in a browser and nothing else.
+
+  **Shipping this needed two app-side changes, found by testing the click.**
+  WidgetKit delivers the URL to the *containing app*, so the first build
+  launched Deck, dropped the URL and left a new settings window behind on every
+  click — the browser never opened. `DeckAppDelegate` now forwards the URL to
+  `NSWorkspace` and, when the launch existed only to carry that click, quits
+  without showing a window; `.handlesExternalEvents(matching: [])` stops
+  SwiftUI manufacturing a second settings window when Deck is already open.
+  Measured after the fix: cold click → 0 Deck windows, page opens; click with
+  settings open → window count stays 1, page opens.
 - **No multi-project / multi-org.** One `org/project` for Azure, matching
   TaskBox; the same follow-up as ShipBox multi-repo.
 - No CI status per PR (that is ShipBox), no merge-conflict state, no comment

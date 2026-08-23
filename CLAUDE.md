@@ -160,6 +160,19 @@ Do not delete the container; see the trap below.
   widgets from the desktop *first* and leave the container alone unless you
   actually want to reset settings — note it holds the OpenBox/ShipBox/TaskBox
   tokens, so back up `settings.json` before wiping it.
+- **A widget's URL is delivered to the app, not to the browser.** On macOS
+  WidgetKit hands `widgetURL` / `Link` destinations to the **containing app**;
+  it never opens them itself. A widget that links to a web page therefore needs
+  the app to receive the URL and forward it (`DeckAppDelegate.application(_:open:)`
+  → `NSWorkspace.open`), or the click just launches Deck and appears to do
+  nothing. Two further traps came with it: a plain `WindowGroup` manufactures a
+  **new window for every URL delivered**, which needs
+  `.handlesExternalEvents(matching: [])` on the scene (not
+  `applicationShouldHandleReopen`, which does not cover URL opens); and Deck
+  must **not** declare `CFBundleURLTypes` for http(s), or it becomes a
+  candidate browser. Forwarding is filtered to http(s)-with-a-host
+  (`DeckURLForwarding`) because the URL originates in a snapshot file, which is
+  data rather than instruction.
 - **Azure DevOps' Git PR API silently ignores an identity it can't parse.**
   `searchCriteria.creatorId` / `.reviewerId` take identity **GUIDs**; there is
   no `@Me` macro as there is in WIQL. A non-GUID value is not rejected — it
