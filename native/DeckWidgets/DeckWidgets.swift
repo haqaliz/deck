@@ -16,5 +16,6 @@ struct DeckWidgetsBundle: WidgetBundle {
         ShipBoxWidget()
         TaskBoxWidget()
         CalBoxWidget()
+        PRBoxWidget()
     }
 }
