@@ -4,10 +4,11 @@
 
 # Deck
 
-**Twelve small, beautiful macOS desktop widgets — one native app, no floating windows.**
+**Thirteen small, beautiful macOS desktop widgets — one native app, no floating windows.**
 
 Deck adds real WidgetKit widgets to your desktop: your machine, your network, your
-battery, your commits, your ports, your calendar, your tasks and your builds — with
+battery, your commits, your ports, your calendar, your tasks, your builds and your
+review queue — with
 native colors, corners and materials, at three sizes each.
 
 [![Release](https://img.shields.io/github/v/release/haqaliz/deck?color=3fb950&label=release)](https://github.com/haqaliz/deck/releases/latest)
@@ -41,8 +42,9 @@ native colors, corners and materials, at three sizes each.
 | **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
 | **TaskBox** | Azure DevOps work items assigned to you: open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW, from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
+| **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps in one queue: counts, provider-tagged rows, drafts marked; a failed fetch names the provider |
 
-All twelve come in **small / medium / large** sizes.
+All thirteen come in **small / medium / large** sizes.
 
 ## Install
 
