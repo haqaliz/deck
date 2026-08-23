@@ -39,7 +39,8 @@ widget.
   syncs).
 - **PRBox** — review queue: your open PRs and the ones awaiting your review,
   **mixed from two providers** (GitHub + Azure DevOps Git) in one list. The
-  first widget with per-provider settings sub-tabs and two `FetchSource` keys.
+  first widget with per-provider settings sub-tabs and two `FetchSource` keys,
+  and the first to deep-link (rows are `Link`s; small uses `widgetURL`).
   Azure needs an identity GUID from `_apis/connectionData` — see the trap
   below.
 

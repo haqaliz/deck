@@ -186,9 +186,13 @@ the next slate. Ordered by priority, not by cost.
       "100+" ceiling), the project-level endpoint spans every repo in the
       project (no per-repo fan-out), and GitHub search allows 30 req/min
       against 2 calls per tick.
-      **Open follow-ups:** deep links (`widgetURL`), multi-project/multi-org,
-      review state / approval counts (needs one request per PR), a third
-      provider, Keychain for the two tokens.
+      Rows are clickable (the first Deck widget to deep-link): medium and
+      large link per row, the small face carries a `widgetURL` to the top pull
+      request. Restricted to http(s) with a host — the snapshot is data, not
+      instruction.
+      **Open follow-ups:** multi-project/multi-org, review state / approval
+      counts (needs one request per PR), a third provider, Keychain for the two
+      tokens.
 - [ ] **MarketBox** — configured tickers/crypto: price, day change, sparkline.
       Near line-for-line clone of the WeatherBox agent fetch block.
 - [x] **BlueBox** — peripheral battery (AirPods, Magic Mouse/Keyboard).

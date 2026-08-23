@@ -218,6 +218,21 @@ enum PRFormatting {
         }
     }
 
+    /// Where a row points, or nil when it isn't a link.
+    ///
+    /// Restricted to http(s) on purpose. The URL comes from a snapshot file,
+    /// which the widget treats as data rather than as instruction: a row must
+    /// be able to open a pull request in a browser and nothing else.
+    static func destination(for item: PullRequestItem) -> URL? {
+        let trimmed = item.url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let url = URL(string: trimmed) else { return nil }
+        guard let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http" else {
+            return nil
+        }
+        guard url.host?.isEmpty == false else { return nil }
+        return url
+    }
+
     /// "3", or "100+" when the number is a floor rather than a total.
     static func countLabel(_ count: Int, capped: Bool) -> String {
         capped ? "\(count)+" : "\(count)"

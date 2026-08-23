@@ -128,6 +128,15 @@ struct PRBoxWidgetEntryView: View {
     @Environment(\.widgetFamily) private var family
     let entry: PRBoxEntry
 
+    /// The small face has no rows, so the whole widget is the tap target and
+    /// it opens the top pull request — the one the counts are about. Medium
+    /// and large link per row instead, so a widget-wide URL there would
+    /// hijack clicks meant for a specific row.
+    private var smallDestination: URL? {
+        guard family == .systemSmall else { return nil }
+        return entry.pullRequests.first.flatMap { PRFormatting.destination(for: $0) }
+    }
+
     var body: some View {
         Group {
             if entry.available {
@@ -146,6 +155,7 @@ struct PRBoxWidgetEntryView: View {
         .containerBackground(for: .widget) {
             Color.clear
         }
+        .widgetURL(smallDestination)
     }
 
     /// No snapshot at all: either nothing is configured yet or the agent has
@@ -260,7 +270,14 @@ struct PRBoxWidgetEntryView: View {
                 .foregroundStyle(.secondary)
                 .tracking(1)
             ForEach(Array(entry.pullRequests.prefix(maxCount).enumerated()), id: \.offset) { _, pr in
-                row(for: pr)
+                // A row whose provider gave no usable URL stays plain text
+                // rather than becoming a link that goes nowhere.
+                if let destination = PRFormatting.destination(for: pr) {
+                    Link(destination: destination) { row(for: pr) }
+                        .buttonStyle(.plain)
+                } else {
+                    row(for: pr)
+                }
             }
         }
     }

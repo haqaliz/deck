@@ -255,9 +255,13 @@ its own sentence under its own fields.
 - **No review state / approval counts.** The GitHub search payload has no
   review data; getting it means one call per PR — the fan-out the 30/min search
   budget forbids.
-- **No deep links** (`widgetURL`). Also an open TaskBox follow-up; and the
-  Azure payload carries no web URL, so a link has to be constructed
-  (`…/_git/{repo}/pullrequest/{id}`).
+- ~~**No deep links** (`widgetURL`).~~ **Added after review** — the URL was
+  already in the model for both providers (GitHub's `html_url`, Azure's
+  constructed `…/_git/{repo}/pullrequest/{id}`), so rows became `Link`s and the
+  small face got a `widgetURL` to the top pull request. PRBox is the first Deck
+  widget to deep-link at all. `PRFormatting.destination(for:)` restricts it to
+  http(s) with a host: the snapshot is data, not instruction, so a row opens a
+  pull request in a browser and nothing else.
 - **No multi-project / multi-org.** One `org/project` for Azure, matching
   TaskBox; the same follow-up as ShipBox multi-repo.
 - No CI status per PR (that is ShipBox), no merge-conflict state, no comment

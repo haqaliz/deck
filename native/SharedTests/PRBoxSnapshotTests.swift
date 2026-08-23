@@ -363,3 +363,63 @@ final class PRSnapshotBuilderTests: XCTestCase {
         XCTAssertEqual(snap.writtenAt, now)
     }
 }
+
+// MARK: - Row destination
+
+final class PRDestinationTests: XCTestCase {
+    private func item(url: String) -> PullRequestItem {
+        PullRequestItem(
+            id: "github:deck#1", number: 1, title: "T", repo: "deck",
+            role: .authored, provider: .github, isDraft: false,
+            createdAt: Date(timeIntervalSince1970: 0), url: url
+        )
+    }
+
+    func testHTTPSURLIsClickable() {
+        XCTAssertEqual(
+            PRFormatting.destination(for: item(url: "https://github.com/haqaliz/deck/pull/33")),
+            URL(string: "https://github.com/haqaliz/deck/pull/33")
+        )
+    }
+
+    func testAzureConstructedURLIsClickable() {
+        let url = "https://dev.azure.com/Org/Proj/_git/manifold/pullrequest/4396"
+        XCTAssertEqual(PRFormatting.destination(for: item(url: url)), URL(string: url))
+    }
+
+    /// A row whose provider gave no URL — or a snapshot written before the
+    /// field was populated — must render as plain text rather than as a link
+    /// that goes nowhere.
+    func testEmptyURLIsNotClickable() {
+        XCTAssertNil(PRFormatting.destination(for: item(url: "")))
+        XCTAssertNil(PRFormatting.destination(for: item(url: "   ")))
+    }
+
+    /// Only http(s) opens a browser. Anything else in a snapshot is either
+    /// junk or an attempt to have the widget launch something else, and the
+    /// row simply isn't a link.
+    func testNonWebSchemesAreRejected() {
+        XCTAssertNil(PRFormatting.destination(for: item(url: "file:///etc/passwd")))
+        XCTAssertNil(PRFormatting.destination(for: item(url: "javascript:alert(1)")))
+        XCTAssertNil(PRFormatting.destination(for: item(url: "not a url at all")))
+    }
+
+    func testPlainHTTPIsAllowed() {
+        let url = "http://ghe.internal/org/repo/pull/2"
+        XCTAssertEqual(PRFormatting.destination(for: item(url: url)), URL(string: url))
+    }
+}
+
+// MARK: - The parsers must supply what the link needs
+
+final class PRSourceURLTests: XCTestCase {
+    /// Characterises existing parser behaviour, because the clickable row now
+    /// depends on it: a provider that stopped populating `url` would silently
+    /// turn every row back into plain text.
+    func testGitHubRowsCarryTheirHTMLURL() throws {
+        let url = Bundle(for: Self.self).url(forResource: "github_prs", withExtension: "json")
+        let data = try Data(contentsOf: try XCTUnwrap(url))
+        let items = try XCTUnwrap(GitHubPRParser.parse(data, role: .authored))
+        XCTAssertTrue(items.allSatisfy { PRFormatting.destination(for: $0) != nil })
+    }
+}
