@@ -413,3 +413,37 @@ enum HostGitHubPRLoader {
         return data
     }
 }
+
+// MARK: - Snapshot assembly (pure)
+
+enum PRSnapshotBuilder {
+    /// Merge both providers into the one snapshot the widget renders.
+    ///
+    /// `nil` means that provider's fetch failed. It contributes nothing rather
+    /// than blanking the other's rows: half a review queue is still worth
+    /// reading, and the chip names the half that is missing.
+    ///
+    /// Counts are unions and stay uncapped; only the stored rows are trimmed.
+    /// That gap is the point of having a separate header number — "6 MINE"
+    /// above four rows is honest, four rows pretending to be the whole queue
+    /// is not.
+    static func build(
+        github: PRRoleTotals?,
+        azure: PRRoleTotals?,
+        cap: Int,
+        now: Date
+    ) -> PRBoxSnapshot {
+        let sides = [github, azure].compactMap { $0 }
+        let rows = PRFormatting.sorted(PRFormatting.deduped(sides.flatMap(\.items)))
+
+        return PRBoxSnapshot(
+            writtenAt: now,
+            authoredCount: sides.reduce(0) { $0 + $1.authoredTotal },
+            reviewingCount: sides.reduce(0) { $0 + $1.reviewingTotal },
+            // Either side being a floor makes the union a floor.
+            authoredCapped: sides.contains { $0.authoredCapped },
+            reviewingCapped: sides.contains { $0.reviewingCapped },
+            pullRequests: Array(rows.prefix(cap))
+        )
+    }
+}

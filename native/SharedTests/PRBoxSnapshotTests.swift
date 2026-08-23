@@ -255,3 +255,111 @@ final class PRBoxSnapshotTests: XCTestCase {
         XCTAssertEqual(PRFormatting.countLabel(100, capped: true), "100+")
     }
 }
+
+// MARK: - Building one snapshot from two providers
+
+final class PRSnapshotBuilderTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_787_000_000)
+
+    private func item(
+        _ number: Int, _ provider: PRProvider, _ role: PRRole,
+        secondsAgo: TimeInterval = 0, repo: String = "r"
+    ) -> PullRequestItem {
+        PullRequestItem(
+            id: "\(provider.rawValue):\(repo)#\(number)",
+            number: number, title: "PR \(number)", repo: repo, role: role,
+            provider: provider, isDraft: false,
+            createdAt: now.addingTimeInterval(-secondsAgo), url: ""
+        )
+    }
+
+    private func totals(
+        _ items: [PullRequestItem], authored: Int, reviewing: Int,
+        authoredCapped: Bool = false, reviewingCapped: Bool = false
+    ) -> PRRoleTotals {
+        PRRoleTotals(
+            authoredTotal: authored, reviewingTotal: reviewing,
+            authoredCapped: authoredCapped, reviewingCapped: reviewingCapped,
+            items: items
+        )
+    }
+
+    func testCountsAreTheUnionOfBothProviders() {
+        let snap = PRSnapshotBuilder.build(
+            github: totals([item(1, .github, .authored)], authored: 1, reviewing: 4),
+            azure: totals([item(2, .azureDevOps, .authored)], authored: 2, reviewing: 3),
+            cap: 10, now: now
+        )
+        XCTAssertEqual(snap.authoredCount, 3)
+        XCTAssertEqual(snap.reviewingCount, 7)
+    }
+
+    /// A provider that fails contributes nothing rather than blanking the
+    /// other's rows — half a queue is still worth reading, and the chip says
+    /// which half is missing.
+    func testAFailedProviderLeavesTheOtherIntact() {
+        let snap = PRSnapshotBuilder.build(
+            github: nil,
+            azure: totals([item(2, .azureDevOps, .reviewing)], authored: 0, reviewing: 1),
+            cap: 10, now: now
+        )
+        XCTAssertEqual(snap.reviewingCount, 1)
+        XCTAssertEqual(snap.pullRequests.map(\.number), [2])
+    }
+
+    func testBothProvidersFailingGivesAnEmptySnapshotNotACrash() {
+        let snap = PRSnapshotBuilder.build(github: nil, azure: nil, cap: 10, now: now)
+        XCTAssertEqual(snap.authoredCount, 0)
+        XCTAssertTrue(snap.pullRequests.isEmpty)
+    }
+
+    /// Either provider's capped flag makes the union a floor.
+    func testCappedFlagsPropagateFromEitherProvider() {
+        let snap = PRSnapshotBuilder.build(
+            github: totals([], authored: 5, reviewing: 0),
+            azure: totals([], authored: 101, reviewing: 0, authoredCapped: true),
+            cap: 10, now: now
+        )
+        XCTAssertTrue(snap.authoredCapped)
+        XCTAssertFalse(snap.reviewingCapped)
+    }
+
+    func testRowsAreSortedNewestFirstAcrossProviders() {
+        let snap = PRSnapshotBuilder.build(
+            github: totals([item(1, .github, .authored, secondsAgo: 500)], authored: 1, reviewing: 0),
+            azure: totals([item(2, .azureDevOps, .authored, secondsAgo: 100)], authored: 1, reviewing: 0),
+            cap: 10, now: now
+        )
+        XCTAssertEqual(snap.pullRequests.map(\.number), [2, 1])
+    }
+
+    func testDuplicatesAreCollapsedBeforeTheCapIsApplied() {
+        let both = [
+            item(7, .github, .reviewing, secondsAgo: 10),
+            item(7, .github, .authored, secondsAgo: 10),
+            item(8, .github, .authored, secondsAgo: 20),
+        ]
+        let snap = PRSnapshotBuilder.build(
+            github: totals(both, authored: 2, reviewing: 1), azure: nil, cap: 2, now: now
+        )
+        XCTAssertEqual(snap.pullRequests.count, 2)
+        XCTAssertEqual(snap.pullRequests.first?.role, .authored)
+    }
+
+    /// The stored rows are trimmed but the counts are not: the header is
+    /// allowed to exceed the list, which is the whole reason it is a separate
+    /// number.
+    func testRowsAreCappedWhileCountsAreNot() {
+        let items = (1...20).map { item($0, .github, .authored, secondsAgo: TimeInterval($0)) }
+        let snap = PRSnapshotBuilder.build(
+            github: totals(items, authored: 20, reviewing: 0), azure: nil, cap: 6, now: now
+        )
+        XCTAssertEqual(snap.pullRequests.count, 6)
+        XCTAssertEqual(snap.authoredCount, 20)
+    }
+
+    func testWrittenAtIsStamped() {
+        let snap = PRSnapshotBuilder.build(github: nil, azure: nil, cap: 6, now: now)
+        XCTAssertEqual(snap.writtenAt, now)
+    }
+}

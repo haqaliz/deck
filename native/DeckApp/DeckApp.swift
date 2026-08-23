@@ -51,6 +51,7 @@ struct ContentView: View {
             case .shipbox: ShipBoxSettingsView(settings: $settings.shipbox)
             case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox)
             case .calbox: CalBoxSettingsView(settings: $settings.calbox)
+            case .prbox: PRBoxSettingsView(settings: $settings.prbox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -66,6 +67,7 @@ struct ContentView: View {
             Task { await refreshShipBox() }
             Task { await refreshTaskBox() }
             Task { await refreshCalBox() }
+            Task { await refreshPRBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshGitBox()
@@ -75,6 +77,7 @@ struct ContentView: View {
                 Task { await refreshShipBox() }
                 Task { await refreshTaskBox() }
                 Task { await refreshCalBox() }
+                Task { await refreshPRBox() }
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -178,6 +181,64 @@ struct ContentView: View {
     /// Fetch GitHub Actions runs (host is unsandboxed) for the ShipBox widget.
     /// Requires the user's own repo + token — never a default token. Always
     /// written on success so writtenAt drives the staleness windows.
+    /// Fetch both providers and write one snapshot. A provider that is off, or
+    /// on but missing credentials, is recorded as `.ok` rather than skipped
+    /// silently: `FetchStatusStore` has no clear, and `.ok` is what erases a
+    /// failure the user has since switched off. Recording `.notConfigured`
+    /// instead would keep nagging about a provider they disabled.
+    private func refreshPRBox() async {
+        let prbox = settings.prbox
+        guard prbox.isAnyProviderUsable else {
+            FetchStatusStore.record(prbox.github.enabled ? .notConfigured : .ok, for: .prboxGitHub)
+            FetchStatusStore.record(prbox.azure.enabled ? .notConfigured : .ok, for: .prboxAzure)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+
+        var github: PRRoleTotals?
+        if prbox.github.isUsable {
+            do {
+                github = try await HostGitHubPRLoader.fetch(
+                    token: prbox.github.token,
+                    scope: prbox.github.scope,
+                    cap: prbox.prCount
+                )
+                FetchStatusStore.record(.ok, for: .prboxGitHub)
+            } catch {
+                FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .prboxGitHub)
+            }
+        } else {
+            FetchStatusStore.record(prbox.github.enabled ? .notConfigured : .ok, for: .prboxGitHub)
+        }
+
+        var azure: PRRoleTotals?
+        if prbox.azure.isUsable {
+            do {
+                azure = try await HostAzurePRLoader.fetch(
+                    organization: prbox.azure.organization,
+                    project: prbox.azure.project,
+                    token: prbox.azure.token,
+                    cap: prbox.prCount
+                )
+                FetchStatusStore.record(.ok, for: .prboxAzure)
+            } catch {
+                FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .prboxAzure)
+            }
+        } else {
+            FetchStatusStore.record(prbox.azure.enabled ? .notConfigured : .ok, for: .prboxAzure)
+        }
+
+        // One provider failing must not blank the other's rows.
+        if github != nil || azure != nil {
+            PRBoxSnapshotStore.save(
+                PRSnapshotBuilder.build(
+                    github: github, azure: azure, cap: prbox.prCount, now: Date()
+                )
+            )
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     private func refreshShipBox() async {
         let shipbox = settings.shipbox
         let repo = shipbox.repo.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -414,7 +475,7 @@ private func refreshCalBox() async {
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
     case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
-    case weatherbox, clockbox, shipbox, taskbox, calbox
+    case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
 
     var id: String { rawValue }
 
@@ -433,6 +494,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .shipbox: "ShipBox"
         case .taskbox: "TaskBox"
         case .calbox: "CalBox"
+        case .prbox: "PRBox"
         }
     }
 
@@ -451,6 +513,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .shipbox: "shippingbox"
         case .taskbox: "checklist"
         case .calbox: "calendar"
+        case .prbox: "arrow.triangle.pull"
         }
     }
 }
@@ -955,6 +1018,91 @@ private struct FetchStatusCaption: View {
         formatter.dateFormat = "HH:mm"
         return formatter
     }()
+}
+
+private struct PRBoxSettingsView: View {
+    @Binding var settings: PRBoxSettings
+
+    /// Deck's first per-provider sub-tab. A segmented picker inside the Form
+    /// keeps it native and keeps the window at its existing size, where a real
+    /// nested TabView would not.
+    private enum Provider: String, CaseIterable, Identifiable {
+        case github = "GitHub"
+        case azure = "Azure DevOps"
+        var id: String { rawValue }
+    }
+
+    @State private var provider: Provider = .github
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Provider", selection: $provider) {
+                    ForEach(Provider.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            switch provider {
+            case .github: githubSection
+            case .azure: azureSection
+            }
+
+            Section("Queue") {
+                Toggle("Show list", isOn: $settings.showList)
+                Stepper(
+                    "PR count: \(settings.prCount)",
+                    value: $settings.prCount,
+                    in: PRBoxSettings.rowCountRange
+                )
+                .disabled(!settings.showList)
+                Text("The count is for the large widget \u{2014} medium shows at most three rows.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Colors") {
+                ColorPicker("Mine", selection: $settings.mineColor.color)
+                ColorPicker("Review", selection: $settings.reviewColor.color)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+
+    private var githubSection: some View {
+        Section("GitHub") {
+            Toggle("Include GitHub", isOn: $settings.github.enabled)
+            SecureField("Personal access token", text: $settings.github.token)
+                .textContentType(.password)
+            TextField("Scope (optional)", text: $settings.github.scope, prompt: Text("org:acme"))
+            Text("Without a scope this searches every repository the token can see, which can reach years back into personal repos. The token is sent only to api.github.com over TLS.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            FetchStatusCaption(
+                source: .prboxGitHub,
+                clearOn: "\(settings.github.enabled)\u{0}\(settings.github.token)\u{0}\(settings.github.scope)"
+            )
+        }
+    }
+
+    private var azureSection: some View {
+        Section("Azure DevOps") {
+            Toggle("Include Azure DevOps", isOn: $settings.azure.enabled)
+            TextField("Organization", text: $settings.azure.organization)
+            TextField("Project", text: $settings.azure.project)
+            SecureField("Personal access token", text: $settings.azure.token)
+                .textContentType(.password)
+            Text("Shows pull requests created by, or awaiting review from, whoever owns the PAT \u{2014} not whoever is signed in to the browser. The token is sent only to dev.azure.com over TLS; a read-only PAT that can see Code is enough.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            FetchStatusCaption(
+                source: .prboxAzure,
+                clearOn: "\(settings.azure.enabled)\u{0}\(settings.azure.organization)\u{0}\(settings.azure.project)\u{0}\(settings.azure.token)"
+            )
+        }
+    }
 }
 
 private struct ShipBoxSettingsView: View {
