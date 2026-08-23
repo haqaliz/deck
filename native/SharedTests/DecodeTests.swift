@@ -500,6 +500,15 @@ final class DeckSettingsRoundTripTests: XCTestCase {
         s.calbox.todayCount = 3
         s.calbox.showTomorrow = false
         s.calbox.accentColor = RGBA(red: 0.01, green: 0.02, blue: 0.03)
+        s.prbox.github.enabled = true
+        s.prbox.github.token = "gh-round-trip"
+        s.prbox.github.scope = "org:acme"
+        s.prbox.azure.enabled = true
+        s.prbox.azure.organization = "org"
+        s.prbox.azure.project = "proj"
+        s.prbox.azure.token = "az-round-trip"
+        s.prbox.prCount = 11
+        s.prbox.mineColor = RGBA(red: 0.09, green: 0.08, blue: 0.07)
         s.agentAtLogin = false
         return s
     }
@@ -529,6 +538,7 @@ final class DeckSettingsRoundTripTests: XCTestCase {
         XCTAssertEqual(d.shipbox, original.shipbox, "shipbox dropped on decode")
         XCTAssertEqual(d.taskbox, original.taskbox, "taskbox dropped on decode")
         XCTAssertEqual(d.calbox, original.calbox, "calbox dropped on decode")
+        XCTAssertEqual(d.prbox, original.prbox, "prbox dropped on decode")
         XCTAssertEqual(d.agentAtLogin, original.agentAtLogin, "agentAtLogin dropped on decode")
     }
 }
@@ -602,5 +612,119 @@ final class HomeBoxSplitMigrationTests: XCTestCase {
         XCTAssertFalse(json.contains("\"homebox\""))
         XCTAssertTrue(json.contains("\"weatherbox\""))
         XCTAssertTrue(json.contains("\"clockbox\""))
+    }
+}
+
+// MARK: - Adding a section must not reset the sections already on disk
+//
+// The direction the round-trip test above cannot see: a `settings.json`
+// written by a build that predates `prbox` has no such key at all. Before the
+// container decoded section-by-section, one absent key threw `keyNotFound`,
+// `DeckSettings.load()` swallowed it and returned defaults, and the next save
+// overwrote the user's real settings — colors, repo paths and all three API
+// tokens — with them. Every widget added since ShipBox would have done it.
+
+final class PrePRBoxSettingsTests: XCTestCase {
+    /// A settings file from before PRBox existed, carrying values a user would
+    /// be angry to lose.
+    private let prePRBox = """
+    {"shipbox":{"repo":"owner/name","token":"shipbox-secret","runCount":7},
+     "taskbox":{"organization":"org","project":"proj","token":"taskbox-secret"},
+     "openbox":{"token":"openbox-secret"},
+     "gitbox":{"repoPaths":["/Users/me/dev"],"scanDepth":4},
+     "livebox":{"processCount":9}}
+    """
+
+    func testAbsentPRBoxSectionDoesNotThrow() throws {
+        XCTAssertNoThrow(try JSONDecoder().decode(DeckSettings.self, from: Data(prePRBox.utf8)))
+    }
+
+    func testTokensSurviveTheUpgrade() throws {
+        let s = try JSONDecoder().decode(DeckSettings.self, from: Data(prePRBox.utf8))
+        XCTAssertEqual(s.shipbox.token, "shipbox-secret")
+        XCTAssertEqual(s.taskbox.token, "taskbox-secret")
+        XCTAssertEqual(s.openbox.token, "openbox-secret")
+    }
+
+    func testOtherSettingsSurviveTheUpgrade() throws {
+        let s = try JSONDecoder().decode(DeckSettings.self, from: Data(prePRBox.utf8))
+        XCTAssertEqual(s.shipbox.repo, "owner/name")
+        XCTAssertEqual(s.shipbox.runCount, 7)
+        XCTAssertEqual(s.gitbox.repoPaths, ["/Users/me/dev"])
+        XCTAssertEqual(s.gitbox.scanDepth, 4)
+        XCTAssertEqual(s.livebox.processCount, 9)
+    }
+
+    func testPRBoxItselfComesUpAtDefaults() throws {
+        let s = try JSONDecoder().decode(DeckSettings.self, from: Data(prePRBox.utf8))
+        XCTAssertEqual(s.prbox, PRBoxSettings())
+    }
+}
+
+// MARK: - PRBox settings
+
+final class PRBoxSettingsTests: XCTestCase {
+    /// Both providers off until the user says otherwise: a widget added from
+    /// the gallery must not start making network requests, and with no
+    /// credentials there is nothing to request anyway.
+    func testBothProvidersDefaultOff() {
+        let s = PRBoxSettings()
+        XCTAssertFalse(s.github.enabled)
+        XCTAssertFalse(s.azure.enabled)
+    }
+
+    func testNoTokenIsEverDefaulted() {
+        let s = PRBoxSettings()
+        XCTAssertTrue(s.github.token.isEmpty)
+        XCTAssertTrue(s.azure.token.isEmpty)
+    }
+
+    func testPartialSectionDecodesTolerantly() throws {
+        let json = #"{"github":{"enabled":true},"prCount":9}"#
+        let s = try JSONDecoder().decode(PRBoxSettings.self, from: Data(json.utf8))
+        XCTAssertTrue(s.github.enabled)
+        XCTAssertTrue(s.github.token.isEmpty)
+        XCTAssertFalse(s.azure.enabled)
+        XCTAssertEqual(s.prCount, 9)
+    }
+
+    func testUnknownKeysAreIgnored() throws {
+        let json = #"{"prCount":8,"somethingFromTheFuture":{"a":1}}"#
+        let s = try JSONDecoder().decode(PRBoxSettings.self, from: Data(json.utf8))
+        XCTAssertEqual(s.prCount, 8)
+    }
+
+    /// `prCount` is the *large* row count; medium shows at most three, so a
+    /// value out of range would silently mean something different per size.
+    func testRowCountClampsToRange() throws {
+        let low = try JSONDecoder().decode(PRBoxSettings.self, from: Data(#"{"prCount":1}"#.utf8))
+        let high = try JSONDecoder().decode(PRBoxSettings.self, from: Data(#"{"prCount":99}"#.utf8))
+        XCTAssertEqual(low.prCount, 3)
+        XCTAssertEqual(high.prCount, 12)
+    }
+
+    func testMediumRowCountNeverExceedsThree() {
+        var s = PRBoxSettings()
+        s.prCount = 12
+        XCTAssertEqual(s.rowCount(for: .medium), 3)
+        XCTAssertEqual(s.rowCount(for: .large), 12)
+    }
+
+    /// A provider with its toggle on but no credentials is not configured, and
+    /// the agent must skip it rather than fire a request that cannot work.
+    func testProviderIsOnlyUsableWhenEnabledAndCredentialed() {
+        var s = PRBoxSettings()
+        XCTAssertFalse(s.github.isUsable)
+        s.github.enabled = true
+        XCTAssertFalse(s.github.isUsable)
+        s.github.token = "t"
+        XCTAssertTrue(s.github.isUsable)
+
+        s.azure.enabled = true
+        s.azure.token = "t"
+        XCTAssertFalse(s.azure.isUsable, "needs an organization and a project too")
+        s.azure.organization = "org"
+        s.azure.project = "proj"
+        XCTAssertTrue(s.azure.isUsable)
     }
 }
