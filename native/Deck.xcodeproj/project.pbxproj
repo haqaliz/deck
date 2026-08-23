@@ -87,6 +87,7 @@
 		758F397B4CB36B934DA2AD64 /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
 		769F47CE66D9A10A5B348E02 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */; };
+		7ADEE8BA9F19842AD86B99DC /* github_prs.json in Resources */ = {isa = PBXBuildFile; fileRef = 910A3754B71959068BBF2549 /* github_prs.json */; };
 		822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */; };
 		82D525C8424FF0CFA882A47F /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		86444246D4788784A28FBA68 /* OpenBoxSessionCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */; };
@@ -102,6 +103,7 @@
 		A2EE3F352DA2E30CB3F4E017 /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
 		A3610AE8477308D69CE6301A /* ClockBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */; };
 		A366F0122DCFF1970B2158B5 /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
+		A5B35DC87D98A640C07225DE /* PRBoxGitHubTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52463282A2101289BD5E16DD /* PRBoxGitHubTests.swift */; };
 		A5D18790439106076A579311 /* FetchStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0F7208894404301344CB11 /* FetchStatusTests.swift */; };
 		A5D6283DF0774FCB9F273152 /* ShipBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */; };
 		A5E22A6827149E7194FB4E64 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
@@ -227,6 +229,7 @@
 		4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryCoreTests.swift; sourceTree = "<group>"; };
 		5089372A785C079676513337 /* TaskBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBoxSnapshot.swift; sourceTree = "<group>"; };
 		50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatBoxWidget.swift; sourceTree = "<group>"; };
+		52463282A2101289BD5E16DD /* PRBoxGitHubTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxGitHubTests.swift; sourceTree = "<group>"; };
 		561AB4E0A1AD6FABCE740F12 /* WeatherSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherSnapshotTests.swift; sourceTree = "<group>"; };
 		5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeAggregatorTests.swift; sourceTree = "<group>"; };
 		61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThermalCore.swift; sourceTree = "<group>"; };
@@ -243,6 +246,7 @@
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicFileTests.swift; sourceTree = "<group>"; };
+		910A3754B71959068BBF2549 /* github_prs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = github_prs.json; sourceTree = "<group>"; };
 		92C80445C9EC1F419FFAC0DB /* LiveBoxThermalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThermalTests.swift; sourceTree = "<group>"; };
 		94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSnapshot.swift; sourceTree = "<group>"; };
 		970F6F6A1DFB74AABEE7826C /* ClipBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxWidget.swift; sourceTree = "<group>"; };
@@ -354,6 +358,7 @@
 				C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */,
 				16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */,
 				CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */,
+				52463282A2101289BD5E16DD /* PRBoxGitHubTests.swift */,
 				B129C36246D87142F352B506 /* PRBoxSnapshotTests.swift */,
 				21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */,
 				D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */,
@@ -403,6 +408,7 @@
 			isa = PBXGroup;
 			children = (
 				772E2CD7B7548ED00950F6F7 /* amsterdam_j1.json */,
+				910A3754B71959068BBF2549 /* github_prs.json */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -585,6 +591,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				54D534F314A536D957EAE16F /* amsterdam_j1.json in Resources */,
+				7ADEE8BA9F19842AD86B99DC /* github_prs.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -709,6 +716,7 @@
 				3731452DDEEE62491DBC4FD7 /* OpenCodeReader.swift in Sources */,
 				F7C61B7366E45966CD60DCB8 /* OpenCodeSQLTests.swift in Sources */,
 				3256C001A7523B07D0D86C89 /* OpenCodeSnapshot.swift in Sources */,
+				A5B35DC87D98A640C07225DE /* PRBoxGitHubTests.swift in Sources */,
 				1B8565F372BC3AA492625092 /* PRBoxSnapshot.swift in Sources */,
 				CB54BF2A77B52929C1500593 /* PRBoxSnapshotTests.swift in Sources */,
 				933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */,

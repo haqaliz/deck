@@ -241,3 +241,175 @@ enum PRBoxSnapshotStore {
         _ = AtomicFile.write(data, to: fileURL)
     }
 }
+
+// MARK: - GitHub search query (pure)
+
+enum GitHubPRQuery {
+    /// The two questions PRBox asks GitHub. `@me` resolves server-side against
+    /// whoever owns the token, so no identity call is needed — unlike Azure
+    /// DevOps, whose PR API has no such macro.
+    static func searchTerms(role: PRRole, scope: String) -> String {
+        let base: String
+        switch role {
+        case .authored: base = "is:pr is:open author:@me"
+        case .reviewing: base = "is:pr is:open review-requested:@me"
+        }
+        let trimmed = scope.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? base : "\(base) \(trimmed)"
+    }
+
+    static func url(role: PRRole, scope: String, perPage: Int) -> URL? {
+        var components = URLComponents(string: "https://api.github.com/search/issues")
+        components?.queryItems = [
+            URLQueryItem(name: "q", value: searchTerms(role: role, scope: scope)),
+            URLQueryItem(name: "per_page", value: String(perPage)),
+        ]
+        return components?.url
+    }
+}
+
+// MARK: - GitHub search parser
+//
+// Contract notes: `total_count` is the true total and is independent of
+// `per_page`, so the header never guesses. `draft` and `created_at` are always
+// present on an open PR; `repository_url` is an API URL whose last path
+// component is the short repo name. Review state is NOT in this payload —
+// getting it would mean one request per PR, which the 30/min search budget
+// does not allow.
+
+struct ParsedGitHubPRs: Equatable {
+    var totalCount: Int
+    var items: [PullRequestItem]
+}
+
+/// One provider's answer to both questions. The two totals stay separate —
+/// summing them here would throw away which header number a provider
+/// contributed to, and a provider that fails must be subtractable from the
+/// other's counts.
+///
+/// The capped flags are only ever true on the Azure side: it reports no total
+/// for a PR query, so a saturated fetch means the count is a floor. GitHub's
+/// `total_count` is exact regardless of page size.
+struct PRRoleTotals: Equatable {
+    var authoredTotal: Int
+    var reviewingTotal: Int
+    var authoredCapped: Bool
+    var reviewingCapped: Bool
+    var items: [PullRequestItem]
+
+    static let empty = PRRoleTotals(
+        authoredTotal: 0, reviewingTotal: 0,
+        authoredCapped: false, reviewingCapped: false, items: []
+    )
+}
+
+enum GitHubPRParser {
+    static func parse(_ data: Data, role: PRRole) -> [PullRequestItem]? {
+        parseResult(data, role: role)?.items
+    }
+
+    static func parseResult(_ data: Data, role: PRRole) -> ParsedGitHubPRs? {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let rawItems = root["items"] as? [[String: Any]]
+        else {
+            // nil means "couldn't read the answer", which the face words
+            // differently from "no pull requests".
+            return nil
+        }
+
+        let items = rawItems.compactMap { item(from: $0, role: role) }
+        let total = root["total_count"] as? Int ?? items.count
+        return ParsedGitHubPRs(totalCount: total, items: items)
+    }
+
+    private static func item(from entry: [String: Any], role: PRRole) -> PullRequestItem? {
+        guard
+            let number = entry["number"] as? Int,
+            let title = entry["title"] as? String,
+            let repositoryURL = entry["repository_url"] as? String,
+            let createdRaw = entry["created_at"] as? String,
+            let createdAt = iso8601.date(from: createdRaw)
+        else { return nil }
+
+        let repo = String(repositoryURL.split(separator: "/").last ?? "")
+        return PullRequestItem(
+            id: "github:\(repo)#\(number)",
+            number: number,
+            title: title,
+            repo: repo,
+            role: role,
+            provider: .github,
+            isDraft: entry["draft"] as? Bool ?? false,
+            createdAt: createdAt,
+            url: entry["html_url"] as? String ?? ""
+        )
+    }
+
+    private static let iso8601 = ISO8601DateFormatter()
+}
+
+// MARK: - GitHub fetch (host/agent only — unsandboxed)
+
+enum HostGitHubPRLoader {
+    /// Both roles in two requests. Deliberately two and only two: the search
+    /// endpoint allows 30 requests a minute against a 60s tick, and any
+    /// per-repository fan-out would spend that budget for detail the face does
+    /// not show.
+    ///
+    /// Throws `HostGitHubLoader.GitHubError` so `FetchClassifier` needs no new
+    /// case.
+    static func fetch(token: String, scope: String, cap: Int) async throws -> PRRoleTotals {
+        var items: [PullRequestItem] = []
+        var authoredTotal = 0
+        var reviewingTotal = 0
+
+        for role in [PRRole.authored, PRRole.reviewing] {
+            guard let url = GitHubPRQuery.url(role: role, scope: scope, perPage: cap) else {
+                throw HostGitHubLoader.GitHubError.invalidRepo
+            }
+            let data = try await send(url: url, token: token)
+            guard let parsed = GitHubPRParser.parseResult(data, role: role) else {
+                throw HostGitHubLoader.GitHubError.invalidPayload
+            }
+            items.append(contentsOf: parsed.items)
+            switch role {
+            case .authored: authoredTotal = parsed.totalCount
+            case .reviewing: reviewingTotal = parsed.totalCount
+            }
+        }
+
+        return PRRoleTotals(
+            authoredTotal: authoredTotal,
+            reviewingTotal: reviewingTotal,
+            authoredCapped: false,
+            reviewingCapped: false,
+            items: items
+        )
+    }
+
+    /// Same request shape as `HostGitHubLoader.fetch` — Bearer token, the
+    /// versioned Accept header, 10s timeout.
+    private static func send(url: URL, token: String) async throws -> Data {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw HostGitHubLoader.GitHubError.transport(error.localizedDescription)
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw HostGitHubLoader.GitHubError.transport("Not an HTTP response")
+        }
+        guard http.statusCode == 200 else {
+            throw HostGitHubLoader.GitHubError.serverError(http.statusCode)
+        }
+        return data
+    }
+}
