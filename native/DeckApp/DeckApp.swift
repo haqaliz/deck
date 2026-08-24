@@ -110,6 +110,7 @@ struct ContentView: View {
             case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox)
             case .calbox: CalBoxSettingsView(settings: $settings.calbox)
             case .prbox: PRBoxSettingsView(settings: $settings.prbox)
+            case .marketbox: MarketBoxSettingsView(settings: $settings.marketbox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -126,6 +127,7 @@ struct ContentView: View {
             Task { await refreshTaskBox() }
             Task { await refreshCalBox() }
             Task { await refreshPRBox() }
+            Task { await refreshMarketBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshGitBox()
@@ -136,6 +138,7 @@ struct ContentView: View {
                 Task { await refreshTaskBox() }
                 Task { await refreshCalBox() }
                 Task { await refreshPRBox() }
+                Task { await refreshMarketBox() }
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -529,11 +532,24 @@ private func refreshCalBox() async {
     }
 }
 
+/// Pump the MarketBox snapshot from the host app too, so changing the tickers
+/// or the display currency applies to the widget immediately instead of on the
+/// next agent tick.
+private func refreshMarketBox() async {
+    do {
+        let snapshot = try await HostMarketLoader.fetch(settings: DeckSettings.load().marketbox)
+        MarketSnapshotStore.save(snapshot)
+        FetchStatusStore.record(.ok, for: .marketbox)
+    } catch {
+        FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .marketbox)
+    }
+}
+
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
     case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
-    case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
+    case weatherbox, clockbox, shipbox, taskbox, calbox, prbox, marketbox
 
     var id: String { rawValue }
 
@@ -553,6 +569,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .taskbox: "TaskBox"
         case .calbox: "CalBox"
         case .prbox: "PRBox"
+        case .marketbox: "MarketBox"
         }
     }
 
@@ -572,6 +589,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .taskbox: "checklist"
         case .calbox: "calendar"
         case .prbox: "arrow.triangle.pull"
+        case .marketbox: "chart.line.uptrend.xyaxis"
         }
     }
 }
@@ -1364,5 +1382,42 @@ private struct CalBoxSettingsView: View {
             .filter { CalendarDefaults.shouldEnableByDefault(allowsContentModifications: $0.allowsContentModifications) }
             .map(\.id)
         settings.hasChosenCalendars = true
+    }
+}
+
+private struct MarketBoxSettingsView: View {
+    @Binding var settings: MarketBoxSettings
+
+    var body: some View {
+        Form {
+            Section("Tickers") {
+                TextField("Symbols (comma-separated)", text: $settings.symbols)
+                Text("Crypto like BTC or ETH, fiat codes like USD or CAD, and GOLD for 1 gram of gold. Fiat and gold show price only.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                FetchStatusCaption(source: .marketbox, clearOn: settings.symbols)
+            }
+            Section("Display") {
+                Picker("Display currency", selection: $settings.displayCurrency) {
+                    ForEach(MarketCurrency.allCases, id: \.self) { currency in
+                        Text(currency.label).tag(currency)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text("Every row is priced in this currency. IRT (Toman) is the free-market rate; IRR is 10× Toman.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Stepper("Rows (large face): \(settings.tickerCount)", value: $settings.tickerCount, in: 1...MarketBoxSettings.maxCount)
+                Toggle("Show day change", isOn: $settings.showDayChange)
+                Toggle("Show sparklines", isOn: $settings.showSparklines)
+            }
+            Section("Colors") {
+                ColorPicker("Up color", selection: $settings.upColor.color)
+                ColorPicker("Down color", selection: $settings.downColor.color)
+                ColorPicker("Accent color", selection: $settings.accentColor.color)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
     }
 }
