@@ -10,12 +10,12 @@
 # is what saves users from running `xattr -dr com.apple.quarantine` by hand. Drop
 # this note from the README and the tap the day notarization lands.
 cask "deck" do
-  version "1.21"
-  sha256 "b39ea2d5b2a5febfedc74607dc6d07bb994cb9d0cf5191c4d886b3e3ac4b7a03"
+  version "1.27"
+  sha256 "8495ae70da32aa19f9dcd1ccaa02c7a466943dc4d7b33bc6a66e08b086acf61b"
 
   url "https://github.com/haqaliz/deck/releases/download/v#{version}/Deck-v#{version}.dmg"
   name "Deck"
-  desc "Thirteen native macOS desktop widgets in one WidgetKit extension"
+  desc "Fourteen native macOS desktop widgets in one WidgetKit extension"
   homepage "https://github.com/haqaliz/deck"
 
   # WidgetKit APIs Deck relies on, and the deployment target in project.yml.
