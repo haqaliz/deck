@@ -152,11 +152,8 @@ struct ClipBoxWidgetEntryView: View {
 
     private func rows(limit: Int, previewLines: Int) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 4) {
-                Text("CLIPBOX")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .tracking(1)
+            // No widget title — just the running item count, right-aligned.
+            HStack {
                 Spacer()
                 Text("\(entry.items.count)")
                     .font(.system(size: 10, weight: .semibold, design: .rounded))

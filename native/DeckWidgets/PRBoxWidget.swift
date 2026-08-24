@@ -212,10 +212,8 @@ struct PRBoxWidgetEntryView: View {
 
     private var headerLine: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text("PRBOX")
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
-                .tracking(1)
+            // No widget title — the counts below lead the face; the chip and
+            // the age hint stay right-aligned where they already were.
             Spacer(minLength: 4)
             if let chip = entry.chip {
                 Text(chip)

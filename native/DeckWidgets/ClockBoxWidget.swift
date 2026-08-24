@@ -115,10 +115,7 @@ struct ClockBoxWidgetEntryView: View {
     /// only place that can fix it.
     private var emptyView: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("CLOCKBOX")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(.secondary)
-                .tracking(1)
+            // No widget title — the empty state says what is wrong instead.
             Text("No cities selected")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
             Text("Pick cities in Deck settings")
@@ -178,10 +175,7 @@ struct ClockBoxWidgetEntryView: View {
         let top = Array(shown.prefix(3))
         let bottom = Array(shown.dropFirst(3))
         return VStack(alignment: .leading, spacing: 10) {
-            Text("WORLD CLOCKS")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(.secondary)
-                .tracking(1)
+            // No widget title — the clock rows lead the face directly.
             row(of: top, timeSize: 24, spacing: 12)
             if !bottom.isEmpty {
                 Divider()
