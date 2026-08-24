@@ -224,13 +224,7 @@ enum PRFormatting {
     /// which the widget treats as data rather than as instruction: a row must
     /// be able to open a pull request in a browser and nothing else.
     static func destination(for item: PullRequestItem) -> URL? {
-        let trimmed = item.url.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let url = URL(string: trimmed) else { return nil }
-        guard let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http" else {
-            return nil
-        }
-        guard url.host?.isEmpty == false else { return nil }
-        return url
+        DeckLink.webURL(from: item.url)
     }
 
     /// "3", or "100+" when the number is a floor rather than a total.
@@ -474,10 +468,6 @@ enum PRSnapshotBuilder {
 
 enum DeckURLForwarding {
     static func webURLs(from urls: [URL]) -> [URL] {
-        urls.filter { url in
-            guard let scheme = url.scheme?.lowercased() else { return false }
-            guard scheme == "https" || scheme == "http" else { return false }
-            return url.host?.isEmpty == false
-        }
+        urls.compactMap { DeckLink.webURL(from: $0) }
     }
 }

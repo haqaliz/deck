@@ -160,6 +160,15 @@ Do not delete the container; see the trap below.
   widgets from the desktop *first* and leave the container alone unless you
   actually want to reset settings — note it holds the OpenBox/ShipBox/TaskBox
   tokens, so back up `settings.json` before wiping it.
+- **A calendar event's meeting link is not in `EKEvent.url`.** That field is
+  the obvious one and is empty in practice: measured across a real synced
+  Google account, **0 of 10** events set `url`, **0** had a URL in `location`,
+  and **9 of 10** carried one in `notes`. The notes hold three hosts, not one —
+  `meet.google.com` (the call), `support.google.com` ("Learn more about Meet")
+  and `tel.meet` (dial-in) — so "first URL in the notes" opens a help page from
+  a click on a meeting. `CalendarLink` matches a list of known conferencing
+  hosts (exactly or as a subdomain, never as a substring, or `zoom.us.evil.com`
+  would pass) and leaves an event with none unlinked.
 - **A widget's URL is delivered to the app, not to the browser.** On macOS
   WidgetKit hands `widgetURL` / `Link` destinations to the **containing app**;
   it never opens them itself. A widget that links to a web page therefore needs

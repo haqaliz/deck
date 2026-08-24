@@ -203,6 +203,12 @@ struct TaskStateMapping: Codable, Equatable {
 // MARK: - Formatting (pure, used by the widget face)
 
 enum TaskFormatting {
+    /// Where a task row points, or nil when the provider gave no usable URL.
+    /// Azure DevOps work items always carry one; a future provider might not.
+    static func destination(for item: TaskItem) -> URL? {
+        DeckLink.webURL(from: item.url)
+    }
+
     /// Face order: most recently touched first, undated last. Deterministic and
     /// total — the comparator never depends on input order, so two identical
     /// ticks produce an identical list rather than reshuffling under the user.

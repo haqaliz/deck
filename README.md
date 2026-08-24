@@ -40,8 +40,8 @@ native colors, corners and materials, at three sizes each.
 | **WeatherBox** | weather for your location (conditions + 3-day forecast); a failed fetch says why |
 | **ClockBox** | world clocks for up to six cities (3 on medium, 6 on large): time, relative day, offset from your own zone |
 | **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
-| **TaskBox** | Azure DevOps work items assigned to you: open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
-| **CalBox** | two sections, TODAY and TOMORROW, from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
+| **TaskBox** | Azure DevOps work items assigned to you (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
+| **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
 | **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps in one queue: counts, provider-tagged rows, drafts marked; click a row to open the PR; a failed fetch names the provider |
 
 All thirteen come in **small / medium / large** sizes.

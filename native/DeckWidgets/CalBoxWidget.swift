@@ -237,12 +237,12 @@ struct CalBoxWidgetEntryView: View {
             }
 
             ForEach(allDay.prefix(limit), id: \.id) { event in
-                row(event, time: "all-day")
+                linked(event) { row(event, time: "all-day") }
             }
             // All-day rows spend the section's budget before timed ones do.
             let remaining = max(0, limit - min(allDay.count, limit))
             ForEach(events.prefix(remaining), id: \.id) { event in
-                row(event, time: Self.timeString(event.start))
+                linked(event) { row(event, time: Self.timeString(event.start)) }
             }
             let hidden = (allDay.count + events.count) - (min(allDay.count, limit) + min(events.count, remaining))
             if hidden > 0 {
@@ -250,6 +250,21 @@ struct CalBoxWidgetEntryView: View {
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundStyle(.tertiary)
             }
+        }
+    }
+
+    /// Most calendar events carry no URL, so this is the exception rather than
+    /// the rule: an invite whose URL is the video call becomes a clickable row,
+    /// everything else stays plain text.
+    @ViewBuilder
+    private func linked<Content: View>(
+        _ event: CalEvent, @ViewBuilder content: () -> Content
+    ) -> some View {
+        if let destination = CalFormatting.destination(for: event) {
+            Link(destination: destination) { content() }
+                .buttonStyle(.plain)
+        } else {
+            content()
         }
     }
 
