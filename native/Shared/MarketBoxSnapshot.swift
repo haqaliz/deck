@@ -229,6 +229,10 @@ enum HostMarketLoader {
 
         var quotesByID: [String: CryptoQuote] = [:]
         for quote in crypto ?? [] where !quote.id.isEmpty {
+            var quote = quote
+            if let sparkline = quote.sparkline {
+                quote.sparkline = MarketSparkline.downsample(sparkline)
+            }
             quotesByID[quote.id] = quote
         }
 

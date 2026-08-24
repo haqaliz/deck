@@ -254,6 +254,18 @@ enum MarketBuilder {
 
 // MARK: - Price formatting
 
+enum MarketSparkline {
+    /// Reduces a long series (CoinGecko's 167 hourly points) to at most
+    /// `maxPoints` evenly spaced values, always keeping the newest, so a
+    /// 36pt-wide chart gets all the shape it can use and the timeline archive
+    /// stays lean (the CalBox archive-size lesson).
+    static func downsample(_ points: [Double], maxPoints: Int = 30) -> [Double] {
+        guard points.count > maxPoints else { return points }
+        let stride = Double(points.count - 1) / Double(maxPoints - 1)
+        return (0..<maxPoints).map { points[Int((Double($0) * stride).rounded())] }
+    }
+}
+
 enum MarketPriceFormatter {
     /// Abbreviates large magnitudes so a Toman price in the billions stays
     /// glanceable: 77,850 → "$77,850"; 15,570,000,000 → "15.6B" (IRT gets no
