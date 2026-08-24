@@ -44,7 +44,7 @@ widget.
   Azure needs an identity GUID from `_apis/connectionData` — see the trap
   below.
 
-All thirteen ship in one WidgetKit extension: `Deck.app` (host + settings window)
+All fourteen ship in one WidgetKit extension: `Deck.app` (host + settings window)
 → `DeckWidgets.appex`.
 
 ## Architecture
