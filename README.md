@@ -20,7 +20,24 @@ native colors, corners and materials, at three sizes each.
 [![Downloads](https://img.shields.io/github/downloads/haqaliz/deck/total?color=3fb950&label=downloads)](https://github.com/haqaliz/deck/releases)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-3fb950)](CONTRIBUTING.md)
 
-[Install](#install) · [Widgets](#widgets) · [Settings](#settings) · [Privacy](#privacy) · [How it works](#how-it-works) · [Troubleshooting](#troubleshooting) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md)
+[Screenshots](#screenshots) · [Install](#install) · [Widgets](#widgets) · [Settings](#settings) · [Privacy](#privacy) · [How it works](#how-it-works) · [Troubleshooting](#troubleshooting) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md)
+
+</div>
+
+---
+
+## Screenshots
+
+<div align="center">
+
+<img src="docs/screenshots/A1.png" width="560" alt="Deck widgets" />
+<img src="docs/screenshots/A2.png" width="560" alt="Deck widgets" />
+
+<img src="docs/screenshots/A3.png" width="560" alt="Deck widgets" />
+<img src="docs/screenshots/A4.png" width="560" alt="Deck widgets" />
+
+<img src="docs/screenshots/A5.png" width="560" alt="Deck widgets" />
+<img src="docs/screenshots/A6.png" width="560" alt="Deck widgets" />
 
 </div>
 
