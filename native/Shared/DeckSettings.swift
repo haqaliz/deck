@@ -45,6 +45,7 @@ struct DeckSettings: Codable, Equatable {
     var taskbox = TaskBoxSettings()
     var calbox = CalBoxSettings()
     var prbox = PRBoxSettings()
+    var marketbox = MarketBoxSettings()
     var agentAtLogin = true
 
     init() {}
@@ -65,7 +66,8 @@ struct DeckSettings: Codable, Equatable {
     /// that no longer exists.
     enum CodingKeys: String, CodingKey {
         case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
-        case weatherbox, clockbox, shipbox, taskbox, calbox, prbox, agentAtLogin
+        case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
+        case marketbox, agentAtLogin
     }
 
     /// Decode-only. See `LegacyHomeBoxSettings`.
@@ -103,6 +105,7 @@ struct DeckSettings: Codable, Equatable {
         taskbox = try c.decodeIfPresent(TaskBoxSettings.self, forKey: .taskbox) ?? TaskBoxSettings()
         calbox = try c.decodeIfPresent(CalBoxSettings.self, forKey: .calbox) ?? CalBoxSettings()
         prbox = try c.decodeIfPresent(PRBoxSettings.self, forKey: .prbox) ?? PRBoxSettings()
+        marketbox = try c.decodeIfPresent(MarketBoxSettings.self, forKey: .marketbox) ?? MarketBoxSettings()
         agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
     }
 
@@ -734,5 +737,45 @@ struct PRBoxSettings: Codable, Equatable {
         prCount = min(max(rawCount, Self.rowCountRange.lowerBound), Self.rowCountRange.upperBound)
         mineColor = try c.decodeIfPresent(RGBA.self, forKey: .mineColor) ?? RGBA(.blue)
         reviewColor = try c.decodeIfPresent(RGBA.self, forKey: .reviewColor) ?? RGBA(.orange)
+    }
+}
+
+// MARK: - MarketBox
+
+struct MarketBoxSettings: Codable, Equatable {
+    /// Comma-separated symbols: crypto (BTC, ETH, …), fiat (USD, CAD, …) and
+    /// `GOLD` (1 gram). Empty → agent skips the fetch.
+    var symbols = "BTC, ETH, USD, GOLD"
+    /// The one display currency every row is priced in.
+    var displayCurrency = MarketCurrency.usd
+    /// Rows on the large face; medium shows at most 4, small at most 2 (past
+    /// that the rows are clipped by the frame rather than by the setting).
+    var tickerCount = 8
+    /// Day change applies to crypto rows only — fiat/gold always show "–".
+    var showDayChange = true
+    /// Sparklines apply to crypto rows on medium/large.
+    var showSparklines = true
+    var upColor = RGBA(.green)
+    var downColor = RGBA(.red)
+    var accentColor = RGBA(.blue)
+
+    static let maxCount = 12
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        symbols = try c.decodeIfPresent(String.self, forKey: .symbols) ?? "BTC, ETH, USD, GOLD"
+        // Decode the currency as a raw string so a value a newer build wrote
+        // ("eur", "cad") degrades to USD rather than failing the whole section.
+        displayCurrency = MarketCurrency(rawValue: try c.decodeIfPresent(String.self, forKey: .displayCurrency) ?? "") ?? .usd
+        // Floor at 1, cap at maxCount so a hand-edited file cannot push more
+        // rows into the face than it can lay out.
+        tickerCount = min(max(try c.decodeIfPresent(Int.self, forKey: .tickerCount) ?? 8, 1), Self.maxCount)
+        showDayChange = try c.decodeIfPresent(Bool.self, forKey: .showDayChange) ?? true
+        showSparklines = try c.decodeIfPresent(Bool.self, forKey: .showSparklines) ?? true
+        upColor = try c.decodeIfPresent(RGBA.self, forKey: .upColor) ?? RGBA(.green)
+        downColor = try c.decodeIfPresent(RGBA.self, forKey: .downColor) ?? RGBA(.red)
+        accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA(.blue)
     }
 }
