@@ -1418,8 +1418,7 @@ private struct MarketBoxSettingsView: View {
                         Text(currency.label).tag(currency)
                     }
                 }
-                .pickerStyle(.segmented)
-                Text("Every row is priced in this currency. IRT (Toman) is the free-market rate; IRR is 10× Toman.")
+                Text("Every row is priced in this currency. IRT (Toman) is the free-market rate, IRR is 10× Toman; CAD, EUR and AED convert at the live FX rate.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Stepper("Rows (large face): \(settings.tickerCount)", value: $settings.tickerCount, in: 1...MarketBoxSettings.maxCount)

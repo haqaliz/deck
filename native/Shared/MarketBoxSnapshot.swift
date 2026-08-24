@@ -12,7 +12,7 @@ import Foundation
 
 /// The one display currency every row is priced in.
 enum MarketCurrency: String, Codable, CaseIterable, Equatable {
-    case usd, irr, irt
+    case usd, irr, irt, cad, eur, aed
 
     /// Header label, e.g. "IRT". IRR and IRT share no symbol; the label is the
     /// only unambiguous signal.
@@ -199,7 +199,10 @@ enum HostMarketLoader {
         let needsCrypto = symbols.contains { MarketSymbolResolver.kind(for: $0) == .crypto }
         let needsGold = symbols.contains { MarketSymbolResolver.kind(for: $0) == .gold }
         let needsFiat = symbols.contains { MarketSymbolResolver.kind(for: $0) == .fiat }
-        let needsToman = display != .usd
+        // IRT/IRR need the free-market Toman anchor; CAD/EUR/AED displays need
+        // the open.er-api rate set (as do fiat tickers).
+        let needsToman = display == .irt || display == .irr
+        let needsFX = needsFiat || display == .cad || display == .eur || display == .aed
 
         // Fetch only what the tickers + display currency need, and remember the
         // first failure so the "no rows at all" case can be classified honestly.

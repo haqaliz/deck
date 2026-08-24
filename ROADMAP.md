@@ -218,8 +218,11 @@ the next slate. Ordered by priority, not by cost.
       results render with a note. Sparklines are downsampled to 30 points in
       the loader (the CalBox archive-size lesson).
       **Layout (user revision 2026-08-24):** small = up to 4 rows **price-only**
-      (no day change); medium = up to 4 rows with the 24h change; large = up to
-      12 rows (the `tickerCount` setting). **Sparklines were dropped by user
+      (no day change); medium = up to 5 rows with the 24h change; large = up to
+      12 rows (the `tickerCount` setting). **Display currency is a list, not a
+      toggle** — USD, IRR, IRT (Toman, free-market), CAD, EUR and AED (live FX
+      rate); the converter multiplies by the Wallex Toman anchor or the
+      open.er-api rate depending on the pick. **Sparklines were dropped by user
       decision** — the first face drew them with Swift Charts, which made
       WidgetKit **silently drop the widget from the gallery** (the Charts-in-a-
       widget-face trap, see CLAUDE.md); the user then removed the sparkline

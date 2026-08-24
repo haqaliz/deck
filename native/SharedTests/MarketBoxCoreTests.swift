@@ -62,21 +62,31 @@ final class MarketConverterTests: XCTestCase {
     private let tmn = 200_000.0
 
     func testPerUSDInEachDisplayCurrency() {
-        XCTAssertEqual(MarketConverter.perUSD(100, display: .usd, tmn: tmn), 100)
-        XCTAssertEqual(MarketConverter.perUSD(100, display: .irt, tmn: tmn), 20_000_000)
-        XCTAssertEqual(MarketConverter.perUSD(100, display: .irr, tmn: tmn), 200_000_000, "IRR is IRT × 10")
+        XCTAssertEqual(MarketConverter.perUSD(100, display: .usd, tmn: tmn, fx: nil), 100)
+        XCTAssertEqual(MarketConverter.perUSD(100, display: .irt, tmn: tmn, fx: nil), 20_000_000)
+        XCTAssertEqual(MarketConverter.perUSD(100, display: .irr, tmn: tmn, fx: nil), 200_000_000, "IRR is IRT × 10")
     }
 
-    func testPerUSDFailsWithoutTomanAnchorForIranianCurrencies() {
-        XCTAssertNil(MarketConverter.perUSD(100, display: .irt, tmn: nil))
-        XCTAssertNil(MarketConverter.perUSD(100, display: .irr, tmn: nil))
+    func testPerUSDInFiatDisplayCurrencies() {
+        let fx = ["USD": 1.0, "CAD": 1.378517, "EUR": 0.92, "AED": 3.6725]
+        XCTAssertEqual(MarketConverter.perUSD(100, display: .cad, tmn: nil, fx: fx) ?? 0, 137.8517, accuracy: 0.0001)
+        XCTAssertEqual(MarketConverter.perUSD(100, display: .eur, tmn: nil, fx: fx) ?? 0, 92, accuracy: 0.0001)
+        XCTAssertEqual(MarketConverter.perUSD(100, display: .aed, tmn: nil, fx: fx) ?? 0, 367.25, accuracy: 0.0001)
+    }
+
+    func testPerUSDFailsWithoutTheAnchorItNeeds() {
+        XCTAssertNil(MarketConverter.perUSD(100, display: .irt, tmn: nil, fx: nil))
+        XCTAssertNil(MarketConverter.perUSD(100, display: .irr, tmn: nil, fx: nil))
+        XCTAssertNil(MarketConverter.perUSD(100, display: .cad, tmn: nil, fx: nil), "no FX rates, no CAD price")
+        XCTAssertNil(MarketConverter.perUSD(100, display: .cad, tmn: nil, fx: ["USD": 1.0]), "no CAD rate, no CAD price")
     }
 
     func testUSDollarTickerInEachDisplayCurrency() {
-        let fx = ["USD": 1.0]
+        let fx = ["USD": 1.0, "CAD": 1.378517]
         XCTAssertEqual(MarketConverter.fiatPrice(code: "USD", display: .usd, tmn: tmn, fx: fx), 1.0)
         XCTAssertEqual(MarketConverter.fiatPrice(code: "USD", display: .irt, tmn: tmn, fx: fx), tmn)
         XCTAssertEqual(MarketConverter.fiatPrice(code: "USD", display: .irr, tmn: tmn, fx: fx), tmn * 10)
+        XCTAssertEqual(MarketConverter.fiatPrice(code: "USD", display: .cad, tmn: tmn, fx: fx) ?? 0, 1.378517, accuracy: 0.0001, "a dollar costs 1.378 CAD")
     }
 
     func testCadTickerConvertsThroughTheRate() {
@@ -85,6 +95,10 @@ final class MarketConverterTests: XCTestCase {
         XCTAssertEqual(
             MarketConverter.fiatPrice(code: "CAD", display: .irt, tmn: tmn, fx: fx) ?? 0,
             tmn / 1.378517, accuracy: 0.001
+        )
+        XCTAssertEqual(
+            MarketConverter.fiatPrice(code: "CAD", display: .cad, tmn: tmn, fx: fx) ?? 0,
+            1.0, accuracy: 0.000001, "a Canadian dollar is 1 CAD in a CAD display"
         )
     }
 
@@ -126,11 +140,9 @@ final class MarketBuilderTests: XCTestCase {
         XCTAssertEqual(build.rows[0].symbol, "BTC")
         XCTAssertEqual(build.rows[0].price, 77_850 * tmn, accuracy: 0.001)
         XCTAssertEqual(build.rows[0].dayChangePct, 0.85)
-        XCTAssertEqual(build.rows[0].sparkline, [1, 2, 3])
         XCTAssertEqual(build.rows[1].symbol, "USD")
         XCTAssertEqual(build.rows[1].price, tmn)
         XCTAssertNil(build.rows[1].dayChangePct, "fiat rows are price-only")
-        XCTAssertNil(build.rows[1].sparkline)
         XCTAssertEqual(build.rows[2].symbol, "CAD")
         XCTAssertEqual(build.rows[2].price, tmn / 1.378517, accuracy: 0.001)
         XCTAssertEqual(build.rows[3].symbol, "GOLD")
@@ -140,6 +152,36 @@ final class MarketBuilderTests: XCTestCase {
         XCTAssertTrue(build.omitted.isEmpty)
         XCTAssertNil(build.note)
         XCTAssertFalse(build.isEmpty)
+    }
+
+    func testBuildsInCadDisplayWithoutToman() {
+        let build = MarketBuilder.build(
+            display: .cad,
+            symbols: ["BTC", "USD", "CAD", "GOLD"],
+            quotesByID: quotes,
+            tmn: nil,
+            goldUSDPerGram: 149.3,
+            fx: ["USD": 1.0, "CAD": 1.378517]
+        )
+        XCTAssertEqual(build.rows.count, 4)
+        XCTAssertEqual(build.rows[0].price, 77_850 * 1.378517, accuracy: 0.001)
+        XCTAssertEqual(build.rows[1].price, 1.378517, accuracy: 0.0001, "a dollar costs 1.378 CAD")
+        XCTAssertEqual(build.rows[2].price, 1.0, accuracy: 0.0001, "a CAD costs 1 CAD")
+        XCTAssertEqual(build.rows[3].price, 149.3 * 1.378517, accuracy: 0.001)
+        XCTAssertNil(build.note)
+    }
+
+    func testCadDisplayWithoutFxFailsEveryRow() {
+        let build = MarketBuilder.build(
+            display: .cad,
+            symbols: ["BTC", "USD", "GOLD"],
+            quotesByID: quotes,
+            tmn: tmn,
+            goldUSDPerGram: 149.3,
+            fx: nil
+        )
+        XCTAssertTrue(build.isEmpty)
+        XCTAssertEqual(build.omitted, ["Crypto", "Rates", "Gold"])
     }
 
     func testUnknownSymbolIsSurfacedNotDropped() {

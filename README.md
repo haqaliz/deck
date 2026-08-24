@@ -141,9 +141,10 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 - **MarketBox** tickers are picked from a list, not typed: twelve slots in the
   MarketBox tab, each a picker over the curated symbols (crypto, fiat codes,
   and `GOLD` for 1 gram of gold — slot order is display order). Prices are
-  priced in one display currency: **USD**, **IRR** (Iranian Rial) or **IRT**
-  (Toman — the free-market rate, IRT = IRR ÷ 10). The small widget shows up to
-  4 rows price-only; medium shows up to 4 with the 24h change; large shows up
+  priced in one display currency, picked from a list: **USD**, **IRR**
+  (Iranian Rial), **IRT** (Toman — the free-market rate, IRT = IRR ÷ 10),
+  **CAD**, **EUR** or **AED** (live FX rate). The small widget shows up to
+  4 rows price-only; medium shows up to 5 with the 24h change; large shows up
   to 12. Crypto rows carry the change; fiat and gold rows are price-only. No
   API key is needed anywhere; prices come from
   CoinGecko (crypto), gold-api (gold), Wallex (free-market Toman) and

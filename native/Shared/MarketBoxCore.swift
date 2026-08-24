@@ -155,8 +155,9 @@ enum MarketConverter {
     static let gramsPerTroyOunce = 31.1035
 
     /// Converts a USD price into the display currency. Returns nil when the
-    /// display needs the Toman anchor (IRT/IRR) and it is missing.
-    static func perUSD(_ usd: Double, display: MarketCurrency, tmn: Double?) -> Double? {
+    /// display needs an anchor that is missing: Toman (IRT/IRR) needs the
+    /// Wallex rate, CAD/EUR/AED need their open.er-api rate.
+    static func perUSD(_ usd: Double, display: MarketCurrency, tmn: Double?, fx: [String: Double]?) -> Double? {
         switch display {
         case .usd:
             return usd
@@ -166,24 +167,26 @@ enum MarketConverter {
         case .irr:
             guard let tmn else { return nil }
             return usd * tmn * 10
+        case .cad, .eur, .aed:
+            guard let rate = fx?[display.rawValue.uppercased()], rate > 0 else { return nil }
+            return usd * rate
         }
     }
 
     /// Price of one unit of fiat `code` ("USD", "CAD", …) in the display
     /// currency. `fx` maps ISO → units per 1 USD (open.er-api shape).
-    static func fiatPrice(code: String, display: MarketCurrency, tmn: Double?, fx: [String: Double]) -> Double? {
+    static func fiatPrice(code: String, display: MarketCurrency, tmn: Double?, fx: [String: Double]?) -> Double? {
         let code = code.uppercased()
-        switch display {
-        case .usd:
-            if code == "USD" { return 1.0 }
-            guard let rate = fx[code], rate > 0 else { return nil }
-            return 1.0 / rate
-        case .irt, .irr:
-            guard let tmn else { return nil }
-            let usd = code == "USD" ? 1.0 : (fx[code].flatMap { $0 > 0 ? 1.0 / $0 : nil })
-            guard let usd else { return nil }
-            return display == .irt ? usd * tmn : usd * tmn * 10
+        // 1 unit of `code` expressed in USD.
+        let usdValue: Double
+        if code == "USD" {
+            usdValue = 1
+        } else if let rate = fx?[code], rate > 0 {
+            usdValue = 1.0 / rate
+        } else {
+            return nil
         }
+        return perUSD(usdValue, display: display, tmn: tmn, fx: fx)
     }
 
     /// USD per troy ounce → USD per gram.
@@ -241,7 +244,7 @@ enum MarketBuilder {
                     let id = MarketSymbolResolver.cryptoID(for: symbol),
                     let quote = quotesByID[id],
                     let priceUSD = quote.priceUSD,
-                    let price = MarketConverter.perUSD(priceUSD, display: display, tmn: tmn)
+                    let price = MarketConverter.perUSD(priceUSD, display: display, tmn: tmn, fx: fx)
                 else {
                     omitted.append(symbol)
                     continue
@@ -275,7 +278,7 @@ enum MarketBuilder {
             case .gold:
                 guard
                     let goldUSDPerGram,
-                    let price = MarketConverter.perUSD(goldUSDPerGram, display: display, tmn: tmn)
+                    let price = MarketConverter.perUSD(goldUSDPerGram, display: display, tmn: tmn, fx: fx)
                 else {
                     omitted.append(MarketSymbolResolver.goldSymbol)
                     continue

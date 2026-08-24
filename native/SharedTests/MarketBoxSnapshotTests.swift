@@ -58,7 +58,7 @@ final class MarketBoxSettingsDecodeTests: XCTestCase {
     /// A currency this build doesn't know (written by a newer build) falls back
     /// to USD rather than failing the whole section.
     func testUnknownDisplayCurrencyFallsBackToUsd() throws {
-        let s = try decode(#"{"displayCurrency":"eur"}"#, as: MarketBoxSettings.self)
+        let s = try decode(#"{"displayCurrency":"xxx"}"#, as: MarketBoxSettings.self)
         XCTAssertEqual(s.displayCurrency, .usd)
     }
 

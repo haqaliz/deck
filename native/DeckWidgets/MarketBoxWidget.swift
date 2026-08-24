@@ -123,7 +123,7 @@ struct MarketBoxWidgetEntryView: View {
                 case .systemSmall:
                     listView(maxCount: min(entry.settings.tickerCount, 4), showChange: false)
                 case .systemMedium:
-                    listView(maxCount: min(entry.settings.tickerCount, 4), showChange: true)
+                    listView(maxCount: min(entry.settings.tickerCount, 5), showChange: true)
                 default:
                     listView(maxCount: entry.settings.tickerCount, showChange: true)
                 }
