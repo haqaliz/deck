@@ -1,7 +1,7 @@
 # Deck Roadmap
 
 Small, beautiful macOS desktop widgets that behave like native ones. The
-product value is **one WidgetKit extension** (twelve widgets in the Widget
+product value is **one WidgetKit extension** (thirteen widgets in the Widget
 Center) plus **one metric story per widget**. New widgets reuse the widget
 shell and only add a data source + a layout.
 
@@ -162,18 +162,46 @@ the next slate. Ordered by priority, not by cost.
         team using those words really does receive finished items. TaskBox
         gives them a `done` lane (checked before the open lanes) and renders
         them struck through rather than letting them read as outstanding.
-      **Open follow-ups:** deep links (`widgetURL`), multi-project/multi-org,
+      **Open follow-ups:** multi-project/multi-org,
       custom WIQL, a second provider, Keychain storage for the PAT.
-- [ ] **PRBox** — GitHub review queue: your open PRs + PRs awaiting review.
-      Cheapest of the slate: reuses ShipBox's token, `HostGitHubLoader`, and
-      the `FetchClassifier` error path against the pulls/search endpoints.
+- [x] **PRBox** — review queue: your open PRs + PRs awaiting your review,
+      **mixed from GitHub and Azure DevOps Git** in one list (the original
+      entry scoped this to GitHub only). Shipped 2026-08-24
+      (`docs/planning/prbox/`). Per-provider settings sub-tabs, each with its
+      own include toggle, credentials and `FetchSource` key; the face names
+      the provider whose pull requests are missing when one half fails.
+      **Probed live before the PRD was written, which reshaped it three times:**
+      - **Azure's Git PR API silently ignores an unparseable identity.** There
+        is no `@Me` macro; `creatorId=@me` returns 200 and *every active PR in
+        the project* (6 / 6 / 0 for none / `@me` / unknown GUID). The loader
+        resolves the id from `_apis/connectionData` and fails rather than
+        falling back — an unfiltered query looks exactly like a working one.
+      - **Azure PRs carry no update timestamp**, only `creationDate`, so both
+        providers sort by creation date. Sorting GitHub by `updated_at` would
+        sink a freshly-pushed Azure PR below a stale GitHub one.
+      - **`reviewerId` returns PRs you already voted on**, while GitHub drops
+        them from `review-requested`. Filtered to `vote == 0` so one list means
+        one thing.
+      Also: Azure reports no total for a PR query (hence `$top=101` and a
+      "100+" ceiling), the project-level endpoint spans every repo in the
+      project (no per-repo fan-out), and GitHub search allows 30 req/min
+      against 2 calls per tick.
+      Rows are clickable (the first Deck widget to deep-link): medium and
+      large link per row, the small face carries a `widgetURL` to the top pull
+      request. Restricted to http(s) with a host — the snapshot is data, not
+      instruction.
+      **Open follow-ups:** multi-project/multi-org, review state / approval
+      counts (needs one request per PR), a third provider, Keychain for the two
+      tokens.
 - [ ] **MarketBox** — configured tickers/crypto: price, day change, sparkline.
       Near line-for-line clone of the WeatherBox agent fetch block.
-- [ ] **BlueBox** — peripheral battery (AirPods, Magic Mouse/Keyboard).
-      **Needs a feasibility spike first:** on the dev machine both
-      `system_profiler SPBluetoothDataType -json` and
-      `ioreg -r -k BatteryPercent` returned no battery keys for the connected
-      mouse and keyboard. Do not plan until a source is proven.
+- [x] **BlueBox** — peripheral battery (AirPods, Magic Mouse/Keyboard).
+      **Already shipped inside BatBox** (`542c893`,
+      `docs/planning/batbox-accessories/`) and ticked in M3; this entry was
+      stale. The caveat it recorded — that `system_profiler` and
+      `ioreg -r -k BatteryPercent` return no battery keys — is the *disproven
+      draft*, not the outcome: the spike found `IOPSCopyPowerSourcesByType(4)`,
+      an SPI bound with `@_silgen_name`. See the CLAUDE.md note.
 
 Rejected with a recorded blocker (do not re-recommend):
 - **MusicBox / now-playing** — MediaRemote is entitlement-gated as of

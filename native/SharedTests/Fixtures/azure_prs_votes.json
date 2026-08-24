@@ -1,0 +1,120 @@
+{
+  "value": [
+    {
+      "pullRequestId": 101,
+      "status": "active",
+      "creationDate": "2026-08-14T09:45:36.1569896Z",
+      "title": "already approved by me",
+      "sourceRefName": "refs/heads/task/7792/javad",
+      "targetRefName": "refs/heads/master",
+      "mergeStatus": "succeeded",
+      "isDraft": false,
+      "repository": {
+        "name": "manifold-swa",
+        "id": "60e8d374-daab-48d6-9854-e15b045c4ed4"
+      },
+      "createdBy": {
+        "id": "2708cbd2-3ef1-4b0d-983b-f166db15149f",
+        "displayName": "javad"
+      },
+      "reviewers": [
+        {
+          "id": "c3ec7969-0000-0000-0000-000000000000",
+          "displayName": "Someone",
+          "vote": 0
+        },
+        {
+          "id": "5d48bc9c-1cf3-419c-b2c5-43c4d36875d2",
+          "displayName": "Ali Haqiqi",
+          "vote": 10
+        }
+      ]
+    },
+    {
+      "pullRequestId": 102,
+      "status": "active",
+      "creationDate": "2026-08-14T09:45:36.1569896Z",
+      "title": "genuinely waiting on me",
+      "sourceRefName": "refs/heads/task/7792/javad",
+      "targetRefName": "refs/heads/master",
+      "mergeStatus": "succeeded",
+      "isDraft": false,
+      "repository": {
+        "name": "manifold-swa",
+        "id": "60e8d374-daab-48d6-9854-e15b045c4ed4"
+      },
+      "createdBy": {
+        "id": "2708cbd2-3ef1-4b0d-983b-f166db15149f",
+        "displayName": "javad"
+      },
+      "reviewers": [
+        {
+          "id": "c3ec7969-0000-0000-0000-000000000000",
+          "displayName": "Someone",
+          "vote": 0
+        },
+        {
+          "id": "5d48bc9c-1cf3-419c-b2c5-43c4d36875d2",
+          "displayName": "Ali Haqiqi",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 103,
+      "status": "active",
+      "creationDate": "2026-08-14T09:45:36.1569896Z",
+      "title": "I asked for changes",
+      "sourceRefName": "refs/heads/task/7792/javad",
+      "targetRefName": "refs/heads/master",
+      "mergeStatus": "succeeded",
+      "isDraft": false,
+      "repository": {
+        "name": "manifold-swa",
+        "id": "60e8d374-daab-48d6-9854-e15b045c4ed4"
+      },
+      "createdBy": {
+        "id": "2708cbd2-3ef1-4b0d-983b-f166db15149f",
+        "displayName": "javad"
+      },
+      "reviewers": [
+        {
+          "id": "c3ec7969-0000-0000-0000-000000000000",
+          "displayName": "Someone",
+          "vote": 0
+        },
+        {
+          "id": "5d48bc9c-1cf3-419c-b2c5-43c4d36875d2",
+          "displayName": "Ali Haqiqi",
+          "vote": -5
+        }
+      ]
+    },
+    {
+      "pullRequestId": 104,
+      "status": "active",
+      "creationDate": "2026-08-14T09:45:36.1569896Z",
+      "title": "not a reviewer at all",
+      "sourceRefName": "refs/heads/task/7792/javad",
+      "targetRefName": "refs/heads/master",
+      "mergeStatus": "succeeded",
+      "isDraft": false,
+      "repository": {
+        "name": "manifold-swa",
+        "id": "60e8d374-daab-48d6-9854-e15b045c4ed4"
+      },
+      "createdBy": {
+        "id": "2708cbd2-3ef1-4b0d-983b-f166db15149f",
+        "displayName": "javad"
+      },
+      "reviewers": [
+        {
+          "id": "c3ec7969-0000-0000-0000-000000000000",
+          "displayName": "Someone",
+          "vote": 0
+        }
+      ]
+    }
+  ],
+  "count": 4
+}

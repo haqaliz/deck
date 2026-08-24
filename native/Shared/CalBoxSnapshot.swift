@@ -27,6 +27,10 @@ struct CalEvent: Codable, Equatable, Sendable {
     var calendarTitle: String
     var calendarID: String
     var color: RGBA
+    /// The invite's URL — for most meeting invites this is the video call.
+    /// Empty for the many events that carry none, in which case the row simply
+    /// is not a link.
+    var url: String
 
     init(
         id: String,
@@ -36,7 +40,8 @@ struct CalEvent: Codable, Equatable, Sendable {
         isAllDay: Bool,
         calendarTitle: String,
         calendarID: String,
-        color: RGBA
+        color: RGBA,
+        url: String = ""
     ) {
         self.id = id
         self.title = title
@@ -46,6 +51,35 @@ struct CalEvent: Codable, Equatable, Sendable {
         self.calendarTitle = calendarTitle
         self.calendarID = calendarID
         self.color = color
+        self.url = url
+    }
+
+    /// Tolerant on `url` alone: a `calbox.json` written before events carried
+    /// one must still decode. The agent rewrites it within a minute, but the
+    /// widget must not render an empty agenda in the meantime.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        start = try c.decode(Date.self, forKey: .start)
+        end = try c.decode(Date.self, forKey: .end)
+        isAllDay = try c.decode(Bool.self, forKey: .isAllDay)
+        calendarTitle = try c.decode(String.self, forKey: .calendarTitle)
+        calendarID = try c.decode(String.self, forKey: .calendarID)
+        color = try c.decode(RGBA.self, forKey: .color)
+        url = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
+    }
+}
+
+// MARK: - Row destinations
+
+enum CalFormatting {
+    /// Where a calendar row points, or nil when the event carries no usable
+    /// URL — which is most of them. Invites from Meet, Zoom and Teams put the
+    /// call there; a `message://` link back to the originating mail is
+    /// deliberately not something a widget row launches.
+    static func destination(for event: CalEvent) -> URL? {
+        DeckLink.webURL(from: event.url)
     }
 }
 
@@ -299,7 +333,14 @@ enum HostCalendarLoader {
                 isAllDay: event.isAllDay,
                 calendarTitle: event.calendar.title,
                 calendarID: event.calendar.calendarIdentifier,
-                color: rgba(from: event.calendar.cgColor)
+                color: rgba(from: event.calendar.cgColor),
+                // Not just `event.url`: on a real account that field is empty
+                // and the call lives in the notes. See `CalendarLink`.
+                url: CalendarLink.meetingURL(
+                    url: event.url?.absoluteString,
+                    location: event.location,
+                    notes: event.notes
+                ) ?? ""
             )
         }
 

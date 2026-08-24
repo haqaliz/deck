@@ -1,0 +1,128 @@
+{
+  "value": [
+    {
+      "pullRequestId": 4475,
+      "status": "active",
+      "creationDate": "2026-08-23T19:44:35.6309467Z",
+      "title": "Remove read-only gates from Accident and Review sessions",
+      "sourceRefName": "refs/heads/pbi/7967/javad",
+      "targetRefName": "refs/heads/master",
+      "mergeStatus": "succeeded",
+      "isDraft": false,
+      "repository": {
+        "name": "manifold-validation-swa",
+        "id": "787fb84c-4cff-40f7-9f78-6f21d3a07035"
+      },
+      "createdBy": {
+        "id": "2708cbd2-3ef1-4b0d-983b-f166db15149f",
+        "displayName": "javad"
+      },
+      "reviewers": []
+    },
+    {
+      "pullRequestId": 4397,
+      "status": "active",
+      "creationDate": "2026-08-14T09:45:36.1569896Z",
+      "title": "Task 7792: Add Xcelerate to the connection UI",
+      "sourceRefName": "refs/heads/task/7792/javad",
+      "targetRefName": "refs/heads/master",
+      "mergeStatus": "succeeded",
+      "isDraft": false,
+      "repository": {
+        "name": "manifold-swa",
+        "id": "60e8d374-daab-48d6-9854-e15b045c4ed4"
+      },
+      "createdBy": {
+        "id": "2708cbd2-3ef1-4b0d-983b-f166db15149f",
+        "displayName": "javad"
+      },
+      "reviewers": [
+        {
+          "id": "c3ec7969-e929-4a32-a45a-2aead95978ef",
+          "displayName": "MohammadReza",
+          "vote": 0
+        },
+        {
+          "id": "5d48bc9c-1cf3-419c-b2c5-43c4d36875d2",
+          "displayName": "aliz",
+          "vote": 10
+        }
+      ]
+    },
+    {
+      "pullRequestId": 4396,
+      "status": "active",
+      "creationDate": "2026-08-14T09:45:14.8050336Z",
+      "title": "Task 7792: Connect Xcelerate (Element EAPI) as a new data source",
+      "sourceRefName": "refs/heads/task/7792/javad",
+      "targetRefName": "refs/heads/master",
+      "mergeStatus": "succeeded",
+      "isDraft": false,
+      "repository": {
+        "name": "manifold",
+        "id": "97c11e15-997c-4360-981e-c551b7626fa2"
+      },
+      "createdBy": {
+        "id": "2708cbd2-3ef1-4b0d-983b-f166db15149f",
+        "displayName": "javad"
+      },
+      "reviewers": [
+        {
+          "id": "c3ec7969-e929-4a32-a45a-2aead95978ef",
+          "displayName": "MohammadReza",
+          "vote": 0
+        },
+        {
+          "id": "5d48bc9c-1cf3-419c-b2c5-43c4d36875d2",
+          "displayName": "aliz",
+          "vote": 10
+        }
+      ]
+    },
+    {
+      "pullRequestId": 3591,
+      "status": "active",
+      "creationDate": "2026-02-22T09:12:46.5892807Z",
+      "title": "Upgrade project to .NET 10.0",
+      "sourceRefName": "refs/heads/feat/6408/mrv",
+      "targetRefName": "refs/heads/master",
+      "mergeStatus": "succeeded",
+      "isDraft": false,
+      "repository": {
+        "name": "manifold",
+        "id": "97c11e15-997c-4360-981e-c551b7626fa2"
+      },
+      "createdBy": {
+        "id": "c3ec7969-e929-4a32-a45a-2aead95978ef",
+        "displayName": "MohammadReza"
+      },
+      "reviewers": []
+    },
+    {
+      "pullRequestId": 2509,
+      "status": "active",
+      "creationDate": "2025-06-19T23:05:40.4628608Z",
+      "title": "adding a new processor just for video downloading",
+      "sourceRefName": "refs/heads/4093",
+      "targetRefName": "refs/heads/master",
+      "mergeStatus": "succeeded",
+      "isDraft": true,
+      "repository": {
+        "name": "manifold",
+        "id": "97c11e15-997c-4360-981e-c551b7626fa2"
+      },
+      "createdBy": {
+        "id": "6d8a2110-702a-626e-a4b7-0343df6d854d",
+        "displayName": "sep"
+      },
+      "reviewers": [
+        {
+          "id": "c3ec7969-e929-4a32-a45a-2aead95978ef",
+          "displayName": "MohammadReza",
+          "vote": 0
+        }
+      ]
+    }
+  ],
+  "count": 5
+}

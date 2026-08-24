@@ -334,3 +334,200 @@ enum HostAzureDevOpsLoader {
         return data
     }
 }
+
+// MARK: - PRBox: identity (pure)
+//
+// The Git pull-request API takes identity GUIDs for `creatorId` and
+// `reviewerId`. It has no `@Me` macro — and, critically, it does not reject a
+// value it cannot parse. Measured against a live organization:
+//
+//     …/pullrequests?searchCriteria.status=active                    → 6
+//       &searchCriteria.creatorId=@me                                → 6   (200, unfiltered)
+//       &searchCriteria.creatorId=<well-formed unknown GUID>         → 0
+//
+// So an unresolvable identity must fail the fetch rather than fall back. An
+// unfiltered query renders every open pull request in the project as though it
+// were the user's own work, and nothing about the response says otherwise.
+
+enum ConnectionDataParser {
+    /// The PAT owner's identity GUID, or nil if the payload doesn't carry one.
+    /// An empty string is nil: interpolated into the query it produces the
+    /// unfiltered case again.
+    static func parse(_ data: Data) -> String? {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let user = root["authenticatedUser"] as? [String: Any],
+            let id = user["id"] as? String,
+            !id.isEmpty
+        else { return nil }
+        return id
+    }
+}
+
+// MARK: - PRBox: pull-request parser (pure)
+
+enum AzurePRParser {
+    /// nil means "couldn't read the answer"; an empty array means "no pull
+    /// requests". The face words those differently.
+    static func parse(
+        _ data: Data, role: PRRole, me: String, target: AzureTarget
+    ) -> [PullRequestItem]? {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let rows = root["value"] as? [[String: Any]]
+        else { return nil }
+
+        return rows.compactMap { item(from: $0, role: role, me: me, target: target) }
+    }
+
+    private static func item(
+        from entry: [String: Any], role: PRRole, me: String, target: AzureTarget
+    ) -> PullRequestItem? {
+        guard
+            let number = entry["pullRequestId"] as? Int,
+            let title = entry["title"] as? String,
+            let repository = entry["repository"] as? [String: Any],
+            let repo = repository["name"] as? String,
+            let createdAt = AzureDate.parse(entry["creationDate"])
+        else { return nil }
+
+        // `reviewerId` returns every pull request the user is a reviewer on,
+        // including ones already voted on, while GitHub drops a PR from
+        // `review-requested` as soon as it is reviewed. Keeping only the
+        // unvoted ones makes one list mean one thing.
+        if role == .reviewing, !isAwaitingVote(from: me, in: entry) { return nil }
+
+        return PullRequestItem(
+            id: "azureDevOps:\(repo)#\(number)",
+            number: number,
+            title: title,
+            repo: repo,
+            role: role,
+            provider: .azureDevOps,
+            isDraft: entry["isDraft"] as? Bool ?? false,
+            createdAt: createdAt,
+            url: webURL(target: target, repo: repo, number: number)
+        )
+    }
+
+    private static func isAwaitingVote(from me: String, in entry: [String: Any]) -> Bool {
+        guard let reviewers = entry["reviewers"] as? [[String: Any]] else { return false }
+        guard let mine = reviewers.first(where: { $0["id"] as? String == me }) else { return false }
+        return (mine["vote"] as? Int ?? 0) == 0
+    }
+
+    /// The payload has no browsable link — `url` is the REST endpoint and
+    /// `repository.webUrl` is absent — so the web URL is constructed.
+    static func webURL(target: AzureTarget, repo: String, number: Int) -> String {
+        let repoSegment = repo.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? repo
+        return "\(target.projectBase)/_git/\(repoSegment)/pullrequest/\(number)"
+    }
+}
+
+// MARK: - PRBox: count ceiling
+
+enum AzurePRCap {
+    /// How many rows to ask for. Deliberately larger than any row cap the face
+    /// can show: Azure DevOps reports no total for a pull-request query — the
+    /// response carries `count` (rows returned) and nothing else — so asking
+    /// for exactly the row cap would make every count saturate at the cap and
+    /// silently understate the queue.
+    static let ceiling = 101
+
+    /// A fetch that came back full can only promise "at least this many".
+    static func isCapped(rowCount: Int, ceiling: Int = ceiling) -> Bool {
+        rowCount >= ceiling
+    }
+}
+
+// MARK: - PRBox: fetch (host/agent only — unsandboxed)
+
+enum HostAzurePRLoader {
+    /// Both roles, identity-scoped. Three requests on the first tick and two
+    /// after it, since the GUID only changes when the PAT's owner does.
+    static func fetch(
+        organization: String, project: String, token: String, cap: Int
+    ) async throws -> PRRoleTotals {
+        let target = try AzureTarget.normalise(organization: organization, project: project)
+        let auth = "Basic " + Data(":\(token)".utf8).base64EncodedString()
+
+        let me = try await identity(target: target, auth: auth)
+
+        var items: [PullRequestItem] = []
+        var totals: [PRRole: (count: Int, capped: Bool)] = [:]
+
+        for role in [PRRole.authored, PRRole.reviewing] {
+            let data = try await send(role: role, me: me, target: target, auth: auth)
+            guard let parsed = AzurePRParser.parse(data, role: role, me: me, target: target) else {
+                throw AzureDevOpsError.invalidPayload
+            }
+            // Counted after the vote filter, so the header matches the rows.
+            totals[role] = (parsed.count, AzurePRCap.isCapped(rowCount: parsed.count))
+            items.append(contentsOf: parsed.prefix(cap))
+        }
+
+        return PRRoleTotals(
+            authoredTotal: totals[.authored]?.count ?? 0,
+            reviewingTotal: totals[.reviewing]?.count ?? 0,
+            authoredCapped: totals[.authored]?.capped ?? false,
+            reviewingCapped: totals[.reviewing]?.capped ?? false,
+            items: items
+        )
+    }
+
+    /// Resolves the PAT owner's GUID, or throws. See `ConnectionDataParser` for
+    /// why there is no fallback.
+    static func requireIdentity(_ data: Data) throws -> String {
+        guard let id = ConnectionDataParser.parse(data) else {
+            throw AzureDevOpsError.invalidTarget
+        }
+        return id
+    }
+
+    private static func identity(target: AzureTarget, auth: String) async throws -> String {
+        guard let url = URL(string: "\(target.orgBase)/_apis/connectionData?api-version=7.1-preview") else {
+            throw AzureDevOpsError.invalidTarget
+        }
+        return try requireIdentity(try await get(url: url, auth: auth))
+    }
+
+    private static func send(
+        role: PRRole, me: String, target: AzureTarget, auth: String
+    ) async throws -> Data {
+        let criterion = role == .authored ? "creatorId" : "reviewerId"
+        var components = URLComponents(string: "\(target.projectBase)/_apis/git/pullrequests")
+        components?.queryItems = [
+            URLQueryItem(name: "searchCriteria.status", value: "active"),
+            URLQueryItem(name: "searchCriteria.\(criterion)", value: me),
+            URLQueryItem(name: "$top", value: String(AzurePRCap.ceiling)),
+            URLQueryItem(name: "api-version", value: "7.1"),
+        ]
+        guard let url = components?.url else { throw AzureDevOpsError.invalidTarget }
+        return try await get(url: url, auth: auth)
+    }
+
+    private static func get(url: URL, auth: String) async throws -> Data {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        request.setValue(auth, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw AzureDevOpsError.transport(error.localizedDescription)
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw AzureDevOpsError.transport("Not an HTTP response")
+        }
+        // A bad or expired PAT answers 203 with an HTML sign-in page rather
+        // than 401; FetchClassifier maps 201...399 to authOrTarget for exactly
+        // this reason.
+        guard http.statusCode == 200 else {
+            throw AzureDevOpsError.serverError(http.statusCode)
+        }
+        return data
+    }
+}

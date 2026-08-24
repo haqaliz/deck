@@ -37,8 +37,14 @@ widget.
 - **CalBox** — calendar: TODAY and TOMORROW sections, each with its own
   show/hide and row count (EventKit, read by the agent; covers whatever macOS
   syncs).
+- **PRBox** — review queue: your open PRs and the ones awaiting your review,
+  **mixed from two providers** (GitHub + Azure DevOps Git) in one list. The
+  first widget with per-provider settings sub-tabs and two `FetchSource` keys,
+  and the first to deep-link (rows are `Link`s; small uses `widgetURL`).
+  Azure needs an identity GUID from `_apis/connectionData` — see the trap
+  below.
 
-All twelve ship in one WidgetKit extension: `Deck.app` (host + settings window)
+All thirteen ship in one WidgetKit extension: `Deck.app` (host + settings window)
 → `DeckWidgets.appex`.
 
 ## Architecture
@@ -48,7 +54,7 @@ targets:
 
 ```
 DeckApp/        # host app: settings window (tabs per widget), agent installer
-DeckWidgets/    # WidgetKit extension: 12 widgets + Loaders/ (mach, getifaddrs, IOKit)
+DeckWidgets/    # WidgetKit extension: 13 widgets + Loaders/ (mach, getifaddrs, IOKit)
 DeckAgent/      # silent CLI: refreshes sandbox-blocked data snapshots, then exits
 Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
 ```
@@ -63,7 +69,7 @@ Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
    and reading other apps' data (opencode DB, `ps`/process info, `git log`).
    The unsandboxed `DeckAgent` (LaunchAgent `com.deck.agent`, every 60s) reads
    those and writes snapshots into the widget's container:
-   `~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox,taskbox,calbox}.json`
+   `~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox,taskbox,calbox,prbox}.json`
    The widgets render the snapshots.
 
 **Settings live in the Deck app window only** (per-widget tabs: show toggles,
@@ -154,6 +160,43 @@ Do not delete the container; see the trap below.
   widgets from the desktop *first* and leave the container alone unless you
   actually want to reset settings — note it holds the OpenBox/ShipBox/TaskBox
   tokens, so back up `settings.json` before wiping it.
+- **A calendar event's meeting link is not in `EKEvent.url`.** That field is
+  the obvious one and is empty in practice: measured across a real synced
+  Google account, **0 of 10** events set `url`, **0** had a URL in `location`,
+  and **9 of 10** carried one in `notes`. The notes hold three hosts, not one —
+  `meet.google.com` (the call), `support.google.com` ("Learn more about Meet")
+  and `tel.meet` (dial-in) — so "first URL in the notes" opens a help page from
+  a click on a meeting. `CalendarLink` matches a list of known conferencing
+  hosts (exactly or as a subdomain, never as a substring, or `zoom.us.evil.com`
+  would pass) and leaves an event with none unlinked.
+- **A widget's URL is delivered to the app, not to the browser.** On macOS
+  WidgetKit hands `widgetURL` / `Link` destinations to the **containing app**;
+  it never opens them itself. A widget that links to a web page therefore needs
+  the app to receive the URL and forward it (`DeckAppDelegate.application(_:open:)`
+  → `NSWorkspace.open`), or the click just launches Deck and appears to do
+  nothing. Two further traps came with it: a plain `WindowGroup` manufactures a
+  **new window for every URL delivered**, which needs
+  `.handlesExternalEvents(matching: [])` on the scene (not
+  `applicationShouldHandleReopen`, which does not cover URL opens); and Deck
+  must **not** declare `CFBundleURLTypes` for http(s), or it becomes a
+  candidate browser. Forwarding is filtered to http(s)-with-a-host
+  (`DeckURLForwarding`) because the URL originates in a snapshot file, which is
+  data rather than instruction.
+- **Azure DevOps' Git PR API silently ignores an identity it can't parse.**
+  `searchCriteria.creatorId` / `.reviewerId` take identity **GUIDs**; there is
+  no `@Me` macro as there is in WIQL. A non-GUID value is not rejected — it
+  returns **200 with every active pull request in the project**. Measured on a
+  live org: 6 with no criteria, the same 6 with `@me`, 0 with a well-formed
+  unknown GUID. PRBox therefore resolves the PAT owner's id from
+  `{org}/_apis/connectionData` and **fails the fetch** if it can't
+  (`HostAzurePRLoader.requireIdentity`); there is no safe fallback, because the
+  unfiltered result renders the whole team's work as though it were yours and
+  nothing in the response says otherwise. Two more from the same probe: the PR
+  payload has **no update timestamp** (only `creationDate`, which is why PRBox
+  sorts both providers by creation) and **no web URL** (built as
+  `…/_git/{repo}/pullrequest/{id}`), and `reviewerId` returns PRs you have
+  **already voted on**, so the review queue filters to `vote == 0` to mean what
+  GitHub's `review-requested` means.
 - **Accessory batteries need an SPI, and two obvious sources are dead ends.**
   `IOPSCopyPowerSourcesList` returns only the internal battery — accessories
   are a separate power-source type reached via `IOPSCopyPowerSourcesByType(4)`,

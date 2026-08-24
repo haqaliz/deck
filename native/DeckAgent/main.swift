@@ -197,6 +197,65 @@ Task {
         agentLog.info("failed calbox snapshot (\(outcome.rawValue, privacy: .public))")
     }
 
+    // PRBox: two providers at once, each with its own credentials and its own
+    // fetch-status key. A provider that fails must not blank the other's rows
+    // — half a review queue is still worth reading, and the chip names the
+    // half that is missing. A provider that is switched off records .ok rather
+    // than .notConfigured, which is what clears a failure it left behind.
+    let prbox = settings.prbox
+    if prbox.isAnyProviderUsable {
+        var githubTotals: PRRoleTotals?
+        if prbox.github.isUsable {
+            do {
+                githubTotals = try await HostGitHubPRLoader.fetch(
+                    token: prbox.github.token,
+                    scope: prbox.github.scope,
+                    cap: prbox.prCount
+                )
+                FetchStatusStore.record(.ok, for: .prboxGitHub)
+            } catch {
+                let outcome = FetchClassifier.outcome(for: error)
+                FetchStatusStore.record(outcome, for: .prboxGitHub)
+                agentLog.info("failed prbox github (\(outcome.rawValue, privacy: .public))")
+            }
+        } else {
+            FetchStatusStore.record(prbox.github.enabled ? .notConfigured : .ok, for: .prboxGitHub)
+        }
+
+        var azureTotals: PRRoleTotals?
+        if prbox.azure.isUsable {
+            do {
+                azureTotals = try await HostAzurePRLoader.fetch(
+                    organization: prbox.azure.organization,
+                    project: prbox.azure.project,
+                    token: prbox.azure.token,
+                    cap: prbox.prCount
+                )
+                FetchStatusStore.record(.ok, for: .prboxAzure)
+            } catch {
+                let outcome = FetchClassifier.outcome(for: error)
+                FetchStatusStore.record(outcome, for: .prboxAzure)
+                agentLog.info("failed prbox azure (\(outcome.rawValue, privacy: .public))")
+            }
+        } else {
+            FetchStatusStore.record(prbox.azure.enabled ? .notConfigured : .ok, for: .prboxAzure)
+        }
+
+        if githubTotals != nil || azureTotals != nil {
+            // Always written: writtenAt drives the staleness window and the
+            // "Agent hasn't run" chip, so an empty queue must still refresh it.
+            let snapshot = PRSnapshotBuilder.build(
+                github: githubTotals, azure: azureTotals, cap: prbox.prCount, now: Date()
+            )
+            PRBoxSnapshotStore.save(snapshot)
+            agentLog.info("written prbox snapshot (\(snapshot.pullRequests.count, privacy: .public) rows)")
+        }
+    } else {
+        FetchStatusStore.record(prbox.github.enabled ? .notConfigured : .ok, for: .prboxGitHub)
+        FetchStatusStore.record(prbox.azure.enabled ? .notConfigured : .ok, for: .prboxAzure)
+        agentLog.info("skipped prbox snapshot (not configured)")
+    }
+
     let elapsed = Date().timeIntervalSince(start)
     agentLog.info("full refresh done in \(elapsed, format: .fixed(precision: 2))s")
     semaphore.signal()

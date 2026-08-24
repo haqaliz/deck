@@ -44,6 +44,7 @@ struct DeckSettings: Codable, Equatable {
     var shipbox = ShipBoxSettings()
     var taskbox = TaskBoxSettings()
     var calbox = CalBoxSettings()
+    var prbox = PRBoxSettings()
     var agentAtLogin = true
 
     init() {}
@@ -64,7 +65,7 @@ struct DeckSettings: Codable, Equatable {
     /// that no longer exists.
     enum CodingKeys: String, CodingKey {
         case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
-        case weatherbox, clockbox, shipbox, taskbox, calbox, agentAtLogin
+        case weatherbox, clockbox, shipbox, taskbox, calbox, prbox, agentAtLogin
     }
 
     /// Decode-only. See `LegacyHomeBoxSettings`.
@@ -101,6 +102,7 @@ struct DeckSettings: Codable, Equatable {
         shipbox = try c.decodeIfPresent(ShipBoxSettings.self, forKey: .shipbox) ?? ShipBoxSettings()
         taskbox = try c.decodeIfPresent(TaskBoxSettings.self, forKey: .taskbox) ?? TaskBoxSettings()
         calbox = try c.decodeIfPresent(CalBoxSettings.self, forKey: .calbox) ?? CalBoxSettings()
+        prbox = try c.decodeIfPresent(PRBoxSettings.self, forKey: .prbox) ?? PRBoxSettings()
         agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
     }
 
@@ -633,5 +635,104 @@ extension Binding where Value == RGBA {
             get: { wrappedValue.color },
             set: { wrappedValue = RGBA($0) }
         )
+    }
+}
+
+// MARK: - PRBox
+//
+// PRBox is the first widget to talk to two providers, so its settings are two
+// sub-sections plus the shared presentation. Each provider carries its own
+// credentials rather than borrowing ShipBox's GitHub token or TaskBox's Azure
+// PAT: every Deck widget owns its settings, and a shared credential section
+// would be a schema change plus a migration for already-pasted tokens.
+
+/// How many rows a face has room for. `prCount` is the large count; medium
+/// physically cannot show more than three rows and stay readable.
+enum PRBoxFace {
+    case medium
+    case large
+}
+
+struct PRGitHubSettings: Codable, Equatable {
+    /// Off by default: a widget added from the gallery must not start making
+    /// network requests on its own.
+    var enabled = false
+    /// Personal access token — required; no default is ever sent.
+    var token = ""
+    /// Optional extra search terms ("org:acme", "repo:owner/name"). Empty
+    /// searches everything the token can see, which on a long-lived account
+    /// reaches years back into personal repositories.
+    var scope = ""
+
+    /// Enabled is not the same as usable: a provider switched on with no token
+    /// is "not configured", and the agent skips it rather than firing a
+    /// request that cannot succeed.
+    var isUsable: Bool { enabled && !token.isEmpty }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+        scope = try c.decodeIfPresent(String.self, forKey: .scope) ?? ""
+    }
+}
+
+struct PRAzureSettings: Codable, Equatable {
+    var enabled = false
+    /// Organization — a bare name or a full dev.azure.com URL.
+    var organization = ""
+    /// Project within the organization. The pull-request query is scoped to it.
+    var project = ""
+    /// Personal access token — required; no default is ever sent.
+    var token = ""
+
+    var isUsable: Bool {
+        enabled && !organization.isEmpty && !project.isEmpty && !token.isEmpty
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        organization = try c.decodeIfPresent(String.self, forKey: .organization) ?? ""
+        project = try c.decodeIfPresent(String.self, forKey: .project) ?? ""
+        token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+    }
+}
+
+struct PRBoxSettings: Codable, Equatable {
+    var github = PRGitHubSettings()
+    var azure = PRAzureSettings()
+    var showList = true
+    /// Rows on the large face, 3...12. Medium shows at most three.
+    var prCount = 6
+    var mineColor = RGBA(.blue)
+    var reviewColor = RGBA(.orange)
+
+    static let rowCountRange = 3...12
+
+    var isAnyProviderUsable: Bool { github.isUsable || azure.isUsable }
+
+    func rowCount(for face: PRBoxFace) -> Int {
+        switch face {
+        case .medium: return min(prCount, 3)
+        case .large: return prCount
+        }
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        github = try c.decodeIfPresent(PRGitHubSettings.self, forKey: .github) ?? PRGitHubSettings()
+        azure = try c.decodeIfPresent(PRAzureSettings.self, forKey: .azure) ?? PRAzureSettings()
+        showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
+        let rawCount = try c.decodeIfPresent(Int.self, forKey: .prCount) ?? 6
+        prCount = min(max(rawCount, Self.rowCountRange.lowerBound), Self.rowCountRange.upperBound)
+        mineColor = try c.decodeIfPresent(RGBA.self, forKey: .mineColor) ?? RGBA(.blue)
+        reviewColor = try c.decodeIfPresent(RGBA.self, forKey: .reviewColor) ?? RGBA(.orange)
     }
 }

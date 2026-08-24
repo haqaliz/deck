@@ -289,7 +289,15 @@ struct TaskBoxWidgetEntryView: View {
                     .tracking(1)
             }
             ForEach(Array(entry.tasks.prefix(maxCount).enumerated()), id: \.offset) { _, task in
-                taskRow(task)
+                // Opens the work item in a browser. A provider that gave no
+                // usable URL leaves the row as plain text rather than as a
+                // link that goes nowhere.
+                if let destination = TaskFormatting.destination(for: task) {
+                    Link(destination: destination) { taskRow(task) }
+                        .buttonStyle(.plain)
+                } else {
+                    taskRow(task)
+                }
             }
         }
     }

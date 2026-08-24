@@ -4,11 +4,69 @@ import AppKit
 
 @main
 struct DeckApp: App {
+    @NSApplicationDelegateAdaptor(DeckAppDelegate.self) private var appDelegate
+
     var body: some Scene {
         WindowGroup("Deck") {
             ContentView()
         }
         .windowResizability(.contentSize)
+        // Deck's settings window is not a document and must never be opened
+        // *by* an external event. Without this, every widget URL delivered to
+        // the app made SwiftUI manufacture another settings window on top of
+        // the one already on screen. The URL is handled in the app delegate
+        // instead, which forwards it to the browser.
+        .handlesExternalEvents(matching: [])
+    }
+}
+
+/// Exists for one reason: WidgetKit on macOS delivers a widget's URL to the
+/// containing app rather than to the browser. Without this, clicking a PRBox
+/// row launched Deck, dropped the URL on the floor, and — because the scene is
+/// a plain `WindowGroup` — left a new settings window behind every time.
+///
+/// So Deck forwards the URL and gets out of the way: if it was launched purely
+/// to carry that click, it opens the page and quits instead of leaving a
+/// window nobody asked for.
+final class DeckAppDelegate: NSObject, NSApplicationDelegate {
+    /// True when the process was started to deliver a URL rather than by
+    /// someone opening Deck. `application(_:open:)` runs before
+    /// `applicationDidFinishLaunching`, so this is known in time to decide
+    /// whether a window is wanted at all.
+    private var launchedToOpenAURL = false
+    private var finishedLaunching = false
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let webURLs = DeckURLForwarding.webURLs(from: urls)
+        for url in webURLs {
+            NSWorkspace.shared.open(url)
+        }
+
+        // Nothing usable in the batch: behave exactly as before rather than
+        // quitting an app the user may have opened deliberately.
+        guard !webURLs.isEmpty else { return }
+
+        if finishedLaunching {
+            // Already running with a window on screen: the user gets their
+            // page and keeps whatever they were doing.
+            return
+        }
+        launchedToOpenAURL = true
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        finishedLaunching = true
+        guard launchedToOpenAURL else { return }
+        // The page is already opening in the browser; a settings window would
+        // be pure noise.
+        NSApplication.shared.windows.forEach { $0.close() }
+        NSApplication.shared.terminate(nil)
+    }
+
+    /// Clicking the Dock icon of a running Deck should raise the window it
+    /// already has, not manufacture another one.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        flag
     }
 }
 
@@ -51,6 +109,7 @@ struct ContentView: View {
             case .shipbox: ShipBoxSettingsView(settings: $settings.shipbox)
             case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox)
             case .calbox: CalBoxSettingsView(settings: $settings.calbox)
+            case .prbox: PRBoxSettingsView(settings: $settings.prbox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -66,6 +125,7 @@ struct ContentView: View {
             Task { await refreshShipBox() }
             Task { await refreshTaskBox() }
             Task { await refreshCalBox() }
+            Task { await refreshPRBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshGitBox()
@@ -75,6 +135,7 @@ struct ContentView: View {
                 Task { await refreshShipBox() }
                 Task { await refreshTaskBox() }
                 Task { await refreshCalBox() }
+                Task { await refreshPRBox() }
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -178,6 +239,64 @@ struct ContentView: View {
     /// Fetch GitHub Actions runs (host is unsandboxed) for the ShipBox widget.
     /// Requires the user's own repo + token — never a default token. Always
     /// written on success so writtenAt drives the staleness windows.
+    /// Fetch both providers and write one snapshot. A provider that is off, or
+    /// on but missing credentials, is recorded as `.ok` rather than skipped
+    /// silently: `FetchStatusStore` has no clear, and `.ok` is what erases a
+    /// failure the user has since switched off. Recording `.notConfigured`
+    /// instead would keep nagging about a provider they disabled.
+    private func refreshPRBox() async {
+        let prbox = settings.prbox
+        guard prbox.isAnyProviderUsable else {
+            FetchStatusStore.record(prbox.github.enabled ? .notConfigured : .ok, for: .prboxGitHub)
+            FetchStatusStore.record(prbox.azure.enabled ? .notConfigured : .ok, for: .prboxAzure)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+
+        var github: PRRoleTotals?
+        if prbox.github.isUsable {
+            do {
+                github = try await HostGitHubPRLoader.fetch(
+                    token: prbox.github.token,
+                    scope: prbox.github.scope,
+                    cap: prbox.prCount
+                )
+                FetchStatusStore.record(.ok, for: .prboxGitHub)
+            } catch {
+                FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .prboxGitHub)
+            }
+        } else {
+            FetchStatusStore.record(prbox.github.enabled ? .notConfigured : .ok, for: .prboxGitHub)
+        }
+
+        var azure: PRRoleTotals?
+        if prbox.azure.isUsable {
+            do {
+                azure = try await HostAzurePRLoader.fetch(
+                    organization: prbox.azure.organization,
+                    project: prbox.azure.project,
+                    token: prbox.azure.token,
+                    cap: prbox.prCount
+                )
+                FetchStatusStore.record(.ok, for: .prboxAzure)
+            } catch {
+                FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .prboxAzure)
+            }
+        } else {
+            FetchStatusStore.record(prbox.azure.enabled ? .notConfigured : .ok, for: .prboxAzure)
+        }
+
+        // One provider failing must not blank the other's rows.
+        if github != nil || azure != nil {
+            PRBoxSnapshotStore.save(
+                PRSnapshotBuilder.build(
+                    github: github, azure: azure, cap: prbox.prCount, now: Date()
+                )
+            )
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     private func refreshShipBox() async {
         let shipbox = settings.shipbox
         let repo = shipbox.repo.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -414,7 +533,7 @@ private func refreshCalBox() async {
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
     case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
-    case weatherbox, clockbox, shipbox, taskbox, calbox
+    case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
 
     var id: String { rawValue }
 
@@ -433,6 +552,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .shipbox: "ShipBox"
         case .taskbox: "TaskBox"
         case .calbox: "CalBox"
+        case .prbox: "PRBox"
         }
     }
 
@@ -451,6 +571,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .shipbox: "shippingbox"
         case .taskbox: "checklist"
         case .calbox: "calendar"
+        case .prbox: "arrow.triangle.pull"
         }
     }
 }
@@ -955,6 +1076,91 @@ private struct FetchStatusCaption: View {
         formatter.dateFormat = "HH:mm"
         return formatter
     }()
+}
+
+private struct PRBoxSettingsView: View {
+    @Binding var settings: PRBoxSettings
+
+    /// Deck's first per-provider sub-tab. A segmented picker inside the Form
+    /// keeps it native and keeps the window at its existing size, where a real
+    /// nested TabView would not.
+    private enum Provider: String, CaseIterable, Identifiable {
+        case github = "GitHub"
+        case azure = "Azure DevOps"
+        var id: String { rawValue }
+    }
+
+    @State private var provider: Provider = .github
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Provider", selection: $provider) {
+                    ForEach(Provider.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            switch provider {
+            case .github: githubSection
+            case .azure: azureSection
+            }
+
+            Section("Queue") {
+                Toggle("Show list", isOn: $settings.showList)
+                Stepper(
+                    "PR count: \(settings.prCount)",
+                    value: $settings.prCount,
+                    in: PRBoxSettings.rowCountRange
+                )
+                .disabled(!settings.showList)
+                Text("The count is for the large widget \u{2014} medium shows at most three rows.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Colors") {
+                ColorPicker("Mine", selection: $settings.mineColor.color)
+                ColorPicker("Review", selection: $settings.reviewColor.color)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+
+    private var githubSection: some View {
+        Section("GitHub") {
+            Toggle("Include GitHub", isOn: $settings.github.enabled)
+            SecureField("Personal access token", text: $settings.github.token)
+                .textContentType(.password)
+            TextField("Scope (optional)", text: $settings.github.scope, prompt: Text("org:acme"))
+            Text("Without a scope this searches every repository the token can see, which can reach years back into personal repos. The token is sent only to api.github.com over TLS.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            FetchStatusCaption(
+                source: .prboxGitHub,
+                clearOn: "\(settings.github.enabled)\u{0}\(settings.github.token)\u{0}\(settings.github.scope)"
+            )
+        }
+    }
+
+    private var azureSection: some View {
+        Section("Azure DevOps") {
+            Toggle("Include Azure DevOps", isOn: $settings.azure.enabled)
+            TextField("Organization", text: $settings.azure.organization)
+            TextField("Project", text: $settings.azure.project)
+            SecureField("Personal access token", text: $settings.azure.token)
+                .textContentType(.password)
+            Text("Shows pull requests created by, or awaiting review from, whoever owns the PAT \u{2014} not whoever is signed in to the browser. The token is sent only to dev.azure.com over TLS; a read-only PAT that can see Code is enough.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            FetchStatusCaption(
+                source: .prboxAzure,
+                clearOn: "\(settings.azure.enabled)\u{0}\(settings.azure.organization)\u{0}\(settings.azure.project)\u{0}\(settings.azure.token)"
+            )
+        }
+    }
 }
 
 private struct ShipBoxSettingsView: View {

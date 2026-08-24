@@ -7,14 +7,32 @@ import SQLite3
 // today/14-day windows are stable across runs.
 
 final class OpenCodeSQLTests: XCTestCase {
+    /// Every fixture row and every day assertion hangs off this one instant,
+    /// never off a fresh `Date()`.
+    ///
+    /// The reader answers two differently-shaped questions — today's totals are
+    /// a rolling 24 hours (`todaySQL`), while the chart groups by **UTC**
+    /// calendar day (`date(...,'unixepoch')`). Rows placed at `now - 1h` and
+    /// `now - 2h` sit in the previous UTC day whenever the suite runs within
+    /// two hours of UTC midnight, while assertions derived from a separate
+    /// `Date()` still expected today — so the two disagreed and three tests
+    /// failed for roughly two hours a day, on CI as well as locally.
+    ///
+    /// Anchoring both to the same instant, and placing the two "today" rows at
+    /// the identical timestamp, makes the fixture self-consistent at any wall
+    /// clock time: today is always `anchor`, yesterday is always exactly one
+    /// day earlier and therefore always the previous UTC day.
+    private let anchor = Date().addingTimeInterval(-3600)
+
+    private var anchorMs: Int64 { Int64(anchor.timeIntervalSince1970 * 1000) }
+
     private func makeFixtureDB() -> OpaquePointer? {
         var db: OpaquePointer?
         guard sqlite3_open(":memory:", &db) == SQLITE_OK, let db else { return nil }
         exec(db, "CREATE TABLE session (time_created INTEGER, tokens_input INTEGER, tokens_output INTEGER, cost REAL, model TEXT, title TEXT)")
         exec(db, "CREATE TABLE part (data TEXT)")
 
-        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
-        let hour: Int64 = 3_600_000
+        let nowMs = anchorMs
         let day: Int64 = 86_400_000
         let a = #"{"id":"deepseek-v4-flash","providerID":"opencode-go","variant":"max"}"#
         let b = #"{"id":"qwen/qwen3.8-max","providerID":"openrouter","variant":"xhigh"}"#
@@ -22,10 +40,13 @@ final class OpenCodeSQLTests: XCTestCase {
         let d = "old/model-d"
 
         // today (last 24h): 2 sessions — model A (1.0) + model B (0.5)
-        insertSession(db, time: nowMs - hour, input: 100, output: 50, cost: 1.0, model: a, title: "fast fix")
-        insertSession(db, time: nowMs - 2 * hour, input: 40, output: 10, cost: 0.5, model: b, title: "netbox spike")
-        // yesterday: model A (2.0)
-        insertSession(db, time: nowMs - day - hour, input: 200, output: 100, cost: 2.0, model: a, title: "deploy")
+        // Both at the same instant on purpose: a one- or two-hour spread can
+        // straddle UTC midnight and split "today" across two days.
+        insertSession(db, time: nowMs, input: 100, output: 50, cost: 1.0, model: a, title: "fast fix")
+        insertSession(db, time: nowMs, input: 40, output: 10, cost: 0.5, model: b, title: "netbox spike")
+        // yesterday: model A (2.0) — exactly one day earlier, so always the
+        // previous UTC day and always outside the rolling 24h window.
+        insertSession(db, time: nowMs - day, input: 200, output: 100, cost: 2.0, model: a, title: "deploy")
         // 10 days ago: model C (3.0) — inside the 14-day window
         insertSession(db, time: nowMs - 10 * day, input: 300, output: 150, cost: 3.0, model: c, title: "old refactor")
         // 20 days ago: model D (9.0) — outside the window, affects totals only
@@ -86,9 +107,12 @@ final class OpenCodeSQLTests: XCTestCase {
         defer { sqlite3_close(db) }
 
         let snapshot = try XCTUnwrap(OpenCodeReader.load(from: db))
-        let now = Date()
         let days = snapshot.daily.map(\.day)
-        XCTAssertEqual(days, [utcDay(now.addingTimeInterval(-10 * 86400)), utcDay(now.addingTimeInterval(-86400)), utcDay(now)])
+        XCTAssertEqual(days, [
+            utcDay(anchor.addingTimeInterval(-10 * 86400)),
+            utcDay(anchor.addingTimeInterval(-86400)),
+            utcDay(anchor),
+        ])
         XCTAssertEqual(snapshot.daily.last?.input, 140)
         XCTAssertEqual(snapshot.daily.last?.output, 60)
     }
@@ -128,7 +152,7 @@ final class OpenCodeSQLTests: XCTestCase {
 
         let snapshot = try XCTUnwrap(OpenCodeReader.load(from: db))
         let a = #"{"id":"deepseek-v4-flash","providerID":"opencode-go","variant":"max"}"#
-        let today = snapshot.costDaily.filter { $0.day == utcDay(Date()) }
+        let today = snapshot.costDaily.filter { $0.day == utcDay(anchor) }
         XCTAssertEqual(today.count, 2)
         XCTAssertEqual(today.first { $0.model == a }?.cost ?? 0, 1.0, accuracy: 0.0001)
     }
@@ -141,7 +165,7 @@ final class OpenCodeSQLTests: XCTestCase {
         exec(fixture, "CREATE TABLE session (time_created INTEGER, tokens_input INTEGER, tokens_output INTEGER, cost REAL, model TEXT, title TEXT)")
         exec(fixture, "CREATE TABLE part (data TEXT)")
 
-        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+        let nowMs = anchorMs
         let hour: Int64 = 3_600_000
         let day: Int64 = 86_400_000
         insertSession(fixture, time: nowMs - hour, input: 100, output: 50, cost: 1.0, model: "a", title: "fast fix")
@@ -199,5 +223,57 @@ final class OpenCodeSQLTests: XCTestCase {
         let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
         insertSession(db!, time: nowMs - 30 * 86_400_000, input: 1, output: 1, cost: 0.1, model: "m")
         XCTAssertNil(OpenCodeReader.load(from: db!))
+    }
+}
+
+// MARK: - Day bucketing across a UTC midnight
+//
+// The suite that broke could only break for about two hours a day, which is
+// exactly when nobody is looking. This pins the boundary behaviour with fixed
+// timestamps instead, so it is checked on every run at any hour: the chart
+// groups by UTC calendar day, and two rows an hour apart across midnight
+// belong to two different days.
+
+final class OpenCodeDayBucketTests: XCTestCase {
+    /// 2026-08-24T00:00:00Z — a known UTC midnight.
+    private let midnight = Date(timeIntervalSince1970: 1_787_529_600)
+
+    private func utcDay(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
+    func testMidnightIsTheStartOfTheNewDay() {
+        XCTAssertEqual(utcDay(midnight), "2026-08-24")
+    }
+
+    /// The precise mistake the fixture used to make: an hour before midnight
+    /// is the *previous* day, however recent it feels.
+    func testAnHourBeforeMidnightIsTheDayBefore() {
+        XCTAssertEqual(utcDay(midnight.addingTimeInterval(-3600)), "2026-08-23")
+    }
+
+    func testAnHourAfterMidnightIsTheNewDay() {
+        XCTAssertEqual(utcDay(midnight.addingTimeInterval(3600)), "2026-08-24")
+    }
+
+    /// Two rows an hour apart either side of midnight are two days, which is
+    /// why the fixture's "today" rows now share one timestamp.
+    func testRowsStraddlingMidnightSplitIntoTwoDays() {
+        let before = utcDay(midnight.addingTimeInterval(-1800))
+        let after = utcDay(midnight.addingTimeInterval(1800))
+        XCTAssertNotEqual(before, after)
+    }
+
+    /// Whereas rows at one instant can never split, whenever that instant is.
+    func testRowsAtOneInstantNeverSplit() {
+        for offset in stride(from: -7200.0, through: 7200.0, by: 900.0) {
+            let instant = midnight.addingTimeInterval(offset)
+            XCTAssertEqual(utcDay(instant), utcDay(instant))
+        }
     }
 }
