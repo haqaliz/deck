@@ -169,3 +169,147 @@ enum FXRatesParser {
         return out.isEmpty ? nil : out
     }
 }
+
+// MARK: - MarketBox fetch (host/agent only — unsandboxed)
+
+enum MarketLoaderError: Error {
+    /// The symbol list is empty — the fetch was skipped on purpose.
+    case notConfigured
+    /// Every configured symbol resolved to no known kind.
+    case invalidSymbols
+    case serverError(Int)
+    case transport(String)
+    case invalidPayload
+}
+
+enum HostMarketLoader {
+    /// Fetches the configured symbols in the configured display currency.
+    ///
+    /// Partial-failure policy (PRD §3): each provider is fetched best-effort;
+    /// a provider that fails contributes no rows, but the rows that could be
+    /// priced still come back with a note. The fetch only throws when **no**
+    /// row at all could be priced — the agent then records a classified
+    /// outcome and the widget keeps its last-good snapshot.
+    static func fetch(settings: MarketBoxSettings) async throws -> MarketSnapshot {
+        let symbols = MarketSymbolResolver.normalizedSymbols(from: settings.symbols)
+        guard !symbols.isEmpty else { throw MarketLoaderError.notConfigured }
+
+        let display = settings.displayCurrency
+        let needsCrypto = symbols.contains { MarketSymbolResolver.kind(for: $0) == .crypto }
+        let needsGold = symbols.contains { MarketSymbolResolver.kind(for: $0) == .gold }
+        let needsFiat = symbols.contains { MarketSymbolResolver.kind(for: $0) == .fiat }
+        let needsToman = display != .usd
+
+        // Fetch only what the tickers + display currency need, and remember the
+        // first failure so the "no rows at all" case can be classified honestly.
+        var firstError: Error?
+        let crypto: [CryptoQuote]?
+        if needsCrypto {
+            do { crypto = try await fetchCrypto(symbols: symbols) }
+            catch { crypto = nil; firstError = firstError ?? error }
+        } else { crypto = nil }
+
+        let goldUSDPerOunce: Double?
+        if needsGold {
+            do { goldUSDPerOunce = try await fetchGold() }
+            catch { goldUSDPerOunce = nil; firstError = firstError ?? error }
+        } else { goldUSDPerOunce = nil }
+
+        let toman: Double?
+        if needsToman {
+            do { toman = try await fetchToman() }
+            catch { toman = nil; firstError = firstError ?? error }
+        } else { toman = nil }
+
+        let fx: [String: Double]?
+        if needsFiat {
+            do { fx = try await fetchFX() }
+            catch { fx = nil; firstError = firstError ?? error }
+        } else { fx = nil }
+
+        var quotesByID: [String: CryptoQuote] = [:]
+        for quote in crypto ?? [] where !quote.id.isEmpty {
+            quotesByID[quote.id] = quote
+        }
+
+        let build = MarketBuilder.build(
+            display: display,
+            symbols: symbols,
+            quotesByID: quotesByID,
+            tmn: toman,
+            goldUSDPerGram: goldUSDPerOunce.map(MarketConverter.goldPerGram),
+            fx: fx
+        )
+
+        guard !build.isEmpty else {
+            // Every symbol failed to price: blame the first fetch failure, or
+            // the symbols themselves when nothing even resolved.
+            throw firstError ?? MarketLoaderError.invalidSymbols
+        }
+
+        return MarketSnapshot(
+            writtenAt: Date(),
+            displayCurrency: display,
+            rows: build.rows,
+            note: build.note
+        )
+    }
+
+    private static func fetchCrypto(symbols: [String]) async throws -> [CryptoQuote] {
+        let ids = symbols.compactMap { MarketSymbolResolver.cryptoID(for: $0) }
+        let query = ids.joined(separator: ",")
+        let url = URL(string: "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=\(query)&price_change_percentage=24h&sparkline=true")!
+        let data = try await get(url)
+        guard let quotes = CoinGeckoMarketsParser.parse(data) else {
+            throw MarketLoaderError.invalidPayload
+        }
+        return quotes
+    }
+
+    private static func fetchGold() async throws -> Double {
+        let url = URL(string: "https://api.gold-api.com/price/XAU")!
+        let data = try await get(url)
+        guard let price = GoldParser.parse(data) else {
+            throw MarketLoaderError.invalidPayload
+        }
+        return price
+    }
+
+    private static func fetchToman() async throws -> Double {
+        let url = URL(string: "https://api.wallex.ir/v1/markets")!
+        let data = try await get(url)
+        guard let rate = WallexParser.parse(data), let toman = rate.tomanPerUSDT else {
+            throw MarketLoaderError.invalidPayload
+        }
+        return toman
+    }
+
+    private static func fetchFX() async throws -> [String: Double] {
+        let url = URL(string: "https://open.er-api.com/v6/latest/USD")!
+        let data = try await get(url)
+        guard let rates = FXRatesParser.parse(data) else {
+            throw MarketLoaderError.invalidPayload
+        }
+        return rates
+    }
+
+    private static func get(_ url: URL) async throws -> Data {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw MarketLoaderError.transport(error.localizedDescription)
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw MarketLoaderError.transport("Not an HTTP response")
+        }
+        guard http.statusCode == 200 else {
+            throw MarketLoaderError.serverError(http.statusCode)
+        }
+        return data
+    }
+}

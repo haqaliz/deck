@@ -256,6 +256,21 @@ Task {
         agentLog.info("skipped prbox snapshot (not configured)")
     }
 
+    // MarketBox: live prices for the configured symbols in the display
+    // currency. No tokens anywhere — every source is keyless. The loader only
+    // throws when no row at all could be priced; partial results render with a
+    // note instead. Always written: writtenAt drives the staleness windows.
+    do {
+        let marketbox = try await HostMarketLoader.fetch(settings: settings.marketbox)
+        MarketSnapshotStore.save(marketbox)
+        FetchStatusStore.record(.ok, for: .marketbox)
+        agentLog.info("written marketbox snapshot (\(marketbox.rows.count, privacy: .public) rows)")
+    } catch {
+        let outcome = FetchClassifier.outcome(for: error)
+        FetchStatusStore.record(outcome, for: .marketbox)
+        agentLog.info("failed marketbox snapshot (\(outcome.rawValue, privacy: .public))")
+    }
+
     let elapsed = Date().timeIntervalSince(start)
     agentLog.info("full refresh done in \(elapsed, format: .fixed(precision: 2))s")
     semaphore.signal()
