@@ -135,6 +135,20 @@ Do not delete the container; see the trap below.
   `__TEXT,__info_plist` section (`CREATE_INFOPLIST_SECTION_IN_BINARY` in
   project.yml) — without it the request is denied without ever prompting.
   Deck.app and DeckAgent are separately signed, so macOS asks once for each.
+- **A Swift Charts `Chart` inside a widget face silently drops the widget
+  from the gallery.** Discovered with MarketBox (2026-08-24): a widget whose
+  face draws a `Chart` (even a 30×12 sparkline inside a `ForEach` row) never
+  appears in the Widget Center, while the other 13 widgets enumerate fine. The
+  usual tells are all absent: pluginkit registers the new extension version,
+  the binary contains the widget, the extension launches, no crash report
+  appears, and chronod serves the last-good 13-widget descriptor set. The
+  documented `log show ... | grep -c <Name>BoxWidget` check cannot be used
+  either — the unified log can be entirely empty on a machine. Bisect by
+  stripping the widget to a minimal clone (it enumerates), then restore parts
+  until it disappears again. **Fix: draw sparklines with a plain
+  `Path`/`Shape`** (MarketBox's `MiniSparkline`) — SwiftUI Path is
+  gallery-safe; the other Deck widgets that use Charts render them in
+  full-width chart areas, which is fine.
 - **Adding a widget requires a version bump.** WidgetKit caches the widget
   descriptor set per extension version, so a new widget added without raising
   `CFBundleShortVersionString` / `CFBundleVersion` in `project.yml` never

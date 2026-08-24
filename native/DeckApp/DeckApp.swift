@@ -1391,11 +1391,26 @@ private struct MarketBoxSettingsView: View {
     var body: some View {
         Form {
             Section("Tickers") {
-                TextField("Symbols (comma-separated)", text: $settings.symbols)
+                // One picker per slot rather than free text: a symbol typed
+                // blind is unknowable to the user. Slot order *is* display
+                // order, so a plain indexed list keeps the two in sync.
+                ForEach(0..<MarketBoxSettings.maxCount, id: \.self) { slot in
+                    Picker("Ticker \(slot + 1)", selection: tickerBinding(slot: slot)) {
+                        Text("None").tag("")
+                        ForEach(pickableSymbols, id: \.self) { symbol in
+                            Text(MarketSymbolResolver.pickerLabel(for: symbol)).tag(symbol)
+                        }
+                        // Symbols from an older free-text file stay visible so
+                        // they can be changed, not silently lost.
+                        ForEach(configuredSymbolsNotInPicker, id: \.self) { symbol in
+                            Text(MarketSymbolResolver.pickerLabel(for: symbol)).tag(symbol)
+                        }
+                    }
+                }
                 Text("Crypto like BTC or ETH, fiat codes like USD or CAD, and GOLD for 1 gram of gold. Fiat and gold show price only.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                FetchStatusCaption(source: .marketbox, clearOn: settings.symbols)
+                FetchStatusCaption(source: .marketbox, clearOn: settings.tickers.joined(separator: ","))
             }
             Section("Display") {
                 Picker("Display currency", selection: $settings.displayCurrency) {
@@ -1419,5 +1434,30 @@ private struct MarketBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+    }
+
+    private var pickableSymbols: [String] {
+        MarketSymbolResolver.allPickableSymbols
+    }
+
+    /// A configured symbol the curated list does not offer (left over from a
+    /// free-text file) is appended to the first picker that holds it, so it
+    /// stays visible and changeable.
+    private var configuredSymbolsNotInPicker: [String] {
+        settings.tickers.filter { !pickableSymbols.contains($0) }
+    }
+
+    /// Slots are positional: an empty pick clears that slot and the remaining
+    /// tickers close up, so the widget never renders a gap.
+    private func tickerBinding(slot: Int) -> Binding<String> {
+        Binding(
+            get: { slot < settings.tickers.count ? settings.tickers[slot] : "" },
+            set: { newValue in
+                var tickers = settings.tickers
+                while tickers.count < MarketBoxSettings.maxCount { tickers.append("") }
+                tickers[slot] = newValue
+                settings.tickers = MarketBoxSettings.normalized(tickers)
+            }
+        )
     }
 }

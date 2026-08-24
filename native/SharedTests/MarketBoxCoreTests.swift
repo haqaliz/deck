@@ -9,6 +9,29 @@ final class MarketSymbolResolverTests: XCTestCase {
         XCTAssertEqual(MarketSymbolResolver.cryptoID(for: "ETH"), "ethereum")
         XCTAssertEqual(MarketSymbolResolver.cryptoID(for: "TON"), "the-open-network")
         XCTAssertEqual(MarketSymbolResolver.cryptoID(for: "USDT"), "tether")
+        XCTAssertEqual(MarketSymbolResolver.cryptoID(for: "USDC"), "usd-coin")
+        XCTAssertEqual(MarketSymbolResolver.cryptoID(for: "SOL"), "solana")
+        XCTAssertEqual(MarketSymbolResolver.cryptoID(for: "PEPE"), "pepe")
+        XCTAssertEqual(MarketSymbolResolver.cryptoID(for: "WBTC"), "wrapped-bitcoin")
+    }
+
+    /// Every pickable symbol must resolve — the picker list and the loader can
+    /// never disagree.
+    func testEveryPickableSymbolResolvesToAKind() {
+        let symbols = MarketSymbolResolver.allPickableSymbols
+        XCTAssertEqual(symbols.count, MarketSymbolResolver.cryptoIDs.count + MarketSymbolResolver.fiatISOs.count + 1)
+        XCTAssertTrue(symbols.contains("GOLD"))
+        XCTAssertTrue(symbols.contains("USD"))
+        for symbol in symbols {
+            XCTAssertNotNil(MarketSymbolResolver.kind(for: symbol), "\(symbol) must resolve")
+        }
+    }
+
+    func testPickerLabels() {
+        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "BTC"), "BTC — Bitcoin")
+        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "USD"), "USD — US Dollar")
+        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "GOLD"), "GOLD — Gold")
+        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "XRPX"), "XRPX", "unknown falls back to the symbol")
     }
 
     func testSymbolsAreCaseInsensitive() {

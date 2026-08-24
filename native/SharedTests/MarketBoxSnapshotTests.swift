@@ -10,7 +10,7 @@ final class MarketBoxSettingsDecodeTests: XCTestCase {
     func testEmptyFixtureDecodesAllDefaults() throws {
         let s = try decode(#"{}"#, as: MarketBoxSettings.self)
         XCTAssertEqual(s, MarketBoxSettings())
-        XCTAssertEqual(s.symbols, "BTC, ETH, USD, GOLD")
+        XCTAssertEqual(s.tickers, ["BTC", "ETH", "USD", "GOLD"])
         XCTAssertEqual(s.displayCurrency, .usd)
         XCTAssertEqual(s.tickerCount, 8)
         XCTAssertTrue(s.showDayChange)
@@ -18,12 +18,28 @@ final class MarketBoxSettingsDecodeTests: XCTestCase {
     }
 
     func testPartialFixtureKeepsDefaults() throws {
-        let s = try decode(#"{"symbols":"BTC","displayCurrency":"irt","tickerCount":5}"#, as: MarketBoxSettings.self)
-        XCTAssertEqual(s.symbols, "BTC")
+        let s = try decode(#"{"tickers":["BTC","CAD"],"displayCurrency":"irt","tickerCount":5}"#, as: MarketBoxSettings.self)
+        XCTAssertEqual(s.tickers, ["BTC", "CAD"])
         XCTAssertEqual(s.displayCurrency, .irt)
         XCTAssertEqual(s.tickerCount, 5)
         XCTAssertEqual(s.upColor, RGBA(.green), "absent colors keep defaults")
         XCTAssertEqual(s.downColor, RGBA(.red))
+    }
+
+    /// The widget shipped with a comma-separated free-text field; a file that
+    /// predates the picker keeps its list.
+    func testLegacySymbolsStringMigratesToTickers() throws {
+        let s = try decode(#"{"symbols":"btc, ETH, GOLD , ,x"}"#, as: MarketBoxSettings.self)
+        XCTAssertEqual(s.tickers, ["BTC", "ETH", "GOLD", "X"])
+    }
+
+    /// Hand-edited files must not duplicate, over-cap, or lowercase the list.
+    func testTickersAreNormalized() throws {
+        let many = ["btc", "BTC", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
+        let s = try decode(#"{"tickers": \#(manyJSON(many))}"#, as: MarketBoxSettings.self)
+        XCTAssertEqual(s.tickers.count, MarketBoxSettings.maxCount)
+        XCTAssertEqual(s.tickers.first, "BTC")
+        XCTAssertFalse(s.tickers.contains("btc"), "duplicates collapse")
     }
 
     /// A hand-edited file must not push more rows into the face than it can
@@ -36,8 +52,8 @@ final class MarketBoxSettingsDecodeTests: XCTestCase {
     }
 
     func testUnknownFutureFieldIsIgnored() throws {
-        let s = try decode(#"{"symbols":"ETH","somethingNew":true}"#, as: MarketBoxSettings.self)
-        XCTAssertEqual(s.symbols, "ETH")
+        let s = try decode(#"{"tickers":["ETH"],"somethingNew":true}"#, as: MarketBoxSettings.self)
+        XCTAssertEqual(s.tickers, ["ETH"])
     }
 
     /// A currency this build doesn't know (written by a newer build) falls back
@@ -47,10 +63,23 @@ final class MarketBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.displayCurrency, .usd)
     }
 
+    /// The one-way migration: encoding writes only the current shape.
+    func testEncodeDropsLegacySymbolsKey() throws {
+        let s = try decode(#"{"symbols":"BTC, ETH"}"#, as: MarketBoxSettings.self)
+        let data = try JSONEncoder().encode(s)
+        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        XCTAssertTrue(json.contains("\"tickers\""))
+        XCTAssertFalse(json.contains("\"symbols\""))
+    }
+
     func testDeckSettingsWithoutMarketBoxSectionStillLoads() throws {
         let s = try decode(#"{"shipbox":{"repo":"a/b"}}"#, as: DeckSettings.self)
         XCTAssertEqual(s.shipbox.repo, "a/b")
         XCTAssertEqual(s.marketbox, MarketBoxSettings())
+    }
+
+    private func manyJSON(_ symbols: [String]) -> String {
+        "[" + symbols.map { "\"\($0)\"" }.joined(separator: ",") + "]"
     }
 }
 

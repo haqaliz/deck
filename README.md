@@ -138,14 +138,17 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 - **ShipBox** needs a repo (`owner/repo`) and a GitHub token in settings —
   without a token nothing is fetched (the token goes only to api.github.com
   over TLS). Runs refresh via the agent every 60s.
-- **MarketBox** reads the tickers you type (comma-separated symbols: crypto
-  like `BTC`, fiat codes like `USD`/`CAD`, and `GOLD` for 1 gram of gold) and
-  prices them all in one display currency: **USD**, **IRR** (Iranian Rial) or
-  **IRT** (Toman — the free-market rate, IRT = IRR ÷ 10). Crypto rows carry a
-  24h change and a 7-day sparkline; fiat and gold rows are price-only. No API
-  key is needed anywhere; prices come from CoinGecko (crypto), gold-api (gold),
-  Wallex (free-market Toman) and open.er-api (fiat cross-rates), fetched by the
-  agent every 60s. Unknown symbols are shown, not dropped: `Unknown: XRPX`.
+- **MarketBox** tickers are picked from a list, not typed: twelve slots in the
+  MarketBox tab, each a picker over the curated symbols (crypto, fiat codes,
+  and `GOLD` for 1 gram of gold — slot order is display order). Prices are
+  priced in one display currency: **USD**, **IRR** (Iranian Rial) or **IRT**
+  (Toman — the free-market rate, IRT = IRR ÷ 10). The small widget shows up to
+  4 rows price-only; medium shows up to 4 with the 24h change and sparkline;
+  large shows up to 12. Crypto rows carry the change and sparkline; fiat and
+  gold rows are price-only. No API key is needed anywhere; prices come from
+  CoinGecko (crypto), gold-api (gold), Wallex (free-market Toman) and
+  open.er-api (fiat cross-rates), fetched by the agent every 60s. A symbol
+  outside the curated list is shown, not dropped: `Unknown: XRPX`.
 - **TaskBox** needs an Azure DevOps organization, a project and a personal
   access token in settings — without all three nothing is fetched (the token
   goes only to dev.azure.com over TLS, and a read-only *Work Items (Read)*

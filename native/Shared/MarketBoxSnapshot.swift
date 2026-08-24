@@ -191,7 +191,8 @@ enum HostMarketLoader {
     /// row at all could be priced — the agent then records a classified
     /// outcome and the widget keeps its last-good snapshot.
     static func fetch(settings: MarketBoxSettings) async throws -> MarketSnapshot {
-        let symbols = MarketSymbolResolver.normalizedSymbols(from: settings.symbols)
+        // Settings normalize on decode (uppercase, dedupe, cap at maxCount).
+        let symbols = settings.tickers
         guard !symbols.isEmpty else { throw MarketLoaderError.notConfigured }
 
         let display = settings.displayCurrency

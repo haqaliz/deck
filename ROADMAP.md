@@ -217,6 +217,16 @@ the next slate. Ordered by priority, not by cost.
       the loader only fails when *no* row at all could be priced; partial
       results render with a note. Sparklines are downsampled to 30 points in
       the loader (the CalBox archive-size lesson).
+      **Layout (user revision 2026-08-24):** small = up to 4 rows **price-only**
+      (no day change, no sparkline); medium = up to 4 rows with change +
+      sparkline; large = up to 12 rows (the `tickerCount` setting). Tickers are
+      **picked from a curated list** in settings (twelve slot pickers, the
+      ClockBox pattern) instead of typed free text — a blind-typed symbol was
+      unknowable to the user; the old `symbols` string migrates to `tickers`.
+      **Trap found live:** the first face drew its sparklines with Swift
+      Charts and WidgetKit **silently dropped the widget from the gallery**
+      (see the CLAUDE.md note) — sparklines are drawn with a plain `Path`
+      instead.
       **Open follow-ups:** fiat/gold 24h % + sparklines (needs a history
       source), stocks/indices, the Toman rate's own 24h change on the USD row
       (Wallex `24h_ch`, already parsed), a live `/coins/list` lookup instead

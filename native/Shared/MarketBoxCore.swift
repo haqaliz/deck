@@ -10,14 +10,15 @@ import Foundation
 // MARK: - Symbol resolution
 
 enum MarketSymbolResolver {
-    /// Curated crypto symbol → CoinGecko id. Small on purpose; a symbol outside
-    /// the map is surfaced as "Unknown", never silently dropped. Grows as users
-    /// ask for coins.
+    /// Curated crypto symbol → CoinGecko id. A symbol outside the map is
+    /// surfaced as "Unknown", never silently dropped. This map is also the
+    /// settings picker's source, so the two can never disagree.
     static let cryptoIDs: [String: String] = [
         "BTC": "bitcoin",
         "ETH": "ethereum",
         "TON": "the-open-network",
         "USDT": "tether",
+        "USDC": "usd-coin",
         "SOL": "solana",
         "XRP": "ripple",
         "DOGE": "dogecoin",
@@ -28,6 +29,54 @@ enum MarketSymbolResolver {
         "AVAX": "avalanche-2",
         "LINK": "chainlink",
         "TRX": "tron",
+        "BCH": "bitcoin-cash",
+        "SHIB": "shiba-inu",
+        "PEPE": "pepe",
+        "WIF": "dogwifcoin",
+        "BONK": "bonk",
+        "NEAR": "near",
+        "APT": "aptos",
+        "ARB": "arbitrum",
+        "OP": "optimism",
+        "SUI": "sui",
+        "SEI": "sei-network",
+        "TIA": "celestia",
+        "INJ": "injective-protocol",
+        "FIL": "filecoin",
+        "ATOM": "cosmos",
+        "UNI": "uniswap",
+        "AAVE": "aave",
+        "MKR": "maker",
+        "DAI": "dai",
+        "XLM": "stellar",
+        "ETC": "ethereum-classic",
+        "VET": "vechain",
+        "ALGO": "algorand",
+        "ICP": "internet-computer",
+        "HBAR": "hedera-hashgraph",
+        "CRO": "crypto-com-chain",
+        "JUP": "jupiter-exchange-solana",
+        "WBTC": "wrapped-bitcoin",
+    ]
+
+    /// Display names for the settings picker; crypto names are friendly,
+    /// not CoinGecko's exact strings.
+    static let cryptoNames: [String: String] = [
+        "BTC": "Bitcoin", "ETH": "Ethereum", "TON": "Toncoin",
+        "USDT": "Tether", "USDC": "USD Coin", "SOL": "Solana",
+        "XRP": "XRP", "DOGE": "Dogecoin", "ADA": "Cardano",
+        "BNB": "BNB", "LTC": "Litecoin", "DOT": "Polkadot",
+        "AVAX": "Avalanche", "LINK": "Chainlink", "TRX": "TRON",
+        "BCH": "Bitcoin Cash", "SHIB": "Shiba Inu", "PEPE": "Pepe",
+        "WIF": "dogwifcoin", "BONK": "Bonk", "NEAR": "NEAR Protocol",
+        "APT": "Aptos", "ARB": "Arbitrum", "OP": "Optimism",
+        "SUI": "Sui", "SEI": "Sei", "TIA": "Celestia",
+        "INJ": "Injective", "FIL": "Filecoin", "ATOM": "Cosmos",
+        "UNI": "Uniswap", "AAVE": "Aave", "MKR": "Maker",
+        "DAI": "Dai", "XLM": "Stellar", "ETC": "Ethereum Classic",
+        "VET": "VeChain", "ALGO": "Algorand", "ICP": "Internet Computer",
+        "HBAR": "Hedera", "CRO": "Cronos", "JUP": "Jupiter",
+        "WBTC": "Wrapped Bitcoin",
     ]
 
     /// Curated fiat ISO allowlist — these resolve to the `fiat` kind and are
@@ -45,6 +94,26 @@ enum MarketSymbolResolver {
 
     /// `GOLD` means 1 gram of gold (spot per troy ounce ÷ 31.1035).
     static let goldSymbol = "GOLD"
+
+    /// Every symbol the settings picker offers, in display order: crypto,
+    /// then GOLD, then the fiat codes.
+    static var allPickableSymbols: [String] {
+        Array(cryptoIDs.keys).sorted() + [goldSymbol] + Array(fiatISOs).sorted()
+    }
+
+    /// "BTC → Bitcoin", "USD → US Dollar", "GOLD → Gold"; falls back to the
+    /// symbol itself when there is no name.
+    static func pickerLabel(for symbol: String) -> String {
+        let s = symbol.uppercased()
+        let name: String
+        switch kind(for: s) {
+        case .crypto: name = cryptoNames[s] ?? ""
+        case .fiat: name = fiatNames[s] ?? ""
+        case .gold: name = "Gold"
+        case nil: name = ""
+        }
+        return name.isEmpty ? s : "\(s) — \(name)"
+    }
 
     static func cryptoID(for symbol: String) -> String? {
         cryptoIDs[symbol.uppercased()]

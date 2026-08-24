@@ -1,6 +1,5 @@
 import WidgetKit
 import SwiftUI
-import Charts
 
 // MARK: - Timeline entry
 
@@ -122,11 +121,11 @@ struct MarketBoxWidgetEntryView: View {
             if entry.available {
                 switch family {
                 case .systemSmall:
-                    smallView
+                    listView(maxCount: min(entry.settings.tickerCount, 4), showChange: false)
                 case .systemMedium:
-                    listView(maxCount: min(entry.settings.tickerCount, 4))
+                    listView(maxCount: min(entry.settings.tickerCount, 4), showChange: true)
                 default:
-                    listView(maxCount: entry.settings.tickerCount)
+                    listView(maxCount: entry.settings.tickerCount, showChange: true)
                 }
             } else {
                 unavailableView
@@ -149,24 +148,9 @@ struct MarketBoxWidgetEntryView: View {
         }
     }
 
-    private var smallView: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            headerLine
-            ForEach(Array(entry.rows.prefix(2).enumerated()), id: \.offset) { _, row in
-                rowView(row, showSparkline: false)
-            }
-            if entry.rows.isEmpty, let note = entry.note {
-                Text(note)
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func listView(maxCount: Int) -> some View {
+    /// Small is price-only (no day change, no sparkline) to keep 4 rows
+    /// readable; medium and large carry the change and sparkline.
+    private func listView(maxCount: Int, showChange: Bool) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             headerLine
             if entry.rows.isEmpty {
@@ -175,7 +159,7 @@ struct MarketBoxWidgetEntryView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(Array(entry.rows.prefix(maxCount).enumerated()), id: \.offset) { _, row in
-                    rowView(row, showSparkline: true)
+                    rowView(row, showChange: showChange)
                 }
             }
             if let note = entry.note {
@@ -217,7 +201,7 @@ struct MarketBoxWidgetEntryView: View {
         }
     }
 
-    private func rowView(_ row: MarketRow, showSparkline: Bool) -> some View {
+    private func rowView(_ row: MarketRow, showChange: Bool) -> some View {
         HStack(spacing: 6) {
             Text(row.symbol)
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -230,17 +214,17 @@ struct MarketBoxWidgetEntryView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 2)
-            if showSparkline, entry.settings.showSparklines, let sparkline = row.sparkline {
+            if showChange, entry.settings.showSparklines, let sparkline = row.sparkline {
                 sparklineView(sparkline)
-                    .frame(width: 36, height: 16)
+                    .frame(width: 30, height: 12)
             }
-            changeLabel(row)
+            changeLabel(row, showChange: showChange)
         }
     }
 
     @ViewBuilder
-    private func changeLabel(_ row: MarketRow) -> some View {
-        if entry.settings.showDayChange, row.kind == .crypto, let pct = row.dayChangePct {
+    private func changeLabel(_ row: MarketRow, showChange: Bool) -> some View {
+        if showChange, entry.settings.showDayChange, row.kind == .crypto, let pct = row.dayChangePct {
             Text(MarketPriceFormatter.change(pct) ?? "–")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
@@ -260,18 +244,12 @@ struct MarketBoxWidgetEntryView: View {
         return .secondary
     }
 
+    /// Drawn with a plain Path, not Swift Charts: a Chart inside a widget row
+    /// made WidgetKit silently drop the whole widget from the gallery (no
+    /// crash report, no log). Path is plain SwiftUI and is gallery-safe.
     private func sparklineView(_ points: [Double]) -> some View {
-        Chart(Array(points.enumerated()), id: \.offset) { index, value in
-            LineMark(
-                x: .value("Time", index),
-                y: .value("Price", value)
-            )
-            .foregroundStyle(entry.settings.accentColor.color)
-            .lineStyle(StrokeStyle(lineWidth: 1.25))
-            .interpolationMethod(.catmullRom)
-        }
-        .chartXAxis(.hidden)
-        .chartYAxis(.hidden)
+        MiniSparkline(points: points)
+            .stroke(entry.settings.accentColor.color, style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round))
     }
 
     private func timeString(_ date: Date) -> String {
@@ -284,4 +262,29 @@ struct MarketBoxWidgetEntryView: View {
         formatter.dateFormat = "HH:mm"
         return formatter
     }()
+}
+
+/// Normalised mini line chart: y spans min...max of the points, x is even.
+private struct MiniSparkline: Shape {
+    let points: [Double]
+
+    func path(in rect: CGRect) -> Path {
+        guard points.count > 1 else { return Path() }
+        let minValue = points.min() ?? 0
+        let maxValue = points.max() ?? 1
+        let range = max(maxValue - minValue, 1e-9)
+
+        var path = Path()
+        for (index, value) in points.enumerated() {
+            let x = rect.minX + rect.width * CGFloat(index) / CGFloat(points.count - 1)
+            let y = rect.minY + rect.height * (1 - CGFloat((value - minValue) / range))
+            let point = CGPoint(x: x, y: y)
+            if index == 0 {
+                path.move(to: point)
+            } else {
+                path.addLine(to: point)
+            }
+        }
+        return path
+    }
 }
