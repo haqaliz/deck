@@ -175,15 +175,11 @@ struct MarketBoxWidgetEntryView: View {
 
     private var headerLine: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            HStack(spacing: 4) {
-                Text("MARKETBOX")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .tracking(1)
-                Text(entry.displayCurrency.label)
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(entry.settings.accentColor.color)
-            }
+            // No widget title — the currency label is the only leading element;
+            // it is data (what the rows are priced in), not a name.
+            Text(entry.displayCurrency.label)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(entry.settings.accentColor.color)
             Spacer(minLength: 4)
             if let chip = entry.chip {
                 Text(chip)
