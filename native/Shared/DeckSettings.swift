@@ -757,8 +757,6 @@ struct MarketBoxSettings: Codable, Equatable {
     /// Day change applies to crypto rows on medium/large only — the small face
     /// is price-only, and fiat/gold always show "–".
     var showDayChange = true
-    /// Sparklines apply to crypto rows on medium/large.
-    var showSparklines = true
     var upColor = RGBA(.green)
     var downColor = RGBA(.red)
     var accentColor = RGBA(.blue)
@@ -785,7 +783,6 @@ struct MarketBoxSettings: Codable, Equatable {
         // rows into the face than it can lay out.
         tickerCount = min(max(try c.decodeIfPresent(Int.self, forKey: .tickerCount) ?? 8, 1), Self.maxCount)
         showDayChange = try c.decodeIfPresent(Bool.self, forKey: .showDayChange) ?? true
-        showSparklines = try c.decodeIfPresent(Bool.self, forKey: .showSparklines) ?? true
         upColor = try c.decodeIfPresent(RGBA.self, forKey: .upColor) ?? RGBA(.green)
         downColor = try c.decodeIfPresent(RGBA.self, forKey: .downColor) ?? RGBA(.red)
         accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA(.blue)
@@ -800,7 +797,6 @@ struct MarketBoxSettings: Codable, Equatable {
         try c.encode(displayCurrency, forKey: .displayCurrency)
         try c.encode(tickerCount, forKey: .tickerCount)
         try c.encode(showDayChange, forKey: .showDayChange)
-        try c.encode(showSparklines, forKey: .showSparklines)
         try c.encode(upColor, forKey: .upColor)
         try c.encode(downColor, forKey: .downColor)
         try c.encode(accentColor, forKey: .accentColor)
@@ -821,7 +817,7 @@ struct MarketBoxSettings: Codable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case tickers, displayCurrency, tickerCount
-        case showDayChange, showSparklines, upColor, downColor, accentColor
+        case showDayChange, upColor, downColor, accentColor
         case legacySymbols = "symbols"
     }
 }

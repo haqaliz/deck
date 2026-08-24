@@ -145,10 +145,11 @@ Do not delete the container; see the trap below.
   documented `log show ... | grep -c <Name>BoxWidget` check cannot be used
   either — the unified log can be entirely empty on a machine. Bisect by
   stripping the widget to a minimal clone (it enumerates), then restore parts
-  until it disappears again. **Fix: draw sparklines with a plain
-  `Path`/`Shape`** (MarketBox's `MiniSparkline`) — SwiftUI Path is
-  gallery-safe; the other Deck widgets that use Charts render them in
-  full-width chart areas, which is fine.
+  until it disappears again. **Fix: don't use Swift Charts in widget faces at
+  all** — MarketBox's sparkline-first face hit this; the fix and the user's
+  own revision both removed Charts (MarketBox ships sparkline-free; the other
+  Deck widgets that use Charts render them in full-width chart areas, which
+  is fine).
 - **Adding a widget requires a version bump.** WidgetKit caches the widget
   descriptor set per extension version, so a new widget added without raising
   `CFBundleShortVersionString` / `CFBundleVersion` in `project.yml` never

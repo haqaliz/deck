@@ -14,7 +14,6 @@ final class MarketBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.displayCurrency, .usd)
         XCTAssertEqual(s.tickerCount, 8)
         XCTAssertTrue(s.showDayChange)
-        XCTAssertTrue(s.showSparklines)
     }
 
     func testPartialFixtureKeepsDefaults() throws {

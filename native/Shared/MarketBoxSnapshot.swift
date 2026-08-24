@@ -230,10 +230,6 @@ enum HostMarketLoader {
 
         var quotesByID: [String: CryptoQuote] = [:]
         for quote in crypto ?? [] where !quote.id.isEmpty {
-            var quote = quote
-            if let sparkline = quote.sparkline {
-                quote.sparkline = MarketSparkline.downsample(sparkline)
-            }
             quotesByID[quote.id] = quote
         }
 
@@ -263,7 +259,7 @@ enum HostMarketLoader {
     private static func fetchCrypto(symbols: [String]) async throws -> [CryptoQuote] {
         let ids = symbols.compactMap { MarketSymbolResolver.cryptoID(for: $0) }
         let query = ids.joined(separator: ",")
-        let url = URL(string: "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=\(query)&price_change_percentage=24h&sparkline=true")!
+        let url = URL(string: "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=\(query)&price_change_percentage=24h")!
         let data = try await get(url)
         guard let quotes = CoinGeckoMarketsParser.parse(data) else {
             throw MarketLoaderError.invalidPayload

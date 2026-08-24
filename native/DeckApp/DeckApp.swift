@@ -1424,7 +1424,6 @@ private struct MarketBoxSettingsView: View {
                     .foregroundStyle(.secondary)
                 Stepper("Rows (large face): \(settings.tickerCount)", value: $settings.tickerCount, in: 1...MarketBoxSettings.maxCount)
                 Toggle("Show day change", isOn: $settings.showDayChange)
-                Toggle("Show sparklines", isOn: $settings.showSparklines)
             }
             Section("Colors") {
                 ColorPicker("Up color", selection: $settings.upColor.color)

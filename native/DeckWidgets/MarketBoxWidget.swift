@@ -37,7 +37,7 @@ struct MarketBoxProvider: TimelineProvider {
             chip: nil,
             displayCurrency: .irt,
             rows: [
-                MarketRow(symbol: "BTC", name: "Bitcoin", kind: .crypto, price: 15_600_000_000, dayChangePct: 0.9, sparkline: [1, 1.2, 1.1, 1.4, 1.3, 1.6]),
+                MarketRow(symbol: "BTC", name: "Bitcoin", kind: .crypto, price: 15_600_000_000, dayChangePct: 0.9, sparkline: nil),
                 MarketRow(symbol: "USD", name: "US Dollar", kind: .fiat, price: 201_352, dayChangePct: nil, sparkline: nil),
                 MarketRow(symbol: "GOLD", name: "Gold", kind: .gold, price: 6_475, dayChangePct: nil, sparkline: nil),
             ],
@@ -148,8 +148,8 @@ struct MarketBoxWidgetEntryView: View {
         }
     }
 
-    /// Small is price-only (no day change, no sparkline) to keep 4 rows
-    /// readable; medium and large carry the change and sparkline.
+    /// Small is price-only (no day change) to keep 4 rows readable; medium and
+    /// large carry the change.
     private func listView(maxCount: Int, showChange: Bool) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             headerLine
@@ -214,10 +214,6 @@ struct MarketBoxWidgetEntryView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 2)
-            if showChange, entry.settings.showSparklines, let sparkline = row.sparkline {
-                sparklineView(sparkline)
-                    .frame(width: 30, height: 12)
-            }
             changeLabel(row, showChange: showChange)
         }
     }
@@ -244,14 +240,6 @@ struct MarketBoxWidgetEntryView: View {
         return .secondary
     }
 
-    /// Drawn with a plain Path, not Swift Charts: a Chart inside a widget row
-    /// made WidgetKit silently drop the whole widget from the gallery (no
-    /// crash report, no log). Path is plain SwiftUI and is gallery-safe.
-    private func sparklineView(_ points: [Double]) -> some View {
-        MiniSparkline(points: points)
-            .stroke(entry.settings.accentColor.color, style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round))
-    }
-
     private func timeString(_ date: Date) -> String {
         Self.timeFormatter.string(from: date)
     }
@@ -262,29 +250,4 @@ struct MarketBoxWidgetEntryView: View {
         formatter.dateFormat = "HH:mm"
         return formatter
     }()
-}
-
-/// Normalised mini line chart: y spans min...max of the points, x is even.
-private struct MiniSparkline: Shape {
-    let points: [Double]
-
-    func path(in rect: CGRect) -> Path {
-        guard points.count > 1 else { return Path() }
-        let minValue = points.min() ?? 0
-        let maxValue = points.max() ?? 1
-        let range = max(maxValue - minValue, 1e-9)
-
-        var path = Path()
-        for (index, value) in points.enumerated() {
-            let x = rect.minX + rect.width * CGFloat(index) / CGFloat(points.count - 1)
-            let y = rect.minY + rect.height * (1 - CGFloat((value - minValue) / range))
-            let point = CGPoint(x: x, y: y)
-            if index == 0 {
-                path.move(to: point)
-            } else {
-                path.addLine(to: point)
-            }
-        }
-        return path
-    }
 }

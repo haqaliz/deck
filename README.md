@@ -43,7 +43,7 @@ native colors, corners and materials, at three sizes each.
 | **TaskBox** | Azure DevOps work items assigned to you (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
 | **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps in one queue: counts, provider-tagged rows, drafts marked; click a row to open the PR; a failed fetch names the provider |
-| **MarketBox** | live prices for your tickers — crypto (with 24h change and a 7-day sparkline), fiat like USD/CAD, and gold per gram — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
+| **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, and gold per gram — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
 
 All fourteen come in **small / medium / large** sizes.
 
@@ -143,9 +143,9 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   and `GOLD` for 1 gram of gold — slot order is display order). Prices are
   priced in one display currency: **USD**, **IRR** (Iranian Rial) or **IRT**
   (Toman — the free-market rate, IRT = IRR ÷ 10). The small widget shows up to
-  4 rows price-only; medium shows up to 4 with the 24h change and sparkline;
-  large shows up to 12. Crypto rows carry the change and sparkline; fiat and
-  gold rows are price-only. No API key is needed anywhere; prices come from
+  4 rows price-only; medium shows up to 4 with the 24h change; large shows up
+  to 12. Crypto rows carry the change; fiat and gold rows are price-only. No
+  API key is needed anywhere; prices come from
   CoinGecko (crypto), gold-api (gold), Wallex (free-market Toman) and
   open.er-api (fiat cross-rates), fetched by the agent every 60s. A symbol
   outside the curated list is shown, not dropped: `Unknown: XRPX`.

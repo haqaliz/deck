@@ -229,26 +229,6 @@ final class MarketBuilderTests: XCTestCase {
     }
 }
 
-final class MarketSparklineTests: XCTestCase {
-    func testShortSeriesIsUntouched() {
-        XCTAssertEqual(MarketSparkline.downsample([1, 2, 3], maxPoints: 30), [1, 2, 3])
-    }
-
-    func testLongSeriesReducesToMaxPoints() {
-        let points = (0..<167).map { Double($0) }
-        let reduced = MarketSparkline.downsample(points)
-        XCTAssertEqual(reduced.count, 30)
-        XCTAssertEqual(reduced.last, points.last, "the newest point survives")
-        XCTAssertEqual(reduced.first, points.first)
-    }
-
-    func testMonotonicSeriesStaysMonotonic() {
-        let points = (0..<167).map { Double($0) }
-        let reduced = MarketSparkline.downsample(points)
-        XCTAssertEqual(reduced, reduced.sorted())
-    }
-}
-
 final class MarketPriceFormatterTests: XCTestCase {
     func testUsdPricesGetDollarPrefixAndTiers() {
         XCTAssertEqual(MarketPriceFormatter.price(77_850, currency: .usd), "$77,850")
