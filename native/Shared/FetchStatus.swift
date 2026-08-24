@@ -21,6 +21,10 @@ enum FetchSource: String, Codable, CaseIterable {
     /// keys so a GitHub failure never clears an Azure success and each
     /// settings sub-tab shows its own sentence under its own fields.
     case prboxGitHub, prboxAzure
+    /// MarketBox: one key for four providers. The loader only fails the fetch
+    /// when no row at all could be priced, so a single source going down reads
+    /// as a partial list with a note, not as a dead widget.
+    case marketbox
 }
 
 enum FetchOutcome: String, Codable {
@@ -122,6 +126,15 @@ enum FetchClassifier {
             case .serverError(let code): return outcome(forStatusCode: code)
             case .transport: return .unreachable
             }
+        case let error as MarketLoaderError:
+            switch error {
+            case .notConfigured: return .notConfigured
+            // Every configured symbol resolved to no known kind — user-fixable.
+            case .invalidSymbols: return .authOrTarget
+            case .serverError(let code): return outcome(forStatusCode: code)
+            case .transport: return .unreachable
+            case .invalidPayload: return .badResponse
+            }
         default:
             // Never accuse the user of misconfiguring something over an error
             // we don't recognise.
@@ -148,6 +161,7 @@ enum FetchStatusCopy {
             case .opencodeRemote: return "Paste your opencode token"
             case .taskbox: return "Add org, project + PAT in settings"
             case .calbox: return "Pick a calendar in settings"
+            case .marketbox: return "Add symbols in settings"
             }
         case .authOrTarget:
             switch source {
@@ -158,6 +172,7 @@ enum FetchStatusCopy {
             case .opencodeRemote: return "Check server URL + token"
             case .taskbox: return "Check org, project + PAT"
             case .calbox: return "Allow calendar access"
+            case .marketbox: return "Check the symbols"
             }
         case .unreachable:
             switch source {
@@ -169,6 +184,7 @@ enum FetchStatusCopy {
             case .taskbox: return "Can't reach Azure DevOps"
             // No network in this path — kept only so the switch is total.
             case .calbox: return "Can't read the calendar"
+            case .marketbox: return "Can't reach the price sources"
             }
         case .badResponse:
             switch source {
@@ -179,6 +195,7 @@ enum FetchStatusCopy {
             case .opencodeRemote: return "Unexpected server response"
             case .taskbox: return "Unexpected Azure DevOps response"
             case .calbox: return "Couldn't read the calendar"
+            case .marketbox: return "Unexpected market response"
             }
         }
     }
@@ -199,6 +216,7 @@ enum FetchStatusCopy {
             case .opencodeRemote: return "Remote mode fetches nothing until you paste your own token."
             case .taskbox: return "Nothing is fetched until an organization, a project and a token are all set."
             case .calbox: return "Nothing is read until at least one calendar is ticked."
+            case .marketbox: return "Nothing is fetched until at least one symbol is set."
             }
         case .authOrTarget:
             switch source {
@@ -216,6 +234,8 @@ enum FetchStatusCopy {
                 return "Azure DevOps rejected the request: check the organization and project names, and that the PAT is valid and not expired."
             case .calbox:
                 return "macOS is blocking calendar access. Grant it in System Settings → Privacy & Security → Calendars, for both Deck and DeckAgent."
+            case .marketbox:
+                return "The price sources didn't recognise a symbol: check the ticker list (crypto symbols like BTC, fiat codes like USD or CAD, and GOLD for 1 gram of gold)."
             }
         case .unreachable:
             switch source {
@@ -226,6 +246,7 @@ enum FetchStatusCopy {
             case .opencodeRemote: return "Couldn't reach the opencode server — check it is running and reachable."
             case .taskbox: return "Couldn't reach dev.azure.com — offline, rate-limited, or Azure DevOps is down."
             case .calbox: return "Couldn't read the calendar store. Retrying every minute."
+            case .marketbox: return "Couldn't reach a price source — offline, rate-limited, or a source is down. Retrying every minute."
             }
         case .badResponse:
             switch source {
@@ -236,6 +257,7 @@ enum FetchStatusCopy {
             case .opencodeRemote: return "Reached the server, but the response couldn't be read. Retrying every minute."
             case .taskbox: return "Reached Azure DevOps, but the response couldn't be read. Retrying every minute."
             case .calbox: return "Reached the calendar store but couldn't read it. Retrying every minute."
+            case .marketbox: return "Reached the price sources, but the response couldn't be read. Retrying every minute."
             }
         }
     }

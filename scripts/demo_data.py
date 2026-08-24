@@ -122,10 +122,30 @@ def processes(d):
         proc["name"] = cycle(PROCESSES, i)
 
 
+DEMO_MARKET_ROWS = [
+    {"symbol": "BTC", "name": "Bitcoin", "kind": "crypto", "price": 77850.0,
+     "dayChangePct": 1.02, "sparkline": [1.0, 1.2, 1.1, 1.4, 1.3, 1.6]},
+    {"symbol": "ETH", "name": "Ethereum", "kind": "crypto", "price": 2468.0,
+     "dayChangePct": -0.4, "sparkline": [1.0, 0.9, 1.1, 0.8, 1.0, 0.95]},
+    {"symbol": "USD", "name": "US Dollar", "kind": "fiat", "price": 1.0,
+     "dayChangePct": None, "sparkline": None},
+    {"symbol": "GOLD", "name": "Gold", "kind": "gold", "price": 149.8,
+     "dayChangePct": None, "sparkline": None},
+]
+
+
+def marketbox(d):
+    # The ticker list is the personal part; prices are public market data, but
+    # a fixed demo set keeps the screenshot reproducible.
+    d["displayCurrency"] = "usd"
+    d["rows"] = DEMO_MARKET_ROWS
+    d["note"] = None
+
+
 print("Sanitizing snapshots:")
 for name, fn in [
     ("calbox", calbox), ("taskbox", taskbox), ("clipbox", clipbox),
     ("gitbox", gitbox), ("shipbox", shipbox), ("devbox", devbox),
-    ("weather", weather), ("processes", processes),
+    ("weather", weather), ("processes", processes), ("marketbox", marketbox),
 ]:
     edit(name, fn)

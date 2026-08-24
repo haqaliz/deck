@@ -4,7 +4,7 @@
 
 # Deck
 
-**Thirteen small, beautiful macOS desktop widgets — one native app, no floating windows.**
+**Fourteen small, beautiful macOS desktop widgets — one native app, no floating windows.**
 
 Deck adds real WidgetKit widgets to your desktop: your machine, your network, your
 battery, your commits, your ports, your calendar, your tasks, your builds and your
@@ -43,8 +43,9 @@ native colors, corners and materials, at three sizes each.
 | **TaskBox** | Azure DevOps work items assigned to you (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
 | **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps in one queue: counts, provider-tagged rows, drafts marked; click a row to open the PR; a failed fetch names the provider |
+| **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, and gold per gram — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
 
-All thirteen come in **small / medium / large** sizes.
+All fourteen come in **small / medium / large** sizes.
 
 ## Install
 
@@ -137,6 +138,18 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 - **ShipBox** needs a repo (`owner/repo`) and a GitHub token in settings —
   without a token nothing is fetched (the token goes only to api.github.com
   over TLS). Runs refresh via the agent every 60s.
+- **MarketBox** tickers are picked from a list, not typed: twelve slots in the
+  MarketBox tab, each a picker over the curated symbols (crypto, fiat codes,
+  and `GOLD` for 1 gram of gold — slot order is display order). Prices are
+  priced in one display currency, picked from a list: **USD**, **IRR**
+  (Iranian Rial), **IRT** (Toman — the free-market rate, IRT = IRR ÷ 10),
+  **CAD**, **EUR** or **AED** (live FX rate). The small widget shows up to
+  4 rows price-only; medium shows up to 5 with the 24h change; large shows up
+  to 12. Crypto rows carry the change; fiat and gold rows are price-only. No
+  API key is needed anywhere; prices come from
+  CoinGecko (crypto), gold-api (gold), Wallex (free-market Toman) and
+  open.er-api (fiat cross-rates), fetched by the agent every 60s. A symbol
+  outside the curated list is shown, not dropped: `Unknown: XRPX`.
 - **TaskBox** needs an Azure DevOps organization, a project and a personal
   access token in settings — without all three nothing is fetched (the token
   goes only to dev.azure.com over TLS, and a read-only *Work Items (Read)*
@@ -195,7 +208,7 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 - **Self-sampled widgets** (LiveBox/NetBox/BatBox) read mach, getifaddrs and
   IOKit directly inside the widget — no other process needed.
 - **Agent-pumped data** (OpenBox, process list, GitBox, ClipBox, weather,
-  ShipBox, TaskBox, CalBox): the widget
+  ShipBox, TaskBox, CalBox, PRBox, MarketBox): the widget
   sandbox forbids subprocesses and reading other apps' data, so a silent CLI
   (`DeckAgent`, embedded in the app) runs every 60s via a LaunchAgent and
   writes snapshots the widgets render. The top-process snapshot is sampled
@@ -217,6 +230,10 @@ Deck reads personal data, so here is exactly what happens to it.
 | ShipBox | your GitHub token, your `owner/repo` | `api.github.com` |
 | TaskBox | your Azure DevOps PAT, org and project | `dev.azure.com` |
 | OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
+| MarketBox | the symbols you typed (e.g. `BTC, USD, GOLD`) | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com` |
+
+MarketBox sends only the ticker symbols you typed — no tokens, no identity, and
+it never sends anything on behalf of a row's price.
 
 Nothing else makes a network request. There is no analytics, no telemetry, no
 crash reporting, and no Deck server — the project has no backend at all. The

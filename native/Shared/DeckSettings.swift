@@ -45,6 +45,7 @@ struct DeckSettings: Codable, Equatable {
     var taskbox = TaskBoxSettings()
     var calbox = CalBoxSettings()
     var prbox = PRBoxSettings()
+    var marketbox = MarketBoxSettings()
     var agentAtLogin = true
 
     init() {}
@@ -65,7 +66,8 @@ struct DeckSettings: Codable, Equatable {
     /// that no longer exists.
     enum CodingKeys: String, CodingKey {
         case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
-        case weatherbox, clockbox, shipbox, taskbox, calbox, prbox, agentAtLogin
+        case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
+        case marketbox, agentAtLogin
     }
 
     /// Decode-only. See `LegacyHomeBoxSettings`.
@@ -103,6 +105,7 @@ struct DeckSettings: Codable, Equatable {
         taskbox = try c.decodeIfPresent(TaskBoxSettings.self, forKey: .taskbox) ?? TaskBoxSettings()
         calbox = try c.decodeIfPresent(CalBoxSettings.self, forKey: .calbox) ?? CalBoxSettings()
         prbox = try c.decodeIfPresent(PRBoxSettings.self, forKey: .prbox) ?? PRBoxSettings()
+        marketbox = try c.decodeIfPresent(MarketBoxSettings.self, forKey: .marketbox) ?? MarketBoxSettings()
         agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
     }
 
@@ -734,5 +737,87 @@ struct PRBoxSettings: Codable, Equatable {
         prCount = min(max(rawCount, Self.rowCountRange.lowerBound), Self.rowCountRange.upperBound)
         mineColor = try c.decodeIfPresent(RGBA.self, forKey: .mineColor) ?? RGBA(.blue)
         reviewColor = try c.decodeIfPresent(RGBA.self, forKey: .reviewColor) ?? RGBA(.orange)
+    }
+}
+
+// MARK: - MarketBox
+
+struct MarketBoxSettings: Codable, Equatable {
+    /// The configured symbols in display order, deduped and uppercased; at
+    /// most `maxCount`. Picked from the curated list in the settings tab —
+    /// the free-text field was retired because symbols typed blind were
+    /// unknowable to the user.
+    var tickers = ["BTC", "ETH", "USD", "GOLD"]
+    /// The one display currency every row is priced in.
+    var displayCurrency = MarketCurrency.usd
+    /// Rows on the large face (1...12). Medium shows at most 4, small at most
+    /// 4 — past that the rows are clipped by the frame rather than by the
+    /// setting.
+    var tickerCount = 8
+    /// Day change applies to crypto rows on medium/large only — the small face
+    /// is price-only, and fiat/gold always show "–".
+    var showDayChange = true
+    var upColor = RGBA(.green)
+    var downColor = RGBA(.red)
+    var accentColor = RGBA(.blue)
+
+    static let maxCount = 12
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        // `symbols` was the comma-separated free-text shape this widget shipped
+        // with. Carry it over rather than silently resetting someone's list;
+        // a file with neither key keeps the default list.
+        let legacy = try c.decodeIfPresent(String.self, forKey: .legacySymbols)
+        if let decoded = try c.decodeIfPresent([String].self, forKey: .tickers) {
+            tickers = Self.normalized(decoded)
+        } else if let legacy {
+            tickers = MarketSymbolResolver.normalizedSymbols(from: legacy)
+        } else {
+            tickers = ["BTC", "ETH", "USD", "GOLD"]
+        }
+        displayCurrency = MarketCurrency(rawValue: try c.decodeIfPresent(String.self, forKey: .displayCurrency) ?? "") ?? .usd
+        // Floor at 1, cap at maxCount so a hand-edited file cannot push more
+        // rows into the face than it can lay out.
+        tickerCount = min(max(try c.decodeIfPresent(Int.self, forKey: .tickerCount) ?? 8, 1), Self.maxCount)
+        showDayChange = try c.decodeIfPresent(Bool.self, forKey: .showDayChange) ?? true
+        upColor = try c.decodeIfPresent(RGBA.self, forKey: .upColor) ?? RGBA(.green)
+        downColor = try c.decodeIfPresent(RGBA.self, forKey: .downColor) ?? RGBA(.red)
+        accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA(.blue)
+    }
+
+    /// Writes only the current shape: the legacy `symbols` key is read on the
+    /// way in (see `init(from:)`) and dropped on the way out, so a file
+    /// migrates once and then stays clean.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(tickers, forKey: .tickers)
+        try c.encode(displayCurrency, forKey: .displayCurrency)
+        try c.encode(tickerCount, forKey: .tickerCount)
+        try c.encode(showDayChange, forKey: .showDayChange)
+        try c.encode(upColor, forKey: .upColor)
+        try c.encode(downColor, forKey: .downColor)
+        try c.encode(accentColor, forKey: .accentColor)
+    }
+
+    /// Uppercased, deduped, capped at `maxCount`, empty symbols dropped.
+    static func normalized(_ symbols: [String]) -> [String] {
+        var seen: [String] = []
+        for symbol in symbols {
+            let s = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            if !s.isEmpty, !seen.contains(s) {
+                seen.append(s)
+            }
+            if seen.count == maxCount { break }
+        }
+        return seen
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case tickers, displayCurrency, tickerCount
+        case showDayChange, upColor, downColor, accentColor
+        case legacySymbols = "symbols"
     }
 }

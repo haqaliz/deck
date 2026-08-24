@@ -17,5 +17,6 @@ struct DeckWidgetsBundle: WidgetBundle {
         TaskBoxWidget()
         CalBoxWidget()
         PRBoxWidget()
+        MarketBoxWidget()
     }
 }

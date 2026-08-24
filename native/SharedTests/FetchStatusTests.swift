@@ -393,3 +393,34 @@ final class TaskBoxCopyTests: XCTestCase {
         XCTAssertNil(FetchStatusCopy.hint(source: .taskbox, outcome: .ok))
     }
 }
+
+final class MarketBoxClassifierTests: XCTestCase {
+    func testMarketErrorOutcomes() {
+        XCTAssertEqual(FetchClassifier.outcome(for: MarketLoaderError.notConfigured), .notConfigured)
+        XCTAssertEqual(FetchClassifier.outcome(for: MarketLoaderError.invalidSymbols), .authOrTarget)
+        XCTAssertEqual(FetchClassifier.outcome(for: MarketLoaderError.serverError(404)), .authOrTarget)
+        XCTAssertEqual(FetchClassifier.outcome(for: MarketLoaderError.serverError(429)), .unreachable)
+        XCTAssertEqual(FetchClassifier.outcome(for: MarketLoaderError.serverError(503)), .unreachable)
+        XCTAssertEqual(FetchClassifier.outcome(for: MarketLoaderError.transport("offline")), .unreachable)
+        XCTAssertEqual(FetchClassifier.outcome(for: MarketLoaderError.invalidPayload), .badResponse)
+    }
+}
+
+final class MarketBoxCopyTests: XCTestCase {
+    func testMarketBoxLine() {
+        XCTAssertEqual(FetchStatusCopy.line(source: .marketbox, outcome: .notConfigured), "Add symbols in settings")
+        XCTAssertEqual(FetchStatusCopy.line(source: .marketbox, outcome: .authOrTarget), "Check the symbols")
+        XCTAssertEqual(FetchStatusCopy.line(source: .marketbox, outcome: .unreachable), "Can't reach the price sources")
+        XCTAssertEqual(FetchStatusCopy.line(source: .marketbox, outcome: .badResponse), "Unexpected market response")
+        XCTAssertNil(FetchStatusCopy.line(source: .marketbox, outcome: .ok))
+    }
+
+    /// The settings window has room for a full sentence; it must speak exactly
+    /// when the widget chip speaks.
+    func testMarketBoxHintSpeaksWheneverTheLineDoes() {
+        for outcome: FetchOutcome in [.notConfigured, .authOrTarget, .unreachable, .badResponse] {
+            XCTAssertNotNil(FetchStatusCopy.hint(source: .marketbox, outcome: outcome), "\(outcome.rawValue)")
+        }
+        XCTAssertNil(FetchStatusCopy.hint(source: .marketbox, outcome: .ok))
+    }
+}

@@ -110,6 +110,7 @@ struct ContentView: View {
             case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox)
             case .calbox: CalBoxSettingsView(settings: $settings.calbox)
             case .prbox: PRBoxSettingsView(settings: $settings.prbox)
+            case .marketbox: MarketBoxSettingsView(settings: $settings.marketbox)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -126,6 +127,7 @@ struct ContentView: View {
             Task { await refreshTaskBox() }
             Task { await refreshCalBox() }
             Task { await refreshPRBox() }
+            Task { await refreshMarketBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 Task { await refreshOpenCode() }
                 refreshGitBox()
@@ -136,6 +138,7 @@ struct ContentView: View {
                 Task { await refreshTaskBox() }
                 Task { await refreshCalBox() }
                 Task { await refreshPRBox() }
+                Task { await refreshMarketBox() }
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -529,11 +532,24 @@ private func refreshCalBox() async {
     }
 }
 
+/// Pump the MarketBox snapshot from the host app too, so changing the tickers
+/// or the display currency applies to the widget immediately instead of on the
+/// next agent tick.
+private func refreshMarketBox() async {
+    do {
+        let snapshot = try await HostMarketLoader.fetch(settings: DeckSettings.load().marketbox)
+        MarketSnapshotStore.save(snapshot)
+        FetchStatusStore.record(.ok, for: .marketbox)
+    } catch {
+        FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .marketbox)
+    }
+}
+
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
     case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
-    case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
+    case weatherbox, clockbox, shipbox, taskbox, calbox, prbox, marketbox
 
     var id: String { rawValue }
 
@@ -553,6 +569,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .taskbox: "TaskBox"
         case .calbox: "CalBox"
         case .prbox: "PRBox"
+        case .marketbox: "MarketBox"
         }
     }
 
@@ -572,6 +589,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .taskbox: "checklist"
         case .calbox: "calendar"
         case .prbox: "arrow.triangle.pull"
+        case .marketbox: "chart.line.uptrend.xyaxis"
         }
     }
 }
@@ -1364,5 +1382,80 @@ private struct CalBoxSettingsView: View {
             .filter { CalendarDefaults.shouldEnableByDefault(allowsContentModifications: $0.allowsContentModifications) }
             .map(\.id)
         settings.hasChosenCalendars = true
+    }
+}
+
+private struct MarketBoxSettingsView: View {
+    @Binding var settings: MarketBoxSettings
+
+    var body: some View {
+        Form {
+            Section("Tickers") {
+                // One picker per slot rather than free text: a symbol typed
+                // blind is unknowable to the user. Slot order *is* display
+                // order, so a plain indexed list keeps the two in sync.
+                ForEach(0..<MarketBoxSettings.maxCount, id: \.self) { slot in
+                    Picker("Ticker \(slot + 1)", selection: tickerBinding(slot: slot)) {
+                        Text("None").tag("")
+                        ForEach(pickableSymbols, id: \.self) { symbol in
+                            Text(MarketSymbolResolver.pickerLabel(for: symbol)).tag(symbol)
+                        }
+                        // Symbols from an older free-text file stay visible so
+                        // they can be changed, not silently lost.
+                        ForEach(configuredSymbolsNotInPicker, id: \.self) { symbol in
+                            Text(MarketSymbolResolver.pickerLabel(for: symbol)).tag(symbol)
+                        }
+                    }
+                }
+                Text("Crypto like BTC or ETH, fiat codes like USD or CAD, and GOLD for 1 gram of gold. Fiat and gold show price only.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                FetchStatusCaption(source: .marketbox, clearOn: settings.tickers.joined(separator: ","))
+            }
+            Section("Display") {
+                Picker("Display currency", selection: $settings.displayCurrency) {
+                    ForEach(MarketCurrency.allCases, id: \.self) { currency in
+                        Text(currency.label).tag(currency)
+                    }
+                }
+                Text("Every row is priced in this currency. IRT (Toman) is the free-market rate, IRR is 10× Toman; CAD, EUR and AED convert at the live FX rate.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Stepper("Rows (large face): \(settings.tickerCount)", value: $settings.tickerCount, in: 1...MarketBoxSettings.maxCount)
+                Toggle("Show day change", isOn: $settings.showDayChange)
+            }
+            Section("Colors") {
+                ColorPicker("Up color", selection: $settings.upColor.color)
+                ColorPicker("Down color", selection: $settings.downColor.color)
+                ColorPicker("Accent color", selection: $settings.accentColor.color)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+
+    private var pickableSymbols: [String] {
+        MarketSymbolResolver.allPickableSymbols
+    }
+
+    /// A configured symbol the curated list does not offer (left over from a
+    /// free-text file) is appended to the first picker that holds it, so it
+    /// stays visible and changeable.
+    private var configuredSymbolsNotInPicker: [String] {
+        settings.tickers.filter { !pickableSymbols.contains($0) }
+    }
+
+    /// Slots are positional: an empty pick clears that slot and the remaining
+    /// tickers close up, so the widget never renders a gap.
+    private func tickerBinding(slot: Int) -> Binding<String> {
+        Binding(
+            get: { slot < settings.tickers.count ? settings.tickers[slot] : "" },
+            set: { newValue in
+                var tickers = settings.tickers
+                while tickers.count < MarketBoxSettings.maxCount { tickers.append("") }
+                tickers[slot] = newValue
+                settings.tickers = MarketBoxSettings.normalized(tickers)
+            }
+        )
     }
 }

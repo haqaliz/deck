@@ -1,7 +1,7 @@
 # Deck Roadmap
 
 Small, beautiful macOS desktop widgets that behave like native ones. The
-product value is **one WidgetKit extension** (thirteen widgets in the Widget
+product value is **one WidgetKit extension** (fourteen widgets in the Widget
 Center) plus **one metric story per widget**. New widgets reuse the widget
 shell and only add a data source + a layout.
 
@@ -193,8 +193,48 @@ the next slate. Ordered by priority, not by cost.
       **Open follow-ups:** multi-project/multi-org, review state / approval
       counts (needs one request per PR), a third provider, Keychain for the two
       tokens.
-- [ ] **MarketBox** — configured tickers/crypto: price, day change, sparkline.
-      Near line-for-line clone of the WeatherBox agent fetch block.
+- [x] **MarketBox** — configured tickers/crypto: price, day change, sparkline.
+      Shipped 2026-08-24 (`docs/planning/marketbox/`), and the interview grew
+      it past the ROADMAP entry: **mixed assets** (crypto + fiat + gold 1g) all
+      priced in **one global display currency** — USD, IRR or IRT (Toman =
+      IRR ÷ 10) — at the **free-market** rate. Four keyless providers, each
+      probed live before the PRD:
+      - **CoinGecko** (crypto price + 24h % + 7-day sparkline; free tier has
+        no `irr`/`irt` vs_currency, so the conversion is done client-side);
+      - **Wallex** `USDTTMN` (the free-market Toman anchor — an Iranian
+        exchange's order book, 201k Toman per USDT vs open.er-api's 152k);
+      - **gold-api** (XAU spot → per gram ÷ 31.1035);
+      - **open.er-api** (fiat cross-rates, e.g. CAD).
+      **priceto.day was rejected after a live probe**: it serves a Cloudflare
+      JS challenge to non-browser clients (error 1015) — DeckAgent's plain
+      URLSession cannot solve it. CryptoCompare now demands an API key
+      (CoinDesk takeover). Yahoo works for GC=F/CAD=X but is a flaky
+      unofficial scrape, so **fiat/gold rows are price-only in v1** — no 24h %
+      or sparkline for them until a free no-key history source appears.
+      Unknown symbols are surfaced (`Unknown: XRPX`), the snapshot stores the
+      currency it converted for (the header never mislabels a mid-tick
+      settings change), and a single fetch-status key covers four providers:
+      the loader only fails when *no* row at all could be priced; partial
+      results render with a note. Sparklines are downsampled to 30 points in
+      the loader (the CalBox archive-size lesson).
+      **Layout (user revision 2026-08-24):** small = up to 4 rows **price-only**
+      (no day change); medium = up to 5 rows with the 24h change; large = up to
+      12 rows (the `tickerCount` setting). **Display currency is a list, not a
+      toggle** — USD, IRR, IRT (Toman, free-market), CAD, EUR and AED (live FX
+      rate); the converter multiplies by the Wallex Toman anchor or the
+      open.er-api rate depending on the pick. **Sparklines were dropped by user
+      decision** — the first face drew them with Swift Charts, which made
+      WidgetKit **silently drop the widget from the gallery** (the Charts-in-a-
+      widget-face trap, see CLAUDE.md); the user then removed the sparkline
+      requirement entirely, and the loader no longer asks CoinGecko for the
+      series. Tickers are **picked from a curated list** in settings (twelve
+      slot pickers, the ClockBox pattern) instead of typed free text — a
+      blind-typed symbol was unknowable to the user; the old `symbols` string
+      migrates to `tickers`.
+      **Open follow-ups:** fiat/gold 24h % + sparklines (needs a history
+      source), stocks/indices, the Toman rate's own 24h change on the USD row
+      (Wallex `24h_ch`, already parsed), a live `/coins/list` lookup instead
+      of the curated symbol map.
 - [x] **BlueBox** — peripheral battery (AirPods, Magic Mouse/Keyboard).
       **Already shipped inside BatBox** (`542c893`,
       `docs/planning/batbox-accessories/`) and ticked in M3; this entry was

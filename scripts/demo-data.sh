@@ -21,7 +21,7 @@ set -euo pipefail
 
 CONTAINER="$HOME/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck"
 BACKUP="$HOME/Library/Application Support/Deck/demo-backup"
-SNAPSHOTS=(calbox taskbox clipbox gitbox shipbox devbox weather processes openbox)
+SNAPSHOTS=(calbox taskbox clipbox gitbox shipbox devbox weather processes openbox marketbox)
 
 agents_stop() {
   osascript -e 'quit app "Deck"' 2>/dev/null || true
