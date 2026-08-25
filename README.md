@@ -273,10 +273,18 @@ history tools ignore them — so passwords copied from 1Password, Bitwarden,
 KeePassXC or Keychain Access are never recorded. Everything else it does keep is
 plain text, capped at 20 items, and clearable from the ClipBox settings tab.
 
-**Tokens** are stored in `settings.json` in that container, owner-readable only
-(mode 0600). Moving them to the Keychain is on the roadmap; until then, treat
-that file as a secret and use read-only scopes (for Azure DevOps, *Work Items
-(Read)* is enough).
+**Tokens** are stored in your **login keychain**, not in a file. The five
+credentials (OpenBox, ShipBox, TaskBox, and PRBox's GitHub and Azure tokens)
+are written there by the settings window and read by the background agent;
+`settings.json` keeps the non-secret fields and stays owner-readable only
+(mode 0600). An older Deck that kept them in that file migrates them the first
+time you open the new version.
+
+To be precise about what that buys: the tokens are no longer sitting in a
+plain-text file that backups, folder copies and sync tools pick up. It is
+**not** a barrier against other software running as you — anything running
+under your account can ask the keychain for them, the same as it could read the
+file. Use read-only scopes (for Azure DevOps, *Work Items (Read)* is enough).
 
 **Permissions macOS will ask for:** calendar access (CalBox) and "access data
 from other apps" (the process list runs `ps`). Deck and its background agent are
