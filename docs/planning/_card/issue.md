@@ -1,43 +1,45 @@
-# ShipBox multi-repo — inline brief (deck-next → dbf feat shipbox-multi-repo)
+# Card — Keychain for Deck's API credentials
 
-Top open item in M6 "Improvements (after M5)" (`ROADMAP.md:311`), recorded as an
-open follow-up in two other places: `ROADMAP.md:74` and
-`docs/planning/shipbox/prd.md:118` ("multi-repo list" — an explicit non-goal of
-slice 1, not a blocker).
+**Type:** feat · **Slug:** `keychain-tokens` · **Branch:** `feat/keychain-tokens/aliz`
 
-## The ask
+**Source:** inline brief, handed off by `deck-next` on 2026-08-25. No GitHub
+issue — the id is a slug, not a number.
 
-ShipBox currently watches one `owner/repo` (`ShipBoxSettings.repo: String`,
-`native/Shared/DeckSettings.swift:486`). Grow it to a small list of repos:
+## Brief
 
-- Settings picks N targets (cap it low, ~5, for GitHub rate limits at the 60s
-  agent cadence).
-- The snapshot carries runs tagged by repo.
-- The face shows them newest-first across repos, with the repo named on each row.
-- Migrate the old single `repo` string into the list tolerantly, the way
-  MarketBox migrated `symbols` → `tickers`.
+Move Deck's API credentials out of cleartext `settings.json` into the login
+keychain. There are five token fields, not the three `ROADMAP.md` M7 claims:
+OpenBox, ShipBox, TaskBox, and PRBox's separate GitHub and Azure tokens
+(`native/Shared/DeckSettings.swift:256`, `:504`, `:600`, `:744`, `:772`) — the
+M7 entry predates PRBox shipping two.
 
-## The design point to settle first
+Both `DeckApp` (writes, from the settings tabs) and `DeckAgent` (reads, every
+60s under launchd) need access; the widget extension never touches them and
+should keep seeing empty fields. Ship a one-way migration that copies each
+existing value into the keychain and scrubs it from `settings.json`, without
+breaking the tolerant-decode regression tests.
 
-`FetchSource.shipbox` is a single key for what becomes N repos
-(`native/Shared/FetchStatus.swift:19`). Either it aggregates worst-wins — and
-then the widget note *and* the settings sentence must name **which** repo failed,
-or the message is useless — or the enum grows per-repo keys, which it cannot do
-statically. Follow MarketBox's one-key/several-providers precedent
-(`FetchStatus.swift:24`): fail only when no repo at all could be fetched, render
-partial results with a note.
+## The blocking risk to settle first
 
-## Why now (from deck-next)
+A keychain item's ACL is per-binary, and `Deck.app` and `DeckAgent` are
+separately signed, so the agent will hit an access prompt it cannot answer
+under launchd (or `errSecInteractionNotAllowed`) and four widgets go dark with
+no fetch error that explains it. That likely needs a shared
+`keychain-access-groups` entitlement under team `K6X49DG8VF` — and
+`native/project.yml` has no entitlements file for any target today, with
+`DeckAgent` being a `type: tool` with no bundle.
 
-- Pure shell reuse, zero new data-source risk: the GitHub Actions loader, the
-  agent block and the fetch-status plumbing all ship today; this is a fan-out
-  over an existing proven call.
-- Every open design point already has a shipped precedent — MarketBox for the
-  single-key/several-sources status and for the curated slot-picker settings
-  pattern + tolerant migration, PRBox for per-row deep links.
+**Verify a successful agent-side read while running under launchd, not from a
+terminal, before committing to the design.**
 
-## Not in scope (carried from the original ShipBox non-goals)
+## Why this was picked (deck-next, 2026-08-25)
 
-- No checks/commit-status API, no deployments, no PR merge status.
-- No "latest per workflow" grouping.
-- No widget-side fetch (the sandbox has no network entitlement).
+- The only `ROADMAP.md` M7 item that is fully unblocked: notarization and the
+  expiry cliff need the paid program, "verify on a second Mac" needs a second
+  Mac, Sparkle is "pointless before notarization", and the bundle-identifier
+  rename plus the landing page wait on a launch-identity decision.
+- Named by three independent planning docs: `ROADMAP.md` M7 (where 0600 on
+  `settings.json` is explicitly "the interim measure"), TaskBox's open
+  follow-ups ("Keychain storage for the PAT") and PRBox's ("Keychain for the
+  two tokens").
+- Pure shell reuse: no widget, no snapshot, no sampler, no new data source.
