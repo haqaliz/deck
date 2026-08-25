@@ -10,8 +10,8 @@
 # is what saves users from running `xattr -dr com.apple.quarantine` by hand. Drop
 # this note from the README and the tap the day notarization lands.
 cask "deck" do
-  version "1.28"
-  sha256 "76f2c8e2d215bbc8191db92f59f7f64398ab1623614a13b60c8179dec6fa82b2"
+  version "1.29"
+  sha256 "2ecba3476c8ebb259b5433a6a92e76bad46912ee16877544b4d4851db62bb00a"
 
   url "https://github.com/haqaliz/deck/releases/download/v#{version}/Deck-v#{version}.dmg"
   name "Deck"
