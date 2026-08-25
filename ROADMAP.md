@@ -350,9 +350,41 @@ in CI, the verification gates, and what the identity change resets.
 - [ ] **Bundle identifier.** `com.deck.app` / `com.deck.agent` is reverse-DNS
       for a domain nobody owns. Changing it after launch forces every user to
       re-add their widgets and re-grant TCC, so it has to happen before.
-- [ ] **Keychain for the three tokens** (GitHub, Azure DevOps PAT, OpenBox).
-      The app and agent are unsandboxed and the widget never needs them, so
-      this is straightforward; 0600 on `settings.json` is the interim measure.
+- [x] **Keychain for the credentials** — shipped 2026-08-26
+      (`docs/planning/keychain-tokens/`). **Five** tokens, not the three this
+      entry used to claim: OpenBox, ShipBox, TaskBox, and PRBox's separate
+      GitHub and Azure tokens (it predated PRBox shipping two). Migrated one
+      way on first launch — write, read back to confirm, *then* blank the
+      file — so a keychain failure can never cost the only copy of a token.
+      **Probed live before the PRD, and every finding changed the design:**
+      - **The feared per-binary ACL prompt does not exist.** A bare tool signed
+        like `DeckAgent` reads an item written by the bundled app **inside a
+        launchd job, with no prompt**, even with the auth UI suppressed.
+        Confirmed in production: with Deck.app not running, one agent tick
+        refreshed ShipBox, TaskBox and both PRBox providers, all `ok`.
+      - **The presumed fix is fatal.** Signing either binary with a
+        `keychain-access-groups` entitlement **SIGKILLs it at launch** (exit
+        137, no crash report) — there is no provisioning profile to authorise
+        it, and a `type: tool` target has nowhere to embed one. The data
+        protection keychain refuses to write without that entitlement
+        (`-34018`). Deck uses the legacy login keychain, which needs no
+        entitlement at all. See the CLAUDE.md trap.
+      - **It buys confidentiality at rest, not process isolation.** An
+        ad-hoc-signed binary and `/usr/bin/security` both read a probe item
+        with no prompt, and still did against an item written with an explicit
+        `SecAccess` trusting only two named binaries. The README says so
+        plainly rather than implying the tokens are now safe from other local
+        software.
+      A locked keychain gets its own `FetchOutcome` (`credentialsUnavailable`)
+      instead of reading as "not configured" — telling someone to paste a token
+      they already pasted is the ShipBox C1 mistake. **That path is designed
+      and unit-tested but never exercised against a genuinely locked
+      keychain**: locking the dev machine's login keychain would have left
+      unlock prompts across other apps that could not be undone without the
+      user's password.
+      **Open follow-ups:** exercise the locked-keychain path on a scratch
+      account; revisit access groups if Deck ever gains a provisioning
+      profile.
 - [ ] **`SMAppService`** instead of hand-written LaunchAgent plists — puts Deck
       in System Settings → Login Items, where a suspicious user looks first.
 - [ ] **Sparkle auto-update.** Pointless before notarization (the update would

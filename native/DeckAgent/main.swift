@@ -41,13 +41,26 @@ Task {
     let start = Date()
     agentLog.info("full refresh started")
 
-    let settings = DeckSettings.load()
+    var settings = DeckSettings.load()
+    // The five API credentials live in the keychain, not in settings.json.
+    // A key that FAILED to read (a locked login keychain) is not the same as
+    // one that was never set: it is recorded as its own outcome here, and every
+    // gate below skips rather than falling through to "not configured", which
+    // would tell the user to paste a token they already pasted.
+    let unavailableSecrets = settings.hydrateFromKeychain()
+    for secret in unavailableSecrets {
+        FetchStatusStore.record(.credentialsUnavailable, for: secret.fetchSource)
+        agentLog.info("credential unavailable (\(secret.rawValue, privacy: .public))")
+    }
 
     let opencode: OpenCodeSnapshot?
     if let serverURL = settings.openbox.serverURL, !serverURL.isEmpty {
         // Remote mode: never passes a default token — without the user's own
         // token no data is fetched (no silent local-DB fallback).
-        if !settings.openbox.token.isEmpty {
+        if unavailableSecrets.contains(.openboxToken) {
+            // Outcome already recorded above; do not overwrite it.
+            opencode = nil
+        } else if !settings.openbox.token.isEmpty {
             do {
                 opencode = try await RemoteOpenCodeLoader.load(serverURL: serverURL, token: settings.openbox.token)
                 FetchStatusStore.record(.ok, for: .opencodeRemote)
@@ -132,7 +145,9 @@ Task {
     let shipbox = settings.shipbox
     let shipboxConfigured = !shipbox.token.isEmpty
         && (shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty)
-    if shipboxConfigured {
+    if unavailableSecrets.contains(.shipboxToken) {
+        agentLog.info("skipped shipbox snapshot (credential unavailable)")
+    } else if shipboxConfigured {
         do {
             // Always written: writtenAt drives the staleness windows. A repo
             // that failed while others succeeded rides in the snapshot's note
@@ -161,7 +176,9 @@ Task {
         .trimmingCharacters(in: .whitespacesAndNewlines)
     let taskboxProject = settings.taskbox.project
         .trimmingCharacters(in: .whitespacesAndNewlines)
-    if !taskboxOrg.isEmpty && !taskboxProject.isEmpty && !settings.taskbox.token.isEmpty {
+    if unavailableSecrets.contains(.taskboxToken) {
+        agentLog.info("skipped taskbox snapshot (credential unavailable)")
+    } else if !taskboxOrg.isEmpty && !taskboxProject.isEmpty && !settings.taskbox.token.isEmpty {
         do {
             // Always written: writtenAt drives the staleness windows, so a
             // successful fetch must refresh it even when the task list is
@@ -206,9 +223,13 @@ Task {
     // half that is missing. A provider that is switched off records .ok rather
     // than .notConfigured, which is what clears a failure it left behind.
     let prbox = settings.prbox
-    if prbox.isAnyProviderUsable {
+    let prboxCredentialFailed = unavailableSecrets.contains(.prboxGitHubToken)
+        || unavailableSecrets.contains(.prboxAzureToken)
+    if prbox.isAnyProviderUsable || prboxCredentialFailed {
         var githubTotals: PRRoleTotals?
-        if prbox.github.isUsable {
+        if unavailableSecrets.contains(.prboxGitHubToken) {
+            // Outcome already recorded above.
+        } else if prbox.github.isUsable {
             do {
                 githubTotals = try await HostGitHubPRLoader.fetch(
                     token: prbox.github.token,
@@ -226,7 +247,9 @@ Task {
         }
 
         var azureTotals: PRRoleTotals?
-        if prbox.azure.isUsable {
+        if unavailableSecrets.contains(.prboxAzureToken) {
+            // Outcome already recorded above.
+        } else if prbox.azure.isUsable {
             do {
                 azureTotals = try await HostAzurePRLoader.fetch(
                     organization: prbox.azure.organization,

@@ -10,6 +10,7 @@
 		01BB25D086A5451976DCC54A /* azure_prs_votes.json in Resources */ = {isa = PBXBuildFile; fileRef = F52085AAB762F8008E810AAA /* azure_prs_votes.json */; };
 		040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F06724D8333A9A74C4156DB6 /* SmokeTests.swift */; };
+		0ADA696C2CD6D8BE83B10C12 /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
 		0D92FA03A401FBF07703028E /* ToolCountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */; };
 		0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */; };
 		0EB43DC3000E365E99A16A34 /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
@@ -95,6 +96,7 @@
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6C7827BCFC076B798D66F5A7 /* MarketBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */; };
 		701D2CEE50CA785813158B0D /* azure_connectiondata.json in Resources */ = {isa = PBXBuildFile; fileRef = 9F939C5C1255B0A85CA33D70 /* azure_connectiondata.json */; };
+		704E79FBAAD061417024969A /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
 		712262DD2FEF389783A540A1 /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
 		713B88D412C1D34D897E1B3F /* coinGeckoMarkets.json in Resources */ = {isa = PBXBuildFile; fileRef = 50A8922BFDCE56FEEAFDE601 /* coinGeckoMarkets.json */; };
 		72183F6AE6F651DFC0C5A377 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = CBC89EF1D34611CB2B244F15 /* AppIcon.icns */; };
@@ -143,6 +145,7 @@
 		BB0DA9CFEFB09DB47DCA109F /* LiveBoxDiskCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */; };
 		BD8A7273480E5B5E14C8BB51 /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
 		BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */; };
+		BFD1028CDBFBB49E951CB781 /* DeckSettingsSecretsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A30EA93126D172F0FB1035 /* DeckSettingsSecretsTests.swift */; };
 		C1880C6DD5759D69ACFFE48B /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
 		C25CF03F42EF2643976A9291 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		C2697957F8E3A81F07B6342B /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
@@ -151,6 +154,7 @@
 		C483D310228E6B2532465BC6 /* DevBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290D71C97A8936CF963F219D /* DevBoxSnapshotTests.swift */; };
 		C5E77430380FA2F4C3ED84AC /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
 		C712B23DB4009D204713BD6C /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
+		C7E88A04B400DC5C2717A0D8 /* DeckKeychainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */; };
 		C81C2A41FCF6D5766010C765 /* github_repos.json in Resources */ = {isa = PBXBuildFile; fileRef = 734F3EA73D9BBCC09CE2D9BF /* github_repos.json */; };
 		CA1BF5806D6024A7A49CE577 /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
 		CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
@@ -172,12 +176,15 @@
 		D8DE1BC7D47C480B185987C0 /* ShipBoxSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF045F6211C715FF81858003 /* ShipBoxSettingsTests.swift */; };
 		DAD7D5822D2A6F40FD89DD26 /* AtomicFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */; };
 		DD3E61D42DB4A46DB5C256BF /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
+		DD9B2E32F244BE3B25773C3C /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
 		DE08983334C0343BB41BC78D /* DeckLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */; };
 		DF3E69473804CC777ED434B4 /* MarketBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */; };
+		E12D02F197A271DD411D4053 /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
 		E14CADB2CF950D781BA2F195 /* ClockBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 246CB064D9531380A28D9673 /* ClockBoxWidget.swift */; };
 		E1EBE95E84F8F791E5B3D34A /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
 		E2DE130621C6683B7AA69F2D /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		E8F963A7402C8695BFC89F71 /* FetchStatusCredentialsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */; };
 		E9C9897EA5B6B4BB0A42B780 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		EA90CCDFFC5A2B29D6F7908F /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
@@ -188,6 +195,7 @@
 		F4AB6B9FEEF6A118BD4F284B /* ProcessSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */; };
 		F54A57E18318AB833DE8AF5A /* PRBoxChipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77088C4EE6AAF5F06DCA7953 /* PRBoxChipTests.swift */; };
 		F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
+		F72468714B382D9CADB24DC3 /* DeckSecretsMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66AF2CBFD42DE18E87E2455 /* DeckSecretsMigrationTests.swift */; };
 		F7C61B7366E45966CD60DCB8 /* OpenCodeSQLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */; };
 		F7D714F5EC3F20D7242F6E85 /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
 		F8D0B9E76E31D7928A486CAA /* wallexMarkets.json in Resources */ = {isa = PBXBuildFile; fileRef = D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */; };
@@ -234,6 +242,7 @@
 		13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshot.swift; sourceTree = "<group>"; };
 		16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxSessionCoreTests.swift; sourceTree = "<group>"; };
 		18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxWidget.swift; sourceTree = "<group>"; };
+		1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychainTests.swift; sourceTree = "<group>"; };
 		1D0F7208894404301344CB11 /* FetchStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchStatusTests.swift; sourceTree = "<group>"; };
 		1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryMetrics.swift; sourceTree = "<group>"; };
 		1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSnapshot.swift; sourceTree = "<group>"; };
@@ -282,11 +291,13 @@
 		7B2DB053937C24CBB649992B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSeriesTests.swift; sourceTree = "<group>"; };
 		7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxSnapshot.swift; sourceTree = "<group>"; };
+		82736DC13D9569D028C763BC /* DeckKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychain.swift; sourceTree = "<group>"; };
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicFileTests.swift; sourceTree = "<group>"; };
 		90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxSnapshot.swift; sourceTree = "<group>"; };
 		910A3754B71959068BBF2549 /* github_prs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = github_prs.json; sourceTree = "<group>"; };
+		923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchStatusCredentialsTests.swift; sourceTree = "<group>"; };
 		92C80445C9EC1F419FFAC0DB /* LiveBoxThermalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThermalTests.swift; sourceTree = "<group>"; };
 		94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSnapshot.swift; sourceTree = "<group>"; };
 		970F6F6A1DFB74AABEE7826C /* ClipBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxWidget.swift; sourceTree = "<group>"; };
@@ -297,6 +308,7 @@
 		AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCountTests.swift; sourceTree = "<group>"; };
 		AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockBoxTests.swift; sourceTree = "<group>"; };
 		B129C36246D87142F352B506 /* PRBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxSnapshotTests.swift; sourceTree = "<group>"; };
+		B1A30EA93126D172F0FB1035 /* DeckSettingsSecretsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckSettingsSecretsTests.swift; sourceTree = "<group>"; };
 		B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxCore.swift; sourceTree = "<group>"; };
 		B662E23A53ACAA091EAFA898 /* DeckApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeckApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B6F93AE35E753ECCFC7B3CF9 /* MarketBoxCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxCoreTests.swift; sourceTree = "<group>"; };
@@ -332,6 +344,7 @@
 		F44048FEBB8DD2831A60146B /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		F52085AAB762F8008E810AAA /* azure_prs_votes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = azure_prs_votes.json; sourceTree = "<group>"; };
 		F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxCore.swift; sourceTree = "<group>"; };
+		F66AF2CBFD42DE18E87E2455 /* DeckSecretsMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckSecretsMigrationTests.swift; sourceTree = "<group>"; };
 		F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxCore.swift; sourceTree = "<group>"; };
 		F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxSnapshotTests.swift; sourceTree = "<group>"; };
 		FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckApp.swift; sourceTree = "<group>"; };
@@ -366,6 +379,7 @@
 				ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */,
 				7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */,
 				37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */,
+				82736DC13D9569D028C763BC /* DeckKeychain.swift */,
 				CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */,
 				4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */,
 				0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */,
@@ -402,9 +416,13 @@
 				F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */,
 				AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */,
 				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
+				1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */,
 				E0E922A862E405B58537BA49 /* DeckLinkTests.swift */,
+				F66AF2CBFD42DE18E87E2455 /* DeckSecretsMigrationTests.swift */,
+				B1A30EA93126D172F0FB1035 /* DeckSettingsSecretsTests.swift */,
 				0B881092482BA9425E3F5918 /* DecodeTests.swift */,
 				290D71C97A8936CF963F219D /* DevBoxSnapshotTests.swift */,
+				923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */,
 				1D0F7208894404301344CB11 /* FetchStatusTests.swift */,
 				3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */,
 				06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */,
@@ -726,6 +744,7 @@
 				321052A8E1D6C63E19452D77 /* ClipBoxWidget.swift in Sources */,
 				15C7BB212EDB3631F9DE1647 /* ClockBoxCore.swift in Sources */,
 				E14CADB2CF950D781BA2F195 /* ClockBoxWidget.swift in Sources */,
+				E12D02F197A271DD411D4053 /* DeckKeychain.swift in Sources */,
 				143B07F39F62D08E84D9CF21 /* DeckLink.swift in Sources */,
 				53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */,
 				BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */,
@@ -781,13 +800,18 @@
 				39DA22900FC1560C2B18F53A /* ClockBoxCore.swift in Sources */,
 				3B5B4D3223749E809A021C84 /* ClockBoxTests.swift in Sources */,
 				AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */,
+				0ADA696C2CD6D8BE83B10C12 /* DeckKeychain.swift in Sources */,
+				C7E88A04B400DC5C2717A0D8 /* DeckKeychainTests.swift in Sources */,
 				DE08983334C0343BB41BC78D /* DeckLink.swift in Sources */,
 				FBD849BD3B656D44706F28F6 /* DeckLinkTests.swift in Sources */,
+				F72468714B382D9CADB24DC3 /* DeckSecretsMigrationTests.swift in Sources */,
 				E9C9897EA5B6B4BB0A42B780 /* DeckSettings.swift in Sources */,
+				BFD1028CDBFBB49E951CB781 /* DeckSettingsSecretsTests.swift in Sources */,
 				503A811FFA42B6C95C900C31 /* DecodeTests.swift in Sources */,
 				2A844B182A8B55D6AE7B4116 /* DevBoxSnapshot.swift in Sources */,
 				C483D310228E6B2532465BC6 /* DevBoxSnapshotTests.swift in Sources */,
 				45D576EA50BECDA826166348 /* FetchStatus.swift in Sources */,
+				E8F963A7402C8695BFC89F71 /* FetchStatusCredentialsTests.swift in Sources */,
 				A5D18790439106076A579311 /* FetchStatusTests.swift in Sources */,
 				29301B875DF6C63903F7C456 /* GitBoxSnapshot.swift in Sources */,
 				D74629484729CBEAE1664FFD /* GitBoxSnapshotTests.swift in Sources */,
@@ -850,6 +874,7 @@
 				0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */,
 				A3610AE8477308D69CE6301A /* ClockBoxCore.swift in Sources */,
 				2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */,
+				DD9B2E32F244BE3B25773C3C /* DeckKeychain.swift in Sources */,
 				164F1460B1B3EB7B4049FC67 /* DeckLink.swift in Sources */,
 				EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */,
 				18600374BCF4CECC18E75B9B /* DevBoxSnapshot.swift in Sources */,
@@ -885,6 +910,7 @@
 				5C0FC13FD9210AD4499E5B6E /* CalBoxSnapshot.swift in Sources */,
 				90A811EBE7E73139D552827E /* ClipBoxSnapshot.swift in Sources */,
 				4679230BBFA043E0D068F18F /* ClockBoxCore.swift in Sources */,
+				704E79FBAAD061417024969A /* DeckKeychain.swift in Sources */,
 				74F07107040B1441641C05C1 /* DeckLink.swift in Sources */,
 				4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */,
 				F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */,

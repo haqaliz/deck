@@ -38,6 +38,24 @@ enum FetchOutcome: String, Codable {
     case unreachable
     /// Reached the service, could not make sense of the answer.
     case badResponse
+    /// The credential exists but could not be read from the keychain — a
+    /// locked login keychain, most likely. Deliberately not `notConfigured`:
+    /// the user has already pasted the token, and telling them to paste it
+    /// again sends them to a field that is not the problem.
+    case credentialsUnavailable
+}
+
+extension DeckSecret {
+    /// Which widget goes dark when this credential can't be read.
+    var fetchSource: FetchSource {
+        switch self {
+        case .openboxToken: return .opencodeRemote
+        case .shipboxToken: return .shipbox
+        case .taskboxToken: return .taskbox
+        case .prboxGitHubToken: return .prboxGitHub
+        case .prboxAzureToken: return .prboxAzure
+        }
+    }
 }
 
 struct FetchStatus: Codable, Equatable {
@@ -198,6 +216,16 @@ enum FetchStatusCopy {
             case .calbox: return "Couldn't read the calendar"
             case .marketbox: return "Unexpected market response"
             }
+        case .credentialsUnavailable:
+            switch source {
+            case .shipbox, .taskbox, .opencodeRemote:
+                return "Can't read saved credentials"
+            case .prboxGitHub, .prboxAzure:
+                return "can't read saved credentials"
+            // These three have no credentials and cannot reach this state.
+            case .weather, .calbox, .marketbox:
+                return nil
+            }
         }
     }
 
@@ -259,6 +287,14 @@ enum FetchStatusCopy {
             case .taskbox: return "Reached Azure DevOps, but the response couldn't be read. Retrying every minute."
             case .calbox: return "Reached the calendar store but couldn't read it. Retrying every minute."
             case .marketbox: return "Reached the price sources, but the response couldn't be read. Retrying every minute."
+            }
+        case .credentialsUnavailable:
+            switch source {
+            case .shipbox, .taskbox, .opencodeRemote, .prboxGitHub, .prboxAzure:
+                return "Deck couldn't read the saved token from your keychain — unlock your login keychain and it will retry. The token is still stored; there is nothing to paste again."
+            // These three have no credentials and cannot reach this state.
+            case .weather, .calbox, .marketbox:
+                return nil
             }
         }
     }

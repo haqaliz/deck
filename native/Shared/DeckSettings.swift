@@ -143,11 +143,84 @@ struct DeckSettings: Codable, Equatable {
     }
 
     func save() {
-        guard let data = try? JSONEncoder().encode(self) else { return }
-        // 0o600: settings.json carries the ShipBox GitHub token, the TaskBox
-        // Azure DevOps PAT and the OpenBox server token in clear text. Until
-        // those move to the Keychain, at least do not leave them mode 644.
+        // The five credentials live in the keychain (`DeckKeychain`), never in
+        // this file. `encode(to:)` is deliberately left symmetric — the decode
+        // regression tests pin it — so the scrub happens here, at the file
+        // boundary, on a copy.
+        guard let data = try? JSONEncoder().encode(scrubbedOfSecrets()) else { return }
+        // 0o600 still: the file carries repo paths, an org and project name and
+        // a server URL. Secrets are gone, but this is nobody else's business.
         _ = AtomicFile.write(data, to: Self.fileURL, posixPermissions: 0o600)
+    }
+
+    // MARK: - Secrets
+
+    /// A copy with the five keychain-backed credentials blanked.
+    func scrubbedOfSecrets() -> DeckSettings {
+        var copy = self
+        copy.openbox.token = ""
+        copy.shipbox.token = ""
+        copy.taskbox.token = ""
+        copy.prbox.github.token = ""
+        copy.prbox.azure.token = ""
+        return copy
+    }
+
+    /// Fills the five credential fields from a set of keychain reads and
+    /// returns the keys that **failed** — which is not the same as being
+    /// unset, and callers must not treat it as such.
+    ///
+    /// Two rules, both load-bearing:
+    ///
+    /// - `.found` overwrites. Nothing else does.
+    /// - `.absent` and `.failed` leave whatever was decoded from the file
+    ///   **exactly as it was**. Before the migration has run, that file value
+    ///   is the user's real token, and it is what keeps a Deck that was
+    ///   upgraded but never opened working — `DeckAgent` reads settings and
+    ///   never writes them, so it can run on an unmigrated file indefinitely.
+    ///   Blanking here would wipe four widgets' credentials at the first tick.
+    @discardableResult
+    mutating func hydrate(from reads: [DeckSecret: SecretRead]) -> Set<DeckSecret> {
+        var failed: Set<DeckSecret> = []
+        for secret in DeckSecret.allCases {
+            switch reads[secret] {
+            case .found(let value):
+                setSecret(value, for: secret)
+            case .failed:
+                failed.insert(secret)
+            case .absent, nil:
+                break
+            }
+        }
+        return failed
+    }
+
+    /// `hydrate(from:)` against the real keychain. Host-side only — the widget
+    /// extension never calls this and needs no keychain access.
+    @discardableResult
+    mutating func hydrateFromKeychain() -> Set<DeckSecret> {
+        hydrate(from: DeckKeychain.readAll())
+    }
+
+    mutating func setSecret(_ value: String, for secret: DeckSecret) {
+        switch secret {
+        case .openboxToken: openbox.token = value
+        case .shipboxToken: shipbox.token = value
+        case .taskboxToken: taskbox.token = value
+        case .prboxGitHubToken: prbox.github.token = value
+        case .prboxAzureToken: prbox.azure.token = value
+        }
+    }
+
+    /// The current in-memory value of one credential, for the migration.
+    func secretValue(_ secret: DeckSecret) -> String {
+        switch secret {
+        case .openboxToken: return openbox.token
+        case .shipboxToken: return shipbox.token
+        case .taskboxToken: return taskbox.token
+        case .prboxGitHubToken: return prbox.github.token
+        case .prboxAzureToken: return prbox.azure.token
+        }
     }
 }
 
