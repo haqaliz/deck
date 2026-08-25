@@ -10,7 +10,10 @@ struct ShipBoxEntry: TimelineEntry {
     let writtenAt: Date?
     /// One line explaining the last fetch attempt, or nil when all is well.
     let chip: String?
-    let repo: String
+    /// The repos this snapshot covers, in display order.
+    let repos: [String]
+    /// Names the repos that failed while others succeeded, or nil.
+    let note: String?
     let runs: [ShipRun]
     let settings: ShipBoxSettings
 }
@@ -30,11 +33,12 @@ struct ShipBoxProvider: TimelineProvider {
             stale: false,
             writtenAt: .now,
             chip: nil,
-            repo: "haqaliz/deck",
+            repos: ["haqaliz/deck", "haqaliz/cyclo", "haqaliz/pong"],
+            note: nil,
             runs: [
-                ShipRun(name: "Deck", runNumber: 15, branch: "master", status: .success, createdAt: .now.addingTimeInterval(-192), updatedAt: .now, htmlURL: ""),
-                ShipRun(name: "Deck", runNumber: 14, branch: "master", status: .failure, createdAt: .now.addingTimeInterval(-600), updatedAt: .now.addingTimeInterval(-408), htmlURL: ""),
-                ShipRun(name: "Deck", runNumber: 13, branch: "feat/homebox/aliz", status: .running, createdAt: .now.addingTimeInterval(-60), updatedAt: .now, htmlURL: ""),
+                ShipRun(repo: "haqaliz/deck", name: "Deck", runNumber: 15, branch: "master", status: .success, createdAt: .now.addingTimeInterval(-192), updatedAt: .now, htmlURL: ""),
+                ShipRun(repo: "haqaliz/cyclo", name: "CI", runNumber: 88, branch: "main", status: .failure, createdAt: .now.addingTimeInterval(-600), updatedAt: .now.addingTimeInterval(-408), htmlURL: ""),
+                ShipRun(repo: "haqaliz/pong", name: "Build", runNumber: 7, branch: "main", status: .running, createdAt: .now.addingTimeInterval(-60), updatedAt: .now, htmlURL: ""),
             ],
             settings: ShipBoxSettings()
         )
@@ -68,7 +72,8 @@ struct ShipBoxProvider: TimelineProvider {
                 stale: false,
                 writtenAt: nil,
                 chip: chip,
-                repo: "",
+                repos: [],
+                note: nil,
                 runs: [],
                 settings: settings
             )
@@ -80,7 +85,8 @@ struct ShipBoxProvider: TimelineProvider {
             stale: now.timeIntervalSince(snapshot.writtenAt) > 5 * 60,
             writtenAt: snapshot.writtenAt,
             chip: chip,
-            repo: snapshot.repos.first ?? "",
+            repos: snapshot.repos,
+            note: snapshot.note,
             runs: snapshot.runs,
             settings: settings
         )
@@ -97,7 +103,7 @@ struct ShipBoxWidget: Widget {
             ShipBoxWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("ShipBox")
-        .description("GitHub Actions run status for a repo.")
+        .description("GitHub Actions run status across your repos.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -130,6 +136,9 @@ struct ShipBoxWidgetEntryView: View {
         .containerBackground(for: .widget) {
             Color.clear
         }
+        // The small face's rows are too tight to be individual targets, so the
+        // whole widget opens the newest run instead.
+        .widgetURL(family == .systemSmall ? entry.runs.first.flatMap { DeckLink.webURL(from: $0.htmlURL) } : nil)
     }
 
     private var unavailableView: some View {
@@ -139,7 +148,7 @@ struct ShipBoxWidgetEntryView: View {
                 .foregroundStyle(.secondary)
             Text("No build data")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-            Text(entry.chip ?? "Paste a repo + token in Deck settings.")
+            Text(entry.chip ?? "Paste a GitHub token in Deck settings.")
                 .font(.system(size: 11, design: .rounded))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
@@ -182,22 +191,42 @@ struct ShipBoxWidgetEntryView: View {
         }
     }
 
+    /// One repo names itself; several are counted. Naming one of five would be
+    /// arbitrary, and listing them all would eat the row.
+    private var headerTitle: String {
+        switch entry.repos.count {
+        case 0: return "ShipBox"
+        case 1: return entry.repos[0]
+        default: return "\(entry.repos.count) repos"
+        }
+    }
+
+    /// The small face has room for one hint, not two.
+    ///
+    /// The chip used to win unconditionally, which let a 2-row merged list
+    /// render two green runs from a busy repo while another repo was red and
+    /// the fail count — the only thing that would have shown it — was
+    /// suppressed. A red count is a fact about the data; the chip is a fact
+    /// about the fetch, and bad news about the data wins (PRD C4).
+    private var smallShowsTotals: Bool {
+        entry.chip == nil || RunFormatting.totals(for: entry.runs).failure > 0
+    }
+
     private var headerLine: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text(entry.repo.isEmpty ? "ShipBox" : entry.repo)
+            Text(headerTitle)
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 4)
-            // A small face has room for one hint, not two: the reason wins.
-            if !entry.runs.isEmpty && !(family == .systemSmall && entry.chip != nil) {
+            if !entry.runs.isEmpty && !(family == .systemSmall && !smallShowsTotals) {
                 Text(RunFormatting.totalsLine(for: entry.runs))
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .lineLimit(1)
             }
-            if let chip = entry.chip {
+            if let chip = entry.chip, !(family == .systemSmall && smallShowsTotals) {
                 Text(chip)
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundStyle(.tertiary)
@@ -250,23 +279,54 @@ struct ShipBoxWidgetEntryView: View {
                     .tracking(1)
             }
             ForEach(Array(entry.runs.prefix(maxCount).enumerated()), id: \.offset) { _, run in
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(color(for: run.status))
-                        .frame(width: 7, height: 7)
-                    Text("\(run.name) #\(run.runNumber)")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    Spacer()
-                    Text(RunFormatting.detail(for: run))
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(run.status == .failure ? Color.primary : Color.secondary)
-                        .lineLimit(1)
+                // A run with no usable URL stays plain text rather than
+                // becoming a link that goes nowhere.
+                if let destination = DeckLink.webURL(from: run.htmlURL) {
+                    Link(destination: destination) { row(for: run) }
+                        .buttonStyle(.plain)
+                } else {
+                    row(for: run)
                 }
             }
+            if let note = entry.note, family != .systemSmall {
+                Text(note)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         }
+    }
+
+    private func row(for run: ShipRun) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color(for: run.status))
+                .frame(width: 7, height: 7)
+            // The repo takes the workflow's place: with several repos in one
+            // list, which repo a run belongs to matters more than which
+            // workflow produced it, and both will not fit at 11pt.
+            Text("\(label(for: run)) #\(run.runNumber)")
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer()
+            Text(RunFormatting.detail(for: run))
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(run.status == .failure ? Color.primary : Color.secondary)
+                .lineLimit(1)
+        }
+    }
+
+    private var repoLabels: [String: String] {
+        ShipBoxLabels.labels(for: entry.repos)
+    }
+
+    /// Falls back to the workflow name for a snapshot with no repos at all —
+    /// only reachable from a hand-edited file, but a blank row is worse.
+    private func label(for run: ShipRun) -> String {
+        repoLabels[run.repo] ?? (run.repo.isEmpty ? run.name : run.repo)
     }
 
     private func color(for status: ShipStatus) -> Color {

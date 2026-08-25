@@ -74,8 +74,8 @@ shell and only add a data source + a layout.
       with its timestamp, and a silent agent gets its own "Agent hasn't run"
       wording. Also removed the dead OpenBox "Refresh interval" stepper (the
       settings key stays, tolerantly decoded).
-      Follow-ups still open from `docs/planning/shipbox/prd.md:118`: ShipBox
-      multi-repo support.
+      Follow-up from `docs/planning/shipbox/prd.md:118` (ShipBox multi-repo)
+      shipped 2026-08-25 — see M6.
 - [x] Dev builds no longer break widget rendering: derived data lives in
       `native/build.noindex` so Spotlight/LaunchServices never registers
       throwaway copies of `com.deck.app` (stale registrations made WidgetKit
@@ -258,12 +258,41 @@ Rejected with a recorded blocker (do not re-recommend):
 
 Deferred behind the new widgets by decision on 2026-08-22.
 
-- [ ] **ShipBox multi-repo** — several `owner/repo` targets instead of one
-      (`docs/planning/shipbox/prd.md:118`). Open design points: `FetchStatusStore`
-      is keyed per *source* (`.shipbox`), so per-repo outcomes need either a new
-      key or an explicit worst-wins aggregate that names the failing repo;
-      `ShipBoxSettings.repo: String` → list needs tolerant-decode migration;
-      GitHub rate limits imply a repo cap at the 60s cadence.
+- [x] **ShipBox multi-repo** — up to five repos merged into one newest-first
+      list, with two ways to choose them: **Automatic** (default; the repos you
+      pushed to most recently that have runs) and **Pick repos** (five slot
+      pickers over the repos the token can see). Shipped 2026-08-25
+      (`docs/planning/shipbox-multi-repo/`).
+      **Probed live before the PRD, and three findings changed the design:**
+      - **Nothing in a repo object says whether it has Actions.** No field
+        matches `workflow`/`action`, and only **7 of 19** owned repos had any
+        runs — so automatic mode cannot know which repos have CI without
+        asking each one. It probes candidates (wanted + 3, capped at 8) at
+        `per_page=1` and fetches in full only the winners. Recency predicts CI
+        well but not perfectly: the first repo without runs was the 7th by
+        push date, which is what sizes the buffer.
+      - **Serial fan-out does not fit the tick.** Five repos measured **9.4s**
+        serially against **2.1s** concurrently, and with the 10s per-request
+        timeout the serial worst case runs past the 60s cadence. This is the
+        codebase's **first `withThrowingTaskGroup`**; every other loader
+        awaits its sources one after another.
+      - **A run object embeds the entire repository object** — ~11.4 KB *per
+        run* (`per_page=1` → 11.4 KB, `per_page=8` → 91.6 KB). Fetching every
+        candidate in full would have cost ~45 MB/hour for a widget that shows
+        eight rows; the two-wave probe halves it.
+      Rate limits turned out not to be the constraint at all (5000/hr core
+      against ~360 calls/hr), which is the opposite of what this entry assumed.
+      The `FetchStatusStore` question resolved to **keep one `.shipbox` key**
+      and carry per-repo detail in the snapshot's `note`, MarketBox's
+      one-key/several-providers precedent. Two honesty fixes came out of the
+      PRD's own critique: a failed *inventory* call is classified as itself and
+      never as "not configured" (it would tell a user with a revoked token to
+      go add a repo), and on the small face a non-zero fail count now outranks
+      the fetch chip — the old precedence could render two green rows while
+      another repo was red.
+      **Open follow-ups:** inventory pagination past 100 repos, caching the
+      discovered set across ticks (~16 MB/hr instead of ~22), per-repo fair
+      share so a busy repo cannot crowd out a quiet one.
 - [ ] **OpenBox remote incremental sync** — `limit`-based sync instead of a full
       resync each tick (`docs/planning/openbox-remote/prd.md:105`).
 - [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic

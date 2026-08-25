@@ -30,8 +30,10 @@ widget.
   each with its time, relative day and offset from your own zone; a chosen
   "main" clock drives the small face. The only widget on **neither** data
   path — pure `TimeZone` + `Date`, no snapshot, no sampler, no network.
-- **ShipBox** — build/deploy status: GitHub Actions runs for a repo (fetched
-  by the agent with the user's token).
+- **ShipBox** — build/deploy status: GitHub Actions runs across up to five
+  repos, merged newest-first (fetched by the agent with the user's token).
+  Repos are either picked by hand or discovered automatically; the only widget
+  that fetches concurrently — see the trap below.
 - **TaskBox** — tasks: Azure DevOps work items assigned to you, with open
   count, current sprint and board lanes (PAT, fetched by the agent).
 - **CalBox** — calendar: TODAY and TOMORROW sections, each with its own
@@ -43,6 +45,9 @@ widget.
   and the first to deep-link (rows are `Link`s; small uses `widgetURL`).
   Azure needs an identity GUID from `_apis/connectionData` — see the trap
   below.
+- **MarketBox** — markets: crypto, fiat and gold priced in one display
+  currency (USD/IRR/IRT/CAD/EUR/AED), from four keyless providers. Tickers are
+  picked from a curated list; no charts in the face (see the Swift Charts trap).
 
 All fourteen ship in one WidgetKit extension: `Deck.app` (host + settings window)
 → `DeckWidgets.appex`.
@@ -212,6 +217,24 @@ Do not delete the container; see the trap below.
   `…/_git/{repo}/pullrequest/{id}`), and `reviewerId` returns PRs you have
   **already voted on**, so the review queue filters to `vote == 0` to mean what
   GitHub's `review-requested` means.
+- **GitHub's Actions API costs ~11 KB per run, and no field says whether a
+  repo has CI.** A `workflow_runs` entry embeds the *entire* repository object,
+  so payload scales with runs, not repos: measured on a live account,
+  `per_page=1` is 11.4 KB and `per_page=8` is 91.6 KB. ShipBox's automatic mode
+  therefore probes candidate repos at `per_page=1` purely to learn which have
+  runs, then fetches in full only the ones it will show — fetching every
+  candidate in full costs ~45 MB/hour for an eight-row widget. The probe is
+  needed because **nothing in a repo object advertises Actions**: no field
+  matches `workflow` or `action`, and `actions/runs` answers **200 with
+  `total_count: 0`** for a repo with no workflows (an unknown repo is a 404).
+  Recency is a good proxy but not a reliable one — 7 of 19 owned repos had any
+  runs, and the first miss was the 7th by push date.
+- **Fan out concurrently or miss the tick.** `URLSession.timeoutInterval` is
+  per *request*, so N serial fetches can stall for N×10s against a 60s agent
+  cadence. Five repos measured **9.4s serially, 2.1s concurrently**. ShipBox's
+  `HostGitHubLoader.inParallel` is the only `withThrowingTaskGroup` in the
+  codebase; every other loader (including MarketBox's four providers) awaits
+  serially and gets away with it only because it has fewer sources.
 - **Accessory batteries need an SPI, and two obvious sources are dead ends.**
   `IOPSCopyPowerSourcesList` returns only the internal battery — accessories
   are a separate power-source type reached via `IOPSCopyPowerSourcesByType(4)`,

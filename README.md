@@ -56,7 +56,7 @@ native colors, corners and materials, at three sizes each.
 | **ClipBox** | clipboard history: recent copies with previews, item kinds, relative times |
 | **WeatherBox** | weather for your location (conditions + 3-day forecast); a failed fetch says why |
 | **ClockBox** | world clocks for up to six cities (3 on medium, 6 on large): time, relative day, offset from your own zone |
-| **ShipBox** | GitHub Actions run status for a repo: status dots, durations, totals; a failed fetch says why |
+| **ShipBox** | GitHub Actions runs across up to five repos, newest first: status dots, durations, totals; clickable rows; a failed fetch says why |
 | **TaskBox** | Azure DevOps work items assigned to you (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
 | **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps in one queue: counts, provider-tagged rows, drafts marked; click a row to open the PR; a failed fetch names the provider |
@@ -152,9 +152,15 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   inside the widget, so it works with the agent stopped and the network down.
   Its timeline carries an hour of entries on minute boundaries, so the displayed
   minute is never stale.
-- **ShipBox** needs a repo (`owner/repo`) and a GitHub token in settings —
-  without a token nothing is fetched (the token goes only to api.github.com
-  over TLS). Runs refresh via the agent every 60s.
+- **ShipBox** needs a GitHub token in settings — without one nothing is fetched
+  (the token goes only to api.github.com over TLS). It watches up to five repos
+  and merges their runs into one newest-first list, with the repo on each row.
+  Two modes, chosen in the ShipBox tab: **Automatic** (the default) watches the
+  repos you pushed to most recently that have any Actions runs, so the set
+  changes as you push; **Pick repos** gives you five slots, each a picker over
+  the repos your token can see. A repo that fails while the others succeed
+  doesn't blank the widget — its runs are simply absent and a note names it.
+  Runs refresh via the agent every 60s, and clicking a row opens that run.
 - **MarketBox** tickers are picked from a list, not typed: twelve slots in the
   MarketBox tab, each a picker over the curated symbols (crypto, fiat codes,
   and `GOLD` for 1 gram of gold — slot order is display order). Prices are
@@ -244,7 +250,7 @@ Deck reads personal data, so here is exactly what happens to it.
 | Widget | Sends | To |
 |---|---|---|
 | WeatherBox | your location (or nothing, and your IP geolocates) | `wttr.in` |
-| ShipBox | your GitHub token, your `owner/repo` | `api.github.com` |
+| ShipBox | your GitHub token, and the repos you watch (or, in Automatic mode, your repo list) | `api.github.com` |
 | TaskBox | your Azure DevOps PAT, org and project | `dev.azure.com` |
 | OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
 | MarketBox | the symbols you typed (e.g. `BTC, USD, GOLD`) | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com` |

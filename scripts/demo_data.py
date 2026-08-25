@@ -99,12 +99,22 @@ def gitbox(d):
         repo["path"] = f"/Users/you/dev/{name}"
 
 
+SHIP_REPOS = ["haqaliz/deck", "haqaliz/cyclo", "haqaliz/pong"]
+
+
 def shipbox(d):
-    d["repo"] = "haqaliz/deck"
-    for run in d.get("runs", []):
-        run["name"] = "Deck"
-        run["branch"] = "master"
-        run["htmlURL"] = "https://github.com/haqaliz/deck/actions"
+    # The repo now shows on every row, so both the list and each run have to be
+    # sanitised or a screenshot publishes real repo names.
+    count = max(1, min(len(d.get("repos", [])) or 1, len(SHIP_REPOS)))
+    d["repos"] = SHIP_REPOS[:count]
+    for i, run in enumerate(d.get("runs", [])):
+        repo = cycle(d["repos"], i)
+        run["repo"] = repo
+        run["name"] = "CI"
+        run["branch"] = "main"
+        run["htmlURL"] = "https://github.com/%s/actions" % repo
+    if d.get("note"):
+        d["note"] = "%s: can't reach GitHub" % SHIP_REPOS[-1].split("/")[-1]
 
 
 def devbox(d):

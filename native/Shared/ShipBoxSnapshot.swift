@@ -339,6 +339,20 @@ enum HostGitHubLoader {
         return DynamicRepoSelector.select(probed: probed, maxCount: maxCount)
     }
 
+    /// The repos the token can see, for the settings picker. Uses the default
+    /// affiliation rather than dynamic mode's `owner`, so a repo you only
+    /// collaborate on can still be picked deliberately.
+    static func repoInventory(token: String) async throws -> [String] {
+        guard !token.isEmpty else { throw GitHubError.notConfigured }
+        guard let url = URL(string: "https://api.github.com/user/repos?sort=pushed&per_page=100") else {
+            throw GitHubError.invalidRepo
+        }
+        guard let parsed = RepoInventoryParser.parse(try await get(url, token: token)) else {
+            throw GitHubError.invalidPayload
+        }
+        return parsed
+    }
+
     private static func inventory(token: String) async throws -> [String] {
         guard let url = URL(string: "https://api.github.com/user/repos?sort=pushed&per_page=100&affiliation=owner") else {
             throw GitHubError.invalidRepo
