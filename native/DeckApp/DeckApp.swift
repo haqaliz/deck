@@ -72,6 +72,10 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
 
 struct ContentView: View {
     @State private var settings = DeckSettings.load()
+    /// Credentials the keychain refused to hand over this launch — a locked
+    /// login keychain, most likely. Kept apart from "never set", which is a
+    /// different message and a different field to fix.
+    @State private var unavailableSecrets: Set<DeckSecret> = []
     @State private var selection: DeckWidget = .livebox
     @State private var timer: Timer?
     @State private var toolbarSweepTimer: Timer?
@@ -98,7 +102,7 @@ struct ContentView: View {
                 onEraseData: eraseDeckData
             )
             case .livebox: LiveBoxSettingsView(settings: $settings.livebox)
-            case .openbox: OpenBoxSettingsView(settings: $settings.openbox)
+            case .openbox: OpenBoxSettingsView(settings: $settings.openbox, onSecretCommitted: secretCommitted)
             case .netbox: NetBoxSettingsView(settings: $settings.netbox)
             case .batbox: BatBoxSettingsView(settings: $settings.batbox)
             case .gitbox: GitBoxSettingsView(settings: $settings.gitbox)
@@ -106,10 +110,10 @@ struct ContentView: View {
             case .clipbox: ClipBoxSettingsView(settings: $settings.clipbox)
             case .weatherbox: WeatherBoxSettingsView(settings: $settings.weatherbox)
             case .clockbox: ClockBoxSettingsView(settings: $settings.clockbox)
-            case .shipbox: ShipBoxSettingsView(settings: $settings.shipbox)
-            case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox)
+            case .shipbox: ShipBoxSettingsView(settings: $settings.shipbox, onSecretCommitted: secretCommitted)
+            case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox, onSecretCommitted: secretCommitted)
             case .calbox: CalBoxSettingsView(settings: $settings.calbox)
-            case .prbox: PRBoxSettingsView(settings: $settings.prbox)
+            case .prbox: PRBoxSettingsView(settings: $settings.prbox, onSecretCommitted: secretCommitted)
             case .marketbox: MarketBoxSettingsView(settings: $settings.marketbox)
             }
         }
@@ -117,6 +121,7 @@ struct ContentView: View {
         .frame(width: 640, height: 500)
         .onAppear {
             DeckSettings.tightenPermissions()
+            adoptKeychainSecrets()
             installAgentIfNeeded()
             Task { await refreshOpenCode() }
             refreshGitBox()
@@ -165,7 +170,10 @@ struct ContentView: View {
         let openbox = settings.openbox
         let snapshot: OpenCodeSnapshot?
         if let serverURL = openbox.serverURL, !serverURL.isEmpty {
-            if !openbox.token.isEmpty {
+            if unavailableSecrets.contains(.openboxToken) {
+                snapshot = nil
+                FetchStatusStore.record(.credentialsUnavailable, for: .opencodeRemote)
+            } else if !openbox.token.isEmpty {
                 do {
                     snapshot = try await RemoteOpenCodeLoader.load(serverURL: serverURL, token: openbox.token)
                     FetchStatusStore.record(.ok, for: .opencodeRemote)
@@ -257,7 +265,9 @@ struct ContentView: View {
         }
 
         var github: PRRoleTotals?
-        if prbox.github.isUsable {
+        if unavailableSecrets.contains(.prboxGitHubToken) {
+            FetchStatusStore.record(.credentialsUnavailable, for: .prboxGitHub)
+        } else if prbox.github.isUsable {
             do {
                 github = try await HostGitHubPRLoader.fetch(
                     token: prbox.github.token,
@@ -273,7 +283,9 @@ struct ContentView: View {
         }
 
         var azure: PRRoleTotals?
-        if prbox.azure.isUsable {
+        if unavailableSecrets.contains(.prboxAzureToken) {
+            FetchStatusStore.record(.credentialsUnavailable, for: .prboxAzure)
+        } else if prbox.azure.isUsable {
             do {
                 azure = try await HostAzurePRLoader.fetch(
                     organization: prbox.azure.organization,
@@ -304,6 +316,11 @@ struct ContentView: View {
         let shipbox = settings.shipbox
         // Dynamic mode needs only a token; static mode also needs a repo.
         // Mirrors DeckAgent exactly — the two have always been line-for-line.
+        guard !unavailableSecrets.contains(.shipboxToken) else {
+            FetchStatusStore.record(.credentialsUnavailable, for: .shipbox)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
         let configured = !shipbox.token.isEmpty
             && (shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty)
         guard configured else {
@@ -332,6 +349,11 @@ struct ContentView: View {
         let taskbox = settings.taskbox
         let organization = taskbox.organization.trimmingCharacters(in: .whitespacesAndNewlines)
         let project = taskbox.project.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !unavailableSecrets.contains(.taskboxToken) else {
+            FetchStatusStore.record(.credentialsUnavailable, for: .taskbox)
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
         guard !organization.isEmpty, !project.isEmpty, !taskbox.token.isEmpty else {
             FetchStatusStore.record(.notConfigured, for: .taskbox)
             WidgetCenter.shared.reloadAllTimelines()
@@ -484,15 +506,45 @@ struct ContentView: View {
         removeAgent()
     }
 
+    /// Moves any credential still in `settings.json` into the keychain, then
+    /// fills the in-memory settings from it.
+    ///
+    /// Migration first: until it has run the file is still the only place the
+    /// token exists, and hydrating would find nothing to overwrite it with.
+    /// Saving is what scrubs the file, so it only happens once something moved.
+    private func adoptKeychainSecrets() {
+        var migrated = settings
+        if DeckSecretsMigration.migrate(&migrated) {
+            settings = migrated
+            settings.save()
+        }
+        unavailableSecrets = settings.hydrateFromKeychain()
+        for secret in unavailableSecrets {
+            FetchStatusStore.record(.credentialsUnavailable, for: secret.fetchSource)
+        }
+    }
+
+    /// A freshly pasted credential clears a read failure from this launch —
+    /// otherwise the widget would keep saying it can't read a token the user
+    /// just typed.
+    private func secretCommitted(_ secret: DeckSecret) {
+        unavailableSecrets.remove(secret)
+    }
+
     /// Uninstall: delete Deck's data directory inside the widget container.
     ///
     /// This removes the *contents* Deck owns — settings.json, every snapshot,
-    /// the clipboard history and the saved tokens. It deliberately does not
+    /// the clipboard history — and the five keychain credentials, which is what
+    /// keeps the promise below true now that tokens no longer live in the file. It deliberately does not
     /// touch the container itself: that directory's metadata plist is
     /// SIP-protected and survives deletion, after which containermanagerd
     /// never rebuilds the skeleton and every widget renders blank forever.
     private func eraseDeckData() {
         uninstallAgents()
+        // Best-effort and silent, like the container sweep below.
+        for secret in DeckSecret.allCases {
+            DeckKeychain.delete(secret)
+        }
         let directory = DeckSettings.containerDirectory
         let contents = (try? FileManager.default.contentsOfDirectory(
             at: directory,
@@ -726,13 +778,53 @@ private struct LiveBoxSettingsView: View {
     }
 }
 
+/// A `SecureField` whose value lives in the keychain rather than in
+/// `settings.json`.
+///
+/// The draft is local so `onChange(of: settings)` — which fires per keystroke
+/// and saves the whole file — never sees a half-typed token. The value is
+/// committed on Return or when the field loses focus, and only then does it
+/// reach the keychain and the in-memory settings.
+private struct SecretField: View {
+    let title: String
+    let secret: DeckSecret
+    @Binding var value: String
+    var onCommit: (DeckSecret) -> Void = { _ in }
+
+    @State private var draft: String = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        SecureField(title, text: $draft)
+            .focused($focused)
+            .onAppear { draft = value }
+            .onChange(of: value) { newValue in
+                // Migration or hydration filled it in behind us.
+                if !focused { draft = newValue }
+            }
+            .onSubmit(commit)
+            .onChange(of: focused) { isFocused in
+                if !isFocused { commit() }
+            }
+    }
+
+    private func commit() {
+        guard draft != value else { return }
+        DeckKeychain.write(secret, value: draft)
+        value = draft
+        onCommit(secret)
+    }
+}
+
 private struct OpenBoxSettingsView: View {
     @Binding var settings: OpenBoxSettings
+    var onSecretCommitted: (DeckSecret) -> Void = { _ in }
 
     var body: some View {
         Form {
             Section("Remote server (optional)") {
-                SecureField("Token", text: $settings.token)
+                SecretField(title: "Token", secret: .openboxToken,
+                            value: $settings.token, onCommit: onSecretCommitted)
                     .textContentType(.password)
                 TextField("Server URL (opencode serve, e.g. http://host:4096)", text: serverURLBinding)
                 Text("Empty URL = local opencode database. A configured URL works only with your own token pasted above.")
@@ -1101,6 +1193,7 @@ private struct FetchStatusCaption: View {
 
 private struct PRBoxSettingsView: View {
     @Binding var settings: PRBoxSettings
+    var onSecretCommitted: (DeckSecret) -> Void = { _ in }
 
     /// Deck's first per-provider sub-tab. A segmented picker inside the Form
     /// keeps it native and keeps the window at its existing size, where a real
@@ -1153,7 +1246,8 @@ private struct PRBoxSettingsView: View {
     private var githubSection: some View {
         Section("GitHub") {
             Toggle("Include GitHub", isOn: $settings.github.enabled)
-            SecureField("Personal access token", text: $settings.github.token)
+            SecretField(title: "Personal access token", secret: .prboxGitHubToken,
+                        value: $settings.github.token, onCommit: onSecretCommitted)
                 .textContentType(.password)
             TextField("Scope (optional)", text: $settings.github.scope, prompt: Text("org:acme"))
             Text("Without a scope this searches every repository the token can see, which can reach years back into personal repos. The token is sent only to api.github.com over TLS.")
@@ -1171,7 +1265,8 @@ private struct PRBoxSettingsView: View {
             Toggle("Include Azure DevOps", isOn: $settings.azure.enabled)
             TextField("Organization", text: $settings.azure.organization)
             TextField("Project", text: $settings.azure.project)
-            SecureField("Personal access token", text: $settings.azure.token)
+            SecretField(title: "Personal access token", secret: .prboxAzureToken,
+                        value: $settings.azure.token, onCommit: onSecretCommitted)
                 .textContentType(.password)
             Text("Shows pull requests created by, or awaiting review from, whoever owns the PAT \u{2014} not whoever is signed in to the browser. The token is sent only to dev.azure.com over TLS; a read-only PAT that can see Code is enough.")
                 .font(.caption)
@@ -1186,6 +1281,7 @@ private struct PRBoxSettingsView: View {
 
 private struct ShipBoxSettingsView: View {
     @Binding var settings: ShipBoxSettings
+    var onSecretCommitted: (DeckSecret) -> Void = { _ in }
 
     /// The repos the token can see, fetched when the tab appears. Never
     /// persisted and never read by the agent — it exists only to fill the
@@ -1206,7 +1302,8 @@ private struct ShipBoxSettingsView: View {
             // picker cannot offer a single repo without it — a tab of five
             // empty dropdowns above the field that fills them reads as broken.
             Section("GitHub") {
-                SecureField("GitHub token", text: $settings.token)
+                SecretField(title: "GitHub token", secret: .shipboxToken,
+                            value: $settings.token, onCommit: onSecretCommitted)
                     .textContentType(.password)
                 Text("Required. The token is sent only to api.github.com over TLS; a token that can read Actions is enough.")
                     .font(.caption)
@@ -1334,13 +1431,15 @@ private struct ShipBoxSettingsView: View {
 
 private struct TaskBoxSettingsView: View {
     @Binding var settings: TaskBoxSettings
+    var onSecretCommitted: (DeckSecret) -> Void = { _ in }
 
     var body: some View {
         Form {
             Section("Azure DevOps") {
                 TextField("Organization", text: $settings.organization)
                 TextField("Project", text: $settings.project)
-                SecureField("Personal access token", text: $settings.token)
+                SecretField(title: "Personal access token", secret: .taskboxToken,
+                            value: $settings.token, onCommit: onSecretCommitted)
                     .textContentType(.password)
                 Text("Empty organization, project or token = the widget shows no data. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
                     .font(.caption)

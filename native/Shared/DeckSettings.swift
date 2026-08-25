@@ -185,7 +185,7 @@ struct DeckSettings: Codable, Equatable {
         for secret in DeckSecret.allCases {
             switch reads[secret] {
             case .found(let value):
-                assign(value, to: secret)
+                setSecret(value, for: secret)
             case .failed:
                 failed.insert(secret)
             case .absent, nil:
@@ -202,7 +202,7 @@ struct DeckSettings: Codable, Equatable {
         hydrate(from: DeckKeychain.readAll())
     }
 
-    private mutating func assign(_ value: String, to secret: DeckSecret) {
+    mutating func setSecret(_ value: String, for secret: DeckSecret) {
         switch secret {
         case .openboxToken: openbox.token = value
         case .shipboxToken: shipbox.token = value

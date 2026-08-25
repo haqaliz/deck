@@ -103,3 +103,37 @@ enum DeckKeychain {
         ]
     }
 }
+
+/// Moves credentials that predate the keychain out of `settings.json`.
+///
+/// Runs once at app launch and is idempotent — a second run finds nothing to
+/// move. `DeckAgent` never runs it: the agent does not write settings, which is
+/// what lets it keep working from an unmigrated file until the user opens Deck.
+enum DeckSecretsMigration {
+    /// Write → **read back to confirm** → only then blank the field.
+    ///
+    /// The order is the safety property. Blanking first and writing second
+    /// loses the token outright if the keychain write fails; this way a failure
+    /// leaves `settings.json` exactly as it was and the migration simply
+    /// retries at the next launch.
+    ///
+    /// - Returns: `true` when at least one field was moved and the caller
+    ///   should save.
+    @discardableResult
+    static func migrate(
+        _ settings: inout DeckSettings,
+        write: (DeckSecret, String) -> OSStatus = { DeckKeychain.write($0, value: $1) },
+        readBack: (DeckSecret) -> SecretRead = { DeckKeychain.read($0) }
+    ) -> Bool {
+        var moved = false
+        for secret in DeckSecret.allCases {
+            let value = settings.secretValue(secret)
+            guard !value.isEmpty else { continue }
+            guard write(secret, value) == errSecSuccess else { continue }
+            guard readBack(secret) == .found(value) else { continue }
+            settings.setSecret("", for: secret)
+            moved = true
+        }
+        return moved
+    }
+}
