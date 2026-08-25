@@ -363,7 +363,7 @@ final class ShipBoxSettingsDecodeTests: XCTestCase {
 
     func testPartialFixtureKeepsDefaults() throws {
         let s = try decode(#"{"repo":"a/b","runCount":8}"#, as: ShipBoxSettings.self)
-        XCTAssertEqual(s.repo, "a/b")
+        XCTAssertEqual(s.repos, ["a/b"])
         XCTAssertEqual(s.runCount, 8)
         XCTAssertEqual(s.successColor, RGBA(.green))
     }
@@ -398,7 +398,7 @@ final class TaskBoxSettingsDecodeTests: XCTestCase {
 
     func testDeckSettingsWithoutATaskBoxSectionStillLoads() throws {
         let s = try decode(#"{"shipbox":{"repo":"a/b"}}"#, as: DeckSettings.self)
-        XCTAssertEqual(s.shipbox.repo, "a/b")
+        XCTAssertEqual(s.shipbox.repos, ["a/b"])
         XCTAssertEqual(s.taskbox, TaskBoxSettings())
     }
 }
@@ -421,7 +421,7 @@ final class DeckSettingsSchemaEvolutionTests: XCTestCase {
         XCTAssertEqual(s.openbox.token, "abc")
         XCTAssertEqual(s.gitbox.scanDepth, 4)
         XCTAssertEqual(s.weatherbox.location, "Tehran", "legacy homebox key migrates")
-        XCTAssertEqual(s.shipbox.repo, "a/b")
+        XCTAssertEqual(s.shipbox.repos, ["a/b"])
         XCTAssertFalse(s.agentAtLogin)
         XCTAssertEqual(s.taskbox, TaskBoxSettings(), "the new section defaults")
     }
@@ -493,7 +493,7 @@ final class DeckSettingsRoundTripTests: XCTestCase {
         s.clockbox.cityIDs = ["Asia/Tokyo", "Europe/Paris"]
         s.clockbox.mainCityID = "Europe/Paris"
         s.clockbox.showOffset = false
-        s.shipbox.repo = "owner/name"
+        s.shipbox.repos = ["owner/name"]
         s.shipbox.runCount = 13
         s.taskbox.organization = "org"
         s.taskbox.project = "proj"
@@ -648,7 +648,7 @@ final class PrePRBoxSettingsTests: XCTestCase {
 
     func testOtherSettingsSurviveTheUpgrade() throws {
         let s = try JSONDecoder().decode(DeckSettings.self, from: Data(prePRBox.utf8))
-        XCTAssertEqual(s.shipbox.repo, "owner/name")
+        XCTAssertEqual(s.shipbox.repos, ["owner/name"], "the legacy single-repo key migrates")
         XCTAssertEqual(s.shipbox.runCount, 7)
         XCTAssertEqual(s.gitbox.repoPaths, ["/Users/me/dev"])
         XCTAssertEqual(s.gitbox.scanDepth, 4)

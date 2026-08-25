@@ -73,7 +73,7 @@ final class MarketBoxSettingsDecodeTests: XCTestCase {
 
     func testDeckSettingsWithoutMarketBoxSectionStillLoads() throws {
         let s = try decode(#"{"shipbox":{"repo":"a/b"}}"#, as: DeckSettings.self)
-        XCTAssertEqual(s.shipbox.repo, "a/b")
+        XCTAssertEqual(s.shipbox.repos, ["a/b"])
         XCTAssertEqual(s.marketbox, MarketBoxSettings())
     }
 

@@ -481,9 +481,25 @@ private struct LegacyHomeBoxSettings: Decodable {
     }
 }
 
+/// How ShipBox decides which repos to watch.
+enum ShipBoxRepoMode: String, Codable, Equatable, CaseIterable {
+    /// The repos you pushed to most recently that have any Actions runs.
+    /// Discovered every tick; the set changes as you push.
+    case dynamic
+    /// Exactly the repos picked in settings.
+    case staticList = "static"
+}
+
 struct ShipBoxSettings: Codable, Equatable {
-    /// "owner/repo" — empty → agent skips the fetch.
-    var repo = ""
+    /// Auto-discovery or explicit picks. Dynamic is the default because it
+    /// needs nothing but a token.
+    var repoMode = ShipBoxRepoMode.dynamic
+    /// "owner/repo" entries in display order, used by `.staticList` only.
+    /// Empty in static mode → agent skips the fetch.
+    var repos: [String] = []
+    /// How many repos `.dynamic` watches. Bounded by `maxRepoCount` so the
+    /// fan-out stays inside one 60s tick.
+    var maxRepoCount = 3
     /// GitHub personal access token — required; no default is ever sent.
     var token = ""
     var showList = true
@@ -493,11 +509,37 @@ struct ShipBoxSettings: Codable, Equatable {
     var successColor = RGBA(.green)
     var failureColor = RGBA(.red)
 
+    /// Both the static slot count and the dynamic ceiling. Five repos is the
+    /// most the fan-out can fetch and the face can name.
+    static let maxRepoCount = 5
+
     init() {}
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        repo = try c.decodeIfPresent(String.self, forKey: .repo) ?? ""
+        // `repo` was the single-target shape this widget shipped with. A
+        // non-empty legacy value migrates to a one-entry static list: the user
+        // chose that repo, and dropping them into auto-discovery would replace
+        // it with whatever they happened to push to most recently.
+        let legacy = try c.decodeIfPresent(String.self, forKey: .legacyRepo)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let decoded = try c.decodeIfPresent([String].self, forKey: .repos) {
+            repos = Self.normalized(decoded)
+        } else if let legacy, !legacy.isEmpty {
+            repos = Self.normalized([legacy])
+        } else {
+            repos = []
+        }
+        // An unknown mode (written by a newer build) reads as dynamic rather
+        // than throwing — a throw here resets every other widget's settings.
+        if let raw = try c.decodeIfPresent(String.self, forKey: .repoMode) {
+            repoMode = ShipBoxRepoMode(rawValue: raw) ?? .dynamic
+        } else if let legacy, !legacy.isEmpty {
+            repoMode = .staticList
+        } else {
+            repoMode = .dynamic
+        }
+        maxRepoCount = min(max(try c.decodeIfPresent(Int.self, forKey: .maxRepoCount) ?? 3, 1), Self.maxRepoCount)
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
         runCount = try c.decodeIfPresent(Int.self, forKey: .runCount) ?? 4
@@ -505,6 +547,44 @@ struct ShipBoxSettings: Codable, Equatable {
         runningColor = try c.decodeIfPresent(RGBA.self, forKey: .runningColor) ?? RGBA(.yellow)
         successColor = try c.decodeIfPresent(RGBA.self, forKey: .successColor) ?? RGBA(.green)
         failureColor = try c.decodeIfPresent(RGBA.self, forKey: .failureColor) ?? RGBA(.red)
+    }
+
+    /// Writes only the current shape: the legacy `repo` key is read on the way
+    /// in and dropped on the way out, so a file migrates once and stays clean.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(repoMode, forKey: .repoMode)
+        try c.encode(repos, forKey: .repos)
+        try c.encode(maxRepoCount, forKey: .maxRepoCount)
+        try c.encode(token, forKey: .token)
+        try c.encode(showList, forKey: .showList)
+        try c.encode(runCount, forKey: .runCount)
+        try c.encode(queuedColor, forKey: .queuedColor)
+        try c.encode(runningColor, forKey: .runningColor)
+        try c.encode(successColor, forKey: .successColor)
+        try c.encode(failureColor, forKey: .failureColor)
+    }
+
+    /// Trimmed, empties dropped, capped at `maxRepoCount`, deduped
+    /// case-insensitively — GitHub treats `A/B` and `a/b` as one repo, so
+    /// keeping both would double the fetch and duplicate every row. The first
+    /// spelling wins, because it is the one the user typed or picked.
+    static func normalized(_ repos: [String]) -> [String] {
+        var kept: [String] = []
+        var seen: Set<String> = []
+        for repo in repos {
+            let trimmed = repo.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed.lowercased()).inserted else { continue }
+            kept.append(trimmed)
+            if kept.count == maxRepoCount { break }
+        }
+        return kept
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case repoMode, repos, maxRepoCount, token, showList, runCount
+        case queuedColor, runningColor, successColor, failureColor
+        case legacyRepo = "repo"
     }
 }
 

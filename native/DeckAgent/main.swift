@@ -128,7 +128,7 @@ Task {
     }
 
     // ShipBox: requires the user's own repo + token — never a default token.
-    let shipboxRepo = settings.shipbox.repo
+    let shipboxRepo = settings.shipbox.repos.first ?? ""
         .trimmingCharacters(in: .whitespacesAndNewlines)
     if !shipboxRepo.isEmpty && !settings.shipbox.token.isEmpty {
         do {

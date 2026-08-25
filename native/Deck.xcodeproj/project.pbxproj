@@ -166,6 +166,7 @@
 		D74629484729CBEAE1664FFD /* GitBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */; };
 		D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */; };
 		D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
+		D8DE1BC7D47C480B185987C0 /* ShipBoxSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF045F6211C715FF81858003 /* ShipBoxSettingsTests.swift */; };
 		DAD7D5822D2A6F40FD89DD26 /* AtomicFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */; };
 		DD3E61D42DB4A46DB5C256BF /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
 		DE08983334C0343BB41BC78D /* DeckLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */; };
@@ -296,6 +297,7 @@
 		B662E23A53ACAA091EAFA898 /* DeckApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeckApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B6F93AE35E753ECCFC7B3CF9 /* MarketBoxCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxCoreTests.swift; sourceTree = "<group>"; };
 		B989CFB8753F5CA071EEBD93 /* goldXau.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = goldXau.json; sourceTree = "<group>"; };
+		BF045F6211C715FF81858003 /* ShipBoxSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSettingsTests.swift; sourceTree = "<group>"; };
 		C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetricsCore.swift; sourceTree = "<group>"; };
 		C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxThresholdTests.swift; sourceTree = "<group>"; };
 		C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxCore.swift; sourceTree = "<group>"; };
@@ -417,6 +419,7 @@
 				21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */,
 				D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */,
 				5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */,
+				BF045F6211C715FF81858003 /* ShipBoxSettingsTests.swift */,
 				2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */,
 				F06724D8333A9A74C4156DB6 /* SmokeTests.swift */,
 				29738728E12DD5CDF3E8BB45 /* SystemMetricsCoreTests.swift */,
@@ -808,6 +811,7 @@
 				F4AB6B9FEEF6A118BD4F284B /* ProcessSnapshotTests.swift in Sources */,
 				AA9E91EA980B1F6E98C2FF6B /* RemoteOpenCodeAggregatorTests.swift in Sources */,
 				4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */,
+				D8DE1BC7D47C480B185987C0 /* ShipBoxSettingsTests.swift in Sources */,
 				769F47CE66D9A10A5B348E02 /* ShipBoxSnapshot.swift in Sources */,
 				A5D6283DF0774FCB9F273152 /* ShipBoxSnapshotTests.swift in Sources */,
 				083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */,

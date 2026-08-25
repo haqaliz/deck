@@ -302,7 +302,7 @@ struct ContentView: View {
 
     private func refreshShipBox() async {
         let shipbox = settings.shipbox
-        let repo = shipbox.repo.trimmingCharacters(in: .whitespacesAndNewlines)
+        let repo = (shipbox.repos.first ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !repo.isEmpty, !shipbox.token.isEmpty else {
             FetchStatusStore.record(.notConfigured, for: .shipbox)
             WidgetCenter.shared.reloadAllTimelines()
@@ -1184,16 +1184,24 @@ private struct PRBoxSettingsView: View {
 private struct ShipBoxSettingsView: View {
     @Binding var settings: ShipBoxSettings
 
+    /// Interim single-repo binding; the sub-tabbed repo list replaces it.
+    private var firstRepo: Binding<String> {
+        Binding(
+            get: { settings.repos.first ?? "" },
+            set: { settings.repos = ShipBoxSettings.normalized([$0]) }
+        )
+    }
+
     var body: some View {
         Form {
             Section("Repository") {
-                TextField("owner/repo", text: $settings.repo)
+                TextField("owner/repo", text: firstRepo)
                 SecureField("GitHub token", text: $settings.token)
                     .textContentType(.password)
                 Text("Empty repo or token = the widget shows no data. The token is sent only to api.github.com over TLS.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                FetchStatusCaption(source: .shipbox, clearOn: "\(settings.repo)\u{0}\(settings.token)")
+                FetchStatusCaption(source: .shipbox, clearOn: "\(settings.repos.joined(separator: ","))\u{0}\(settings.token)")
             }
             Section("Runs") {
                 Toggle("Show runs list", isOn: $settings.showList)
