@@ -1,62 +1,87 @@
-# WeatherBox + ClockBox split — Phase 2 understanding
+# Understanding — ShipBox multi-repo
 
 ## What the work is really asking
 
-Two units of work bundled in one card:
+ShipBox is a single-target widget: one `owner/repo` → one GitHub Actions fetch →
+one snapshot → one flat list of runs. The ask is to fan that out over a small
+list of repos while keeping **one** snapshot, **one** fetch-status key and one
+readable face. The fetch itself is already proven — this is a shape change, not
+a new data source.
 
-1. **Rename** HomeBox -> WeatherBox and drop its world-clock half.
-2. **New widget** ClockBox: up to 4 analog world-clock faces, user-picked cities.
-
-ClockBox is the *only* widget so far that needs **no data path at all** —
-not agent-pumped, not even a syscall sampler. It is pure `TimeZone` +
-`Date`, resolved at render. That makes it the cheapest widget in the set
-and removes the whole snapshot/FetchStatus layer from its design.
-
-## Affected files
+## Affected files (all exist; nothing new is invented)
 
 | File | Change |
 |---|---|
-| `Shared/HomeBoxSnapshot.swift` | drop `ZoneRow`/`ZoneRows` (moves to ClockBox core) |
-| `Shared/DeckSettings.swift` | `homebox` -> `weatherbox` + legacy fallback; add `clockbox`; FIX missing `calbox` decode |
-| `DeckWidgets/HomeBoxWidget.swift` | -> `WeatherBoxWidget.swift`, clock rows removed |
-| `DeckWidgets/ClockBoxWidget.swift` | NEW |
-| `Shared/ClockBoxCore.swift` | NEW — pure city/zone/offset/hand-angle logic |
-| `DeckWidgets/DeckWidgets.swift` | bundle registration |
-| `DeckApp/DeckApp.swift` | rename tab; new ClockBox tab with city picker |
-| `native/project.yml` | version bump (new widget -> gallery re-enumeration) |
-| `SharedTests/ClockBoxTests.swift` | NEW |
-| `README.md`, `ROADMAP.md`, `CLAUDE.md` | widget roster is documented in all three |
+| `native/Shared/DeckSettings.swift:484` | `ShipBoxSettings.repo: String` → a list + tolerant migration |
+| `native/Shared/ShipBoxSnapshot.swift:10` | `ShipBoxSnapshot.repo: String` → repos; `ShipRun` gains a repo tag |
+| `native/Shared/ShipBoxSnapshot.swift:69` | `HostGitHubLoader.fetch(repo:token:)` → fan-out + partial-failure policy |
+| `native/Shared/FetchStatus.swift:19` | `.shipbox` stays one key; copy may need "N repos" wording |
+| `native/DeckAgent/main.swift:130` | the guard (`repo.isEmpty`) and the `.notConfigured` branch |
+| `native/DeckApp/DeckApp.swift:303` | `refreshShipBox()` mirrors the agent block exactly |
+| `native/DeckApp/DeckApp.swift:1184` | settings tab: one `TextField` → a repo list |
+| `native/DeckWidgets/ShipBoxWidget.swift` | header (`entry.repo`), row label, three faces |
+| `native/SharedTests/ShipBoxSnapshotTests.swift` | parser/formatter/merge tests |
+| `scripts/demo_data.py:102` | sanitizer writes `d["repo"]` — must follow the new shape |
+| `README.md`, `ROADMAP.md` | registration + close `ROADMAP.md:311` |
 
-Snapshot file needs **no** rename: it is already `weather.json`.
+## What the codebase already decided for us
 
-## Findings that change the design
+- **Partial failure has a shipped precedent.** `HostMarketLoader.fetch`
+  (`MarketBoxSnapshot.swift:193`) fetches each provider best-effort, keeps the
+  first error, returns rows + a `note`, and throws **only when nothing at all
+  could be built**. `MarketSnapshot.note` is rendered as one line on the face
+  (`MarketBoxWidget.swift:165`). ShipBox should copy this verbatim: a repo that
+  fails contributes no runs, the others still render, and the note names the
+  failing repo.
+- **Naming which target failed also has a precedent.** `PRChip.text`
+  (`FetchStatus.swift:349`) composes two providers into one line: both-down-for-
+  the-same-reason collapses to `"GitHub + Azure: <reason>"`, two different
+  reasons become `"GitHub: <reason> +1 more"`. That is exactly the N-repo
+  wording problem, already solved for N=2.
+- **The settings migration has a precedent.** `MarketBoxSettings`
+  (`DeckSettings.swift:770`) reads a legacy `symbols` key when `tickers` is
+  absent, normalizes (trim/dedupe/cap) and **encodes only the new shape**. The
+  `repo` → `repos` migration is the same three lines.
+- **The tolerant-decode trap is documented.** `ROADMAP.md` "Fixed in passing":
+  a non-tolerant decode silently resets *every* setting. `ShipBoxSettings`
+  already has a hand-written `init(from:)`; the new key must join it.
 
-1. **`calbox` is dropped on decode** (`DeckSettings.swift:45` vs `init(from:)`).
-   Pre-existing bug, not caused by this work, but this work edits that exact
-   initializer and must not repeat the omission. Fix it here.
+## Ambiguities for the interview
 
-2. **Widget `kind` rename is destructive.** WidgetKit keys a placed widget by
-   its `kind` string. Changing `"HomeBoxWidget"` -> `"WeatherBoxWidget"`
-   orphans any HomeBox the user has on the desktop. Mitigated in this case:
-   a full uninstall/reinstall is already planned separately, and every widget
-   is being re-added by hand anyway.
+1. **Merged stream or per-repo grouping?** A repo with busy CI can crowd every
+   other repo out of a global newest-first list. Per-repo grouping fixes that
+   and costs vertical space the small face does not have.
+2. **Row label under multi-repo.** Today a row is `"<workflow> #<n>"` +
+   `"<branch> · <duration>"`. Adding the repo makes three identifiers compete
+   for one line at 11pt; something has to give, especially on small.
+3. **Header.** `entry.repo` is the header today. With N repos it becomes what —
+   a count, a rotation, the totals line alone?
+4. **Repo cap.** ~5 was the deck-next suggestion; needs a number. It sets the
+   settings UI (fixed slots vs add/remove) and the worst-case fetch time.
+5. **Fetch concurrency.** No loader in the repo uses `async let` or a
+   `TaskGroup` — MarketBox awaits four providers serially. Five repos × a 10s
+   timeout is 50s serially, against a 60s tick. Concurrent fan-out is likely
+   required, and would be the first in the codebase.
+6. **Deep links.** `ShipRun.htmlURL` is parsed and unused (an explicit non-goal
+   of ShipBox slice 1), but CalBox/TaskBox/PRBox rows became clickable in
+   `5b0c417`/`a6ecd9c`. In scope here or not?
+7. **Snapshot decode across the upgrade.** `ShipBoxSnapshotStore.load()` uses a
+   synthesized decoder, so the first launch after the upgrade fails to decode
+   the old `shipbox.json` and the widget shows "No build data" for one tick.
+   Tolerate it or add a tolerant decode?
 
-3. **The offset label is relative to LOCAL, not UTC.** In the reference
-   screenshot Tehran reads `+0HRS` while Toronto reads `-7:30` — so the user's
-   own zone is the zero point. Naming it "UTC offset" would be wrong.
+## Shell invariants checked (CLAUDE.md)
 
-4. **Second-hand sweep is the main technical risk.** CLAUDE.md: WidgetKit
-   floors timeline regeneration at ~60s. LiveBox already beats this with
-   `TimelineView(.periodic)` re-rendering inside one entry, so a ticking
-   second hand is *possible* — but at 1s it is far more expensive than
-   LiveBox's 15s default, on a widget whose whole appeal is that it is cheap.
+- **No Swift Charts.** ShipBox's face draws no chart today and must not start —
+  a `Chart` in a widget face silently drops the widget from the gallery.
+- **One timeline entry.** The CalBox archive-size lesson; ShipBox already emits
+  a single entry with a 60s reload policy, and N repos must not change that.
+- **Agent path only.** The widget sandbox has no network entitlement; every
+  repo is fetched by `DeckAgent` (and mirrored by the host app's 60s timer).
+- **Atomic writes / single writer.** `ShipBoxSnapshotStore.save` already goes
+  through `AtomicFile`; the fan-out must still write **one** file, once.
+- **Version bump.** Not a new widget, so no descriptor-cache risk, but a
+  release bumps `1.27`/`27` in `native/project.yml` (three targets).
 
-## Open questions for the PRD
-
-- Second hand: sweep at 1s, or minute-resolution only (no second hand)?
-- City picker: curated city list with real names ("Toronto, Canada"), or raw
-  `TimeZone.knownTimeZoneIdentifiers`? The native widget shows city names,
-  and IANA ids give "America/Toronto" -> "Toronto" but no country.
-- Does ClockBox need small/medium/large, or medium+large only? Four faces
-  will not fit a small square.
-- Keep `showZones` in WeatherBox settings as a dead key, or drop it?
+**No invariant is broken by this work** — it stays inside one widget, one
+snapshot, one status key and the existing agent cadence.
