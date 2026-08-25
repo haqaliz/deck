@@ -247,6 +247,30 @@ Do not delete the container; see the trap below.
   accps` is the quickest ground truth. Being SPI it can vanish in any macOS
   update, so every failure path returns an empty list and the section simply
   hides.
+- **A `keychain-access-groups` entitlement SIGKILLs Deck at launch.** Measured
+  2026-08-26 (`docs/planning/keychain-tokens/probe.md`) while looking at moving
+  the API tokens to the keychain. Signing either the app bundle *or* a bare
+  tool built like `DeckAgent` with that entitlement makes the process die
+  before `main` — **exit 137**, no crash report, no message. A control isolates
+  it exactly: strip the entitlement → exit 0; re-add → 137; strip → 0. The
+  entitlement needs a provisioning profile to authorise it, an `.app` can embed
+  one at `Contents/embedded.provisionprofile`, and **a `type: tool` target has
+  nowhere to put one**. The data-protection keychain is therefore also out:
+  `SecItemAdd` with `kSecUseDataProtectionKeychain` returns **`-34018`
+  (errSecMissingEntitlement)** without it. Use the legacy (file-based) keychain
+  — which needs no entitlement at all.
+- **The keychain gives Deck confidentiality at rest, not process isolation, and
+  a keychain ACL does not change that.** Same probe. A generic-password item
+  written by a bundled app is read by a separately-signed bare tool **inside a
+  launchd job, with no prompt**, even with
+  `kSecUseAuthenticationUI: kSecUseAuthenticationUIFail` — so the feared
+  per-binary ACL prompt never appears. The flip side is that an **ad-hoc-signed
+  copy** and **`/usr/bin/security`** read the same item just as freely, and
+  still did against a second item written with an explicit `SecAccess` trusting
+  only two named binaries (`SecItemAdd` appears not to honour `kSecAttrAccess`).
+  Never describe keychain storage in Deck as protecting a token from other
+  local processes; it protects it from being *in a file that gets copied*.
+
 - **`build.noindex` does not prevent LaunchServices pollution.** The `.noindex`
   suffix only hides the directory from Spotlight; xcodebuild still runs an
   explicit `RegisterWithLaunchServices` phase that registers the dev copy. Run
