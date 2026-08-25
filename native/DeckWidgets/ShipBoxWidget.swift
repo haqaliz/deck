@@ -80,7 +80,7 @@ struct ShipBoxProvider: TimelineProvider {
             stale: now.timeIntervalSince(snapshot.writtenAt) > 5 * 60,
             writtenAt: snapshot.writtenAt,
             chip: chip,
-            repo: snapshot.repo,
+            repo: snapshot.repos.first ?? "",
             runs: snapshot.runs,
             settings: settings
         )

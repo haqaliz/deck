@@ -9,10 +9,64 @@ import Foundation
 
 struct ShipBoxSnapshot: Codable, Equatable {
     var writtenAt: Date
-    /// "owner/repo" as configured in settings.
-    var repo: String
-    /// Newest first (API order), all workflows.
+    /// The "owner/repo" targets this snapshot was built from, in display
+    /// order — the configured list in static mode, the discovered one in
+    /// dynamic mode. A repo that failed this tick is still listed; its runs
+    /// are simply absent and `note` says why.
     var runs: [ShipRun]
+    var repos: [String]
+    /// One line naming the repos that failed while others succeeded, or nil.
+    /// Partial failure is reported here rather than through `FetchStatus`,
+    /// which has one key for the whole widget (PRD §6).
+    var note: String?
+
+    init(writtenAt: Date, repos: [String], runs: [ShipRun], note: String? = nil) {
+        self.writtenAt = writtenAt
+        self.repos = repos
+        self.runs = runs
+        self.note = note
+    }
+
+    /// Tolerant: a snapshot written before multi-repo carries a single `repo`
+    /// string and runs with no repo of their own. Without this the first tick
+    /// after an upgrade fails to decode, `load()` returns nil, and the face
+    /// says "No build data" for a widget that has perfectly good data on disk.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        writtenAt = try c.decode(Date.self, forKey: .writtenAt)
+        note = try c.decodeIfPresent(String.self, forKey: .note)
+        let legacyRepo = try c.decodeIfPresent(String.self, forKey: .legacyRepo)
+        if let decoded = try c.decodeIfPresent([String].self, forKey: .repos) {
+            repos = decoded
+        } else if let legacyRepo, !legacyRepo.isEmpty {
+            repos = [legacyRepo]
+        } else {
+            repos = []
+        }
+        let decodedRuns = try c.decodeIfPresent([ShipRun].self, forKey: .runs) ?? []
+        // A legacy run belongs to the only repo there was.
+        runs = decodedRuns.map { run in
+            guard run.repo.isEmpty, let legacyRepo else { return run }
+            var tagged = run
+            tagged.repo = legacyRepo
+            return tagged
+        }
+    }
+
+    /// Writes only the current shape; the legacy `repo` key is read on the way
+    /// in and dropped on the way out.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(writtenAt, forKey: .writtenAt)
+        try c.encode(runs, forKey: .runs)
+        try c.encode(repos, forKey: .repos)
+        try c.encodeIfPresent(note, forKey: .note)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case writtenAt, runs, repos, note
+        case legacyRepo = "repo"
+    }
 }
 
 enum ShipStatus: String, Codable, Equatable {
@@ -41,6 +95,9 @@ enum ShipStatus: String, Codable, Equatable {
 }
 
 struct ShipRun: Codable, Equatable {
+    /// "owner/repo" this run belongs to. Empty only when decoded from a
+    /// pre-multi-repo snapshot that had no per-run repo.
+    var repo: String = ""
     var name: String
     var runNumber: Int
     var branch: String
@@ -48,6 +105,38 @@ struct ShipRun: Codable, Equatable {
     var createdAt: Date
     var updatedAt: Date
     var htmlURL: String
+
+    init(
+        repo: String = "",
+        name: String,
+        runNumber: Int,
+        branch: String,
+        status: ShipStatus,
+        createdAt: Date,
+        updatedAt: Date,
+        htmlURL: String
+    ) {
+        self.repo = repo
+        self.name = name
+        self.runNumber = runNumber
+        self.branch = branch
+        self.status = status
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.htmlURL = htmlURL
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        repo = try c.decodeIfPresent(String.self, forKey: .repo) ?? ""
+        name = try c.decode(String.self, forKey: .name)
+        runNumber = try c.decode(Int.self, forKey: .runNumber)
+        branch = try c.decode(String.self, forKey: .branch)
+        status = try c.decode(ShipStatus.self, forKey: .status)
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        updatedAt = try c.decode(Date.self, forKey: .updatedAt)
+        htmlURL = try c.decode(String.self, forKey: .htmlURL)
+    }
 }
 
 enum ShipBoxSnapshotStore {
@@ -63,6 +152,102 @@ enum ShipBoxSnapshotStore {
     static func save(_ snapshot: ShipBoxSnapshot) {
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         _ = AtomicFile.write(data, to: fileURL)
+    }
+}
+
+// MARK: - Merging, labelling and wording (pure)
+
+enum ShipBoxMerge {
+    /// One list from many repos, newest first.
+    ///
+    /// Creation date is the key every source can promise (the rule PRBox
+    /// arrived at for GitHub + Azure); ties keep the order the repos were
+    /// fetched in, so a stable snapshot never reshuffles between ticks.
+    static func merge(_ perRepo: [[ShipRun]]) -> [ShipRun] {
+        perRepo
+            .enumerated()
+            .flatMap { index, runs in runs.map { (index, $0) } }
+            .sorted { lhs, rhs in
+                if lhs.1.createdAt != rhs.1.createdAt { return lhs.1.createdAt > rhs.1.createdAt }
+                return lhs.0 < rhs.0
+            }
+            .map(\.1)
+    }
+}
+
+enum ShipBoxLabels {
+    /// "owner/repo" → what a row calls it.
+    ///
+    /// The owner is noise when every repo shares one, so it is dropped — but
+    /// only while the short names stay unique. One collision and *every* row
+    /// shows its owner, because a list that mixes "deck" and "b/deck" reads as
+    /// two naming schemes rather than one disambiguation.
+    static func labels(for repos: [String]) -> [String: String] {
+        let shortNames = repos.map { repo -> String in
+            guard let slash = repo.lastIndex(of: "/") else { return repo }
+            return String(repo[repo.index(after: slash)...])
+        }
+        var counts: [String: Int] = [:]
+        for name in shortNames { counts[name.lowercased(), default: 0] += 1 }
+        let collides = counts.values.contains { $0 > 1 }
+        return Dictionary(
+            zip(repos, collides ? repos : shortNames),
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+}
+
+/// The wording ShipBox uses for a *partial* failure — some repos answered,
+/// others didn't. A total failure goes through `FetchStatus` as before.
+enum ShipBoxNote {
+    struct Failure: Equatable {
+        var repo: String
+        var outcome: FetchOutcome
+    }
+
+    /// Composed by the rule `PRChip.text` already applies to two providers:
+    /// one failure names itself, several sharing a reason collapse into one
+    /// sentence, and mixed reasons name the first rather than implying a
+    /// shared cause.
+    static func compose(failures: [Failure], mode: ShipBoxRepoMode) -> String? {
+        guard let first = failures.first else { return nil }
+        guard let reason = ShipBoxCopy.composableLine(outcome: first.outcome, mode: mode) else { return nil }
+        let labels = ShipBoxLabels.labels(for: failures.map(\.repo))
+        let name = labels[first.repo] ?? first.repo
+        let others = failures.count - 1
+        guard others > 0 else { return "\(name): \(reason)" }
+        if failures.allSatisfy({ $0.outcome == first.outcome }) {
+            return "\(name) + \(others) more: \(reason)"
+        }
+        return "\(name): \(reason) +\(others) more"
+    }
+}
+
+/// ShipBox's failure copy, which depends on the repo mode as well as the
+/// outcome.
+///
+/// `FetchStatusCopy` is keyed by `FetchSource` alone, so `.shipbox` always
+/// reads "Check repo + token" — and in dynamic mode there is no repo field to
+/// check. Sending someone to a control their tab does not have is the same
+/// class of lie the fetch-status work existed to remove, so the wording is
+/// substituted here rather than by adding a `FetchSource` case: both sub-tabs
+/// share one fetch, and per-source keys exist to give each *tab* its own
+/// sentence.
+enum ShipBoxCopy {
+    static func line(outcome: FetchOutcome, mode: ShipBoxRepoMode) -> String? {
+        guard mode == .dynamic else { return FetchStatusCopy.line(source: .shipbox, outcome: outcome) }
+        switch outcome {
+        case .notConfigured: return "Add a token in settings"
+        case .authOrTarget: return "Check your token"
+        default: return FetchStatusCopy.line(source: .shipbox, outcome: outcome)
+        }
+    }
+
+    /// The same line, lowercased at the front so it can sit after "repo: ".
+    /// Only the first character changes, so "GitHub" survives intact.
+    static func composableLine(outcome: FetchOutcome, mode: ShipBoxRepoMode) -> String? {
+        guard let line = line(outcome: outcome, mode: mode), let first = line.first else { return nil }
+        return line.replacingCharacters(in: line.startIndex...line.startIndex, with: first.lowercased())
     }
 }
 
@@ -104,8 +289,12 @@ enum HostGitHubLoader {
         }
         return ShipBoxSnapshot(
             writtenAt: Date(),
-            repo: repo,
-            runs: parsed.runs
+            repos: [repo],
+            runs: parsed.runs.map { run in
+                var tagged = run
+                tagged.repo = repo
+                return tagged
+            }
         )
     }
 
