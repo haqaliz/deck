@@ -256,15 +256,133 @@ enum ShipBoxCopy {
 enum HostGitHubLoader {
     enum GitHubError: Error {
         case invalidRepo
+        case notConfigured
         case serverError(Int)
         case transport(String)
         case invalidPayload
     }
 
-    /// Fetches the most recent Actions runs for `repo` ("owner/repo").
-    static func fetch(repo: String, token: String) async throws -> ShipBoxSnapshot {
-        let url = try makeURL(repo: repo)
+    /// Fetches Actions runs for every repo ShipBox is watching and merges
+    /// them into one snapshot.
+    ///
+    /// Partial-failure policy (PRD §6), the same one `HostMarketLoader` applies
+    /// to its four providers: each repo is fetched best-effort, a repo that
+    /// fails contributes no runs but is named in `note`, and the fetch only
+    /// throws when **no** repo produced runs and at least one errored. Every
+    /// repo answering with zero runs is a success, not a failure — that is a
+    /// user with CI they haven't run yet, not a broken widget.
+    static func fetch(settings: ShipBoxSettings) async throws -> ShipBoxSnapshot {
+        let token = settings.token
+        guard !token.isEmpty else { throw GitHubError.notConfigured }
 
+        let repos: [String]
+        switch settings.repoMode {
+        case .staticList:
+            repos = settings.repos
+        case .dynamic:
+            // An inventory failure is *its own* error, never "not configured":
+            // telling someone to add a repo when their token was revoked sends
+            // them to the wrong field entirely (PRD C1).
+            repos = try await discover(maxCount: settings.maxRepoCount, token: token)
+        }
+        guard !repos.isEmpty else { throw GitHubError.notConfigured }
+
+        let perPage = min(max(settings.runCount, 2), 8)
+        let results = try await inParallel(repos) { repo in
+            try await runs(repo: repo, token: token, perPage: perPage)
+        }
+
+        var perRepoRuns: [[ShipRun]] = []
+        var failures: [ShipBoxNote.Failure] = []
+        var firstError: Error?
+        for (repo, result) in zip(repos, results) {
+            switch result {
+            case .success(let runs):
+                perRepoRuns.append(runs)
+            case .failure(let error):
+                perRepoRuns.append([])
+                failures.append(.init(repo: repo, outcome: FetchClassifier.outcome(for: error)))
+                firstError = firstError ?? error
+            }
+        }
+
+        let merged = ShipBoxMerge.merge(perRepoRuns)
+        // Nothing came back and something broke: report the failure and let the
+        // last-good snapshot stand rather than overwriting it with emptiness.
+        if merged.isEmpty, let firstError { throw firstError }
+
+        return ShipBoxSnapshot(
+            writtenAt: Date(),
+            repos: repos,
+            runs: merged,
+            note: ShipBoxNote.compose(failures: failures, mode: settings.repoMode)
+        )
+    }
+
+    /// Dynamic mode: the repos pushed to most recently that have any runs.
+    ///
+    /// Two waves, because a run object embeds the whole repository object at
+    /// ~11 KB per run (probe P5): wave 1 asks each candidate for a single run
+    /// purely to learn whether it has CI, wave 2 fetches in full only the
+    /// winners. Fetching every candidate in full would cost roughly twice the
+    /// bandwidth for the same eight rows.
+    private static func discover(maxCount: Int, token: String) async throws -> [String] {
+        let inventory = try await inventory(token: token)
+        let candidates = DynamicRepoSelector.candidates(inventory: inventory, maxCount: maxCount)
+        guard !candidates.isEmpty else { return [] }
+        let probes = try await inParallel(candidates) { repo in
+            try await runs(repo: repo, token: token, perPage: 1)
+        }
+        let probed = zip(candidates, probes).map { repo, result in
+            (repo: repo, hasRuns: !((try? result.get()) ?? []).isEmpty)
+        }
+        return DynamicRepoSelector.select(probed: probed, maxCount: maxCount)
+    }
+
+    private static func inventory(token: String) async throws -> [String] {
+        guard let url = URL(string: "https://api.github.com/user/repos?sort=pushed&per_page=100&affiliation=owner") else {
+            throw GitHubError.invalidRepo
+        }
+        guard let parsed = RepoInventoryParser.parse(try await get(url, token: token)) else {
+            throw GitHubError.invalidPayload
+        }
+        return parsed
+    }
+
+    private static func runs(repo: String, token: String, perPage: Int) async throws -> [ShipRun] {
+        let data = try await get(try makeURL(repo: repo, perPage: perPage), token: token)
+        guard let parsed = RunParser.parse(data) else { throw GitHubError.invalidPayload }
+        return parsed.runs.map { run in
+            var tagged = run
+            tagged.repo = repo
+            return tagged
+        }
+    }
+
+    /// Runs one request per element concurrently, in input order.
+    ///
+    /// The codebase's first concurrent fetch, and it is not a flourish: five
+    /// repos fetched serially measured 9.4s, and the 10s per-request timeout
+    /// puts the serial worst case past the 60s tick the agent runs on.
+    /// Concurrently the same five took 2.1s.
+    private static func inParallel<T>(
+        _ repos: [String],
+        _ work: @escaping (String) async throws -> T
+    ) async throws -> [Result<T, Error>] {
+        try await withThrowingTaskGroup(of: (Int, Result<T, Error>).self) { group in
+            for (index, repo) in repos.enumerated() {
+                group.addTask {
+                    do { return (index, .success(try await work(repo))) }
+                    catch { return (index, .failure(error)) }
+                }
+            }
+            var collected: [(Int, Result<T, Error>)] = []
+            for try await result in group { collected.append(result) }
+            return collected.sorted { $0.0 < $1.0 }.map(\.1)
+        }
+    }
+
+    private static func get(_ url: URL, token: String) async throws -> Data {
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -284,28 +402,58 @@ enum HostGitHubLoader {
         guard http.statusCode == 200 else {
             throw GitHubError.serverError(http.statusCode)
         }
-        guard let parsed = RunParser.parse(data) else {
-            throw GitHubError.invalidPayload
-        }
-        return ShipBoxSnapshot(
-            writtenAt: Date(),
-            repos: [repo],
-            runs: parsed.runs.map { run in
-                var tagged = run
-                tagged.repo = repo
-                return tagged
-            }
-        )
+        return data
     }
 
-    private static func makeURL(repo: String) throws -> URL {
+    private static func makeURL(repo: String, perPage: Int) throws -> URL {
         let trimmed = repo.trimmingCharacters(in: .whitespacesAndNewlines)
         let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
         guard let encoded, encoded.contains("/") else { throw GitHubError.invalidRepo }
-        guard let url = URL(string: "https://api.github.com/repos/\(encoded)/actions/runs?per_page=10") else {
+        guard let url = URL(string: "https://api.github.com/repos/\(encoded)/actions/runs?per_page=\(perPage)") else {
             throw GitHubError.invalidRepo
         }
         return url
+    }
+}
+
+// MARK: - Repo inventory (dynamic mode)
+
+/// Reads `/user/repos`. The API is asked for `sort=pushed`, so its order is
+/// the answer and the parser imposes none of its own.
+enum RepoInventoryParser {
+    static func parse(_ data: Data) -> [String]? {
+        guard let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return nil
+        }
+        return list.compactMap { entry in
+            guard let name = entry["full_name"] as? String, !name.isEmpty else { return nil }
+            // An archived repo is read-only and cannot produce a new run, so
+            // probing it would spend a candidate slot for nothing.
+            if (entry["archived"] as? Bool) == true { return nil }
+            return name
+        }
+    }
+}
+
+/// Picks which discovered repos are worth a full fetch.
+///
+/// Nothing in a repo object says whether it has Actions (probe P3), so the
+/// only way to know is to ask — cheaply, at `per_page=1`, for a few more repos
+/// than are wanted, and then fetch in full only the ones that answered.
+enum DynamicRepoSelector {
+    /// Hard ceiling on probes per tick: the buffer exists to find repos with
+    /// CI, not to walk the whole account.
+    static let maxCandidates = 8
+
+    static func candidates(inventory: [String], maxCount: Int) -> [String] {
+        Array(inventory.prefix(min(maxCount + 3, maxCandidates)))
+    }
+
+    /// `probed` is in candidate order; `hasRuns == false` covers both "no runs"
+    /// and "the probe failed" — neither is worth a full fetch this tick, and a
+    /// failed probe gets another chance on the next one.
+    static func select(probed: [(repo: String, hasRuns: Bool)], maxCount: Int) -> [String] {
+        probed.filter(\.hasRuns).prefix(maxCount).map(\.repo)
     }
 }
 

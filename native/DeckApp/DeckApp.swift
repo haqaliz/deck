@@ -302,15 +302,18 @@ struct ContentView: View {
 
     private func refreshShipBox() async {
         let shipbox = settings.shipbox
-        let repo = (shipbox.repos.first ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !repo.isEmpty, !shipbox.token.isEmpty else {
+        // Dynamic mode needs only a token; static mode also needs a repo.
+        // Mirrors DeckAgent exactly — the two have always been line-for-line.
+        let configured = !shipbox.token.isEmpty
+            && (shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty)
+        guard configured else {
             FetchStatusStore.record(.notConfigured, for: .shipbox)
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
         let snapshot: ShipBoxSnapshot
         do {
-            snapshot = try await HostGitHubLoader.fetch(repo: repo, token: shipbox.token)
+            snapshot = try await HostGitHubLoader.fetch(settings: shipbox)
         } catch {
             FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .shipbox)
             WidgetCenter.shared.reloadAllTimelines()

@@ -127,19 +127,22 @@ Task {
         agentLog.info("failed weather snapshot (\(outcome.rawValue, privacy: .public))")
     }
 
-    // ShipBox: requires the user's own repo + token — never a default token.
-    let shipboxRepo = settings.shipbox.repos.first ?? ""
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-    if !shipboxRepo.isEmpty && !settings.shipbox.token.isEmpty {
+    // ShipBox: requires the user's own token — never a default one. Dynamic
+    // mode needs nothing else; static mode also needs at least one repo.
+    let shipbox = settings.shipbox
+    let shipboxConfigured = !shipbox.token.isEmpty
+        && (shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty)
+    if shipboxConfigured {
         do {
-            // Always written: writtenAt drives the staleness windows.
-            let shipbox = try await HostGitHubLoader.fetch(
-                repo: shipboxRepo,
-                token: settings.shipbox.token
-            )
-            ShipBoxSnapshotStore.save(shipbox)
+            // Always written: writtenAt drives the staleness windows. A repo
+            // that failed while others succeeded rides in the snapshot's note
+            // rather than failing the whole fetch.
+            let snapshot = try await HostGitHubLoader.fetch(settings: shipbox)
+            ShipBoxSnapshotStore.save(snapshot)
             FetchStatusStore.record(.ok, for: .shipbox)
-            agentLog.info("written shipbox snapshot")
+            // Counts only, never repo names: a private repo's name is exactly
+            // the kind of thing that should not land in the system log.
+            agentLog.info("written shipbox snapshot (\(snapshot.repos.count, privacy: .public) repos, \(snapshot.runs.count, privacy: .public) runs)")
         } catch {
             let outcome = FetchClassifier.outcome(for: error)
             FetchStatusStore.record(outcome, for: .shipbox)
