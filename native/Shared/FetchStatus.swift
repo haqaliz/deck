@@ -89,6 +89,7 @@ enum FetchClassifier {
         case let error as HostGitHubLoader.GitHubError:
             switch error {
             case .invalidRepo: return .authOrTarget
+            case .notConfigured: return .notConfigured
             case .serverError(let code): return outcome(forStatusCode: code)
             case .transport: return .unreachable
             case .invalidPayload: return .badResponse

@@ -302,15 +302,18 @@ struct ContentView: View {
 
     private func refreshShipBox() async {
         let shipbox = settings.shipbox
-        let repo = shipbox.repo.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !repo.isEmpty, !shipbox.token.isEmpty else {
+        // Dynamic mode needs only a token; static mode also needs a repo.
+        // Mirrors DeckAgent exactly — the two have always been line-for-line.
+        let configured = !shipbox.token.isEmpty
+            && (shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty)
+        guard configured else {
             FetchStatusStore.record(.notConfigured, for: .shipbox)
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
         let snapshot: ShipBoxSnapshot
         do {
-            snapshot = try await HostGitHubLoader.fetch(repo: repo, token: shipbox.token)
+            snapshot = try await HostGitHubLoader.fetch(settings: shipbox)
         } catch {
             FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .shipbox)
             WidgetCenter.shared.reloadAllTimelines()
@@ -1184,17 +1187,50 @@ private struct PRBoxSettingsView: View {
 private struct ShipBoxSettingsView: View {
     @Binding var settings: ShipBoxSettings
 
+    /// The repos the token can see, fetched when the tab appears. Never
+    /// persisted and never read by the agent — it exists only to fill the
+    /// static pickers.
+    @State private var inventory: [String] = []
+    @State private var inventoryState: InventoryState = .idle
+
+    private enum InventoryState: Equatable {
+        case idle
+        case loading
+        case loaded
+        case failed(FetchOutcome)
+    }
+
     var body: some View {
         Form {
-            Section("Repository") {
-                TextField("owner/repo", text: $settings.repo)
+            // The token comes first because both modes need it and the static
+            // picker cannot offer a single repo without it — a tab of five
+            // empty dropdowns above the field that fills them reads as broken.
+            Section("GitHub") {
                 SecureField("GitHub token", text: $settings.token)
                     .textContentType(.password)
-                Text("Empty repo or token = the widget shows no data. The token is sent only to api.github.com over TLS.")
+                Text("Required. The token is sent only to api.github.com over TLS; a token that can read Actions is enough.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                FetchStatusCaption(source: .shipbox, clearOn: "\(settings.repo)\u{0}\(settings.token)")
+                FetchStatusCaption(
+                    source: .shipbox,
+                    clearOn: "\(settings.repoMode.rawValue)\u{0}\(settings.repos.joined(separator: ","))\u{0}\(settings.token)"
+                )
             }
+
+            Section {
+                Picker("Repos", selection: $settings.repoMode) {
+                    Text("Automatic").tag(ShipBoxRepoMode.dynamic)
+                    Text("Pick repos").tag(ShipBoxRepoMode.staticList)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            switch settings.repoMode {
+            case .dynamic: dynamicSection
+            case .staticList: staticSection
+            }
+
             Section("Runs") {
                 Toggle("Show runs list", isOn: $settings.showList)
                 Stepper("Run count: \(settings.runCount)", value: $settings.runCount, in: 2...8)
@@ -1209,6 +1245,90 @@ private struct ShipBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+        .task(id: settings.token) { await loadInventory() }
+    }
+
+    private var dynamicSection: some View {
+        Section("Automatic") {
+            Stepper(
+                "Repos to watch: \(settings.maxRepoCount)",
+                value: $settings.maxRepoCount,
+                in: 1...ShipBoxSettings.maxRepoCount
+            )
+            Text("Watches the repos you pushed to most recently that have any Actions runs. The set changes as you push \u{2014} push to something else and it takes a slot.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var staticSection: some View {
+        Section("Repos") {
+            ForEach(0..<ShipBoxSettings.maxRepoCount, id: \.self) { slot in
+                Picker("Repo \(slot + 1)", selection: repoBinding(slot: slot)) {
+                    Text("None").tag("")
+                    ForEach(inventory, id: \.self) { Text($0).tag($0) }
+                    // A configured repo the inventory doesn't offer stays
+                    // listed so it can be changed rather than silently lost.
+                    ForEach(configuredNotInInventory, id: \.self) { Text($0).tag($0) }
+                }
+            }
+            Text(staticCaption)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Says why the pickers are empty, since an empty dropdown explains
+    /// nothing on its own.
+    private var staticCaption: String {
+        if settings.token.isEmpty {
+            return "Add a token above to load the repos you can pick from."
+        }
+        switch inventoryState {
+        case .idle, .loading:
+            return "Loading your repos\u{2026}"
+        case .failed(let outcome):
+            let reason = ShipBoxCopy.line(outcome: outcome, mode: .staticList) ?? "Couldn't load your repos"
+            return "\(reason) \u{2014} the list below is only what's already configured."
+        case .loaded:
+            return inventory.isEmpty
+                ? "This account has no repos to pick from."
+                : "Slot order is display order. Clearing a slot closes the gap."
+        }
+    }
+
+    private var configuredNotInInventory: [String] {
+        settings.repos.filter { !inventory.contains($0) }
+    }
+
+    /// Slots are positional: an empty pick clears that slot and the remaining
+    /// repos close up, so the widget never renders a gap.
+    private func repoBinding(slot: Int) -> Binding<String> {
+        Binding(
+            get: { slot < settings.repos.count ? settings.repos[slot] : "" },
+            set: { newValue in
+                var repos = settings.repos
+                while repos.count < ShipBoxSettings.maxRepoCount { repos.append("") }
+                repos[slot] = newValue
+                settings.repos = ShipBoxSettings.normalized(repos)
+            }
+        )
+    }
+
+    private func loadInventory() async {
+        guard !settings.token.isEmpty else {
+            inventory = []
+            inventoryState = .idle
+            return
+        }
+        inventoryState = .loading
+        do {
+            inventory = try await HostGitHubLoader.repoInventory(token: settings.token)
+            inventoryState = .loaded
+        } catch {
+            inventory = []
+            inventoryState = .failed(FetchClassifier.outcome(for: error))
+        }
     }
 }
 
