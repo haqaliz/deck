@@ -1071,6 +1071,10 @@ private struct CredentialsSettingsView: View {
 
     /// The account being viewed. `nil` is the list.
     @State private var editing: String?
+    /// The account most recently backed out of, so Forward can return to it —
+    /// System Settings' control is a pair, and a Forward arrow that never
+    /// enables is just decoration.
+    @State private var forwardTarget: String?
     @State private var adding = false
     @State private var verifying: Set<String> = []
     /// Verify failures, by account id. Successes live on the account itself.
@@ -1078,7 +1082,8 @@ private struct CredentialsSettingsView: View {
     @State private var confirmingDelete = false
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            navigationBar
             if let account = editing.flatMap(account) {
                 detail(account)
             } else {
@@ -1100,6 +1105,68 @@ private struct CredentialsSettingsView: View {
         settings.credentials.accounts.first { $0.id == id }
     }
 
+    /// Back and Forward as one joined control, the way System Settings draws
+    /// it. `ControlGroup` is what gives the shared border and the divider; two
+    /// separate bordered buttons read as two buttons.
+    ///
+    /// Shown on the list as well as the detail page — always in the same place,
+    /// so navigating never shifts the rest of the pane under the pointer.
+    private var navigationBar: some View {
+        HStack(spacing: 8) {
+            ControlGroup {
+                Button {
+                    goBack()
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
+                .disabled(editing == nil)
+                .help("Back to accounts")
+
+                Button {
+                    goForward()
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
+                .disabled(!canGoForward)
+                .help("Forward")
+            }
+            .controlGroupStyle(.navigation)
+            .fixedSize()
+
+            Text(editing.flatMap(account).map(title) ?? "Credentials")
+                .font(.headline)
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+    }
+
+    private var canGoForward: Bool {
+        guard editing == nil, let target = forwardTarget else { return false }
+        return account(target) != nil
+    }
+
+    private func goBack() {
+        forwardTarget = editing
+        editing = nil
+    }
+
+    private func goForward() {
+        guard let target = forwardTarget, account(target) != nil else { return }
+        editing = target
+        forwardTarget = nil
+    }
+
+    private func open(_ id: String) {
+        editing = id
+        forwardTarget = nil
+    }
+
+    private func title(_ account: CredentialAccount) -> String {
+        account.label.isEmpty ? account.kind.displayName : account.label
+    }
+
     // MARK: - List
 
     private var list: some View {
@@ -1113,7 +1180,7 @@ private struct CredentialsSettingsView: View {
                             .padding(.vertical, 6)
                     }
                     ForEach(settings.credentials.accounts) { account in
-                        Button { editing = account.id } label: { row(account) }
+                        Button { open(account.id) } label: { row(account) }
                             .buttonStyle(.plain)
                     }
                 }
@@ -1125,7 +1192,6 @@ private struct CredentialsSettingsView: View {
                 }
             }
             .formStyle(.grouped)
-            .padding(.top, 4)
 
             HStack {
                 Spacer()
@@ -1168,22 +1234,6 @@ private struct CredentialsSettingsView: View {
 
     private func detail(_ account: CredentialAccount) -> some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Button { editing = nil } label: {
-                    Image(systemName: "chevron.left").font(.body.weight(.medium))
-                }
-                .buttonStyle(.bordered)
-                .keyboardShortcut(.cancelAction)
-                .help("Back to accounts")
-
-                Text(account.label.isEmpty ? account.kind.displayName : account.label)
-                    .font(.headline)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 4)
-
             Form {
                 Section {
                     HStack(spacing: 10) {
@@ -1319,7 +1369,7 @@ private struct CredentialsSettingsView: View {
     private func add(_ kind: CredentialKind) {
         let account = CredentialAccount(kind: kind, label: kind.displayName)
         settings.credentials.accounts.append(account)
-        editing = account.id
+        open(account.id)
     }
 
     /// Removes the record, its keychain item, and every selection pointing at
@@ -1335,6 +1385,8 @@ private struct CredentialsSettingsView: View {
         failures[account.id] = nil
         confirmingDelete = false
         editing = nil
+        // Nothing to go forward to: the page Forward would return to is gone.
+        forwardTarget = nil
     }
 
     // MARK: - Verify
