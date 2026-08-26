@@ -1,45 +1,31 @@
-# Card — Keychain for Deck's API credentials
+# feat/credentials — Credentials tab (typed account manager)
 
-**Type:** feat · **Slug:** `keychain-tokens` · **Branch:** `feat/keychain-tokens/aliz`
+## Inline brief (from the user, 2026-08-26)
 
-**Source:** inline brief, handed off by `deck-next` on 2026-08-25. No GitHub
-issue — the id is a slug, not a number.
+> In the app I want another tab below General called **Credentials**, and users
+> must control the accounts w/ types from there (github, azure, opencode, ...).
+> So based on that users can have 2 opencode accounts and whenever they decide,
+> switch to another account.
 
-## Brief
+## Reading
 
-Move Deck's API credentials out of cleartext `settings.json` into the login
-keychain. There are five token fields, not the three `ROADMAP.md` M7 claims:
-OpenBox, ShipBox, TaskBox, and PRBox's separate GitHub and Azure tokens
-(`native/Shared/DeckSettings.swift:256`, `:504`, `:600`, `:744`, `:772`) — the
-M7 entry predates PRBox shipping two.
+Today Deck stores exactly five credentials, each welded to one widget:
 
-Both `DeckApp` (writes, from the settings tabs) and `DeckAgent` (reads, every
-60s under launchd) need access; the widget extension never touches them and
-should keep seeing empty fields. Ship a one-way migration that copies each
-existing value into the keychain and scrubs it from `settings.json`, without
-breaking the tolerant-decode regression tests.
+| `DeckSecret` | keychain account | owning widget | companion fields (settings.json) |
+|---|---|---|---|
+| `openbox.token`      | OpenBox   | opencode remote | `openbox.serverURL` |
+| `shipbox.token`      | ShipBox   | GitHub          | `shipbox.repos`, `repoMode`, `maxRepoCount` |
+| `taskbox.token`      | TaskBox   | Azure DevOps    | `taskbox.organization`, `taskbox.project` |
+| `prbox.github.token` | PRBox     | GitHub          | `prbox.github.enabled`, `.scope` |
+| `prbox.azure.token`  | PRBox     | Azure DevOps    | `prbox.azure.enabled`, `.organization`, `.project` |
 
-## The blocking risk to settle first
+There is no concept of an *account*: a credential is a property of a widget, one
+per widget, and the same GitHub token must be pasted twice (ShipBox + PRBox).
+The ask is to invert that — credentials become first-class, typed, named,
+many-per-type records that widgets **reference**.
 
-A keychain item's ACL is per-binary, and `Deck.app` and `DeckAgent` are
-separately signed, so the agent will hit an access prompt it cannot answer
-under launchd (or `errSecInteractionNotAllowed`) and four widgets go dark with
-no fetch error that explains it. That likely needs a shared
-`keychain-access-groups` entitlement under team `K6X49DG8VF` — and
-`native/project.yml` has no entitlements file for any target today, with
-`DeckAgent` being a `type: tool` with no bundle.
-
-**Verify a successful agent-side read while running under launchd, not from a
-terminal, before committing to the design.**
-
-## Why this was picked (deck-next, 2026-08-25)
-
-- The only `ROADMAP.md` M7 item that is fully unblocked: notarization and the
-  expiry cliff need the paid program, "verify on a second Mac" needs a second
-  Mac, Sparkle is "pointless before notarization", and the bundle-identifier
-  rename plus the landing page wait on a launch-identity decision.
-- Named by three independent planning docs: `ROADMAP.md` M7 (where 0600 on
-  `settings.json` is explicitly "the interim measure"), TaskBox's open
-  follow-ups ("Keychain storage for the PAT") and PRBox's ("Keychain for the
-  two tokens").
-- Pure shell reuse: no widget, no snapshot, no sampler, no new data source.
+## Scope signals
+- New sidebar row directly under General.
+- Typed accounts: github, azure, opencode (the three credentialed backends Deck
+  actually has).
+- Multiple accounts per type, with a switch.
