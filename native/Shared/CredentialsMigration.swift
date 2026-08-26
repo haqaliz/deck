@@ -65,6 +65,38 @@ extension DeckSettings {
     }
 }
 
+extension DeckSettings {
+    /// Whether OpenBox reads a remote opencode server rather than the local
+    /// database — **decidable inside the widget extension**, which has no
+    /// keychain access, because it turns only on non-secret fields.
+    ///
+    /// The rule is now the picker: no account means the local database, an
+    /// account with a server URL means remote. Clearer than the old convention,
+    /// where the emptiness of a text field was load-bearing.
+    var openBoxUsesRemoteServer: Bool {
+        if let account = account(for: .openbox) { return !account.serverURL.isEmpty }
+        // A dangling selection is not configured; only an untouched slot may
+        // consult the pre-accounts field.
+        guard accountID(for: .openbox) == nil else { return false }
+        return !(openbox.serverURL ?? "").isEmpty
+    }
+
+    /// Whether PRBox's GitHub provider is on. The picker replaced the Enable
+    /// toggle, so a selected account *is* "on".
+    var prBoxGitHubIsOn: Bool { providerIsOn(.prboxGitHub, legacyEnabled: prbox.github.enabled) }
+
+    /// Whether PRBox's Azure DevOps provider is on.
+    var prBoxAzureIsOn: Bool { providerIsOn(.prboxAzure, legacyEnabled: prbox.azure.enabled) }
+
+    private func providerIsOn(_ slot: CredentialSlot, legacyEnabled: Bool) -> Bool {
+        if account(for: slot) != nil { return true }
+        guard accountID(for: slot) == nil else { return false }
+        // Before migration the toggle is still the truth, and the agent may
+        // well be fetching. The migration clears it, so this goes inert.
+        return legacyEnabled
+    }
+}
+
 /// Turns the five welded credentials into accounts, once.
 ///
 /// Host-app only: `DeckAgent` never writes settings, which is what lets it keep
@@ -130,9 +162,34 @@ enum CredentialsMigration {
         }
         for slot in migrated {
             settings.setSecret("", for: slot.legacySecret)
+            clearMovedFields(of: slot, in: &settings)
             _ = deleteLegacy(slot.legacySecret)
         }
         return true
+    }
+
+    /// The connection fields belong to the account now (D2). A copy left
+    /// behind on the widget is a stale duplicate that outlives the account it
+    /// was copied from, and it would keep answering the pre-migration
+    /// fallbacks after the picker became the real control.
+    ///
+    /// Only ever called for a slot whose account is already confirmed stored.
+    private static func clearMovedFields(of slot: CredentialSlot, in settings: inout DeckSettings) {
+        switch slot {
+        case .openbox:
+            settings.openbox.serverURL = nil
+        case .shipbox:
+            break
+        case .taskbox:
+            settings.taskbox.organization = ""
+            settings.taskbox.project = ""
+        case .prboxGitHub:
+            settings.prbox.github.enabled = false
+        case .prboxAzure:
+            settings.prbox.azure.enabled = false
+            settings.prbox.azure.organization = ""
+            settings.prbox.azure.project = ""
+        }
     }
 
     /// Critique R2: PRBox's providers each had an Enable toggle, defaulting to

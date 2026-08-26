@@ -95,10 +95,14 @@ struct OpenBoxProvider: TimelineProvider {
         let snapshot = OpenCodeSnapshotStore.load()
         openboxLog.info("snapshot found=\(snapshot != nil) path=\(OpenCodeSnapshotStore.fileURL.path) home=\(FileManager.default.homeDirectoryForCurrentUser.path)")
         let now = Date()
-        let openboxSettings = DeckSettings.load().openbox
+        let allSettings = DeckSettings.load()
+        let openboxSettings = allSettings.openbox
         // Remote mode only: a status left over from a server the user has
         // since cleared must not haunt a perfectly healthy local OpenBox.
-        let isRemote = !(openboxSettings.serverURL ?? "").isEmpty
+        // The server URL lives on the selected opencode account now, so this
+        // must not read `openboxSettings.serverURL` — that field is empty
+        // after the migration and OpenBox would render as local forever.
+        let isRemote = allSettings.openBoxUsesRemoteServer
         let chip = isRemote
             ? FetchChip.text(
                 source: .opencodeRemote,

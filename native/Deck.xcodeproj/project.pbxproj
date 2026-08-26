@@ -195,6 +195,7 @@
 		E1EBE95E84F8F791E5B3D34A /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
 		E2DE130621C6683B7AA69F2D /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		E664FE89330E4F4FC2851875 /* CredentialsWidgetReadsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */; };
 		E8F963A7402C8695BFC89F71 /* FetchStatusCredentialsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */; };
 		E9C9897EA5B6B4BB0A42B780 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		EA90CCDFFC5A2B29D6F7908F /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
@@ -307,6 +308,7 @@
 		812063688CE39D11189608C8 /* CredentialAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialAccount.swift; sourceTree = "<group>"; };
 		82736DC13D9569D028C763BC /* DeckKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychain.swift; sourceTree = "<group>"; };
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
+		8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialsWidgetReadsTests.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicFileTests.swift; sourceTree = "<group>"; };
 		90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxSnapshot.swift; sourceTree = "<group>"; };
@@ -436,6 +438,7 @@
 				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
 				633ED2890AE2D2C0B501102A /* CredentialAccountTests.swift */,
 				6FD5C85FCA16CC6CB16BA6D4 /* CredentialsMigrationTests.swift */,
+				8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */,
 				920FB174B8F493303CA61487 /* CredentialsWiringTests.swift */,
 				1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */,
 				E0E922A862E405B58537BA49 /* DeckLinkTests.swift */,
@@ -827,6 +830,7 @@
 				158161B595463B7ECDE20B50 /* CredentialAccountTests.swift in Sources */,
 				96361F53D4F188186ADAE3BA /* CredentialsMigration.swift in Sources */,
 				482E9A15C89DD93832340B3B /* CredentialsMigrationTests.swift in Sources */,
+				E664FE89330E4F4FC2851875 /* CredentialsWidgetReadsTests.swift in Sources */,
 				2266BFBB98C3E0FBA6312E69 /* CredentialsWiringTests.swift in Sources */,
 				0ADA696C2CD6D8BE83B10C12 /* DeckKeychain.swift in Sources */,
 				C7E88A04B400DC5C2717A0D8 /* DeckKeychainTests.swift in Sources */,
