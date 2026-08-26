@@ -20,6 +20,7 @@
 		117970D84E0920F72D67A760 /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
 		1368FA26430D63F4E6E579F1 /* MarketBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */; };
 		143B07F39F62D08E84D9CF21 /* DeckLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */; };
+		14A001ACD9A00177E27056F6 /* CredentialVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */; };
 		14D533149620BDF218F5C8A1 /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		158161B595463B7ECDE20B50 /* CredentialAccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 633ED2890AE2D2C0B501102A /* CredentialAccountTests.swift */; };
 		15C7BB212EDB3631F9DE1647 /* ClockBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */; };
@@ -43,6 +44,7 @@
 		29301B875DF6C63903F7C456 /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		2A844B182A8B55D6AE7B4116 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		2A95575107BE1619EF3BB4D9 /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
+		2C671351EA35B15FB9B3CD15 /* CredentialVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */; };
 		2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */; };
 		2D03E1C6AEAD755CE49CF9FD /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
 		30201B65F9B4481BA816125F /* CalBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79E814CE71C9E15746C2443A /* CalBoxTests.swift */; };
@@ -149,6 +151,7 @@
 		AF37865EFBC4BAF79B768D19 /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		AF427E1E2B40CE7467D6F1AC /* CalBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8F7E47D5B1EFC7E9E91DF3 /* CalBoxWidget.swift */; };
 		AF7FE0721F8D203C29B1D8D1 /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
+		B6109B4ED969BBFCF04F7C1A /* CredentialVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */; };
 		B65A51E1C663EA52C4B95C29 /* NetBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */; };
 		B78D28F3EFB86CEA57C9803E /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
 		B8D2216F560466E6AB864171 /* AzureDevOpsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */; };
@@ -162,6 +165,7 @@
 		C2697957F8E3A81F07B6342B /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		C302C7E4ACAF175EC6AD3B6E /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
 		C42FB5B9E249E0FE9710B663 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
+		C4364123C8EC5694D890C272 /* github_user.json in Resources */ = {isa = PBXBuildFile; fileRef = AB6827E74F3CB5B26EA2537F /* github_user.json */; };
 		C483D310228E6B2532465BC6 /* DevBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290D71C97A8936CF963F219D /* DevBoxSnapshotTests.swift */; };
 		C5E77430380FA2F4C3ED84AC /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
 		C712B23DB4009D204713BD6C /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
@@ -177,6 +181,7 @@
 		D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		D2669CB46930616C7A93FD65 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		D284040183253CE7DFFEABB2 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
+		D2F997BE5BFD2C6761BA3A9C /* CredentialVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */; };
 		D3B023BE033BD1965A89C5B6 /* WeatherSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 561AB4E0A1AD6FABCE740F12 /* WeatherSnapshotTests.swift */; };
 		D48B0D31B9644A8985F7E702 /* PRBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28CF0C7B395ADB6A8A71C50F /* PRBoxWidget.swift */; };
 		D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */; };
@@ -194,6 +199,7 @@
 		E12D02F197A271DD411D4053 /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
 		E14CADB2CF950D781BA2F195 /* ClockBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 246CB064D9531380A28D9673 /* ClockBoxWidget.swift */; };
 		E1EBE95E84F8F791E5B3D34A /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
+		E243A28095E18E5CAD6F03DF /* CredentialVerificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A81DDCB64140958465D2A8 /* CredentialVerificationTests.swift */; };
 		E2DE130621C6683B7AA69F2D /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		E664FE89330E4F4FC2851875 /* CredentialsWidgetReadsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */; };
@@ -306,6 +312,7 @@
 		7A8F7E47D5B1EFC7E9E91DF3 /* CalBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalBoxWidget.swift; sourceTree = "<group>"; };
 		7B2DB053937C24CBB649992B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSeriesTests.swift; sourceTree = "<group>"; };
+		7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialVerification.swift; sourceTree = "<group>"; };
 		7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxSnapshot.swift; sourceTree = "<group>"; };
 		812063688CE39D11189608C8 /* CredentialAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialAccount.swift; sourceTree = "<group>"; };
 		82736DC13D9569D028C763BC /* DeckKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychain.swift; sourceTree = "<group>"; };
@@ -324,6 +331,7 @@
 		A7F059BC77B65DAFC1FC3A3A /* TaskBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBoxSnapshotTests.swift; sourceTree = "<group>"; };
 		AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxWidget.swift; sourceTree = "<group>"; };
 		AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxCoreTests.swift; sourceTree = "<group>"; };
+		AB6827E74F3CB5B26EA2537F /* github_user.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = github_user.json; sourceTree = "<group>"; };
 		AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCountTests.swift; sourceTree = "<group>"; };
 		AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockBoxTests.swift; sourceTree = "<group>"; };
 		B129C36246D87142F352B506 /* PRBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxSnapshotTests.swift; sourceTree = "<group>"; };
@@ -349,6 +357,7 @@
 		D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeckWidgets.entitlements; sourceTree = "<group>"; };
 		D280CAAAC227082564309914 /* OpenCodeReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeReader.swift; sourceTree = "<group>"; };
 		D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wallexMarkets.json; sourceTree = "<group>"; };
+		D4A81DDCB64140958465D2A8 /* CredentialVerificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialVerificationTests.swift; sourceTree = "<group>"; };
 		D6C015468901E17452BF6132 /* ShipBoxDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxDiscoveryTests.swift; sourceTree = "<group>"; };
 		D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThresholdTests.swift; sourceTree = "<group>"; };
 		D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshotTests.swift; sourceTree = "<group>"; };
@@ -401,6 +410,7 @@
 				37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */,
 				812063688CE39D11189608C8 /* CredentialAccount.swift */,
 				B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */,
+				7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */,
 				82736DC13D9569D028C763BC /* DeckKeychain.swift */,
 				CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */,
 				4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */,
@@ -443,6 +453,7 @@
 				6FD5C85FCA16CC6CB16BA6D4 /* CredentialsMigrationTests.swift */,
 				8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */,
 				920FB174B8F493303CA61487 /* CredentialsWiringTests.swift */,
+				D4A81DDCB64140958465D2A8 /* CredentialVerificationTests.swift */,
 				1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */,
 				E0E922A862E405B58537BA49 /* DeckLinkTests.swift */,
 				F66AF2CBFD42DE18E87E2455 /* DeckSecretsMigrationTests.swift */,
@@ -525,6 +536,7 @@
 				CF554B40AD43EFE339212234 /* erApiLatest.json */,
 				910A3754B71959068BBF2549 /* github_prs.json */,
 				734F3EA73D9BBCC09CE2D9BF /* github_repos.json */,
+				AB6827E74F3CB5B26EA2537F /* github_user.json */,
 				B989CFB8753F5CA071EEBD93 /* goldXau.json */,
 				D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */,
 			);
@@ -718,6 +730,7 @@
 				57F5796192299650422752B1 /* erApiLatest.json in Resources */,
 				7ADEE8BA9F19842AD86B99DC /* github_prs.json in Resources */,
 				C81C2A41FCF6D5766010C765 /* github_repos.json in Resources */,
+				C4364123C8EC5694D890C272 /* github_user.json in Resources */,
 				83AC35040D0FE70CEDF28EDF /* goldXau.json in Resources */,
 				F8D0B9E76E31D7928A486CAA /* wallexMarkets.json in Resources */,
 			);
@@ -772,6 +785,7 @@
 				15C7BB212EDB3631F9DE1647 /* ClockBoxCore.swift in Sources */,
 				E14CADB2CF950D781BA2F195 /* ClockBoxWidget.swift in Sources */,
 				09092463B54E5E76973919A0 /* CredentialAccount.swift in Sources */,
+				14A001ACD9A00177E27056F6 /* CredentialVerification.swift in Sources */,
 				3BCA007992ED90A3706DAF97 /* CredentialsMigration.swift in Sources */,
 				E12D02F197A271DD411D4053 /* DeckKeychain.swift in Sources */,
 				143B07F39F62D08E84D9CF21 /* DeckLink.swift in Sources */,
@@ -832,6 +846,8 @@
 				71756A3125964940AD4F060C /* CredentialAccount.swift in Sources */,
 				158161B595463B7ECDE20B50 /* CredentialAccountTests.swift in Sources */,
 				D9873960F255D965BA294750 /* CredentialGateTests.swift in Sources */,
+				D2F997BE5BFD2C6761BA3A9C /* CredentialVerification.swift in Sources */,
+				E243A28095E18E5CAD6F03DF /* CredentialVerificationTests.swift in Sources */,
 				96361F53D4F188186ADAE3BA /* CredentialsMigration.swift in Sources */,
 				482E9A15C89DD93832340B3B /* CredentialsMigrationTests.swift in Sources */,
 				E664FE89330E4F4FC2851875 /* CredentialsWidgetReadsTests.swift in Sources */,
@@ -910,6 +926,7 @@
 				0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */,
 				A3610AE8477308D69CE6301A /* ClockBoxCore.swift in Sources */,
 				BEE3B5436518E052E5427E4B /* CredentialAccount.swift in Sources */,
+				2C671351EA35B15FB9B3CD15 /* CredentialVerification.swift in Sources */,
 				6CF20BD1883D65E7F8EEE3B8 /* CredentialsMigration.swift in Sources */,
 				2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */,
 				DD9B2E32F244BE3B25773C3C /* DeckKeychain.swift in Sources */,
@@ -949,6 +966,7 @@
 				90A811EBE7E73139D552827E /* ClipBoxSnapshot.swift in Sources */,
 				4679230BBFA043E0D068F18F /* ClockBoxCore.swift in Sources */,
 				3AA9C73435EBD0321C2BC3A3 /* CredentialAccount.swift in Sources */,
+				B6109B4ED969BBFCF04F7C1A /* CredentialVerification.swift in Sources */,
 				7053AD14D80E837035878289 /* CredentialsMigration.swift in Sources */,
 				704E79FBAAD061417024969A /* DeckKeychain.swift in Sources */,
 				74F07107040B1441641C05C1 /* DeckLink.swift in Sources */,
