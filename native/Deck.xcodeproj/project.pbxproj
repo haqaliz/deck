@@ -185,6 +185,7 @@
 		D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */; };
 		D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		D8DE1BC7D47C480B185987C0 /* ShipBoxSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF045F6211C715FF81858003 /* ShipBoxSettingsTests.swift */; };
+		D9873960F255D965BA294750 /* CredentialGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277279067EB7808B71A4759B /* CredentialGateTests.swift */; };
 		DAD7D5822D2A6F40FD89DD26 /* AtomicFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */; };
 		DD3E61D42DB4A46DB5C256BF /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
 		DD9B2E32F244BE3B25773C3C /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
@@ -262,6 +263,7 @@
 		23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryCore.swift; sourceTree = "<group>"; };
 		246CB064D9531380A28D9673 /* ClockBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockBoxWidget.swift; sourceTree = "<group>"; };
 		26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshot.swift; sourceTree = "<group>"; };
+		277279067EB7808B71A4759B /* CredentialGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialGateTests.swift; sourceTree = "<group>"; };
 		28CF0C7B395ADB6A8A71C50F /* PRBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxWidget.swift; sourceTree = "<group>"; };
 		290D71C97A8936CF963F219D /* DevBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxSnapshotTests.swift; sourceTree = "<group>"; };
 		29738728E12DD5CDF3E8BB45 /* SystemMetricsCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetricsCoreTests.swift; sourceTree = "<group>"; };
@@ -437,6 +439,7 @@
 				AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */,
 				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
 				633ED2890AE2D2C0B501102A /* CredentialAccountTests.swift */,
+				277279067EB7808B71A4759B /* CredentialGateTests.swift */,
 				6FD5C85FCA16CC6CB16BA6D4 /* CredentialsMigrationTests.swift */,
 				8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */,
 				920FB174B8F493303CA61487 /* CredentialsWiringTests.swift */,
@@ -828,6 +831,7 @@
 				AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */,
 				71756A3125964940AD4F060C /* CredentialAccount.swift in Sources */,
 				158161B595463B7ECDE20B50 /* CredentialAccountTests.swift in Sources */,
+				D9873960F255D965BA294750 /* CredentialGateTests.swift in Sources */,
 				96361F53D4F188186ADAE3BA /* CredentialsMigration.swift in Sources */,
 				482E9A15C89DD93832340B3B /* CredentialsMigrationTests.swift in Sources */,
 				E664FE89330E4F4FC2851875 /* CredentialsWidgetReadsTests.swift in Sources */,

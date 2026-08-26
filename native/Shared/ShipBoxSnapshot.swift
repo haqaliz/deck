@@ -271,8 +271,9 @@ enum HostGitHubLoader {
     /// throws when **no** repo produced runs and at least one errored. Every
     /// repo answering with zero runs is a success, not a failure — that is a
     /// user with CI they haven't run yet, not a broken widget.
-    static func fetch(settings: ShipBoxSettings) async throws -> ShipBoxSnapshot {
-        let token = settings.token
+    /// The token arrives resolved from the selected account rather than off
+    /// `settings`, which no longer carries one.
+    static func fetch(settings: ShipBoxSettings, token: String) async throws -> ShipBoxSnapshot {
         guard !token.isEmpty else { throw GitHubError.notConfigured }
 
         let repos: [String]

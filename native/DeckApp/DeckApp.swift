@@ -72,9 +72,11 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
 
 struct ContentView: View {
     @State private var settings = DeckSettings.load()
-    /// Credentials the keychain refused to hand over this launch — a locked
+    /// Accounts the keychain refused to hand over this launch — a locked
     /// login keychain, most likely. Kept apart from "never set", which is a
     /// different message and a different field to fix.
+    @State private var unavailableAccounts: Set<String> = []
+    /// The same, for the five pre-accounts items, until the migration runs.
     @State private var unavailableSecrets: Set<DeckSecret> = []
     @State private var selection: DeckWidget = .livebox
     @State private var timer: Timer?
@@ -167,21 +169,23 @@ struct ContentView: View {
     /// into the widget container. Remote mode never passes a default token:
     /// without the user's own token nothing is fetched.
     private func refreshOpenCode() async {
-        let openbox = settings.openbox
         let snapshot: OpenCodeSnapshot?
-        if let serverURL = openbox.serverURL, !serverURL.isEmpty {
-            if unavailableSecrets.contains(.openboxToken) {
-                snapshot = nil
-                FetchStatusStore.record(.credentialsUnavailable, for: .opencodeRemote)
-            } else if !openbox.token.isEmpty {
+        if settings.openBoxUsesRemoteServer {
+            switch gate(.openbox) {
+            case .fetch(let credential):
                 do {
-                    snapshot = try await RemoteOpenCodeLoader.load(serverURL: serverURL, token: openbox.token)
+                    snapshot = try await RemoteOpenCodeLoader.load(
+                        serverURL: credential.serverURL, token: credential.token
+                    )
                     FetchStatusStore.record(.ok, for: .opencodeRemote)
                 } catch {
                     snapshot = nil
                     FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .opencodeRemote)
                 }
-            } else {
+            case .unavailable:
+                snapshot = nil
+                FetchStatusStore.record(.credentialsUnavailable, for: .opencodeRemote)
+            default:
                 snapshot = nil
                 FetchStatusStore.record(.notConfigured, for: .opencodeRemote)
             }
@@ -257,20 +261,13 @@ struct ContentView: View {
     /// instead would keep nagging about a provider they disabled.
     private func refreshPRBox() async {
         let prbox = settings.prbox
-        guard prbox.isAnyProviderUsable else {
-            FetchStatusStore.record(prbox.github.enabled ? .notConfigured : .ok, for: .prboxGitHub)
-            FetchStatusStore.record(prbox.azure.enabled ? .notConfigured : .ok, for: .prboxAzure)
-            WidgetCenter.shared.reloadAllTimelines()
-            return
-        }
 
         var github: PRRoleTotals?
-        if unavailableSecrets.contains(.prboxGitHubToken) {
-            FetchStatusStore.record(.credentialsUnavailable, for: .prboxGitHub)
-        } else if prbox.github.isUsable {
+        switch gate(.prboxGitHub) {
+        case .fetch(let credential):
             do {
                 github = try await HostGitHubPRLoader.fetch(
-                    token: prbox.github.token,
+                    token: credential.token,
                     scope: prbox.github.scope,
                     cap: prbox.prCount
                 )
@@ -278,27 +275,26 @@ struct ContentView: View {
             } catch {
                 FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .prboxGitHub)
             }
-        } else {
-            FetchStatusStore.record(prbox.github.enabled ? .notConfigured : .ok, for: .prboxGitHub)
+        case let other:
+            if let outcome = other.outcome { FetchStatusStore.record(outcome, for: .prboxGitHub) }
         }
 
         var azure: PRRoleTotals?
-        if unavailableSecrets.contains(.prboxAzureToken) {
-            FetchStatusStore.record(.credentialsUnavailable, for: .prboxAzure)
-        } else if prbox.azure.isUsable {
+        switch gate(.prboxAzure) {
+        case .fetch(let credential):
             do {
                 azure = try await HostAzurePRLoader.fetch(
-                    organization: prbox.azure.organization,
-                    project: prbox.azure.project,
-                    token: prbox.azure.token,
+                    organization: credential.organization,
+                    project: credential.project,
+                    token: credential.token,
                     cap: prbox.prCount
                 )
                 FetchStatusStore.record(.ok, for: .prboxAzure)
             } catch {
                 FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .prboxAzure)
             }
-        } else {
-            FetchStatusStore.record(prbox.azure.enabled ? .notConfigured : .ok, for: .prboxAzure)
+        case let other:
+            if let outcome = other.outcome { FetchStatusStore.record(outcome, for: .prboxAzure) }
         }
 
         // One provider failing must not blank the other's rows.
@@ -316,21 +312,20 @@ struct ContentView: View {
         let shipbox = settings.shipbox
         // Dynamic mode needs only a token; static mode also needs a repo.
         // Mirrors DeckAgent exactly — the two have always been line-for-line.
-        guard !unavailableSecrets.contains(.shipboxToken) else {
+        guard gate(.shipbox) != .unavailable else {
             FetchStatusStore.record(.credentialsUnavailable, for: .shipbox)
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
-        let configured = !shipbox.token.isEmpty
-            && (shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty)
-        guard configured else {
+        let hasATarget = shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty
+        guard case .fetch(let credential) = gate(.shipbox), hasATarget else {
             FetchStatusStore.record(.notConfigured, for: .shipbox)
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
         let snapshot: ShipBoxSnapshot
         do {
-            snapshot = try await HostGitHubLoader.fetch(settings: shipbox)
+            snapshot = try await HostGitHubLoader.fetch(settings: shipbox, token: credential.token)
         } catch {
             FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .shipbox)
             WidgetCenter.shared.reloadAllTimelines()
@@ -346,15 +341,12 @@ struct ContentView: View {
     /// token. Always written on success so writtenAt drives the staleness
     /// windows; a failure leaves the last-good snapshot untouched.
     private func refreshTaskBox() async {
-        let taskbox = settings.taskbox
-        let organization = taskbox.organization.trimmingCharacters(in: .whitespacesAndNewlines)
-        let project = taskbox.project.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !unavailableSecrets.contains(.taskboxToken) else {
+        guard gate(.taskbox) != .unavailable else {
             FetchStatusStore.record(.credentialsUnavailable, for: .taskbox)
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
-        guard !organization.isEmpty, !project.isEmpty, !taskbox.token.isEmpty else {
+        guard case .fetch(let credential) = gate(.taskbox) else {
             FetchStatusStore.record(.notConfigured, for: .taskbox)
             WidgetCenter.shared.reloadAllTimelines()
             return
@@ -362,7 +354,9 @@ struct ContentView: View {
         let snapshot: TaskBoxSnapshot
         do {
             snapshot = try await HostAzureDevOpsLoader.fetch(
-                organization: organization, project: project, token: taskbox.token
+                organization: credential.organization,
+                project: credential.project,
+                token: credential.token
             )
         } catch {
             FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .taskbox)
@@ -514,14 +508,27 @@ struct ContentView: View {
     /// Saving is what scrubs the file, so it only happens once something moved.
     private func adoptKeychainSecrets() {
         var migrated = settings
-        if DeckSecretsMigration.migrate(&migrated) {
+        var changed = DeckSecretsMigration.migrate(&migrated)
+        // Then the second, one-way step: the five welded credentials become
+        // accounts. Same ordering guarantee — write, read back, only then
+        // delete — so a keychain failure costs nothing and retries next launch.
+        _ = migrated.hydrateFromKeychain()
+        if CredentialsMigration.migrate(&migrated) { changed = true }
+        if changed {
             settings = migrated
             settings.save()
         }
+        unavailableAccounts = settings.hydrateAccountsFromKeychain()
         unavailableSecrets = settings.hydrateFromKeychain()
-        for secret in unavailableSecrets {
-            FetchStatusStore.record(.credentialsUnavailable, for: secret.fetchSource)
+        for slot in CredentialSlot.allCases where gate(slot) == .unavailable {
+            FetchStatusStore.record(.credentialsUnavailable, for: slot.source)
         }
+    }
+
+    /// The one decision table, shared with `DeckAgent` so the two cannot drift.
+    private func gate(_ slot: CredentialSlot) -> CredentialGate {
+        settings.gate(slot, unavailableAccounts: unavailableAccounts,
+                      unavailableLegacySecrets: unavailableSecrets)
     }
 
     /// A freshly pasted credential clears a read failure from this launch —
@@ -529,6 +536,11 @@ struct ContentView: View {
     /// just typed.
     private func secretCommitted(_ secret: DeckSecret) {
         unavailableSecrets.remove(secret)
+    }
+
+    /// The same, for an account's token.
+    private func accountSecretCommitted(_ accountID: String) {
+        unavailableAccounts.remove(accountID)
     }
 
     /// Uninstall: delete Deck's data directory inside the widget container.

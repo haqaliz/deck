@@ -712,19 +712,37 @@ final class PRBoxSettingsTests: XCTestCase {
 
     /// A provider with its toggle on but no credentials is not configured, and
     /// the agent must skip it rather than fire a request that cannot work.
-    func testProviderIsOnlyUsableWhenEnabledAndCredentialed() {
-        var s = PRBoxSettings()
-        XCTAssertFalse(s.github.isUsable)
-        s.github.enabled = true
-        XCTAssertFalse(s.github.isUsable)
-        s.github.token = "t"
-        XCTAssertTrue(s.github.isUsable)
+    ///
+    /// This used to be `PRGitHubSettings.isUsable`, which read the provider's
+    /// own `enabled` and `token`. Both are pre-accounts fields now, so the
+    /// question is answered by `DeckSettings.gate(_:unavailable:)` against the
+    /// selected account — one table shared by the agent and the host app.
+    func testProviderIsOnlyUsableWhenItHasAnAccountWithCredentials() {
+        var s = DeckSettings()
+        XCTAssertEqual(s.gate(.prboxGitHub, unavailable: []), .off)
 
-        s.azure.enabled = true
-        s.azure.token = "t"
-        XCTAssertFalse(s.azure.isUsable, "needs an organization and a project too")
-        s.azure.organization = "org"
-        s.azure.project = "proj"
-        XCTAssertTrue(s.azure.isUsable)
+        var github = CredentialAccount(id: "gh", kind: .github, label: "work")
+        s.credentials.accounts = [github]
+        s.prbox.github.accountID = "gh"
+        XCTAssertEqual(s.gate(.prboxGitHub, unavailable: []), .notConfigured, "selected but no token")
+
+        github.token = "t"
+        s.credentials.accounts = [github]
+        XCTAssertEqual(s.gate(.prboxGitHub, unavailable: []), .fetch(ResolvedCredential(token: "t")))
+
+        var azure = CredentialAccount(id: "az", kind: .azure, label: "acme")
+        azure.token = "t"
+        s.credentials.accounts.append(azure)
+        s.prbox.azure.accountID = "az"
+        XCTAssertEqual(s.gate(.prboxAzure, unavailable: []), .notConfigured,
+                       "needs an organization and a project too")
+
+        azure.organization = "org"
+        azure.project = "proj"
+        s.credentials.accounts[1] = azure
+        XCTAssertEqual(
+            s.gate(.prboxAzure, unavailable: []),
+            .fetch(ResolvedCredential(token: "t", organization: "org", project: "proj"))
+        )
     }
 }

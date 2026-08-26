@@ -65,7 +65,83 @@ extension DeckSettings {
     }
 }
 
+/// What a slot should do this tick.
+///
+/// `off` and `notConfigured` are deliberately different answers. Nothing
+/// selected is a switch the user left alone; a selection that no longer
+/// resolves is something to report. And `unavailable` is neither — it is the
+/// locked-keychain case, which must never read as "you forgot to paste a
+/// token".
+enum CredentialGate: Equatable {
+    case fetch(ResolvedCredential)
+    case notConfigured
+    case unavailable
+    case off
+
+    /// What to record for the slot's `FetchSource`, or `nil` when the fetch
+    /// itself will record the outcome.
+    var outcome: FetchOutcome? {
+        switch self {
+        case .fetch: nil
+        case .notConfigured: .notConfigured
+        case .unavailable: .credentialsUnavailable
+        // `ok` rather than nothing: it is what clears a failure left behind
+        // from when the provider was on.
+        case .off: .ok
+        }
+    }
+}
+
 extension DeckSettings {
+    /// The one decision table, so the agent and the host app cannot drift.
+    ///
+    /// - Parameter unavailable: account ids whose keychain read **failed**,
+    ///   from `hydrateAccounts(from:)`. Not the same as absent.
+    func gate(_ slot: CredentialSlot, unavailable: Set<String>) -> CredentialGate {
+        if let id = accountID(for: slot), unavailable.contains(id) { return .unavailable }
+
+        guard let credential = credential(for: slot) else {
+            // Nothing selected and nothing left over: the user simply has not
+            // turned this on.
+            return accountID(for: slot) == nil && legacyCredential(for: slot).token.isEmpty
+                ? .off
+                : .notConfigured
+        }
+
+        guard slot.kind == .azure else { return .fetch(credential) }
+
+        // Azure needs a target as much as it needs a token, and the loader
+        // would only fail later with something less legible.
+        let organization = credential.organization.trimmingCharacters(in: .whitespacesAndNewlines)
+        let project = credential.project.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !organization.isEmpty, !project.isEmpty else { return .notConfigured }
+
+        return .fetch(ResolvedCredential(
+            token: credential.token,
+            organization: organization,
+            project: project,
+            serverURL: credential.serverURL
+        ))
+    }
+
+    /// `gate(_:unavailable:)` that also understands a locked keychain on the
+    /// **pre-accounts** items.
+    ///
+    /// `DeckAgent` reads settings and never writes them, so it can run for a
+    /// long time on a file the migration has not touched. Without this, a
+    /// locked login keychain would read there as "not configured" — the exact
+    /// collapse the `credentialsUnavailable` outcome exists to prevent.
+    func gate(
+        _ slot: CredentialSlot,
+        unavailableAccounts: Set<String>,
+        unavailableLegacySecrets: Set<DeckSecret>
+    ) -> CredentialGate {
+        if accountID(for: slot) == nil, unavailableLegacySecrets.contains(slot.legacySecret) {
+            return .unavailable
+        }
+        return gate(slot, unavailable: unavailableAccounts)
+    }
+
     /// Whether OpenBox reads a remote opencode server rather than the local
     /// database — **decidable inside the widget extension**, which has no
     /// keychain access, because it turns only on non-secret fields.

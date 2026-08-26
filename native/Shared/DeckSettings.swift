@@ -913,11 +913,6 @@ struct PRGitHubSettings: Codable, Equatable {
     /// no account is selected, which reads as "not configured".
     var accountID: String?
 
-    /// Enabled is not the same as usable: a provider switched on with no token
-    /// is "not configured", and the agent skips it rather than firing a
-    /// request that cannot succeed.
-    var isUsable: Bool { enabled && !token.isEmpty }
-
     init() {}
 
     init(from decoder: Decoder) throws {
@@ -941,10 +936,6 @@ struct PRAzureSettings: Codable, Equatable {
     /// Personal access token — required; no default is ever sent.
     var token = ""
 
-    var isUsable: Bool {
-        enabled && !organization.isEmpty && !project.isEmpty && !token.isEmpty
-    }
-
     init() {}
 
     init(from decoder: Decoder) throws {
@@ -967,8 +958,6 @@ struct PRBoxSettings: Codable, Equatable {
     var reviewColor = RGBA(.orange)
 
     static let rowCountRange = 3...12
-
-    var isAnyProviderUsable: Bool { github.isUsable || azure.isUsable }
 
     func rowCount(for face: PRBoxFace) -> Int {
         switch face {

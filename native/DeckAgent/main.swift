@@ -47,22 +47,27 @@ Task {
     // one that was never set: it is recorded as its own outcome here, and every
     // gate below skips rather than falling through to "not configured", which
     // would tell the user to paste a token they already pasted.
-    let unavailableSecrets = settings.hydrateFromKeychain()
-    for secret in unavailableSecrets {
-        FetchStatusStore.record(.credentialsUnavailable, for: secret.fetchSource)
-        agentLog.info("credential unavailable (\(secret.rawValue, privacy: .public))")
+    let unavailableAccounts = settings.hydrateAccountsFromKeychain()
+    let unavailableLegacy = settings.hydrateFromKeychain()
+    let credentialGates = Dictionary(uniqueKeysWithValues: CredentialSlot.allCases.map {
+        ($0, settings.gate($0, unavailableAccounts: unavailableAccounts,
+                           unavailableLegacySecrets: unavailableLegacy))
+    })
+    for slot in CredentialSlot.allCases where credentialGates[slot] == .unavailable {
+        FetchStatusStore.record(.credentialsUnavailable, for: slot.source)
+        agentLog.info("credential unavailable (\(slot.rawValue, privacy: .public))")
     }
 
     let opencode: OpenCodeSnapshot?
-    if let serverURL = settings.openbox.serverURL, !serverURL.isEmpty {
+    if settings.openBoxUsesRemoteServer {
         // Remote mode: never passes a default token — without the user's own
         // token no data is fetched (no silent local-DB fallback).
-        if unavailableSecrets.contains(.openboxToken) {
-            // Outcome already recorded above; do not overwrite it.
-            opencode = nil
-        } else if !settings.openbox.token.isEmpty {
+        switch credentialGates[.openbox] {
+        case .fetch(let credential):
             do {
-                opencode = try await RemoteOpenCodeLoader.load(serverURL: serverURL, token: settings.openbox.token)
+                opencode = try await RemoteOpenCodeLoader.load(
+                    serverURL: credential.serverURL, token: credential.token
+                )
                 FetchStatusStore.record(.ok, for: .opencodeRemote)
             } catch {
                 opencode = nil
@@ -70,7 +75,10 @@ Task {
                 FetchStatusStore.record(outcome, for: .opencodeRemote)
                 agentLog.info("failed opencode fetch (\(outcome.rawValue, privacy: .public))")
             }
-        } else {
+        case .unavailable:
+            // Outcome already recorded above; do not overwrite it.
+            opencode = nil
+        default:
             opencode = nil
             FetchStatusStore.record(.notConfigured, for: .opencodeRemote)
         }
@@ -143,16 +151,15 @@ Task {
     // ShipBox: requires the user's own token — never a default one. Dynamic
     // mode needs nothing else; static mode also needs at least one repo.
     let shipbox = settings.shipbox
-    let shipboxConfigured = !shipbox.token.isEmpty
-        && (shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty)
-    if unavailableSecrets.contains(.shipboxToken) {
+    let shipboxHasATarget = shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty
+    if credentialGates[.shipbox] == .unavailable {
         agentLog.info("skipped shipbox snapshot (credential unavailable)")
-    } else if shipboxConfigured {
+    } else if case .fetch(let credential)? = credentialGates[.shipbox], shipboxHasATarget {
         do {
             // Always written: writtenAt drives the staleness windows. A repo
             // that failed while others succeeded rides in the snapshot's note
             // rather than failing the whole fetch.
-            let snapshot = try await HostGitHubLoader.fetch(settings: shipbox)
+            let snapshot = try await HostGitHubLoader.fetch(settings: shipbox, token: credential.token)
             ShipBoxSnapshotStore.save(snapshot)
             FetchStatusStore.record(.ok, for: .shipbox)
             // Counts only, never repo names: a private repo's name is exactly
@@ -172,21 +179,17 @@ Task {
     }
 
     // TaskBox: requires the user's own org + project + PAT — never a default token.
-    let taskboxOrg = settings.taskbox.organization
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-    let taskboxProject = settings.taskbox.project
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-    if unavailableSecrets.contains(.taskboxToken) {
+    if credentialGates[.taskbox] == .unavailable {
         agentLog.info("skipped taskbox snapshot (credential unavailable)")
-    } else if !taskboxOrg.isEmpty && !taskboxProject.isEmpty && !settings.taskbox.token.isEmpty {
+    } else if case .fetch(let credential)? = credentialGates[.taskbox] {
         do {
             // Always written: writtenAt drives the staleness windows, so a
             // successful fetch must refresh it even when the task list is
             // unchanged — otherwise a quiet day reads as a stale widget.
             let taskbox = try await HostAzureDevOpsLoader.fetch(
-                organization: taskboxOrg,
-                project: taskboxProject,
-                token: settings.taskbox.token
+                organization: credential.organization,
+                project: credential.project,
+                token: credential.token
             )
             TaskBoxSnapshotStore.save(taskbox)
             FetchStatusStore.record(.ok, for: .taskbox)
@@ -223,63 +226,65 @@ Task {
     // half that is missing. A provider that is switched off records .ok rather
     // than .notConfigured, which is what clears a failure it left behind.
     let prbox = settings.prbox
-    let prboxCredentialFailed = unavailableSecrets.contains(.prboxGitHubToken)
-        || unavailableSecrets.contains(.prboxAzureToken)
-    if prbox.isAnyProviderUsable || prboxCredentialFailed {
-        var githubTotals: PRRoleTotals?
-        if unavailableSecrets.contains(.prboxGitHubToken) {
-            // Outcome already recorded above.
-        } else if prbox.github.isUsable {
-            do {
-                githubTotals = try await HostGitHubPRLoader.fetch(
-                    token: prbox.github.token,
-                    scope: prbox.github.scope,
-                    cap: prbox.prCount
-                )
-                FetchStatusStore.record(.ok, for: .prboxGitHub)
-            } catch {
-                let outcome = FetchClassifier.outcome(for: error)
-                FetchStatusStore.record(outcome, for: .prboxGitHub)
-                agentLog.info("failed prbox github (\(outcome.rawValue, privacy: .public))")
-            }
-        } else {
-            FetchStatusStore.record(prbox.github.enabled ? .notConfigured : .ok, for: .prboxGitHub)
-        }
-
-        var azureTotals: PRRoleTotals?
-        if unavailableSecrets.contains(.prboxAzureToken) {
-            // Outcome already recorded above.
-        } else if prbox.azure.isUsable {
-            do {
-                azureTotals = try await HostAzurePRLoader.fetch(
-                    organization: prbox.azure.organization,
-                    project: prbox.azure.project,
-                    token: prbox.azure.token,
-                    cap: prbox.prCount
-                )
-                FetchStatusStore.record(.ok, for: .prboxAzure)
-            } catch {
-                let outcome = FetchClassifier.outcome(for: error)
-                FetchStatusStore.record(outcome, for: .prboxAzure)
-                agentLog.info("failed prbox azure (\(outcome.rawValue, privacy: .public))")
-            }
-        } else {
-            FetchStatusStore.record(prbox.azure.enabled ? .notConfigured : .ok, for: .prboxAzure)
-        }
-
-        if githubTotals != nil || azureTotals != nil {
-            // Always written: writtenAt drives the staleness window and the
-            // "Agent hasn't run" chip, so an empty queue must still refresh it.
-            let snapshot = PRSnapshotBuilder.build(
-                github: githubTotals, azure: azureTotals, cap: prbox.prCount, now: Date()
+    var githubTotals: PRRoleTotals?
+    switch credentialGates[.prboxGitHub] {
+    case .fetch(let credential):
+        do {
+            githubTotals = try await HostGitHubPRLoader.fetch(
+                token: credential.token,
+                scope: prbox.github.scope,
+                cap: prbox.prCount
             )
-            PRBoxSnapshotStore.save(snapshot)
-            agentLog.info("written prbox snapshot (\(snapshot.pullRequests.count, privacy: .public) rows)")
+            FetchStatusStore.record(.ok, for: .prboxGitHub)
+        } catch {
+            let outcome = FetchClassifier.outcome(for: error)
+            FetchStatusStore.record(outcome, for: .prboxGitHub)
+            agentLog.info("failed prbox github (\(outcome.rawValue, privacy: .public))")
         }
+    case .unavailable:
+        break // Outcome already recorded above.
+    case .some(let gate):
+        // `.off` records `ok`, which is what clears a failure the provider
+        // left behind when it was still on; `.notConfigured` says so plainly.
+        if let outcome = gate.outcome { FetchStatusStore.record(outcome, for: .prboxGitHub) }
+    case nil:
+        break
+    }
+
+    var azureTotals: PRRoleTotals?
+    switch credentialGates[.prboxAzure] {
+    case .fetch(let credential):
+        do {
+            azureTotals = try await HostAzurePRLoader.fetch(
+                organization: credential.organization,
+                project: credential.project,
+                token: credential.token,
+                cap: prbox.prCount
+            )
+            FetchStatusStore.record(.ok, for: .prboxAzure)
+        } catch {
+            let outcome = FetchClassifier.outcome(for: error)
+            FetchStatusStore.record(outcome, for: .prboxAzure)
+            agentLog.info("failed prbox azure (\(outcome.rawValue, privacy: .public))")
+        }
+    case .unavailable:
+        break // Outcome already recorded above.
+    case .some(let gate):
+        if let outcome = gate.outcome { FetchStatusStore.record(outcome, for: .prboxAzure) }
+    case nil:
+        break
+    }
+
+    if githubTotals != nil || azureTotals != nil {
+        // Always written: writtenAt drives the staleness window and the
+        // "Agent hasn't run" chip, so an empty queue must still refresh it.
+        let snapshot = PRSnapshotBuilder.build(
+            github: githubTotals, azure: azureTotals, cap: prbox.prCount, now: Date()
+        )
+        PRBoxSnapshotStore.save(snapshot)
+        agentLog.info("written prbox snapshot (\(snapshot.pullRequests.count, privacy: .public) rows)")
     } else {
-        FetchStatusStore.record(prbox.github.enabled ? .notConfigured : .ok, for: .prboxGitHub)
-        FetchStatusStore.record(prbox.azure.enabled ? .notConfigured : .ok, for: .prboxAzure)
-        agentLog.info("skipped prbox snapshot (not configured)")
+        agentLog.info("skipped prbox snapshot (nothing fetched)")
     }
 
     // MarketBox: live prices for the configured symbols in the display
