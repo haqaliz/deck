@@ -276,6 +276,23 @@ Do not delete the container; see the trap below.
   turn only on non-secret fields and are unit-pinned. Related: a migration that
   moves a field must **clear the old copy**, or the pre-migration fallback keeps
   answering from a dead field after the new control has taken over.
+- **Launching a quarantined Deck deletes it, and `--no-quarantine` is gone.**
+  Measured 2026-08-26 on Homebrew 6.0.19 / macOS 15 while wiring up the tap.
+  Two separate problems with the install instructions this repo shipped for
+  four releases:
+  1. `brew install --cask --no-quarantine …` fails outright — Homebrew removed
+     the flag ("Error: invalid option"). Every README and cask caveat telling
+     users to pass it was handing them an uncommand.
+  2. Opening a still-quarantined Deck does **not** just warn. Gatekeeper
+     **removes `/Applications/Deck.app`** — not to the Trash, it is simply
+     gone, while `brew list --cask` still reports it installed and the
+     Caskroom keeps a dangling symlink. Reproduced twice.
+  The working sequence is `brew install --cask` → `xattr -dr
+  com.apple.quarantine /Applications/Deck.app` → *then* launch. Same bits,
+  and the order is the whole difference. All of it disappears on notarization.
+  The tap is `haqaliz/homebrew-deck` (created 2026-08-26 — it was referenced by
+  the README for four releases before it existed); `homebrew/deck.rb` here is
+  the source of truth and `Casks/deck.rb` there is a mirror.
 - **An opencode token is Basic auth to the user's own server, not an account on
   a service.** `RemoteOpenCodeLoader` sends
   `Basic base64("opencode:<token>")` to whatever `serverURL` the account

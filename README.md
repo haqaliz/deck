@@ -69,7 +69,9 @@ All fourteen come in **small / medium / large** sizes.
 ### Homebrew (recommended)
 
 ```bash
-brew install --cask --no-quarantine haqaliz/deck/deck
+brew install --cask haqaliz/deck/deck
+xattr -dr com.apple.quarantine /Applications/Deck.app   # before opening it
+open /Applications/Deck.app
 ```
 
 ### Download
@@ -82,6 +84,13 @@ and launch:
 xattr -dr com.apple.quarantine /Applications/Deck.app
 open /Applications/Deck.app
 ```
+
+> **Run the `xattr` line before you open Deck the first time.** Opening it
+> while it is still quarantined does not just show a warning — macOS **deletes
+> `/Applications/Deck.app`**, and not to the Trash. If that has already
+> happened, install again and run the line first. (If you are following older
+> instructions that pass `--no-quarantine` to Homebrew: that flag no longer
+> exists and the command will fail.)
 
 Finally: right-click the desktop → **Edit Widgets…** → search "Deck" → add the
 widgets you want. Each comes in small, medium and large.

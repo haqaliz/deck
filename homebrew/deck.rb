@@ -3,33 +3,52 @@
 # release builds the DMG, copy the sha256 out of SHA256SUMS.txt, bump the version,
 # and commit it to the tap.
 #
-#   brew install --cask --no-quarantine haqaliz/deck/deck
+#   brew install --cask haqaliz/deck/deck
+#   xattr -dr com.apple.quarantine /Applications/Deck.app   # BEFORE first launch
 #
-# --no-quarantine is required until Deck is notarized: it is signed with an Apple
-# Development certificate, which Gatekeeper rejects for downloaded apps. The flag
-# is what saves users from running `xattr -dr com.apple.quarantine` by hand. Drop
-# this note from the README and the tap the day notarization lands.
+# Deck is signed with an Apple Development certificate, which Gatekeeper rejects
+# for downloaded apps, so the quarantine flag has to come off. Two things about
+# that, both measured on Homebrew 6.0.19 / macOS 15 (2026-08-26):
+#
+#   * `--no-quarantine` no longer exists. Homebrew removed the flag; passing it
+#     now fails with "Error: invalid option". Older docs telling users to pass
+#     it are giving them a command that cannot run.
+#   * The order matters, and getting it wrong is destructive. Launching the app
+#     while it is still quarantined does not merely warn — Gatekeeper *removes
+#     /Applications/Deck.app*, and not to the Trash. Strip the attribute first
+#     and the same bits launch fine.
+#
+# All of this goes away the day notarization lands; drop it from here, the tap
+# and the README then.
 cask "deck" do
   version "1.30"
   sha256 "f37a29b3e6b3e7a511618be14edb3493152bb809079cc734eb651edf2dc79eca"
 
   url "https://github.com/haqaliz/deck/releases/download/v#{version}/Deck-v#{version}.dmg"
   name "Deck"
-  desc "Fourteen native macOS desktop widgets in one WidgetKit extension"
+  desc "Fourteen desktop widgets in one WidgetKit extension"
   homepage "https://github.com/haqaliz/deck"
 
   # WidgetKit APIs Deck relies on, and the deployment target in project.yml.
-  depends_on macos: ">= :sequoia"
+  # A bare symbol is the minimum, and the only form Homebrew still accepts —
+  # the `">= :sequoia"` string form it replaced is deprecated and warns on
+  # every `brew info`.
+  depends_on macos: :sequoia
 
   app "Deck.app"
 
   # Deck installs two LaunchAgents on first run; a plain `brew uninstall` that
   # left them running would keep relaunching a deleted binary every 60s.
-  uninstall quit:      "com.deck.app",
-            launchctl: [
+  #
+  # The key order here is Homebrew's, enforced by `brew style`, and it is not
+  # the execution order: Homebrew runs uninstall directives in a fixed sequence
+  # of its own regardless of how they are written. Reordering them changes
+  # nothing but the linter's opinion.
+  uninstall launchctl: [
               "com.deck.agent",
               "com.deck.agent.processes",
             ],
+            quit:      "com.deck.app",
             delete:    [
               "~/Library/LaunchAgents/com.deck.agent.plist",
               "~/Library/LaunchAgents/com.deck.agent.processes.plist",
@@ -47,10 +66,15 @@ cask "deck" do
     "~/Library/Logs/Deck",
   ]
 
+  # Printed after install, which is the one moment it can still help: the user
+  # has the app and has not launched it yet.
   caveats <<~EOS
-    Deck is not notarized yet, so it must be installed with --no-quarantine:
+    Deck is not notarized yet. Run this BEFORE opening it for the first time:
 
-      brew install --cask --no-quarantine haqaliz/deck/deck
+      xattr -dr com.apple.quarantine /Applications/Deck.app
+
+    Opening it first does not just warn you — macOS deletes the app, and not
+    to the Trash. If that already happened, reinstall and run the line above.
 
     Then add the widgets: right-click the desktop -> Edit Widgets... -> "Deck".
   EOS
