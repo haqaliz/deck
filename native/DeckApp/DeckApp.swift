@@ -87,8 +87,10 @@ struct ContentView: View {
             List(selection: $selection) {
                 Label("General", systemImage: "gearshape")
                     .tag(DeckWidget.general)
+                Label("Credentials", systemImage: "key.fill")
+                    .tag(DeckWidget.credentials)
                 Section("Widgets") {
-                    ForEach(DeckWidget.allCases.filter { $0 != .general }) { widget in
+                    ForEach(DeckWidget.allCases.filter { $0 != .general && $0 != .credentials }) { widget in
                         Label(widget.title, systemImage: widget.systemImage)
                             .tag(widget)
                     }
@@ -102,6 +104,11 @@ struct ContentView: View {
                 agentAtLogin: $settings.agentAtLogin,
                 onRemoveAgents: uninstallAgents,
                 onEraseData: eraseDeckData
+            )
+            case .credentials: CredentialsSettingsView(
+                settings: $settings,
+                unavailableAccounts: unavailableAccounts,
+                onSecretCommitted: accountSecretCommitted
             )
             case .livebox: LiveBoxSettingsView(settings: $settings.livebox)
             case .openbox: OpenBoxSettingsView(settings: $settings.openbox, onSecretCommitted: secretCommitted)
@@ -615,7 +622,8 @@ private func refreshMarketBox() async {
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
+    case general, credentials
+    case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
     case weatherbox, clockbox, shipbox, taskbox, calbox, prbox, marketbox
 
     var id: String { rawValue }
@@ -623,6 +631,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: "General"
+        case .credentials: "Credentials"
         case .livebox: "LiveBox"
         case .openbox: "OpenBox"
         case .netbox: "NetBox"
@@ -643,6 +652,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .general: "gearshape"
+        case .credentials: "key.fill"
         case .livebox: "cpu"
         case .openbox: "arrow.left.arrow.right"
         case .netbox: "network"
@@ -797,6 +807,265 @@ private struct LiveBoxSettingsView: View {
 /// and saves the whole file — never sees a half-typed token. The value is
 /// committed on Return or when the field loses focus, and only then does it
 /// reach the keychain and the in-memory settings.
+/// A `SecretField` for an account's token.
+///
+/// Commit semantics are `SecretField`'s, unchanged and deliberately so: on blur
+/// and on submit, never per keystroke. Settings are written on every mutation,
+/// and a keychain write per character would be both wasteful and racy.
+private struct AccountSecretField: View {
+    let title: String
+    let accountID: String
+    @Binding var value: String
+    var onCommit: (String) -> Void = { _ in }
+
+    @State private var draft: String = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        SecureField(title, text: $draft)
+            .focused($focused)
+            .textContentType(.password)
+            .onAppear { draft = value }
+            .onChange(of: value) { newValue in
+                if !focused { draft = newValue }
+            }
+            .onSubmit(commit)
+            .onChange(of: focused) { isFocused in
+                if !isFocused { commit() }
+            }
+    }
+
+    private func commit() {
+        guard draft != value else { return }
+        DeckKeychain.write(accountID: accountID, value: draft)
+        value = draft
+        onCommit(accountID)
+    }
+}
+
+/// The Credentials tab: typed accounts, many per kind, each referenced by
+/// whichever widgets point at it.
+///
+/// One `Form` and a `DisclosureGroup` per account — no sheet and no second
+/// window, so the 640x500 frame is unchanged.
+private struct CredentialsSettingsView: View {
+    @Binding var settings: DeckSettings
+    var unavailableAccounts: Set<String>
+    var onSecretCommitted: (String) -> Void
+
+    @State private var expanded: Set<String> = []
+    @State private var verifying: Set<String> = []
+    /// Verify failures, by account id. Successes live on the account itself.
+    @State private var failures: [String: String] = [:]
+    @State private var pendingDelete: CredentialAccount?
+
+    var body: some View {
+        Form {
+            ForEach(CredentialKind.allCases, id: \.self) { kind in
+                Section(kind.displayName) {
+                    let accounts = settings.credentials.accounts.filter { $0.kind == kind }
+                    if accounts.isEmpty {
+                        Text(emptyState(kind))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    ForEach(accounts) { account in
+                        row(account)
+                    }
+                    Button("Add \(kind.displayName) account") { add(kind) }
+                }
+            }
+
+            Section {
+                Text("Tokens are stored in your login keychain, not in Deck's settings file. That keeps them out of a file that gets copied around; it does not hide them from other software running as you.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+        .confirmationDialog(
+            "Delete \u{201C}\(pendingDelete?.label ?? "")\u{201D}?",
+            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let account = pendingDelete { delete(account) }
+                pendingDelete = nil
+            }
+            Button("Cancel", role: .cancel) { pendingDelete = nil }
+        } message: {
+            Text(CredentialsCopy.deleteMessage(
+                label: pendingDelete?.label ?? "",
+                slots: pendingDelete.map { settings.slots(using: $0.id) } ?? []
+            ))
+        }
+    }
+
+    // MARK: - Rows
+
+    private func row(_ account: CredentialAccount) -> some View {
+        DisclosureGroup(isExpanded: expansion(account.id)) {
+            editor(account)
+        } label: {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(account.label.isEmpty ? account.kind.displayName : account.label)
+                Text("\(CredentialsCopy.subtitle(for: account)) \u{00B7} \(CredentialsCopy.usedBy(settings.slots(using: account.id)))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func editor(_ account: CredentialAccount) -> some View {
+        TextField("Name", text: field(account.id, \.label))
+
+        switch account.kind {
+        case .azure:
+            TextField("Organization (name or dev.azure.com URL)", text: field(account.id, \.organization))
+            TextField("Project", text: field(account.id, \.project))
+        case .opencode:
+            TextField("Server URL (opencode serve, e.g. http://host:4096)", text: field(account.id, \.serverURL))
+        case .github:
+            EmptyView()
+        }
+
+        AccountSecretField(
+            title: account.kind == .azure ? "Personal access token" : "Token",
+            accountID: account.id,
+            value: field(account.id, \.token),
+            onCommit: onSecretCommitted
+        )
+
+        HStack {
+            Button(verifying.contains(account.id) ? "Verifying\u{2026}" : "Verify") {
+                verify(account.id)
+            }
+            .disabled(verifying.contains(account.id) || account.token.isEmpty)
+            Spacer()
+            Button("Delete\u{2026}", role: .destructive) { pendingDelete = account }
+        }
+
+        caption(for: account)
+    }
+
+    @ViewBuilder
+    private func caption(for account: CredentialAccount) -> some View {
+        if unavailableAccounts.contains(account.id) {
+            Text("Deck could not read this token from the keychain this launch. It is still stored \u{2014} unlock your login keychain and reopen Deck.")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        } else if let failure = failures[account.id] {
+            Text(failure)
+                .font(.caption)
+                .foregroundStyle(.red)
+        } else if account.verifiedIdentity != nil {
+            Text(CredentialsCopy.verification(for: account))
+                .font(.caption)
+                .foregroundStyle(.green)
+        } else {
+            Text(CredentialsCopy.verification(for: account))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func emptyState(_ kind: CredentialKind) -> String {
+        let widgets = CredentialSlot.allCases
+            .filter { $0.kind == kind }
+            .map(\.displayName)
+            .joined(separator: ", ")
+        return "No \(kind.displayName) accounts. Add one to use \(widgets)."
+    }
+
+    // MARK: - Editing
+
+    /// Every credential edit goes through here so a verification can never
+    /// outlive the token, organization or server it was made against.
+    private func edit(_ id: String, _ body: (inout CredentialAccount) -> Void) {
+        guard let index = settings.credentials.accounts.firstIndex(where: { $0.id == id }) else { return }
+        let before = settings.credentials.accounts[index].credentialFingerprint
+        body(&settings.credentials.accounts[index])
+        settings.credentials.accounts[index].clearVerificationIfCredentialChanged(from: before)
+        if settings.credentials.accounts[index].credentialFingerprint != before {
+            failures[id] = nil
+        }
+    }
+
+    private func field(_ id: String, _ keyPath: WritableKeyPath<CredentialAccount, String>) -> Binding<String> {
+        Binding(
+            get: { settings.credentials.accounts.first(where: { $0.id == id })?[keyPath: keyPath] ?? "" },
+            set: { value in edit(id) { $0[keyPath: keyPath] = value } }
+        )
+    }
+
+    private func expansion(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { expanded.contains(id) },
+            set: { isExpanded in
+                if isExpanded { expanded.insert(id) } else { expanded.remove(id) }
+            }
+        )
+    }
+
+    private func add(_ kind: CredentialKind) {
+        let account = CredentialAccount(kind: kind, label: "")
+        settings.credentials.accounts.append(account)
+        expanded.insert(account.id)
+    }
+
+    /// Removes the record, its keychain item, and every selection pointing at
+    /// it. Clearing the selections matters: a slot left dangling reads as
+    /// "not configured" and keeps nagging, when what actually happened is that
+    /// the user turned this off.
+    private func delete(_ account: CredentialAccount) {
+        for slot in settings.slots(using: account.id) {
+            settings.setAccountID(nil, for: slot)
+        }
+        settings.credentials.accounts.removeAll { $0.id == account.id }
+        DeckKeychain.delete(accountID: account.id)
+        expanded.remove(account.id)
+        failures[account.id] = nil
+    }
+
+    // MARK: - Verify
+
+    private func verify(_ id: String) {
+        guard let account = settings.credentials.accounts.first(where: { $0.id == id }) else { return }
+        verifying.insert(id)
+        failures[id] = nil
+        Task { @MainActor in
+            do {
+                let identity = try await CredentialVerifier.verify(account)
+                if let index = settings.credentials.accounts.firstIndex(where: { $0.id == id }) {
+                    settings.credentials.accounts[index].recordVerification(identity, at: Date())
+                }
+            } catch {
+                failures[id] = Self.message(for: error)
+            }
+            verifying.remove(id)
+        }
+    }
+
+    private static func message(for error: Error) -> String {
+        switch error {
+        case CredentialVerifier.VerifyError.notConfigured:
+            return "Fill in the fields above first."
+        case CredentialVerifier.VerifyError.serverError(let code) where code == 401 || code == 403:
+            return "\(code) \u{2014} the token was rejected, or it lacks the scopes this needs."
+        case CredentialVerifier.VerifyError.serverError(let code):
+            return "The server answered \(code)."
+        case CredentialVerifier.VerifyError.badResponse:
+            return "The response was not what this provider normally sends."
+        case CredentialVerifier.VerifyError.transport(let detail):
+            return "Could not reach the server: \(detail)"
+        default:
+            return "Verification failed: \(error.localizedDescription)"
+        }
+    }
+}
+
 private struct SecretField: View {
     let title: String
     let secret: DeckSecret
