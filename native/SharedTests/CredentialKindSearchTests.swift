@@ -39,6 +39,23 @@ final class CredentialKindSearchTests: XCTestCase {
         }
     }
 
+    // MARK: - Brand artwork
+
+    func testEveryProviderNamesItsArtworkAndTheNamesAreDistinct() {
+        // These are filenames in the app bundle. A typo is a missing icon, and
+        // nothing else in the build would say so.
+        let names = CredentialKind.allCases.map(\.assetName)
+        XCTAssertEqual(Set(names).count, CredentialKind.allCases.count)
+        XCTAssertEqual(CredentialKind.github.assetName, "provider-github")
+        XCTAssertEqual(CredentialKind.azure.assetName, "provider-azure")
+        XCTAssertEqual(CredentialKind.opencode.assetName, "provider-opencode")
+    }
+
+    func testArtworkComesInBothAppearances() {
+        XCTAssertEqual(CredentialKind.github.assetName(dark: false), "provider-github-light")
+        XCTAssertEqual(CredentialKind.github.assetName(dark: true), "provider-github-dark")
+    }
+
     func testAQueryThatMatchesNothingReturnsNothing() {
         // The sheet says so rather than showing an empty box.
         XCTAssertTrue(CredentialKind.matching("gitlab").isEmpty)

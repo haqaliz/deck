@@ -150,15 +150,21 @@ enum CredentialVerifier {
 
     private static func opencode(_ account: CredentialAccount) async throws -> CredentialIdentity {
         guard !account.serverURL.isEmpty else { throw VerifyError.notConfigured }
-        // Success *is* the probe: the same call OpenBox makes every tick, so a
-        // green Verify means the widget will work, not merely that a host
-        // answered a ping.
-        let snapshot = try await RemoteOpenCodeLoader.load(
+        // Addressed to this account's own server, necessarily: an opencode
+        // token is HTTP Basic auth against *your* `opencode serve` instance,
+        // not an account on a shared service, so there is nowhere else to ask.
+        //
+        // One `GET /session`, not a full snapshot load: the same endpoint and
+        // the same credentials OpenBox uses, so a green Verify means the widget
+        // will work — but without `load`'s per-session message fan-out, which
+        // can be dozens of requests.
+        let count = try await RemoteOpenCodeLoader.probe(
             serverURL: account.serverURL, token: account.token
         )
+        let host = URL(string: account.serverURL)?.host ?? "server"
         return CredentialIdentity(
-            identity: "reachable",
-            detail: "\(snapshot.sessions) sessions today",
+            identity: host,
+            detail: count == 1 ? "1 session" : "\(count) sessions",
             azureIdentityID: nil
         )
     }

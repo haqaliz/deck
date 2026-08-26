@@ -920,29 +920,50 @@ private struct AccountSecretField: View {
     }
 }
 
-/// Colour used for a provider's tile, so the list reads at a glance.
-private func credentialTint(_ kind: CredentialKind) -> Color {
-    switch kind {
-    case .github: .purple
-    case .azure: .blue
-    case .opencode: .orange
-    }
-}
-
-/// The rounded provider tile, shared by the account list and the Add sheet.
+/// The provider's own mark, shared by the account list, the Add sheet and the
+/// detail header.
+///
+/// Vendor artwork, converted from their SVGs to vector PDFs so it stays sharp
+/// at any size. GitHub and opencode ship a light and a dark version; Azure
+/// DevOps' is coloured and reads on both. If the artwork cannot be loaded the
+/// view falls back to the SF Symbol rather than leaving a hole.
 private struct CredentialIcon: View {
     let kind: CredentialKind
     var size: CGFloat = 28
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
-            .fill(credentialTint(kind).opacity(0.18))
-            .frame(width: size, height: size)
-            .overlay(
+        Group {
+            if let image = Self.artwork(kind, dark: colorScheme == .dark) {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+            } else {
                 Image(systemName: kind.systemImage)
-                    .font(.system(size: size * 0.46, weight: .semibold))
-                    .foregroundStyle(credentialTint(kind))
-            )
+                    .font(.system(size: size * 0.62, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: size, height: size)
+        // opencode's mark is a full-bleed block, where GitHub's and Azure's sit
+        // on transparency. Rounding the corners makes the block read as an icon
+        // instead of a raw rectangle, and is a no-op for the other two.
+        .clipShape(RoundedRectangle(cornerRadius: size * 0.2, style: .continuous))
+    }
+
+    /// Loaded once per name — an `NSImage` per row per redraw would re-read the
+    /// PDF on every keystroke in the settings window.
+    private static var cache: [String: NSImage] = [:]
+
+    private static func artwork(_ kind: CredentialKind, dark: Bool) -> NSImage? {
+        let name = kind.assetName(dark: dark)
+        if let cached = cache[name] { return cached }
+        guard let url = Bundle.main.url(forResource: name, withExtension: "pdf"),
+              let image = NSImage(contentsOf: url) else { return nil }
+        cache[name] = image
+        return image
     }
 }
 

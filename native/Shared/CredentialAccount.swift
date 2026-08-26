@@ -25,6 +25,26 @@ enum CredentialKind: String, Codable, CaseIterable {
         }
     }
 
+    /// Base filename of this provider's brand artwork in the app bundle.
+    ///
+    /// The real marks, converted from the vendors' own SVGs to vector PDFs.
+    /// `systemImage` stays as the fallback for when the artwork cannot be
+    /// loaded, and for the sandboxed widget extension, which does not ship it.
+    var assetName: String {
+        switch self {
+        case .github: "provider-github"
+        case .azure: "provider-azure"
+        case .opencode: "provider-opencode"
+        }
+    }
+
+    /// GitHub's mark is black on light and white on dark; opencode's inverts
+    /// the same way. Azure DevOps ships one coloured mark that reads on both,
+    /// but carries both names so callers never have to special-case it.
+    func assetName(dark: Bool) -> String {
+        "\(assetName)-\(dark ? "dark" : "light")"
+    }
+
     /// What this provider says the account gives Deck, under its name in the
     /// list — the same shape as Internet Accounts' "Mail, Contacts, Calendars".
     var summary: String {

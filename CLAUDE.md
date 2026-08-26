@@ -276,6 +276,18 @@ Do not delete the container; see the trap below.
   turn only on non-secret fields and are unit-pinned. Related: a migration that
   moves a field must **clear the old copy**, or the pre-migration fallback keeps
   answering from a dead field after the new control has taken over.
+- **`rsvg-convert -f pdf` can emit a PDF that CoreGraphics draws as nothing.**
+  Hit converting the provider marks for the Credentials tab (2026-08-26). The
+  opencode logo wraps its paths in a `mask` with `mask-type:luminance` and a
+  `clipPath`, both full-canvas no-ops; rsvg turns them into a PDF transparency
+  group that renders correctly in rsvg's own PNG output and **completely empty**
+  through `NSImage`. Nothing errors: `NSImage(contentsOf:)` succeeds and reports
+  a sensible `size`, so the only symptom is a blank icon. Check a converted PDF
+  by *drawing* it (`img.draw(in:)` into a bitmap and looking), not by loading
+  it. Fix: strip no-op masks and clip paths from the SVG before converting.
+  Vendor artwork lives in `DeckApp/Resources/provider-<kind>-{light,dark}.pdf`
+  and is host-app only — the widget extension does not ship it and falls back
+  to `CredentialKind.systemImage`.
 - **A `keychain-access-groups` entitlement SIGKILLs Deck at launch.** Measured
   2026-08-26 (`docs/planning/keychain-tokens/probe.md`) while looking at moving
   the API tokens to the keychain. Signing either the app bundle *or* a bare
