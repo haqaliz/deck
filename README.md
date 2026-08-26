@@ -273,12 +273,26 @@ history tools ignore them — so passwords copied from 1Password, Bitwarden,
 KeePassXC or Keychain Access are never recorded. Everything else it does keep is
 plain text, capped at 20 items, and clearable from the ClipBox settings tab.
 
-**Tokens** are stored in your **login keychain**, not in a file. The five
-credentials (OpenBox, ShipBox, TaskBox, and PRBox's GitHub and Azure tokens)
-are written there by the settings window and read by the background agent;
-`settings.json` keeps the non-secret fields and stays owner-readable only
-(mode 0600). An older Deck that kept them in that file migrates them the first
-time you open the new version.
+**Credentials** are managed in one place: **Deck → Settings → Credentials**.
+An account has a type (GitHub, Azure DevOps, opencode), a name you choose, and
+whatever identifies the connection — an Azure organization and project, an
+opencode server URL. You can keep as many accounts of a type as you like, and
+each widget picks which one it uses from its own tab, so switching between two
+opencode servers or two GitHub identities is a dropdown rather than a re-paste.
+One account can serve several widgets: ShipBox and PRBox can share a single
+GitHub token instead of holding two copies of it.
+
+**Verify** on an account asks the provider who the credential belongs to —
+a GitHub login, an Azure display name, a reachable opencode server — so a token
+that has expired or lacks a scope says so where you pasted it, rather than as a
+silent empty widget.
+
+**Tokens** are stored in your **login keychain**, not in a file: one keychain
+item per account, written by the settings window and read by the background
+agent. `settings.json` keeps only the non-secret fields and stays
+owner-readable (mode 0600). An older Deck that kept tokens in that file, or in
+the five per-widget slots that predated accounts, migrates them the first time
+you open the new version — nothing to re-paste.
 
 To be precise about what that buys: the tokens are no longer sitting in a
 plain-text file that backups, folder copies and sync tools pick up. It is
