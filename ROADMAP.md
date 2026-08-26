@@ -450,8 +450,17 @@ in CI, the verification gates, and what the identity change resets.
       **Open follow-ups:** the legacy per-slot fallback is a one-release
       courtesy for a Deck that was upgraded but never opened — remove it after
       1.30 ships. Azure's project lives on the account, so TaskBox and PRBox on
-      different projects need two accounts sharing one PAT. The `RGBA`/`NSColor`
-      race above.
+      different projects need two accounts sharing one PAT.
+- [x] **`RGBA`/`NSColor` race** — fixed 2026-08-26. `RGBA(.green)`-style
+      defaults bridged through `NSColor` on every decode, from three processes
+      concurrently; one `SIGABRT` was captured. Defaults are now literal
+      components and `RGBA.init(_ color: Color)` is `@MainActor`, so the unsafe
+      bridge is a compile error anywhere but a `ColorPicker` write-back. Fixing
+      it turned up a second bug in the same line of code: system colours are
+      **appearance-dependent**, so the old defaults froze whichever appearance
+      happened to be current — `Color.green` is `0.204, 0.780, 0.349` under
+      aqua and `0.188, 0.820, 0.345` under darkAqua. The palette is pinned to
+      aqua. No stored colour changes; defaults only apply to absent keys.
 - [ ] **`SMAppService`** instead of hand-written LaunchAgent plists — puts Deck
       in System Settings → Login Items, where a suspicious user looks first.
 - [ ] **Sparkle auto-update.** Pointless before notarization (the update would

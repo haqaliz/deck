@@ -226,6 +226,7 @@
 		F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		F65612E2B49A3D789B301107 /* CredentialsCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB175501853DAE0EDDFA4477 /* CredentialsCopy.swift */; };
 		F72468714B382D9CADB24DC3 /* DeckSecretsMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66AF2CBFD42DE18E87E2455 /* DeckSecretsMigrationTests.swift */; };
+		F73AFC91E65EE97F20CB23AB /* RGBAPaletteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DFA928EDB1DBDEF8503D55 /* RGBAPaletteTests.swift */; };
 		F7C61B7366E45966CD60DCB8 /* OpenCodeSQLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */; };
 		F7D714F5EC3F20D7242F6E85 /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
 		F7F3E55580FB2E9464402615 /* provider-github-dark.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 36B787FA6039451942D992E8 /* provider-github-dark.pdf */; };
@@ -271,6 +272,7 @@
 		0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxSnapshot.swift; sourceTree = "<group>"; };
 		0B881092482BA9425E3F5918 /* DecodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodeTests.swift; sourceTree = "<group>"; };
 		13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshot.swift; sourceTree = "<group>"; };
+		13DFA928EDB1DBDEF8503D55 /* RGBAPaletteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RGBAPaletteTests.swift; sourceTree = "<group>"; };
 		16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxSessionCoreTests.swift; sourceTree = "<group>"; };
 		18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxWidget.swift; sourceTree = "<group>"; };
 		1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychainTests.swift; sourceTree = "<group>"; };
@@ -511,6 +513,7 @@
 				21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */,
 				D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */,
 				5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */,
+				13DFA928EDB1DBDEF8503D55 /* RGBAPaletteTests.swift */,
 				D6C015468901E17452BF6132 /* ShipBoxDiscoveryTests.swift */,
 				DC563B15EBF100D1CB4139C2 /* ShipBoxMergeTests.swift */,
 				BF045F6211C715FF81858003 /* ShipBoxSettingsTests.swift */,
@@ -935,6 +938,7 @@
 				933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */,
 				3F9D2C27AE013737B357EA4D /* ProcessSnapshotStoreTests.swift in Sources */,
 				F4AB6B9FEEF6A118BD4F284B /* ProcessSnapshotTests.swift in Sources */,
+				F73AFC91E65EE97F20CB23AB /* RGBAPaletteTests.swift in Sources */,
 				AA9E91EA980B1F6E98C2FF6B /* RemoteOpenCodeAggregatorTests.swift in Sources */,
 				4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */,
 				51C852BFFD446B7CD99A8BDA /* ShipBoxDiscoveryTests.swift in Sources */,

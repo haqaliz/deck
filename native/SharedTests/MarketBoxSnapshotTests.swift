@@ -21,8 +21,8 @@ final class MarketBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.tickers, ["BTC", "CAD"])
         XCTAssertEqual(s.displayCurrency, .irt)
         XCTAssertEqual(s.tickerCount, 5)
-        XCTAssertEqual(s.upColor, RGBA(.green), "absent colors keep defaults")
-        XCTAssertEqual(s.downColor, RGBA(.red))
+        XCTAssertEqual(s.upColor, RGBA.systemGreen, "absent colors keep defaults")
+        XCTAssertEqual(s.downColor, RGBA.systemRed)
     }
 
     /// The widget shipped with a comma-separated free-text field; a file that
