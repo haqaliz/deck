@@ -49,7 +49,15 @@ cask "deck" do
               "com.deck.agent.processes",
             ],
             quit:      "com.deck.app",
-            delete:    [
+            # `trash:`, not `delete:`. Homebrew's uninstall_delete hardcodes
+            # `sudo: true` — it is the directive for files outside the user's
+            # control — so
+            # using it on two plists in ~/Library made `brew upgrade` and
+            # `brew uninstall` die on a password prompt they cannot answer,
+            # after they had already unloaded the agents and quit the app.
+            # Measured 2026-08-26. These files are the user's own; trashing
+            # them needs no privilege and is recoverable.
+            trash:     [
               "~/Library/LaunchAgents/com.deck.agent.plist",
               "~/Library/LaunchAgents/com.deck.agent.processes.plist",
             ]
