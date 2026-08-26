@@ -920,111 +920,326 @@ private struct AccountSecretField: View {
     }
 }
 
+/// Colour used for a provider's tile, so the list reads at a glance.
+private func credentialTint(_ kind: CredentialKind) -> Color {
+    switch kind {
+    case .github: .purple
+    case .azure: .blue
+    case .opencode: .orange
+    }
+}
+
+/// The rounded provider tile, shared by the account list and the Add sheet.
+private struct CredentialIcon: View {
+    let kind: CredentialKind
+    var size: CGFloat = 28
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+            .fill(credentialTint(kind).opacity(0.18))
+            .frame(width: size, height: size)
+            .overlay(
+                Image(systemName: kind.systemImage)
+                    .font(.system(size: size * 0.46, weight: .semibold))
+                    .foregroundStyle(credentialTint(kind))
+            )
+    }
+}
+
+/// "Add Account…" — pick a provider, optionally by searching for it.
+///
+/// Modelled on System Settings → Internet Accounts: one button on the list,
+/// and the choice of *what kind* happens here rather than as three separate
+/// buttons scattered down the page.
+private struct AddAccountSheet: View {
+    var onPick: (CredentialKind) -> Void
+    var onCancel: () -> Void
+
+    @State private var query = ""
+    @FocusState private var searchFocused: Bool
+
+    private var matches: [CredentialKind] { CredentialKind.matching(query) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Add Account")
+                .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search", text: $query)
+                    .textFieldStyle(.plain)
+                    .focused($searchFocused)
+                if !query.isEmpty {
+                    Button {
+                        query = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(6)
+            .background(RoundedRectangle(cornerRadius: 6).fill(.quaternary.opacity(0.5)))
+
+            Text("Choose your provider")
+                .font(.subheadline.weight(.semibold))
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(matches, id: \.self) { kind in
+                        Button { onPick(kind) } label: { providerRow(kind) }
+                            .buttonStyle(.plain)
+                        if kind != matches.last {
+                            Divider().padding(.leading, 46)
+                        }
+                    }
+                    if matches.isEmpty {
+                        Text("No provider matches \u{201C}\(query)\u{201D}.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                    }
+                }
+            }
+            .frame(height: 168)
+            .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.35)))
+
+            HStack {
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 380)
+        .onAppear { searchFocused = true }
+    }
+
+    private func providerRow(_ kind: CredentialKind) -> some View {
+        HStack(spacing: 10) {
+            CredentialIcon(kind: kind, size: 26)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(kind.displayName)
+                Text(kind.summary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+    }
+}
+
 /// The Credentials tab: typed accounts, many per kind, each referenced by
 /// whichever widgets point at it.
 ///
-/// One `Form` and a `DisclosureGroup` per account — no sheet and no second
-/// window, so the 640x500 frame is unchanged.
+/// Two levels, like Internet Accounts: a list of accounts with a chevron on
+/// each, and a detail page reached by clicking one, with a back button. Adding
+/// is a single button that opens a provider picker, rather than one Add button
+/// per kind down the page.
 private struct CredentialsSettingsView: View {
     @Binding var settings: DeckSettings
     var unavailableAccounts: Set<String>
     var onSecretCommitted: (String) -> Void
 
-    @State private var expanded: Set<String> = []
+    /// The account being viewed. `nil` is the list.
+    @State private var editing: String?
+    @State private var adding = false
     @State private var verifying: Set<String> = []
     /// Verify failures, by account id. Successes live on the account itself.
     @State private var failures: [String: String] = [:]
-    @State private var pendingDelete: CredentialAccount?
+    @State private var confirmingDelete = false
 
     var body: some View {
-        Form {
-            ForEach(CredentialKind.allCases, id: \.self) { kind in
-                Section(kind.displayName) {
-                    let accounts = settings.credentials.accounts.filter { $0.kind == kind }
-                    if accounts.isEmpty {
-                        Text(emptyState(kind))
-                            .font(.caption)
+        Group {
+            if let account = editing.flatMap(account) {
+                detail(account)
+            } else {
+                list
+            }
+        }
+        .sheet(isPresented: $adding) {
+            AddAccountSheet(
+                onPick: { kind in
+                    adding = false
+                    add(kind)
+                },
+                onCancel: { adding = false }
+            )
+        }
+    }
+
+    private func account(_ id: String) -> CredentialAccount? {
+        settings.credentials.accounts.first { $0.id == id }
+    }
+
+    // MARK: - List
+
+    private var list: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    if settings.credentials.accounts.isEmpty {
+                        Text("No accounts yet. Add one to connect OpenBox, ShipBox, TaskBox or PRBox.")
+                            .font(.callout)
                             .foregroundStyle(.secondary)
+                            .padding(.vertical, 6)
                     }
-                    ForEach(accounts) { account in
-                        row(account)
+                    ForEach(settings.credentials.accounts) { account in
+                        Button { editing = account.id } label: { row(account) }
+                            .buttonStyle(.plain)
                     }
-                    Button("Add \(kind.displayName) account") { add(kind) }
+                }
+
+                Section {
+                    Text("Tokens are stored in your login keychain, not in Deck's settings file. That keeps them out of a file that gets copied around; it does not hide them from other software running as you.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
+            .formStyle(.grouped)
+            .padding(.top, 4)
 
-            Section {
-                Text("Tokens are stored in your login keychain, not in Deck's settings file. That keeps them out of a file that gets copied around; it does not hide them from other software running as you.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            HStack {
+                Spacer()
+                Button("Add Account\u{2026}") { adding = true }
             }
-        }
-        .formStyle(.grouped)
-        .padding(.top, 4)
-        .confirmationDialog(
-            "Delete \u{201C}\(pendingDelete?.label ?? "")\u{201D}?",
-            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                if let account = pendingDelete { delete(account) }
-                pendingDelete = nil
-            }
-            Button("Cancel", role: .cancel) { pendingDelete = nil }
-        } message: {
-            Text(CredentialsCopy.deleteMessage(
-                label: pendingDelete?.label ?? "",
-                slots: pendingDelete.map { settings.slots(using: $0.id) } ?? []
-            ))
+            .padding(.horizontal, 20)
+            .padding(.bottom, 14)
         }
     }
-
-    // MARK: - Rows
 
     private func row(_ account: CredentialAccount) -> some View {
-        DisclosureGroup(isExpanded: expansion(account.id)) {
-            editor(account)
-        } label: {
+        HStack(spacing: 10) {
+            CredentialIcon(kind: account.kind)
             VStack(alignment: .leading, spacing: 1) {
                 Text(account.label.isEmpty ? account.kind.displayName : account.label)
-                Text("\(CredentialsCopy.subtitle(for: account)) \u{00B7} \(CredentialsCopy.usedBy(settings.slots(using: account.id)))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(CredentialsCopy.rowSubtitle(
+                    for: account,
+                    among: settings.credentials.accounts,
+                    usedBy: settings.slots(using: account.id)
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
+            Spacer(minLength: 8)
+            if unavailableAccounts.contains(account.id) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+            // Always last, always right: this row goes somewhere.
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
+        .padding(.vertical, 3)
+        .contentShape(Rectangle())
     }
 
-    @ViewBuilder
-    private func editor(_ account: CredentialAccount) -> some View {
-        TextField("Name", text: field(account.id, \.label))
+    // MARK: - Detail
 
-        switch account.kind {
-        case .azure:
-            TextField("Organization (name or dev.azure.com URL)", text: field(account.id, \.organization))
-            TextField("Project", text: field(account.id, \.project))
-        case .opencode:
-            TextField("Server URL (opencode serve, e.g. http://host:4096)", text: field(account.id, \.serverURL))
-        case .github:
-            EmptyView()
-        }
+    private func detail(_ account: CredentialAccount) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Button { editing = nil } label: {
+                    Image(systemName: "chevron.left").font(.body.weight(.medium))
+                }
+                .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
+                .help("Back to accounts")
 
-        AccountSecretField(
-            title: account.kind == .azure ? "Personal access token" : "Token",
-            accountID: account.id,
-            value: field(account.id, \.token),
-            onCommit: onSecretCommitted
-        )
-
-        HStack {
-            Button(verifying.contains(account.id) ? "Verifying\u{2026}" : "Verify") {
-                verify(account.id)
+                Text(account.label.isEmpty ? account.kind.displayName : account.label)
+                    .font(.headline)
+                Spacer()
             }
-            .disabled(verifying.contains(account.id) || account.token.isEmpty)
-            Spacer()
-            Button("Delete\u{2026}", role: .destructive) { pendingDelete = account }
-        }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
 
-        caption(for: account)
+            Form {
+                Section {
+                    HStack(spacing: 10) {
+                        CredentialIcon(kind: account.kind, size: 34)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(account.verifiedIdentity ?? account.kind.displayName)
+                            Text(CredentialsCopy.connectionSubtitle(for: account))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 8)
+                        Button(verifying.contains(account.id) ? "Verifying\u{2026}" : "Verify\u{2026}") {
+                            verify(account.id)
+                        }
+                        .disabled(verifying.contains(account.id) || account.token.isEmpty)
+                    }
+                    .padding(.vertical, 2)
+                    caption(for: account)
+                }
+
+                Section("Account") {
+                    TextField("Name", text: field(account.id, \.label))
+                    switch account.kind {
+                    case .azure:
+                        TextField("Organization (name or dev.azure.com URL)",
+                                  text: field(account.id, \.organization))
+                        TextField("Project", text: field(account.id, \.project))
+                    case .opencode:
+                        TextField("Server URL (opencode serve, e.g. http://host:4096)",
+                                  text: field(account.id, \.serverURL))
+                    case .github:
+                        EmptyView()
+                    }
+                    AccountSecretField(
+                        title: account.kind == .azure ? "Personal access token" : "Token",
+                        accountID: account.id,
+                        value: field(account.id, \.token),
+                        onCommit: onSecretCommitted
+                    )
+                }
+
+                Section("Used by") {
+                    let slots = settings.slots(using: account.id)
+                    if slots.isEmpty {
+                        Text("No widget is using this account yet. Pick it on a widget's own tab.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(slots, id: \.self) { slot in
+                            Label(slot.displayName, systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            HStack {
+                Button("Delete Account\u{2026}", role: .destructive) { confirmingDelete = true }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 14)
+        }
+        .confirmationDialog(
+            "Delete \u{201C}\(account.label.isEmpty ? account.kind.displayName : account.label)\u{201D}?",
+            isPresented: $confirmingDelete,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) { delete(account) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(CredentialsCopy.deleteMessage(
+                label: account.label,
+                slots: settings.slots(using: account.id)
+            ))
+        }
     }
 
     @ViewBuilder
@@ -1048,14 +1263,6 @@ private struct CredentialsSettingsView: View {
         }
     }
 
-    private func emptyState(_ kind: CredentialKind) -> String {
-        let widgets = CredentialSlot.allCases
-            .filter { $0.kind == kind }
-            .map(\.displayName)
-            .joined(separator: ", ")
-        return "No \(kind.displayName) accounts. Add one to use \(widgets)."
-    }
-
     // MARK: - Editing
 
     /// Every credential edit goes through here so a verification can never
@@ -1077,19 +1284,12 @@ private struct CredentialsSettingsView: View {
         )
     }
 
-    private func expansion(_ id: String) -> Binding<Bool> {
-        Binding(
-            get: { expanded.contains(id) },
-            set: { isExpanded in
-                if isExpanded { expanded.insert(id) } else { expanded.remove(id) }
-            }
-        )
-    }
-
+    /// A new account opens straight onto its own page — there is nothing to
+    /// see for it in the list until it has a token.
     private func add(_ kind: CredentialKind) {
-        let account = CredentialAccount(kind: kind, label: "")
+        let account = CredentialAccount(kind: kind, label: kind.displayName)
         settings.credentials.accounts.append(account)
-        expanded.insert(account.id)
+        editing = account.id
     }
 
     /// Removes the record, its keychain item, and every selection pointing at
@@ -1102,14 +1302,15 @@ private struct CredentialsSettingsView: View {
         }
         settings.credentials.accounts.removeAll { $0.id == account.id }
         DeckKeychain.delete(accountID: account.id)
-        expanded.remove(account.id)
         failures[account.id] = nil
+        confirmingDelete = false
+        editing = nil
     }
 
     // MARK: - Verify
 
     private func verify(_ id: String) {
-        guard let account = settings.credentials.accounts.first(where: { $0.id == id }) else { return }
+        guard let account = account(id) else { return }
         verifying.insert(id)
         failures[id] = nil
         Task { @MainActor in

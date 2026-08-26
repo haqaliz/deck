@@ -52,6 +52,81 @@ final class CredentialsCopyTests: XCTestCase {
         XCTAssertFalse(CredentialsCopy.subtitle(for: a).contains("SENTINEL"))
     }
 
+    // MARK: - The list row's subtitle
+
+    func testAListRowLeadsWithWhatIdentifiesTheAccount() {
+        var a = account(.azure)
+        a.organization = "acme"
+        a.project = "Manifold"
+
+        XCTAssertEqual(
+            CredentialsCopy.rowSubtitle(for: a, among: [a], usedBy: [.taskbox]),
+            "acme / Manifold \u{00B7} TaskBox"
+        )
+    }
+
+    func testAnAccountWithNothingIdentifyingShowsOnlyWhoUsesIt() {
+        // The id fragment is disambiguation, not information. Printing it on
+        // an account nothing could be confused with is noise.
+        let a = account(.github)
+
+        XCTAssertEqual(
+            CredentialsCopy.rowSubtitle(for: a, among: [a], usedBy: [.shipbox]),
+            "ShipBox"
+        )
+    }
+
+    func testAnUnusedAccountWithNothingIdentifyingStillSaysSomething() {
+        let a = account(.github)
+
+        XCTAssertEqual(CredentialsCopy.rowSubtitle(for: a, among: [a], usedBy: []), "Unused")
+    }
+
+    func testTheIdFragmentComesBackWhenTwoAccountsWouldOtherwiseMatch() {
+        // Two unverified GitHub accounts, both named "work": without the
+        // fragment the list shows the same row twice.
+        let a = account(.github, id: "aaaaaa11")
+        let b = account(.github, id: "bbbbbb22")
+
+        XCTAssertEqual(
+            CredentialsCopy.rowSubtitle(for: a, among: [a, b], usedBy: [.shipbox]),
+            "aaaaaa \u{00B7} ShipBox"
+        )
+    }
+
+    func testTwoAccountsThatDifferInTheirOwnRightNeedNoFragment() {
+        var a = account(.azure, id: "aaaaaa11")
+        a.organization = "acme"
+        var b = account(.azure, id: "bbbbbb22")
+        b.organization = "other"
+
+        XCTAssertEqual(CredentialsCopy.rowSubtitle(for: a, among: [a, b], usedBy: []), "acme \u{00B7} Unused")
+    }
+
+    // MARK: - The detail page's header
+
+    func testTheDetailHeaderNeverRepeatsTheIdentityAsItsOwnSubtitle() {
+        // A verified GitHub account has nothing else identifying it, so the
+        // header would otherwise read "haqaliz" over "haqaliz".
+        var a = account(.github)
+        a.verifiedIdentity = "haqaliz"
+
+        XCTAssertEqual(CredentialsCopy.connectionSubtitle(for: a), "GitHub")
+    }
+
+    func testTheDetailHeaderShowsTheConnectionWhenThereIsOne() {
+        var a = account(.azure)
+        a.organization = "acme"
+        a.project = "Manifold"
+        a.verifiedIdentity = "Ali Haqiqi"
+
+        XCTAssertEqual(CredentialsCopy.connectionSubtitle(for: a), "acme / Manifold")
+    }
+
+    func testAnUnconfiguredAccountsHeaderNamesItsProvider() {
+        XCTAssertEqual(CredentialsCopy.connectionSubtitle(for: account(.opencode)), "opencode")
+    }
+
     // MARK: - Who uses an account
 
     func testAnAccountNothingPointsAtSaysSo() {

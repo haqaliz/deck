@@ -24,6 +24,41 @@ enum CredentialKind: String, Codable, CaseIterable {
         case .opencode: "server.rack"
         }
     }
+
+    /// What this provider says the account gives Deck, under its name in the
+    /// list — the same shape as Internet Accounts' "Mail, Contacts, Calendars".
+    var summary: String {
+        CredentialSlot.allCases
+            .filter { $0.kind == self }
+            .map(\.widgetName)
+            .reduce(into: [String]()) { names, name in
+                if !names.contains(name) { names.append(name) }
+            }
+            .joined(separator: ", ")
+    }
+
+    /// What someone might type looking for this provider, beyond its name.
+    ///
+    /// Azure DevOps has been VSTS and ADO within living memory, and people
+    /// reach for whichever name they learned it under.
+    var searchTerms: [String] {
+        switch self {
+        case .github: ["gh"]
+        case .azure: ["ado", "vsts", "devops", "tfs"]
+        case .opencode: ["oc", "sst"]
+        }
+    }
+
+    /// The providers to offer for a search query, in declared order — the list
+    /// must not reshuffle as the user types.
+    static func matching(_ query: String) -> [CredentialKind] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !needle.isEmpty else { return allCases }
+        return allCases.filter { kind in
+            kind.displayName.lowercased().contains(needle)
+                || kind.searchTerms.contains { $0.contains(needle) }
+        }
+    }
 }
 
 /// One credential the user manages in the Credentials tab.

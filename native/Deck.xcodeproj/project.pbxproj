@@ -136,6 +136,7 @@
 		94F97F3C03EB1B33F5792A6C /* DevBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8410285538D08E9259413910 /* DevBoxWidget.swift */; };
 		96361F53D4F188186ADAE3BA /* CredentialsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */; };
 		96B73870192265B41638143C /* NetBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */; };
+		96DEBAC4E560B48A25B64DE0 /* CredentialKindSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9ED1410532D72412810AE4 /* CredentialKindSearchTests.swift */; };
 		99C485D084282BAF9BDD5AA3 /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
 		A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5089372A785C079676513337 /* TaskBoxSnapshot.swift */; };
 		A2EE3F352DA2E30CB3F4E017 /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
@@ -324,6 +325,7 @@
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
 		8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialsWidgetReadsTests.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		8D9ED1410532D72412810AE4 /* CredentialKindSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialKindSearchTests.swift; sourceTree = "<group>"; };
 		8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicFileTests.swift; sourceTree = "<group>"; };
 		90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxSnapshot.swift; sourceTree = "<group>"; };
 		910A3754B71959068BBF2549 /* github_prs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = github_prs.json; sourceTree = "<group>"; };
@@ -458,6 +460,7 @@
 				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
 				633ED2890AE2D2C0B501102A /* CredentialAccountTests.swift */,
 				277279067EB7808B71A4759B /* CredentialGateTests.swift */,
+				8D9ED1410532D72412810AE4 /* CredentialKindSearchTests.swift */,
 				B3A345B4B584E4F2C596FABB /* CredentialsCopyTests.swift */,
 				6FD5C85FCA16CC6CB16BA6D4 /* CredentialsMigrationTests.swift */,
 				8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */,
@@ -856,6 +859,7 @@
 				71756A3125964940AD4F060C /* CredentialAccount.swift in Sources */,
 				158161B595463B7ECDE20B50 /* CredentialAccountTests.swift in Sources */,
 				D9873960F255D965BA294750 /* CredentialGateTests.swift in Sources */,
+				96DEBAC4E560B48A25B64DE0 /* CredentialKindSearchTests.swift in Sources */,
 				D2F997BE5BFD2C6761BA3A9C /* CredentialVerification.swift in Sources */,
 				E243A28095E18E5CAD6F03DF /* CredentialVerificationTests.swift in Sources */,
 				C59F877294410B8466B059AB /* CredentialsCopy.swift in Sources */,
