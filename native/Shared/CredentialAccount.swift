@@ -170,6 +170,30 @@ enum CredentialSlot: String, CaseIterable {
         }
     }
 
+    /// The widget this slot belongs to. Shorter than `displayName` because it
+    /// is used as a label suffix, where "GitHub (PRBox (GitHub))" would be
+    /// absurd.
+    var widgetName: String {
+        switch self {
+        case .openbox: "OpenBox"
+        case .shipbox: "ShipBox"
+        case .taskbox: "TaskBox"
+        case .prboxGitHub, .prboxAzure: "PRBox"
+        }
+    }
+
+    /// The pre-accounts credential this slot used to own. Read exactly once,
+    /// by the migration; nothing else should reach for it.
+    var legacySecret: DeckSecret {
+        switch self {
+        case .openbox: .openboxToken
+        case .shipbox: .shipboxToken
+        case .taskbox: .taskboxToken
+        case .prboxGitHub: .prboxGitHubToken
+        case .prboxAzure: .prboxAzureToken
+        }
+    }
+
     /// As shown in the "Used by" caption and the delete confirmation.
     var displayName: String {
         switch self {

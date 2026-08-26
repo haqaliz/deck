@@ -1,0 +1,184 @@
+import Foundation
+
+/// Everything one fetch needs from a credential, with the account already
+/// resolved. Loaders take this instead of reading a token off their own
+/// settings struct.
+struct ResolvedCredential: Equatable {
+    var token: String
+    var organization: String = ""
+    var project: String = ""
+    var serverURL: String = ""
+}
+
+extension DeckSettings {
+    /// The credential a slot should fetch with, or `nil` when it is not
+    /// configured.
+    ///
+    /// Order matters. A resolved account always wins. A slot whose `accountID`
+    /// **dangles** — the account was deleted or is of the wrong kind — is not
+    /// configured, and deliberately does *not* fall back: a dangling id means
+    /// the user deleted something, not that a stale token should be revived.
+    /// Only a slot with no selection at all consults the legacy field.
+    func credential(for slot: CredentialSlot) -> ResolvedCredential? {
+        if let account = account(for: slot) {
+            guard !account.token.isEmpty else { return nil }
+            return ResolvedCredential(
+                token: account.token,
+                organization: account.organization,
+                project: account.project,
+                serverURL: account.serverURL
+            )
+        }
+        guard accountID(for: slot) == nil else { return nil }
+        let legacy = legacyCredential(for: slot)
+        return legacy.token.isEmpty ? nil : legacy
+    }
+
+    /// The pre-accounts shape, for a Deck that was upgraded but never opened.
+    ///
+    /// `DeckAgent` reads settings and never writes them, so it can run for
+    /// weeks on a file the migration has not touched. Without this, upgrading
+    /// and not opening Deck silently unconfigures four widgets. It goes inert
+    /// on its own once the migration runs: the legacy field is blanked and the
+    /// legacy keychain item deleted, so there is nothing left to return.
+    func legacyCredential(for slot: CredentialSlot) -> ResolvedCredential {
+        switch slot {
+        case .openbox:
+            return ResolvedCredential(token: openbox.token, serverURL: openbox.serverURL ?? "")
+        case .shipbox:
+            return ResolvedCredential(token: shipbox.token)
+        case .taskbox:
+            return ResolvedCredential(
+                token: taskbox.token,
+                organization: taskbox.organization,
+                project: taskbox.project
+            )
+        case .prboxGitHub:
+            return ResolvedCredential(token: prbox.github.token)
+        case .prboxAzure:
+            return ResolvedCredential(
+                token: prbox.azure.token,
+                organization: prbox.azure.organization,
+                project: prbox.azure.project
+            )
+        }
+    }
+}
+
+/// Turns the five welded credentials into accounts, once.
+///
+/// Host-app only: `DeckAgent` never writes settings, which is what lets it keep
+/// working from an unmigrated file until the user opens Deck.
+enum CredentialsMigration {
+
+    /// Write → **read back to confirm** → assign the slot → *only then* delete
+    /// the legacy item. The order is the safety property: a failure at any
+    /// step leaves `settings` untouched, deletes nothing, and simply retries at
+    /// the next launch.
+    ///
+    /// - Returns: `true` when anything was created and the caller should save.
+    @discardableResult
+    static func migrate(
+        _ settings: inout DeckSettings,
+        write: (String, String) -> OSStatus = { DeckKeychain.write(accountID: $0, value: $1) },
+        readBack: (String) -> SecretRead = { DeckKeychain.read(accountID: $0) },
+        deleteLegacy: (DeckSecret) -> OSStatus = { DeckKeychain.delete($0) },
+        makeID: () -> String = { UUID().uuidString.lowercased() }
+    ) -> Bool {
+        guard settings.credentials.accounts.isEmpty,
+              CredentialSlot.allCases.allSatisfy({ settings.accountID(for: $0) == nil })
+        else { return false }
+
+        var created: [CredentialAccount] = []
+        var assignments: [(CredentialSlot, String)] = []
+        var migrated: [CredentialSlot] = []
+
+        for slot in CredentialSlot.allCases {
+            let fields = settings.legacyCredential(for: slot)
+            guard !fields.token.isEmpty else { continue }
+
+            // Collapse only when *every* field matches. A shared GitHub token
+            // becomes one account; the same Azure PAT against two projects
+            // stays two, because the project is part of the account.
+            if let twin = created.first(where: { $0.kind == slot.kind && matches($0, fields) }) {
+                if isSelectable(slot, in: settings) { assignments.append((slot, twin.id)) }
+                migrated.append(slot)
+                continue
+            }
+
+            var account = CredentialAccount(id: makeID(), kind: slot.kind)
+            account.token = fields.token
+            account.organization = fields.organization
+            account.project = fields.project
+            account.serverURL = fields.serverURL
+
+            guard write(account.id, account.token) == errSecSuccess,
+                  readBack(account.id) == .found(account.token)
+            else { continue }
+
+            account.label = label(for: account, slot: slot, taken: created.map(\.label))
+            created.append(account)
+            if isSelectable(slot, in: settings) { assignments.append((slot, account.id)) }
+            migrated.append(slot)
+        }
+
+        guard !created.isEmpty else { return false }
+
+        settings.credentials.accounts = created
+        for (slot, id) in assignments {
+            settings.setAccountID(id, for: slot)
+        }
+        for slot in migrated {
+            settings.setSecret("", for: slot.legacySecret)
+            _ = deleteLegacy(slot.legacySecret)
+        }
+        return true
+    }
+
+    /// Critique R2: PRBox's providers each had an Enable toggle, defaulting to
+    /// off, and a token can sit behind a provider the user deliberately
+    /// switched off. Since a selected account now *means* enabled, migrating
+    /// that selection would silently start fetching again. The account is
+    /// still created — never lose a token — it just isn't selected.
+    private static func isSelectable(_ slot: CredentialSlot, in settings: DeckSettings) -> Bool {
+        switch slot {
+        case .prboxGitHub: return settings.prbox.github.enabled
+        case .prboxAzure: return settings.prbox.azure.enabled
+        case .openbox, .shipbox, .taskbox: return true
+        }
+    }
+
+    private static func matches(_ account: CredentialAccount, _ fields: ResolvedCredential) -> Bool {
+        account.token == fields.token
+            && account.organization == fields.organization
+            && account.project == fields.project
+            && account.serverURL == fields.serverURL
+    }
+
+    /// Name it after whatever identifies it, then disambiguate. All of this is
+    /// renamable afterwards — it only has to be recognisable on first sight.
+    private static func label(
+        for account: CredentialAccount,
+        slot: CredentialSlot,
+        taken: [String]
+    ) -> String {
+        var base: String
+        switch account.kind {
+        case .azure:
+            base = account.organization
+        case .opencode:
+            base = URL(string: account.serverURL)?.host ?? ""
+        case .github:
+            base = ""
+        }
+        if base.isEmpty { base = account.kind.displayName }
+        guard taken.contains(base) else { return base }
+
+        let withWidget = "\(base) (\(slot.widgetName))"
+        guard taken.contains(withWidget) else { return withWidget }
+
+        var counter = 2
+        while taken.contains("\(withWidget) \(counter)") { counter += 1 }
+        return "\(withWidget) \(counter)"
+    }
+}
