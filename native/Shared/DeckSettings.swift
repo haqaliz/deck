@@ -16,6 +16,17 @@ struct RGBA: Codable, Equatable {
         self.alpha = alpha
     }
 
+    /// Resolve a SwiftUI `Color` into fixed components.
+    ///
+    /// **Main actor on purpose.** `NSColor(color)` is not thread-safe: calling
+    /// it concurrently corrupts an `NSMapTable` inside Foundation and aborts
+    /// the process. This used to be reachable from `DeckSettings`' decode path
+    /// — i.e. from `DeckAgent` and every widget timeline — which is how it
+    /// crashed in production. The isolation makes that a compile error rather
+    /// than a race, and leaves the one legitimate caller: a `ColorPicker`
+    /// writing the user's pick back, which SwiftUI always does on the main
+    /// thread. Defaults must use the fixed palette below, never this.
+    @MainActor
     init(_ color: Color) {
         let ns = NSColor(color).usingColorSpace(.sRGB) ?? .white
         red = Double(ns.redComponent)
@@ -27,6 +38,49 @@ struct RGBA: Codable, Equatable {
     var color: Color {
         Color(.sRGB, red: red, green: green, blue: blue, opacity: alpha)
     }
+}
+
+// MARK: - The default palette
+
+/// Deck's default colours, as literal sRGB components.
+///
+/// These are **snapshots** of Apple's system colours under the aqua
+/// appearance, measured on macOS 15, and they are deliberately not re-resolved
+/// at runtime. Two reasons, both bugs that the old `RGBA.systemGreen` defaults had:
+///
+/// 1. **`init(_ color: Color)` is not thread-safe.** It bridges through
+///    `NSColor`, and building a struct's defaults meant running that bridge
+///    during *decode* — from the app, from `DeckAgent` and from every widget
+///    timeline at once. Captured in production 2026-08-26: `SIGABRT`, malloc
+///    corruption inside `-[NSConcreteMapTable grow]`.
+/// 2. **System colours are appearance-dependent.** `Color.green` bridges to
+///    `0.204, 0.780, 0.349` under aqua and `0.188, 0.820, 0.345` under
+///    darkAqua, so whichever appearance was current when a settings file was
+///    first written got frozen into it. Aqua is the value a headless process
+///    resolves, so it is the one taken here.
+///
+/// A stored colour has always been a fixed `RGBA` — the widgets never
+/// re-resolve it — so pinning the defaults changes nothing a user can see
+/// beyond making them the same on every machine.
+extension RGBA {
+    static let systemGreen = RGBA(red: 0.20392151176929474, green: 0.78039216995239258, blue: 0.34901958703994751)
+    static let systemOrange = RGBA(red: 1, green: 0.55294120311737061, blue: 0.15686275064945221)
+    static let systemBlue = RGBA(red: 0, green: 0.53333336114883423, blue: 1)
+    static let systemCyan = RGBA(red: 0, green: 0.75294119119644165, blue: 0.90980386734008789)
+    static let systemTeal = RGBA(red: 0, green: 0.76470589637756348, blue: 0.81568628549575806)
+    static let systemRed = RGBA(red: 1, green: 0.21960783004760742, blue: 0.23529410362243652)
+    static let systemGray = RGBA(red: 0.55686277151107788, green: 0.55686277151107788, blue: 0.57647061347961426)
+    static let systemYellow = RGBA(red: 1, green: 0.80000001192092896, blue: 0)
+    static let systemPurple = RGBA(red: 0.79607844352722168, green: 0.18823529779911041, blue: 0.87843137979507446)
+    static let systemPink = RGBA(red: 1, green: 0.17647059261798859, blue: 0.33333331346511841)
+    static let systemMint = RGBA(red: 0, green: 0.78431367874145508, blue: 0.70196080207824707)
+    static let systemIndigo = RGBA(red: 0.38039213418960571, green: 0.33333331346511841, blue: 0.96078437566757202)
+
+    /// Every entry, for the tests that check the palette as a whole.
+    static let palette: [RGBA] = [
+        systemGreen, systemOrange, systemBlue, systemCyan, systemTeal, systemRed,
+        systemGray, systemYellow, systemPurple, systemPink, systemMint, systemIndigo,
+    ]
 }
 
 // MARK: - Settings
@@ -314,9 +368,9 @@ struct LiveBoxSettings: Codable, Equatable {
     var processCount = 3
     /// Seconds between widget render ticks and fast process-snapshot samples.
     var processRefreshInterval = 15
-    var cpuColor = RGBA(.green)
-    var memColor = RGBA(.cyan)
-    var diskColor = RGBA(.orange)
+    var cpuColor = RGBA.systemGreen
+    var memColor = RGBA.systemCyan
+    var diskColor = RGBA.systemOrange
     var showThresholdColors = true
     var cpuWarnThreshold = 80
     var cpuAlarmThreshold = 90
@@ -355,9 +409,9 @@ struct LiveBoxSettings: Codable, Equatable {
         showPerCoreCores = try c.decodeIfPresent(Bool.self, forKey: .showPerCoreCores) ?? false
         processCount = try c.decodeIfPresent(Int.self, forKey: .processCount) ?? 3
         processRefreshInterval = try c.decodeIfPresent(Int.self, forKey: .processRefreshInterval) ?? 15
-        cpuColor = try c.decodeIfPresent(RGBA.self, forKey: .cpuColor) ?? RGBA(.green)
-        memColor = try c.decodeIfPresent(RGBA.self, forKey: .memColor) ?? RGBA(.cyan)
-        diskColor = try c.decodeIfPresent(RGBA.self, forKey: .diskColor) ?? RGBA(.orange)
+        cpuColor = try c.decodeIfPresent(RGBA.self, forKey: .cpuColor) ?? RGBA.systemGreen
+        memColor = try c.decodeIfPresent(RGBA.self, forKey: .memColor) ?? RGBA.systemCyan
+        diskColor = try c.decodeIfPresent(RGBA.self, forKey: .diskColor) ?? RGBA.systemOrange
         showThresholdColors = try c.decodeIfPresent(Bool.self, forKey: .showThresholdColors) ?? true
         // Per-metric keys with a legacy-pair fallback (settings-schema migration,
         // ROADMAP.md:56): a per-metric key wins, else the old shared pair, else 80/90.
@@ -418,9 +472,9 @@ struct OpenBoxSettings: Codable, Equatable {
     var toolCount = 3
     var modelCount = 3
     var sessionCount = 3
-    var inputColor = RGBA(.cyan)
-    var outputColor = RGBA(.green)
-    var costColor = RGBA(.orange)
+    var inputColor = RGBA.systemCyan
+    var outputColor = RGBA.systemGreen
+    var costColor = RGBA.systemOrange
 
     /// Tolerant decode: missing keys keep the defaults instead of throwing
     /// (the synthesized decoder throws, which would reset every setting via
@@ -442,9 +496,9 @@ struct OpenBoxSettings: Codable, Equatable {
         toolCount = try c.decodeIfPresent(Int.self, forKey: .toolCount) ?? 3
         modelCount = try c.decodeIfPresent(Int.self, forKey: .modelCount) ?? 3
         sessionCount = try c.decodeIfPresent(Int.self, forKey: .sessionCount) ?? 3
-        inputColor = try c.decodeIfPresent(RGBA.self, forKey: .inputColor) ?? RGBA(.cyan)
-        outputColor = try c.decodeIfPresent(RGBA.self, forKey: .outputColor) ?? RGBA(.green)
-        costColor = try c.decodeIfPresent(RGBA.self, forKey: .costColor) ?? RGBA(.orange)
+        inputColor = try c.decodeIfPresent(RGBA.self, forKey: .inputColor) ?? RGBA.systemCyan
+        outputColor = try c.decodeIfPresent(RGBA.self, forKey: .outputColor) ?? RGBA.systemGreen
+        costColor = try c.decodeIfPresent(RGBA.self, forKey: .costColor) ?? RGBA.systemOrange
     }
 }
 
@@ -454,8 +508,8 @@ struct NetBoxSettings: Codable, Equatable {
     var interfaceCount = 3
     /// Non-empty → pinned to one interface; nil → auto "most active".
     var pinnedInterface: String?
-    var upColor = RGBA(.green)
-    var downColor = RGBA(.cyan)
+    var upColor = RGBA.systemGreen
+    var downColor = RGBA.systemCyan
     var showThresholdColors = true
     /// MB/s (decimal, ×1,000,000 — matches NetBoxFormatters).
     var warnThreshold = 50
@@ -469,8 +523,8 @@ struct NetBoxSettings: Codable, Equatable {
         showInterfaces = try c.decodeIfPresent(Bool.self, forKey: .showInterfaces) ?? true
         interfaceCount = try c.decodeIfPresent(Int.self, forKey: .interfaceCount) ?? 3
         pinnedInterface = try c.decodeIfPresent(String.self, forKey: .pinnedInterface)
-        upColor = try c.decodeIfPresent(RGBA.self, forKey: .upColor) ?? RGBA(.green)
-        downColor = try c.decodeIfPresent(RGBA.self, forKey: .downColor) ?? RGBA(.cyan)
+        upColor = try c.decodeIfPresent(RGBA.self, forKey: .upColor) ?? RGBA.systemGreen
+        downColor = try c.decodeIfPresent(RGBA.self, forKey: .downColor) ?? RGBA.systemCyan
         showThresholdColors = try c.decodeIfPresent(Bool.self, forKey: .showThresholdColors) ?? true
         // Floor at 1 so a hand-edited 0 can never make every rate an alarm.
         warnThreshold = max(1, try c.decodeIfPresent(Int.self, forKey: .warnThreshold) ?? 50)
@@ -481,7 +535,7 @@ struct NetBoxSettings: Codable, Equatable {
 struct BatBoxSettings: Codable, Equatable {
     var showChart = true
     var showStatus = true
-    var levelColor = RGBA(.green)
+    var levelColor = RGBA.systemGreen
     var showAccessories = true
     var accessoryCount = 4
 
@@ -491,7 +545,7 @@ struct BatBoxSettings: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
         showStatus = try c.decodeIfPresent(Bool.self, forKey: .showStatus) ?? true
-        levelColor = try c.decodeIfPresent(RGBA.self, forKey: .levelColor) ?? RGBA(.green)
+        levelColor = try c.decodeIfPresent(RGBA.self, forKey: .levelColor) ?? RGBA.systemGreen
         showAccessories = try c.decodeIfPresent(Bool.self, forKey: .showAccessories) ?? true
         accessoryCount = try c.decodeIfPresent(Int.self, forKey: .accessoryCount) ?? 4
     }
@@ -503,8 +557,8 @@ struct GitBoxSettings: Codable, Equatable {
     var repoCount = 5
     var scanDepth = 3
     var repoPaths: [String] = []
-    var barColor = RGBA(.blue)
-    var todayColor = RGBA(.orange)
+    var barColor = RGBA.systemBlue
+    var todayColor = RGBA.systemOrange
 
     init() {}
 
@@ -515,8 +569,8 @@ struct GitBoxSettings: Codable, Equatable {
         repoCount = try c.decodeIfPresent(Int.self, forKey: .repoCount) ?? 5
         scanDepth = try c.decodeIfPresent(Int.self, forKey: .scanDepth) ?? 3
         repoPaths = try c.decodeIfPresent([String].self, forKey: .repoPaths) ?? []
-        barColor = try c.decodeIfPresent(RGBA.self, forKey: .barColor) ?? RGBA(.blue)
-        todayColor = try c.decodeIfPresent(RGBA.self, forKey: .todayColor) ?? RGBA(.orange)
+        barColor = try c.decodeIfPresent(RGBA.self, forKey: .barColor) ?? RGBA.systemBlue
+        todayColor = try c.decodeIfPresent(RGBA.self, forKey: .todayColor) ?? RGBA.systemOrange
     }
 }
 
@@ -525,8 +579,8 @@ struct DevBoxSettings: Codable, Equatable {
     var showContainers = true
     var portCount = 5
     var containerCount = 5
-    var portColor = RGBA(.teal)
-    var containerColor = RGBA(.mint)
+    var portColor = RGBA.systemTeal
+    var containerColor = RGBA.systemMint
 
     init() {}
 
@@ -536,18 +590,18 @@ struct DevBoxSettings: Codable, Equatable {
         showContainers = try c.decodeIfPresent(Bool.self, forKey: .showContainers) ?? true
         portCount = try c.decodeIfPresent(Int.self, forKey: .portCount) ?? 5
         containerCount = try c.decodeIfPresent(Int.self, forKey: .containerCount) ?? 5
-        portColor = try c.decodeIfPresent(RGBA.self, forKey: .portColor) ?? RGBA(.teal)
-        containerColor = try c.decodeIfPresent(RGBA.self, forKey: .containerColor) ?? RGBA(.mint)
+        portColor = try c.decodeIfPresent(RGBA.self, forKey: .portColor) ?? RGBA.systemTeal
+        containerColor = try c.decodeIfPresent(RGBA.self, forKey: .containerColor) ?? RGBA.systemMint
     }
 }
 
 struct ClipBoxSettings: Codable, Equatable {
     var showList = true
     var historyCount = 5
-    var textColor = RGBA(.indigo)
-    var imageColor = RGBA(.pink)
-    var fileColor = RGBA(.blue)
-    var otherColor = RGBA(.gray)
+    var textColor = RGBA.systemIndigo
+    var imageColor = RGBA.systemPink
+    var fileColor = RGBA.systemBlue
+    var otherColor = RGBA.systemGray
 
     init() {}
 
@@ -555,10 +609,10 @@ struct ClipBoxSettings: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
         historyCount = try c.decodeIfPresent(Int.self, forKey: .historyCount) ?? 5
-        textColor = try c.decodeIfPresent(RGBA.self, forKey: .textColor) ?? RGBA(.indigo)
-        imageColor = try c.decodeIfPresent(RGBA.self, forKey: .imageColor) ?? RGBA(.pink)
-        fileColor = try c.decodeIfPresent(RGBA.self, forKey: .fileColor) ?? RGBA(.blue)
-        otherColor = try c.decodeIfPresent(RGBA.self, forKey: .otherColor) ?? RGBA(.gray)
+        textColor = try c.decodeIfPresent(RGBA.self, forKey: .textColor) ?? RGBA.systemIndigo
+        imageColor = try c.decodeIfPresent(RGBA.self, forKey: .imageColor) ?? RGBA.systemPink
+        fileColor = try c.decodeIfPresent(RGBA.self, forKey: .fileColor) ?? RGBA.systemBlue
+        otherColor = try c.decodeIfPresent(RGBA.self, forKey: .otherColor) ?? RGBA.systemGray
     }
 }
 
@@ -592,7 +646,7 @@ struct ClockBoxSettings: Codable, Equatable {
     var mainCityID = ""
     var showRelativeDay = true
     var showOffset = true
-    var timeColor = RGBA(.teal)
+    var timeColor = RGBA.systemTeal
 
     init() {}
 
@@ -608,7 +662,7 @@ struct ClockBoxSettings: Codable, Equatable {
         mainCityID = try c.decodeIfPresent(String.self, forKey: .mainCityID) ?? ""
         showRelativeDay = try c.decodeIfPresent(Bool.self, forKey: .showRelativeDay) ?? true
         showOffset = try c.decodeIfPresent(Bool.self, forKey: .showOffset) ?? true
-        timeColor = try c.decodeIfPresent(RGBA.self, forKey: .timeColor) ?? RGBA(.teal)
+        timeColor = try c.decodeIfPresent(RGBA.self, forKey: .timeColor) ?? RGBA.systemTeal
     }
 }
 
@@ -661,10 +715,10 @@ struct ShipBoxSettings: Codable, Equatable {
     var accountID: String?
     var showList = true
     var runCount = 4
-    var queuedColor = RGBA(.orange)
-    var runningColor = RGBA(.yellow)
-    var successColor = RGBA(.green)
-    var failureColor = RGBA(.red)
+    var queuedColor = RGBA.systemOrange
+    var runningColor = RGBA.systemYellow
+    var successColor = RGBA.systemGreen
+    var failureColor = RGBA.systemRed
 
     /// Both the static slot count and the dynamic ceiling. Five repos is the
     /// most the fan-out can fetch and the face can name.
@@ -701,10 +755,10 @@ struct ShipBoxSettings: Codable, Equatable {
         accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
         runCount = try c.decodeIfPresent(Int.self, forKey: .runCount) ?? 4
-        queuedColor = try c.decodeIfPresent(RGBA.self, forKey: .queuedColor) ?? RGBA(.orange)
-        runningColor = try c.decodeIfPresent(RGBA.self, forKey: .runningColor) ?? RGBA(.yellow)
-        successColor = try c.decodeIfPresent(RGBA.self, forKey: .successColor) ?? RGBA(.green)
-        failureColor = try c.decodeIfPresent(RGBA.self, forKey: .failureColor) ?? RGBA(.red)
+        queuedColor = try c.decodeIfPresent(RGBA.self, forKey: .queuedColor) ?? RGBA.systemOrange
+        runningColor = try c.decodeIfPresent(RGBA.self, forKey: .runningColor) ?? RGBA.systemYellow
+        successColor = try c.decodeIfPresent(RGBA.self, forKey: .successColor) ?? RGBA.systemGreen
+        failureColor = try c.decodeIfPresent(RGBA.self, forKey: .failureColor) ?? RGBA.systemRed
     }
 
     /// Writes only the current shape: the legacy `repo` key is read on the way
@@ -767,11 +821,11 @@ struct TaskBoxSettings: Codable, Equatable {
     /// Which raw Azure DevOps states feed which lane. Editable because process
     /// templates get customised and board columns get renamed.
     var stateMapping = TaskStateMapping()
-    var todoColor = RGBA(.blue)
-    var inProgressColor = RGBA(.orange)
-    var testingColor = RGBA(.purple)
-    var doneColor = RGBA(.green)
-    var otherColor = RGBA(.gray)
+    var todoColor = RGBA.systemBlue
+    var inProgressColor = RGBA.systemOrange
+    var testingColor = RGBA.systemPurple
+    var doneColor = RGBA.systemGreen
+    var otherColor = RGBA.systemGray
 
     init() {}
 
@@ -785,11 +839,11 @@ struct TaskBoxSettings: Codable, Equatable {
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
         taskCount = try c.decodeIfPresent(Int.self, forKey: .taskCount) ?? 5
         stateMapping = try c.decodeIfPresent(TaskStateMapping.self, forKey: .stateMapping) ?? TaskStateMapping()
-        todoColor = try c.decodeIfPresent(RGBA.self, forKey: .todoColor) ?? RGBA(.blue)
-        inProgressColor = try c.decodeIfPresent(RGBA.self, forKey: .inProgressColor) ?? RGBA(.orange)
-        testingColor = try c.decodeIfPresent(RGBA.self, forKey: .testingColor) ?? RGBA(.purple)
-        doneColor = try c.decodeIfPresent(RGBA.self, forKey: .doneColor) ?? RGBA(.green)
-        otherColor = try c.decodeIfPresent(RGBA.self, forKey: .otherColor) ?? RGBA(.gray)
+        todoColor = try c.decodeIfPresent(RGBA.self, forKey: .todoColor) ?? RGBA.systemBlue
+        inProgressColor = try c.decodeIfPresent(RGBA.self, forKey: .inProgressColor) ?? RGBA.systemOrange
+        testingColor = try c.decodeIfPresent(RGBA.self, forKey: .testingColor) ?? RGBA.systemPurple
+        doneColor = try c.decodeIfPresent(RGBA.self, forKey: .doneColor) ?? RGBA.systemGreen
+        otherColor = try c.decodeIfPresent(RGBA.self, forKey: .otherColor) ?? RGBA.systemGray
     }
 
     /// Lane → configured dot colour, in one place so the legend and the rows
@@ -822,7 +876,7 @@ struct CalBoxSettings: Codable, Equatable {
     var tomorrowCount = 4
     /// Off → every dot uses `accentColor` instead of the calendar's own colour.
     var useCalendarColors = true
-    var accentColor = RGBA(.blue)
+    var accentColor = RGBA.systemBlue
 
     static let maxCount = 10
 
@@ -843,7 +897,7 @@ struct CalBoxSettings: Codable, Equatable {
         todayCount = try c.decodeIfPresent(Int.self, forKey: .todayCount) ?? legacyEventCount ?? 6
         tomorrowCount = try c.decodeIfPresent(Int.self, forKey: .tomorrowCount) ?? 4
         useCalendarColors = try c.decodeIfPresent(Bool.self, forKey: .useCalendarColors) ?? true
-        accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA(.blue)
+        accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA.systemBlue
         // A hand-edited or older file must not produce a face that clips.
         todayCount = min(max(todayCount, 1), Self.maxCount)
         tomorrowCount = min(max(tomorrowCount, 1), Self.maxCount)
@@ -879,7 +933,12 @@ extension Binding where Value == RGBA {
     var color: Binding<Color> {
         Binding<Color>(
             get: { wrappedValue.color },
-            set: { wrappedValue = RGBA($0) }
+            // SwiftUI runs a Binding's setter on the main thread; the
+            // assumption is stated rather than assumed so the @MainActor on
+            // `RGBA.init(_:)` keeps protecting every other caller.
+            set: { newValue in
+                MainActor.assumeIsolated { wrappedValue = RGBA(newValue) }
+            }
         )
     }
 }
@@ -954,8 +1013,8 @@ struct PRBoxSettings: Codable, Equatable {
     var showList = true
     /// Rows on the large face, 3...12. Medium shows at most three.
     var prCount = 6
-    var mineColor = RGBA(.blue)
-    var reviewColor = RGBA(.orange)
+    var mineColor = RGBA.systemBlue
+    var reviewColor = RGBA.systemOrange
 
     static let rowCountRange = 3...12
 
@@ -975,8 +1034,8 @@ struct PRBoxSettings: Codable, Equatable {
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
         let rawCount = try c.decodeIfPresent(Int.self, forKey: .prCount) ?? 6
         prCount = min(max(rawCount, Self.rowCountRange.lowerBound), Self.rowCountRange.upperBound)
-        mineColor = try c.decodeIfPresent(RGBA.self, forKey: .mineColor) ?? RGBA(.blue)
-        reviewColor = try c.decodeIfPresent(RGBA.self, forKey: .reviewColor) ?? RGBA(.orange)
+        mineColor = try c.decodeIfPresent(RGBA.self, forKey: .mineColor) ?? RGBA.systemBlue
+        reviewColor = try c.decodeIfPresent(RGBA.self, forKey: .reviewColor) ?? RGBA.systemOrange
     }
 }
 
@@ -997,9 +1056,9 @@ struct MarketBoxSettings: Codable, Equatable {
     /// Day change applies to crypto rows on medium/large only — the small face
     /// is price-only, and fiat/gold always show "–".
     var showDayChange = true
-    var upColor = RGBA(.green)
-    var downColor = RGBA(.red)
-    var accentColor = RGBA(.blue)
+    var upColor = RGBA.systemGreen
+    var downColor = RGBA.systemRed
+    var accentColor = RGBA.systemBlue
 
     static let maxCount = 12
 
@@ -1023,9 +1082,9 @@ struct MarketBoxSettings: Codable, Equatable {
         // rows into the face than it can lay out.
         tickerCount = min(max(try c.decodeIfPresent(Int.self, forKey: .tickerCount) ?? 8, 1), Self.maxCount)
         showDayChange = try c.decodeIfPresent(Bool.self, forKey: .showDayChange) ?? true
-        upColor = try c.decodeIfPresent(RGBA.self, forKey: .upColor) ?? RGBA(.green)
-        downColor = try c.decodeIfPresent(RGBA.self, forKey: .downColor) ?? RGBA(.red)
-        accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA(.blue)
+        upColor = try c.decodeIfPresent(RGBA.self, forKey: .upColor) ?? RGBA.systemGreen
+        downColor = try c.decodeIfPresent(RGBA.self, forKey: .downColor) ?? RGBA.systemRed
+        accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA.systemBlue
     }
 
     /// Writes only the current shape: the legacy `symbols` key is read on the

@@ -15,9 +15,9 @@ final class OpenBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.refreshInterval, 30)
         XCTAssertFalse(s.showChart)
         XCTAssertTrue(s.showModels)
-        XCTAssertEqual(s.inputColor, RGBA(.cyan))
-        XCTAssertEqual(s.outputColor, RGBA(.green))
-        XCTAssertEqual(s.costColor, RGBA(.orange))
+        XCTAssertEqual(s.inputColor, RGBA.systemCyan)
+        XCTAssertEqual(s.outputColor, RGBA.systemGreen)
+        XCTAssertEqual(s.costColor, RGBA.systemOrange)
     }
 
     func testSessionKeysDefaultOffWithCountThree() throws {
@@ -84,8 +84,8 @@ final class OpenBoxSettingsDecodeTests: XCTestCase {
         s.toolCount = 2
         s.modelCount = 1
         s.inputColor = RGBA(red: 0.1, green: 0.2, blue: 0.3)
-        s.outputColor = RGBA(.green)
-        s.costColor = RGBA(.orange)
+        s.outputColor = RGBA.systemGreen
+        s.costColor = RGBA.systemOrange
         let data = try JSONEncoder().encode(s)
         let back = try JSONDecoder().decode(OpenBoxSettings.self, from: data)
         XCTAssertEqual(back, s)
@@ -102,7 +102,7 @@ final class NetBoxSettingsDecodeTests: XCTestCase {
         let s = try decode(#"{"interfaceCount":7}"#, as: NetBoxSettings.self)
         XCTAssertEqual(s.interfaceCount, 7)
         XCTAssertTrue(s.showChart)
-        XCTAssertEqual(s.upColor, RGBA(.green))
+        XCTAssertEqual(s.upColor, RGBA.systemGreen)
     }
 
     func testMissingPinnedInterfaceDecodesNil() throws {
@@ -160,7 +160,7 @@ final class BatBoxSettingsDecodeTests: XCTestCase {
         let s = try decode(#"{"showChart":false}"#, as: BatBoxSettings.self)
         XCTAssertFalse(s.showChart)
         XCTAssertTrue(s.showStatus)
-        XCTAssertEqual(s.levelColor, RGBA(.green))
+        XCTAssertEqual(s.levelColor, RGBA.systemGreen)
     }
 }
 
@@ -174,7 +174,7 @@ final class GitBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.barColor, RGBA(red: 1, green: 0, blue: 0))
         XCTAssertEqual(s.repoCount, 5)
         XCTAssertEqual(s.scanDepth, 3)
-        XCTAssertEqual(s.todayColor, RGBA(.orange))
+        XCTAssertEqual(s.todayColor, RGBA.systemOrange)
     }
 
     func testMissingRepoPathsDecodesEmpty() throws {
@@ -331,7 +331,7 @@ final class ClipBoxSettingsDecodeTests: XCTestCase {
         let s = try decode(#"{"historyCount":9}"#, as: ClipBoxSettings.self)
         XCTAssertEqual(s.historyCount, 9)
         XCTAssertTrue(s.showList)
-        XCTAssertEqual(s.textColor, RGBA(.indigo))
+        XCTAssertEqual(s.textColor, RGBA.systemIndigo)
     }
 }
 
@@ -351,7 +351,7 @@ final class ClockBoxSettingsDecodeTests: XCTestCase {
         XCTAssertTrue(s.showRelativeDay)
         XCTAssertEqual(s.cityIDs, [ClockBoxCore.localID, "UTC"])
         XCTAssertEqual(s.mainCityID, "", "absent main clock means auto")
-        XCTAssertEqual(s.timeColor, RGBA(.teal))
+        XCTAssertEqual(s.timeColor, RGBA.systemTeal)
     }
 }
 
@@ -365,7 +365,7 @@ final class ShipBoxSettingsDecodeTests: XCTestCase {
         let s = try decode(#"{"repo":"a/b","runCount":8}"#, as: ShipBoxSettings.self)
         XCTAssertEqual(s.repos, ["a/b"])
         XCTAssertEqual(s.runCount, 8)
-        XCTAssertEqual(s.successColor, RGBA(.green))
+        XCTAssertEqual(s.successColor, RGBA.systemGreen)
     }
 }
 
@@ -385,7 +385,7 @@ final class TaskBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.taskCount, 8)
         XCTAssertTrue(s.showList)
         XCTAssertTrue(s.showLegend)
-        XCTAssertEqual(s.todoColor, RGBA(.blue))
+        XCTAssertEqual(s.todoColor, RGBA.systemBlue)
         XCTAssertEqual(s.stateMapping, TaskStateMapping(), "the mapping defaults when absent")
     }
 

@@ -276,6 +276,21 @@ Do not delete the container; see the trap below.
   turn only on non-secret fields and are unit-pinned. Related: a migration that
   moves a field must **clear the old copy**, or the pre-migration fallback keeps
   answering from a dead field after the new control has taken over.
+- **`NSColor(SwiftUI.Color)` is not thread-safe, and it was reachable from
+  `DeckSettings`' decode path.** Every widget settings struct built its default
+  colours with `RGBA(.green)`, whose init bridges through `NSColor` — so merely
+  *decoding* settings ran a dozen bridges, from the app, `DeckAgent` and every
+  widget timeline at once. Crashed in production 2026-08-26: `SIGABRT`, malloc
+  corruption inside `-[NSConcreteMapTable grow]` under `NSColor.init(_:)` under
+  `DevBoxSettings.init()`. Defaults are now literal components
+  (`RGBA.systemGreen` and friends) and `RGBA.init(_ color: Color)` is
+  `@MainActor`, so reaching for the bridge off the main thread is a compile
+  error instead of a race — the one legitimate caller is a `ColorPicker`
+  writing back. **The same defaults were also appearance-dependent**:
+  `Color.green` bridges to `0.204, 0.780, 0.349` under aqua and
+  `0.188, 0.820, 0.345` under darkAqua, so whichever appearance was current
+  when a settings file was first written got frozen into it. The palette is
+  pinned to the aqua values, which is what a headless process resolves.
 - **Launching a quarantined Deck deletes it, and `--no-quarantine` is gone.**
   Measured 2026-08-26 on Homebrew 6.0.19 / macOS 15 while wiring up the tap.
   Two separate problems with the install instructions this repo shipped for

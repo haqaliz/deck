@@ -96,7 +96,7 @@ final class ShipBoxSettingsNormalizationTests: XCTestCase {
         let s = try decode(#"{"runCount":7,"showList":false}"#, as: ShipBoxSettings.self)
         XCTAssertEqual(s.runCount, 7)
         XCTAssertFalse(s.showList)
-        XCTAssertEqual(s.queuedColor, RGBA(.orange))
-        XCTAssertEqual(s.failureColor, RGBA(.red))
+        XCTAssertEqual(s.queuedColor, RGBA.systemOrange)
+        XCTAssertEqual(s.failureColor, RGBA.systemRed)
     }
 }
