@@ -425,10 +425,33 @@ in CI, the verification gates, and what the identity change resets.
       failing closed — a GUID cached against a since-replaced token would render
       the whole team's pull requests as the user's own, and nothing in the
       response says the filter was ignored.
+      **The tab is shaped like System Settings' Internet Accounts** (the user
+      asked for it explicitly): a list with a chevron per row, one
+      **Add Account…** button opening a searchable provider picker, and a page
+      per account with back/forward in the **window toolbar**. Search covers the
+      names Azure DevOps has had — `ado`, `vsts`, `devops`, `tfs`. Provider
+      marks are the vendors' own SVGs converted to vector PDFs, in both
+      appearances; see the `rsvg-convert` trap in CLAUDE.md, which cost an hour
+      because the bad PDF loads without error and reports a sensible size.
+      **opencode's credential is not like the other two.** It is Basic auth to
+      the user's own `opencode serve`, so Verify cannot run without the server
+      URL — there is no fixed host to probe. The same URL is what puts OpenBox
+      in remote mode, which replaced the old "empty text field means local"
+      convention.
+      **Found in passing, not fixed:** `RGBA.init(_ color: Color)` calls
+      `NSColor(color)`, so *decoding* `DeckSettings` bridges a dozen SwiftUI
+      Colors into AppKit — and that bridge is not thread-safe. One crash was
+      captured on 2026-08-26: `SIGABRT`, malloc corruption inside
+      `-[NSConcreteMapTable grow]` under `NSColor.init(_:)`, under
+      `DevBoxSettings.init()`, under `DeckSettings.init(from:)`. `load()` is
+      called from the app, the agent and every widget timeline. Predates this
+      work entirely. Fix by storing default colours as literal components
+      instead of round-tripping through `Color`/`NSColor`.
       **Open follow-ups:** the legacy per-slot fallback is a one-release
       courtesy for a Deck that was upgraded but never opened — remove it after
       1.30 ships. Azure's project lives on the account, so TaskBox and PRBox on
-      different projects need two accounts sharing one PAT.
+      different projects need two accounts sharing one PAT. The `RGBA`/`NSColor`
+      race above.
 - [ ] **`SMAppService`** instead of hand-written LaunchAgent plists — puts Deck
       in System Settings → Login Items, where a suspicious user looks first.
 - [ ] **Sparkle auto-update.** Pointless before notarization (the update would

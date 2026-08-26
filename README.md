@@ -282,10 +282,23 @@ opencode servers or two GitHub identities is a dropdown rather than a re-paste.
 One account can serve several widgets: ShipBox and PRBox can share a single
 GitHub token instead of holding two copies of it.
 
+The tab works like System Settings' Internet Accounts: a list of accounts with
+a chevron on each, **Add Account…** to pick a provider (searchable — "ado" and
+"vsts" find Azure DevOps), and a page per account reached by clicking its row,
+with back and forward in the toolbar.
+
 **Verify** on an account asks the provider who the credential belongs to —
 a GitHub login, an Azure display name, a reachable opencode server — so a token
 that has expired or lacks a scope says so where you pasted it, rather than as a
-silent empty widget.
+silent empty widget. It stays greyed out until the account has what the probe
+needs, and says which field is missing.
+
+**opencode is different from the other two, and it matters here.** Its token is
+HTTP Basic auth against **your own** `opencode serve` instance, not an account
+on a shared service — so Verify needs the server URL before it can run, because
+without one there is no host to ask. That same URL is what puts OpenBox in
+remote mode: no account means the local opencode database, an account with a
+server URL means that server.
 
 **Tokens** are stored in your **login keychain**, not in a file: one keychain
 item per account, written by the settings window and read by the background

@@ -276,6 +276,15 @@ Do not delete the container; see the trap below.
   turn only on non-secret fields and are unit-pinned. Related: a migration that
   moves a field must **clear the old copy**, or the pre-migration fallback keeps
   answering from a dead field after the new control has taken over.
+- **An opencode token is Basic auth to the user's own server, not an account on
+  a service.** `RemoteOpenCodeLoader` sends
+  `Basic base64("opencode:<token>")` to whatever `serverURL` the account
+  carries. There is no fixed endpoint to probe the way `api.github.com` and
+  `dev.azure.com/{org}` are fixed, so anything that wants to check the
+  credential — Verify included — needs the URL first. Verify uses
+  `RemoteOpenCodeLoader.probe`, a single `GET /session`; `load` follows up with
+  a request *per session* when the server reports no session-level usage, which
+  is right for a snapshot and far too much for a credential check.
 - **`rsvg-convert -f pdf` can emit a PDF that CoreGraphics draws as nothing.**
   Hit converting the provider marks for the Credentials tab (2026-08-26). The
   opencode logo wraps its paths in a `mask` with `mask-type:luminance` and a
