@@ -385,6 +385,73 @@ in CI, the verification gates, and what the identity change resets.
       **Open follow-ups:** exercise the locked-keychain path on a scratch
       account; revisit access groups if Deck ever gains a provisioning
       profile.
+- [x] **Credentials tab: typed accounts** — shipped 2026-08-26
+      (`docs/planning/credentials/`). Credentials stop being a property of a
+      widget and become records widgets reference by id. Many accounts per kind
+      (github / azure / opencode), each with its own connection identity; every
+      widget tab picks one from a kind-filtered dropdown, so switching between
+      two opencode servers is a selection rather than a re-paste, and ShipBox
+      and PRBox can share one GitHub token instead of holding two copies.
+      Decisions taken with the user: per-widget picker with no global default;
+      the account owns its connection fields (Azure org **and** project,
+      opencode server URL); no inline token fields on widget tabs; a manual
+      Verify per account; migration auto-creates accounts and dedupes identical
+      tokens; PRBox's picker replaces its Include toggles; deleting names the
+      widgets that break.
+      **The self-critique caught five things the PRD had wrong**, and each
+      changed the build:
+      - **Two reads live inside the widget extension.** `OpenBoxWidget` read
+        `serverURL`, `PRBoxWidget` read the two `enabled` flags. Both fields
+        move onto accounts, so both would have read empty forever with no
+        crash, no log and no chip. See the CLAUDE.md trap.
+      - **Migration would have re-enabled a PRBox provider the user switched
+        off.** `enabled` defaults to false and a token can sit behind a disabled
+        provider; since a selected account now *means* enabled, migrating the
+        selection would silently restart a stream they had removed. The account
+        is created either way — never lose a token — but not selected.
+      - **`DeckSettings.CodingKeys` is hand-written**, so a forgotten case
+        compiles, decodes as absent and never encodes. Every account would have
+        vanished on the next keystroke. **`ShipBoxSettings` has a hand-written
+        `encode(to:)` too** — the same bug, one file over, which the critique
+        did not catch and the tests did.
+      - **`scrubbedOfSecrets()` was written against five fixed fields.**
+        `CredentialAccount.encode(to:)` now omits the token outright *and* the
+        scrub loops the accounts: two independent guarantees, because a fixed
+        list is auditable by a human and an unbounded one is not.
+      - **`Set<DeckSecret>` cannot name a dynamic account**, so the
+        locked-keychain distinction is now keyed by account id.
+      **The cached Azure identity GUID is display-only.** Verify stores it, but
+      `HostAzurePRLoader` keeps resolving identity live per fetch and keeps
+      failing closed — a GUID cached against a since-replaced token would render
+      the whole team's pull requests as the user's own, and nothing in the
+      response says the filter was ignored.
+      **The tab is shaped like System Settings' Internet Accounts** (the user
+      asked for it explicitly): a list with a chevron per row, one
+      **Add Account…** button opening a searchable provider picker, and a page
+      per account with back/forward in the **window toolbar**. Search covers the
+      names Azure DevOps has had — `ado`, `vsts`, `devops`, `tfs`. Provider
+      marks are the vendors' own SVGs converted to vector PDFs, in both
+      appearances; see the `rsvg-convert` trap in CLAUDE.md, which cost an hour
+      because the bad PDF loads without error and reports a sensible size.
+      **opencode's credential is not like the other two.** It is Basic auth to
+      the user's own `opencode serve`, so Verify cannot run without the server
+      URL — there is no fixed host to probe. The same URL is what puts OpenBox
+      in remote mode, which replaced the old "empty text field means local"
+      convention.
+      **Found in passing, not fixed:** `RGBA.init(_ color: Color)` calls
+      `NSColor(color)`, so *decoding* `DeckSettings` bridges a dozen SwiftUI
+      Colors into AppKit — and that bridge is not thread-safe. One crash was
+      captured on 2026-08-26: `SIGABRT`, malloc corruption inside
+      `-[NSConcreteMapTable grow]` under `NSColor.init(_:)`, under
+      `DevBoxSettings.init()`, under `DeckSettings.init(from:)`. `load()` is
+      called from the app, the agent and every widget timeline. Predates this
+      work entirely. Fix by storing default colours as literal components
+      instead of round-tripping through `Color`/`NSColor`.
+      **Open follow-ups:** the legacy per-slot fallback is a one-release
+      courtesy for a Deck that was upgraded but never opened — remove it after
+      1.30 ships. Azure's project lives on the account, so TaskBox and PRBox on
+      different projects need two accounts sharing one PAT. The `RGBA`/`NSColor`
+      race above.
 - [ ] **`SMAppService`** instead of hand-written LaunchAgent plists — puts Deck
       in System Settings → Login Items, where a suspicious user looks first.
 - [ ] **Sparkle auto-update.** Pointless before notarization (the update would

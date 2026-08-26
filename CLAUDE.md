@@ -77,8 +77,23 @@ Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
    `~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox,taskbox,calbox,prbox}.json`
    The widgets render the snapshots.
 
+**Credentials are records, not widget properties.** A `CredentialAccount`
+(`Shared/CredentialAccount.swift`) has a kind (github/azure/opencode), a label,
+and whatever identifies the connection — Azure org + project, opencode server
+URL. Widgets reference one by id through a `CredentialSlot` (`openbox`,
+`shipbox`, `taskbox`, `prboxGitHub`, `prboxAzure`), each of which knows its
+kind and its `FetchSource`. The keychain item is `account.<id>.token`; the id
+is generated once and never rewritten, because renaming it strands the token.
+One decision table, `DeckSettings.gate(_:unavailable:)`, answers "fetch, and if
+not, what does the widget say?" for both `DeckAgent` and the settings window —
+`off` (nothing selected), `notConfigured` (a selection that no longer resolves)
+and `unavailable` (locked keychain) are three different answers on purpose.
+`DeckSecret`'s five fixed cases survive only for the one-way migration and a
+one-release fallback for a Deck that was upgraded but never opened.
+
 **Settings live in the Deck app window only** (per-widget tabs: show toggles,
-colors, counts, OpenBox token/URL, GitBox repo paths). They persist to
+colors, counts, account pickers, GitBox repo paths; credentials in their own
+tab). They persist to
 `settings.json` in the same container and both the app and widgets read it.
 No settings UI exists inside widgets (WidgetKit has none).
 
@@ -247,6 +262,41 @@ Do not delete the container; see the trap below.
   accps` is the quickest ground truth. Being SPI it can vanish in any macOS
   update, so every failure path returns an empty list and the section simply
   hides.
+- **Two settings fields are read *inside the widget extension*, and moving one
+  breaks a widget silently.** Found while making credentials into accounts
+  (2026-08-26): `OpenBoxWidget` read `openbox.serverURL` to decide local vs
+  remote, and `PRBoxWidget` read `prbox.{github,azure}.enabled` to decide which
+  providers to name in its chip. Both fields moved onto accounts, so both would
+  have read empty forever — OpenBox permanently local, PRBox permanently
+  both-providers-off — with **no crash, no log and no chip**, just a wrong
+  face. `grep -rn "\.enabled\|serverURL" native/DeckWidgets/` is the check.
+  Anything the extension reads must stay answerable from `settings.json`
+  *without a token*, because the extension has no keychain access at all; the
+  replacements (`openBoxUsesRemoteServer`, `prBoxGitHubIsOn`, `prBoxAzureIsOn`)
+  turn only on non-secret fields and are unit-pinned. Related: a migration that
+  moves a field must **clear the old copy**, or the pre-migration fallback keeps
+  answering from a dead field after the new control has taken over.
+- **An opencode token is Basic auth to the user's own server, not an account on
+  a service.** `RemoteOpenCodeLoader` sends
+  `Basic base64("opencode:<token>")` to whatever `serverURL` the account
+  carries. There is no fixed endpoint to probe the way `api.github.com` and
+  `dev.azure.com/{org}` are fixed, so anything that wants to check the
+  credential — Verify included — needs the URL first. Verify uses
+  `RemoteOpenCodeLoader.probe`, a single `GET /session`; `load` follows up with
+  a request *per session* when the server reports no session-level usage, which
+  is right for a snapshot and far too much for a credential check.
+- **`rsvg-convert -f pdf` can emit a PDF that CoreGraphics draws as nothing.**
+  Hit converting the provider marks for the Credentials tab (2026-08-26). The
+  opencode logo wraps its paths in a `mask` with `mask-type:luminance` and a
+  `clipPath`, both full-canvas no-ops; rsvg turns them into a PDF transparency
+  group that renders correctly in rsvg's own PNG output and **completely empty**
+  through `NSImage`. Nothing errors: `NSImage(contentsOf:)` succeeds and reports
+  a sensible `size`, so the only symptom is a blank icon. Check a converted PDF
+  by *drawing* it (`img.draw(in:)` into a bitmap and looking), not by loading
+  it. Fix: strip no-op masks and clip paths from the SVG before converting.
+  Vendor artwork lives in `DeckApp/Resources/provider-<kind>-{light,dark}.pdf`
+  and is host-app only — the widget extension does not ship it and falls back
+  to `CredentialKind.systemImage`.
 - **A `keychain-access-groups` entitlement SIGKILLs Deck at launch.** Measured
   2026-08-26 (`docs/planning/keychain-tokens/probe.md`) while looking at moving
   the API tokens to the keychain. Signing either the app bundle *or* a bare

@@ -75,3 +75,81 @@ final class DeckKeychainTests: XCTestCase {
         )
     }
 }
+
+/// Per-account keychain items, the dynamic replacement for the fixed five.
+///
+/// Same test-only service, so nothing here touches the user's own credentials.
+final class DeckKeychainAccountTests: XCTestCase {
+    private let service = "com.deck.app.tests.accounts"
+    private let ids = ["acct-one", "acct-two"]
+
+    override func setUp() {
+        super.setUp()
+        wipe()
+    }
+
+    override func tearDown() {
+        wipe()
+        super.tearDown()
+    }
+
+    private func wipe() {
+        for id in ids { DeckKeychain.delete(accountID: id, service: service) }
+    }
+
+    func testUnwrittenAccountReadsAsAbsentNotFailed() {
+        XCTAssertEqual(DeckKeychain.read(accountID: "acct-one", service: service), .absent)
+    }
+
+    func testRoundTrip() {
+        XCTAssertEqual(
+            DeckKeychain.write(accountID: "acct-one", value: "ghp_abc", service: service),
+            errSecSuccess
+        )
+        XCTAssertEqual(DeckKeychain.read(accountID: "acct-one", service: service), .found("ghp_abc"))
+    }
+
+    func testWriteOverwritesAnExistingValue() {
+        DeckKeychain.write(accountID: "acct-one", value: "first", service: service)
+        DeckKeychain.write(accountID: "acct-one", value: "second", service: service)
+        XCTAssertEqual(DeckKeychain.read(accountID: "acct-one", service: service), .found("second"))
+    }
+
+    func testDeleteMakesTheAccountAbsentAgain() {
+        DeckKeychain.write(accountID: "acct-one", value: "tok", service: service)
+        XCTAssertEqual(DeckKeychain.delete(accountID: "acct-one", service: service), errSecSuccess)
+        XCTAssertEqual(DeckKeychain.read(accountID: "acct-one", service: service), .absent)
+    }
+
+    func testDeletingSomethingNeverStoredSucceeds() {
+        XCTAssertEqual(DeckKeychain.delete(accountID: "acct-two", service: service), errSecSuccess)
+    }
+
+    func testAccountsAreIndependent() {
+        DeckKeychain.write(accountID: "acct-one", value: "one", service: service)
+        DeckKeychain.write(accountID: "acct-two", value: "two", service: service)
+        XCTAssertEqual(DeckKeychain.read(accountID: "acct-one", service: service), .found("one"))
+        XCTAssertEqual(DeckKeychain.read(accountID: "acct-two", service: service), .found("two"))
+    }
+
+    func testReadAllCoversEveryRequestedAccount() {
+        DeckKeychain.write(accountID: "acct-one", value: "one", service: service)
+        let all = DeckKeychain.readAll(accountIDs: ids, service: service)
+        XCTAssertEqual(all.count, 2)
+        XCTAssertEqual(all["acct-one"], .found("one"))
+        XCTAssertEqual(all["acct-two"], .absent)
+    }
+
+    // MARK: - On-disk contract
+
+    func testItemNameIsDerivedFromTheAccountIdAndIsStable() {
+        // A change to this format strands every token the user already pasted,
+        // exactly as a rename of the legacy five would.
+        XCTAssertEqual(DeckKeychain.itemName(forAccountID: "abc123"), "account.abc123.token")
+    }
+
+    func testAccountItemsDoNotCollideWithTheLegacyFive() {
+        let legacy = Set(DeckSecret.allCases.map(\.rawValue))
+        XCTAssertFalse(legacy.contains(DeckKeychain.itemName(forAccountID: "openbox")))
+    }
+}

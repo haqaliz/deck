@@ -41,7 +41,74 @@ enum DeckKeychain {
     static let defaultService = "com.deck.app"
 
     static func read(_ secret: DeckSecret, service: String = defaultService) -> SecretRead {
-        var query = baseQuery(secret, service: service)
+        read(itemName: secret.rawValue, service: service)
+    }
+
+    /// Add-or-update. Returns `errSecSuccess` on success.
+    @discardableResult
+    static func write(_ secret: DeckSecret, value: String, service: String = defaultService) -> OSStatus {
+        write(itemName: secret.rawValue, value: value, service: service)
+    }
+
+    /// Removes one secret. A secret that was never stored is a success.
+    @discardableResult
+    static func delete(_ secret: DeckSecret, service: String = defaultService) -> OSStatus {
+        delete(itemName: secret.rawValue, service: service)
+    }
+
+    /// Reads all five in one pass.
+    static func readAll(service: String = defaultService) -> [DeckSecret: SecretRead] {
+        var out: [DeckSecret: SecretRead] = [:]
+        for secret in DeckSecret.allCases {
+            out[secret] = read(secret, service: service)
+        }
+        return out
+    }
+
+    private static func baseQuery(_ secret: DeckSecret, service: String) -> [String: Any] {
+        baseQuery(itemName: secret.rawValue, service: service)
+    }
+
+    // MARK: - Per-account items
+
+    /// The keychain item name for one `CredentialAccount`.
+    ///
+    /// **Stable on disk.** A change to this format strands every token the user
+    /// already pasted, exactly as a rename of the legacy five would. The
+    /// `account.` prefix is also what keeps a hand-typed account id from ever
+    /// colliding with one of those five.
+    static func itemName(forAccountID id: String) -> String {
+        "account.\(id).token"
+    }
+
+    static func read(accountID: String, service: String = defaultService) -> SecretRead {
+        read(itemName: itemName(forAccountID: accountID), service: service)
+    }
+
+    @discardableResult
+    static func write(accountID: String, value: String, service: String = defaultService) -> OSStatus {
+        write(itemName: itemName(forAccountID: accountID), value: value, service: service)
+    }
+
+    /// An account that was never stored is a success.
+    @discardableResult
+    static func delete(accountID: String, service: String = defaultService) -> OSStatus {
+        delete(itemName: itemName(forAccountID: accountID), service: service)
+    }
+
+    /// One read per account, keyed by account id.
+    static func readAll(accountIDs: [String], service: String = defaultService) -> [String: SecretRead] {
+        var out: [String: SecretRead] = [:]
+        for id in accountIDs {
+            out[id] = read(accountID: id, service: service)
+        }
+        return out
+    }
+
+    // MARK: - Item primitives
+
+    private static func read(itemName: String, service: String) -> SecretRead {
+        var query = baseQuery(itemName: itemName, service: service)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
 
@@ -62,10 +129,8 @@ enum DeckKeychain {
         }
     }
 
-    /// Add-or-update. Returns `errSecSuccess` on success.
-    @discardableResult
-    static func write(_ secret: DeckSecret, value: String, service: String = defaultService) -> OSStatus {
-        let query = baseQuery(secret, service: service)
+    private static func write(itemName: String, value: String, service: String) -> OSStatus {
+        let query = baseQuery(itemName: itemName, service: service)
         let payload = Data(value.utf8)
 
         let status = SecItemAdd(
@@ -79,27 +144,16 @@ enum DeckKeychain {
         )
     }
 
-    /// Removes one secret. A secret that was never stored is a success.
-    @discardableResult
-    static func delete(_ secret: DeckSecret, service: String = defaultService) -> OSStatus {
-        let status = SecItemDelete(baseQuery(secret, service: service) as CFDictionary)
+    private static func delete(itemName: String, service: String) -> OSStatus {
+        let status = SecItemDelete(baseQuery(itemName: itemName, service: service) as CFDictionary)
         return status == errSecItemNotFound ? errSecSuccess : status
     }
 
-    /// Reads all five in one pass.
-    static func readAll(service: String = defaultService) -> [DeckSecret: SecretRead] {
-        var out: [DeckSecret: SecretRead] = [:]
-        for secret in DeckSecret.allCases {
-            out[secret] = read(secret, service: service)
-        }
-        return out
-    }
-
-    private static func baseQuery(_ secret: DeckSecret, service: String) -> [String: Any] {
+    private static func baseQuery(itemName: String, service: String) -> [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: secret.rawValue,
+            kSecAttrAccount as String: itemName,
         ]
     }
 }

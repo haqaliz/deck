@@ -71,13 +71,17 @@ struct PRBoxProvider: TimelineProvider {
 
     private func makeEntry() -> PRBoxEntry {
         let snapshot = PRBoxSnapshotStore.load()
-        let settings = DeckSettings.load().prbox
+        let allSettings = DeckSettings.load()
+        let settings = allSettings.prbox
         let now = Date()
+        // A provider is on when it has an account. Reading `enabled` here would
+        // render both providers as off forever: the picker replaced the toggle
+        // and the migration clears it.
         let chip = PRFetchChip.text(
             github: FetchStatusStore.load(.prboxGitHub),
             azure: FetchStatusStore.load(.prboxAzure),
-            githubEnabled: settings.github.enabled,
-            azureEnabled: settings.azure.enabled,
+            githubEnabled: allSettings.prBoxGitHubIsOn,
+            azureEnabled: allSettings.prBoxAzureIsOn,
             dataWrittenAt: snapshot?.writtenAt,
             now: now
         )

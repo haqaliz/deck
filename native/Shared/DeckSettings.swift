@@ -46,6 +46,9 @@ struct DeckSettings: Codable, Equatable {
     var calbox = CalBoxSettings()
     var prbox = PRBoxSettings()
     var marketbox = MarketBoxSettings()
+    /// Every credential the user has configured. Widgets reference these by id
+    /// rather than each owning a token of its own.
+    var credentials = CredentialsSettings()
     var agentAtLogin = true
 
     init() {}
@@ -67,7 +70,7 @@ struct DeckSettings: Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
         case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
-        case marketbox, agentAtLogin
+        case marketbox, credentials, agentAtLogin
     }
 
     /// Decode-only. See `LegacyHomeBoxSettings`.
@@ -106,6 +109,7 @@ struct DeckSettings: Codable, Equatable {
         calbox = try c.decodeIfPresent(CalBoxSettings.self, forKey: .calbox) ?? CalBoxSettings()
         prbox = try c.decodeIfPresent(PRBoxSettings.self, forKey: .prbox) ?? PRBoxSettings()
         marketbox = try c.decodeIfPresent(MarketBoxSettings.self, forKey: .marketbox) ?? MarketBoxSettings()
+        credentials = try c.decodeIfPresent(CredentialsSettings.self, forKey: .credentials) ?? CredentialsSettings()
         agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
     }
 
@@ -163,6 +167,12 @@ struct DeckSettings: Codable, Equatable {
         copy.taskbox.token = ""
         copy.prbox.github.token = ""
         copy.prbox.azure.token = ""
+        // R4: the five above are a fixed list a human can audit; the accounts
+        // are not. `CredentialAccount.encode(to:)` already omits the token,
+        // so this is the second of two independent guarantees.
+        for index in copy.credentials.accounts.indices {
+            copy.credentials.accounts[index].token = ""
+        }
         return copy
     }
 
@@ -210,6 +220,73 @@ struct DeckSettings: Codable, Equatable {
         case .prboxGitHubToken: prbox.github.token = value
         case .prboxAzureToken: prbox.azure.token = value
         }
+    }
+
+    // MARK: - Accounts
+
+    /// The account id a slot is pointed at, or `nil` when it is unset.
+    func accountID(for slot: CredentialSlot) -> String? {
+        switch slot {
+        case .openbox: return openbox.accountID
+        case .shipbox: return shipbox.accountID
+        case .taskbox: return taskbox.accountID
+        case .prboxGitHub: return prbox.github.accountID
+        case .prboxAzure: return prbox.azure.accountID
+        }
+    }
+
+    mutating func setAccountID(_ id: String?, for slot: CredentialSlot) {
+        switch slot {
+        case .openbox: openbox.accountID = id
+        case .shipbox: shipbox.accountID = id
+        case .taskbox: taskbox.accountID = id
+        case .prboxGitHub: prbox.github.accountID = id
+        case .prboxAzure: prbox.azure.accountID = id
+        }
+    }
+
+    /// The account a slot resolves to, or `nil` when it is unset, **dangles**
+    /// (the account was deleted behind it) or names an account of the wrong
+    /// kind. All three read as "not configured" — never as an error.
+    func account(for slot: CredentialSlot) -> CredentialAccount? {
+        guard let id = accountID(for: slot) else { return nil }
+        guard let account = credentials.accounts.first(where: { $0.id == id }) else { return nil }
+        return account.kind == slot.kind ? account : nil
+    }
+
+    /// Which widgets would stop working if this account went away. Drives the
+    /// delete confirmation, which names them rather than deleting silently.
+    func slots(using accountID: String) -> [CredentialSlot] {
+        CredentialSlot.allCases.filter { self.accountID(for: $0) == accountID }
+    }
+
+    /// Fills every account's token from a set of keychain reads and returns the
+    /// ids that **failed** — which is not the same as being unset.
+    ///
+    /// The two rules are the legacy `hydrate(from:)`'s, unchanged: `.found`
+    /// overwrites, and nothing else does. Blanking on a failure would wipe a
+    /// working credential the moment the keychain hiccups.
+    @discardableResult
+    mutating func hydrateAccounts(from reads: [String: SecretRead]) -> Set<String> {
+        var failed: Set<String> = []
+        for index in credentials.accounts.indices {
+            switch reads[credentials.accounts[index].id] {
+            case .found(let value):
+                credentials.accounts[index].token = value
+            case .failed:
+                failed.insert(credentials.accounts[index].id)
+            case .absent, nil:
+                break
+            }
+        }
+        return failed
+    }
+
+    /// `hydrateAccounts(from:)` against the real keychain. Host-side only — the
+    /// widget extension never calls this and needs no keychain access.
+    @discardableResult
+    mutating func hydrateAccountsFromKeychain() -> Set<String> {
+        hydrateAccounts(from: DeckKeychain.readAll(accountIDs: credentials.accounts.map(\.id)))
     }
 
     /// The current in-memory value of one credential, for the migration.
@@ -327,6 +404,9 @@ struct LiveBoxSettings: Codable, Equatable {
 
 struct OpenBoxSettings: Codable, Equatable {
     var token = ""
+    /// The credential this widget uses, by `CredentialAccount.id`. `nil` means
+    /// no account is selected, which reads as "not configured".
+    var accountID: String?
     /// Non-empty → remote server mode (auto-switch); empty → local DB.
     var serverURL: String?
     var refreshInterval = 60
@@ -351,6 +431,7 @@ struct OpenBoxSettings: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+        accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
         serverURL = try c.decodeIfPresent(String.self, forKey: .serverURL)
         refreshInterval = try c.decodeIfPresent(Int.self, forKey: .refreshInterval) ?? 60
         showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
@@ -575,6 +656,9 @@ struct ShipBoxSettings: Codable, Equatable {
     var maxRepoCount = 3
     /// GitHub personal access token — required; no default is ever sent.
     var token = ""
+    /// The credential this widget uses, by `CredentialAccount.id`. `nil` means
+    /// no account is selected, which reads as "not configured".
+    var accountID: String?
     var showList = true
     var runCount = 4
     var queuedColor = RGBA(.orange)
@@ -614,6 +698,7 @@ struct ShipBoxSettings: Codable, Equatable {
         }
         maxRepoCount = min(max(try c.decodeIfPresent(Int.self, forKey: .maxRepoCount) ?? 3, 1), Self.maxRepoCount)
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+        accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
         runCount = try c.decodeIfPresent(Int.self, forKey: .runCount) ?? 4
         queuedColor = try c.decodeIfPresent(RGBA.self, forKey: .queuedColor) ?? RGBA(.orange)
@@ -630,6 +715,7 @@ struct ShipBoxSettings: Codable, Equatable {
         try c.encode(repos, forKey: .repos)
         try c.encode(maxRepoCount, forKey: .maxRepoCount)
         try c.encode(token, forKey: .token)
+        try c.encodeIfPresent(accountID, forKey: .accountID)
         try c.encode(showList, forKey: .showList)
         try c.encode(runCount, forKey: .runCount)
         try c.encode(queuedColor, forKey: .queuedColor)
@@ -655,7 +741,7 @@ struct ShipBoxSettings: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case repoMode, repos, maxRepoCount, token, showList, runCount
+        case repoMode, repos, maxRepoCount, token, accountID, showList, runCount
         case queuedColor, runningColor, successColor, failureColor
         case legacyRepo = "repo"
     }
@@ -671,6 +757,9 @@ struct TaskBoxSettings: Codable, Equatable {
     /// Personal access token — required; no default is ever sent. A read-only
     /// Work Items (Read) scope is enough.
     var token = ""
+    /// The credential this widget uses, by `CredentialAccount.id`. `nil` means
+    /// no account is selected, which reads as "not configured".
+    var accountID: String?
     /// The lane legend under the header.
     var showLegend = true
     var showList = true
@@ -691,6 +780,7 @@ struct TaskBoxSettings: Codable, Equatable {
         organization = try c.decodeIfPresent(String.self, forKey: .organization) ?? ""
         project = try c.decodeIfPresent(String.self, forKey: .project) ?? ""
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+        accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
         showLegend = try c.decodeIfPresent(Bool.self, forKey: .showLegend) ?? true
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
         taskCount = try c.decodeIfPresent(Int.self, forKey: .taskCount) ?? 5
@@ -819,11 +909,9 @@ struct PRGitHubSettings: Codable, Equatable {
     /// searches everything the token can see, which on a long-lived account
     /// reaches years back into personal repositories.
     var scope = ""
-
-    /// Enabled is not the same as usable: a provider switched on with no token
-    /// is "not configured", and the agent skips it rather than firing a
-    /// request that cannot succeed.
-    var isUsable: Bool { enabled && !token.isEmpty }
+    /// The credential this widget uses, by `CredentialAccount.id`. `nil` means
+    /// no account is selected, which reads as "not configured".
+    var accountID: String?
 
     init() {}
 
@@ -831,22 +919,22 @@ struct PRGitHubSettings: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+        accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
         scope = try c.decodeIfPresent(String.self, forKey: .scope) ?? ""
     }
 }
 
 struct PRAzureSettings: Codable, Equatable {
     var enabled = false
+    /// The credential this widget uses, by `CredentialAccount.id`. `nil` means
+    /// no account is selected, which reads as "not configured".
+    var accountID: String?
     /// Organization — a bare name or a full dev.azure.com URL.
     var organization = ""
     /// Project within the organization. The pull-request query is scoped to it.
     var project = ""
     /// Personal access token — required; no default is ever sent.
     var token = ""
-
-    var isUsable: Bool {
-        enabled && !organization.isEmpty && !project.isEmpty && !token.isEmpty
-    }
 
     init() {}
 
@@ -856,6 +944,7 @@ struct PRAzureSettings: Codable, Equatable {
         organization = try c.decodeIfPresent(String.self, forKey: .organization) ?? ""
         project = try c.decodeIfPresent(String.self, forKey: .project) ?? ""
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
+        accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
     }
 }
 
@@ -869,8 +958,6 @@ struct PRBoxSettings: Codable, Equatable {
     var reviewColor = RGBA(.orange)
 
     static let rowCountRange = 3...12
-
-    var isAnyProviderUsable: Bool { github.isUsable || azure.isUsable }
 
     func rowCount(for face: PRBoxFace) -> Int {
         switch face {

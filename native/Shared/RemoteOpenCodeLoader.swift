@@ -38,6 +38,23 @@ enum RemoteOpenCodeLoader {
         return RemoteOpenCodeAggregator.aggregate(sessions: sessions, messages: messages, now: now)
     }
 
+    /// A cheap "does this work?" probe, for the Credentials tab's Verify.
+    ///
+    /// One `GET /session` and stop. `load` may follow up with a request *per
+    /// session* when the server reports no session-level usage, which is the
+    /// right thing for a snapshot and far too much for a credential check.
+    ///
+    /// It is necessarily addressed to the account's own server URL: an opencode
+    /// token is HTTP Basic auth against **your** `opencode serve` instance, not
+    /// an account on a shared service, so without a URL there is no host to
+    /// ask. That is why Verify needs the URL before it will run.
+    static func probe(serverURL: String, token: String) async throws -> Int {
+        let base = try normalizedBase(serverURL)
+        let auth = "Basic " + Data("opencode:\(token)".utf8).base64EncodedString()
+        let sessions: [RemoteOpenCodeAggregator.RemoteSession] = try await get(base, auth, path: "/session")
+        return sessions.count
+    }
+
     // MARK: - Server JSON shapes
 
     private struct RemoteMessageEnvelope: Codable {
