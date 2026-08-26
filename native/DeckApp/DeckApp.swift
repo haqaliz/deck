@@ -111,7 +111,12 @@ struct ContentView: View {
                 onSecretCommitted: accountSecretCommitted
             )
             case .livebox: LiveBoxSettingsView(settings: $settings.livebox)
-            case .openbox: OpenBoxSettingsView(settings: $settings.openbox, onSecretCommitted: secretCommitted)
+            case .openbox: OpenBoxSettingsView(
+                settings: $settings.openbox,
+                accountID: $settings.openbox.accountID,
+                accounts: settings.credentials.accounts,
+                onManage: { selection = .credentials }
+            )
             case .netbox: NetBoxSettingsView(settings: $settings.netbox)
             case .batbox: BatBoxSettingsView(settings: $settings.batbox)
             case .gitbox: GitBoxSettingsView(settings: $settings.gitbox)
@@ -119,10 +124,25 @@ struct ContentView: View {
             case .clipbox: ClipBoxSettingsView(settings: $settings.clipbox)
             case .weatherbox: WeatherBoxSettingsView(settings: $settings.weatherbox)
             case .clockbox: ClockBoxSettingsView(settings: $settings.clockbox)
-            case .shipbox: ShipBoxSettingsView(settings: $settings.shipbox, onSecretCommitted: secretCommitted)
-            case .taskbox: TaskBoxSettingsView(settings: $settings.taskbox, onSecretCommitted: secretCommitted)
+            case .shipbox: ShipBoxSettingsView(
+                settings: $settings.shipbox,
+                accountID: $settings.shipbox.accountID,
+                accounts: settings.credentials.accounts,
+                token: settings.credential(for: .shipbox)?.token ?? "",
+                onManage: { selection = .credentials }
+            )
+            case .taskbox: TaskBoxSettingsView(
+                settings: $settings.taskbox,
+                accountID: $settings.taskbox.accountID,
+                accounts: settings.credentials.accounts,
+                onManage: { selection = .credentials }
+            )
             case .calbox: CalBoxSettingsView(settings: $settings.calbox)
-            case .prbox: PRBoxSettingsView(settings: $settings.prbox, onSecretCommitted: secretCommitted)
+            case .prbox: PRBoxSettingsView(
+                settings: $settings.prbox,
+                accounts: settings.credentials.accounts,
+                onManage: { selection = .credentials }
+            )
             case .marketbox: MarketBoxSettingsView(settings: $settings.marketbox)
             }
         }
@@ -541,11 +561,10 @@ struct ContentView: View {
     /// A freshly pasted credential clears a read failure from this launch —
     /// otherwise the widget would keep saying it can't read a token the user
     /// just typed.
-    private func secretCommitted(_ secret: DeckSecret) {
-        unavailableSecrets.remove(secret)
-    }
-
-    /// The same, for an account's token.
+    ///
+    /// Accounts only: the five pre-accounts fields have no editing surface any
+    /// more, so a legacy read failure can only be cleared by unlocking the
+    /// keychain and reopening Deck, which is what the caption says to do.
     private func accountSecretCommitted(_ accountID: String) {
         unavailableAccounts.remove(accountID)
     }
@@ -807,6 +826,64 @@ private struct LiveBoxSettingsView: View {
 /// and saves the whole file — never sees a half-typed token. The value is
 /// committed on Return or when the field loses focus, and only then does it
 /// reach the keychain and the in-memory settings.
+/// Picks which stored account a widget fetches with.
+///
+/// Filtered to the kind that widget needs, so a GitHub slot can never be
+/// pointed at an Azure PAT. There are no token fields on widget tabs any more:
+/// one editing surface per secret, in Credentials.
+private struct AccountPicker: View {
+    let kind: CredentialKind
+    let accounts: [CredentialAccount]
+    @Binding var accountID: String?
+    var onManage: () -> Void
+
+    private var matching: [CredentialAccount] { accounts.filter { $0.kind == kind } }
+
+    /// `nil` and `""` are the same thing to a Picker, which cannot tag nil.
+    private var selection: Binding<String> {
+        Binding(
+            get: { accountID ?? "" },
+            set: { accountID = $0.isEmpty ? nil : $0 }
+        )
+    }
+
+    var body: some View {
+        Picker("Account", selection: selection) {
+            Text("None").tag("")
+            ForEach(matching) { account in
+                Text(title(account)).tag(account.id)
+            }
+            // A selection whose account was deleted stays listed rather than
+            // silently resolving to None: the widget really is pointed at
+            // something missing, and the picker is where that gets fixed.
+            if let id = accountID, !matching.contains(where: { $0.id == id }) {
+                Text("Deleted account").tag(id)
+            }
+        }
+        HStack(spacing: 6) {
+            Text(caption)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("Manage in Credentials\u{2026}", action: onManage)
+                .buttonStyle(.link)
+                .font(.caption)
+        }
+    }
+
+    private func title(_ account: CredentialAccount) -> String {
+        let name = account.label.isEmpty ? account.kind.displayName : account.label
+        return "\(name) \u{00B7} \(CredentialsCopy.subtitle(for: account))"
+    }
+
+    private var caption: String {
+        if matching.isEmpty {
+            return "No \(kind.displayName) accounts yet."
+        }
+        return accountID == nil ? "Nothing is fetched until an account is picked." : ""
+    }
+}
+
 /// A `SecretField` for an account's token.
 ///
 /// Commit semantics are `SecretField`'s, unchanged and deliberately so: on blur
@@ -1066,52 +1143,21 @@ private struct CredentialsSettingsView: View {
     }
 }
 
-private struct SecretField: View {
-    let title: String
-    let secret: DeckSecret
-    @Binding var value: String
-    var onCommit: (DeckSecret) -> Void = { _ in }
-
-    @State private var draft: String = ""
-    @FocusState private var focused: Bool
-
-    var body: some View {
-        SecureField(title, text: $draft)
-            .focused($focused)
-            .onAppear { draft = value }
-            .onChange(of: value) { newValue in
-                // Migration or hydration filled it in behind us.
-                if !focused { draft = newValue }
-            }
-            .onSubmit(commit)
-            .onChange(of: focused) { isFocused in
-                if !isFocused { commit() }
-            }
-    }
-
-    private func commit() {
-        guard draft != value else { return }
-        DeckKeychain.write(secret, value: draft)
-        value = draft
-        onCommit(secret)
-    }
-}
-
 private struct OpenBoxSettingsView: View {
     @Binding var settings: OpenBoxSettings
-    var onSecretCommitted: (DeckSecret) -> Void = { _ in }
+    @Binding var accountID: String?
+    let accounts: [CredentialAccount]
+    var onManage: () -> Void = {}
 
     var body: some View {
         Form {
             Section("Remote server (optional)") {
-                SecretField(title: "Token", secret: .openboxToken,
-                            value: $settings.token, onCommit: onSecretCommitted)
-                    .textContentType(.password)
-                TextField("Server URL (opencode serve, e.g. http://host:4096)", text: serverURLBinding)
-                Text("Empty URL = local opencode database. A configured URL works only with your own token pasted above.")
+                AccountPicker(kind: .opencode, accounts: accounts,
+                              accountID: $accountID, onManage: onManage)
+                Text("None = the local opencode database. Pick an account with a server URL to read a remote one instead.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                FetchStatusCaption(source: .opencodeRemote, clearOn: "\(settings.serverURL ?? "")\u{0}\(settings.token)")
+                FetchStatusCaption(source: .opencodeRemote, clearOn: accountID ?? "")
             }
             Section("Chart") {
                 Toggle("Show 14-day chart", isOn: $settings.showChart)
@@ -1147,12 +1193,6 @@ private struct OpenBoxSettingsView: View {
         .padding(.top, 4)
     }
 
-    private var serverURLBinding: Binding<String> {
-        Binding(
-            get: { settings.serverURL ?? "" },
-            set: { settings.serverURL = $0.isEmpty ? nil : $0 }
-        )
-    }
 }
 
 private struct NetBoxSettingsView: View {
@@ -1474,7 +1514,8 @@ private struct FetchStatusCaption: View {
 
 private struct PRBoxSettingsView: View {
     @Binding var settings: PRBoxSettings
-    var onSecretCommitted: (DeckSecret) -> Void = { _ in }
+    let accounts: [CredentialAccount]
+    var onManage: () -> Void = {}
 
     /// Deck's first per-provider sub-tab. A segmented picker inside the Form
     /// keeps it native and keeps the window at its existing size, where a real
@@ -1526,43 +1567,41 @@ private struct PRBoxSettingsView: View {
 
     private var githubSection: some View {
         Section("GitHub") {
-            Toggle("Include GitHub", isOn: $settings.github.enabled)
-            SecretField(title: "Personal access token", secret: .prboxGitHubToken,
-                        value: $settings.github.token, onCommit: onSecretCommitted)
-                .textContentType(.password)
+            // The picker replaced the Include toggle: an account selected is
+            // this provider on, None is off. One control instead of two that
+            // could disagree.
+            AccountPicker(kind: .github, accounts: accounts,
+                          accountID: $settings.github.accountID, onManage: onManage)
             TextField("Scope (optional)", text: $settings.github.scope, prompt: Text("org:acme"))
             Text("Without a scope this searches every repository the token can see, which can reach years back into personal repos. The token is sent only to api.github.com over TLS.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             FetchStatusCaption(
                 source: .prboxGitHub,
-                clearOn: "\(settings.github.enabled)\u{0}\(settings.github.token)\u{0}\(settings.github.scope)"
+                clearOn: "\(settings.github.accountID ?? "")\u{0}\(settings.github.scope)"
             )
         }
     }
 
     private var azureSection: some View {
         Section("Azure DevOps") {
-            Toggle("Include Azure DevOps", isOn: $settings.azure.enabled)
-            TextField("Organization", text: $settings.azure.organization)
-            TextField("Project", text: $settings.azure.project)
-            SecretField(title: "Personal access token", secret: .prboxAzureToken,
-                        value: $settings.azure.token, onCommit: onSecretCommitted)
-                .textContentType(.password)
+            AccountPicker(kind: .azure, accounts: accounts,
+                          accountID: $settings.azure.accountID, onManage: onManage)
             Text("Shows pull requests created by, or awaiting review from, whoever owns the PAT \u{2014} not whoever is signed in to the browser. The token is sent only to dev.azure.com over TLS; a read-only PAT that can see Code is enough.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            FetchStatusCaption(
-                source: .prboxAzure,
-                clearOn: "\(settings.azure.enabled)\u{0}\(settings.azure.organization)\u{0}\(settings.azure.project)\u{0}\(settings.azure.token)"
-            )
+            FetchStatusCaption(source: .prboxAzure, clearOn: settings.azure.accountID ?? "")
         }
     }
 }
 
 private struct ShipBoxSettingsView: View {
     @Binding var settings: ShipBoxSettings
-    var onSecretCommitted: (DeckSecret) -> Void = { _ in }
+    @Binding var accountID: String?
+    let accounts: [CredentialAccount]
+    /// The resolved token, for the repo inventory the static pickers offer.
+    let token: String
+    var onManage: () -> Void = {}
 
     /// The repos the token can see, fetched when the tab appears. Never
     /// persisted and never read by the agent — it exists only to fill the
@@ -1579,19 +1618,18 @@ private struct ShipBoxSettingsView: View {
 
     var body: some View {
         Form {
-            // The token comes first because both modes need it and the static
-            // picker cannot offer a single repo without it — a tab of five
-            // empty dropdowns above the field that fills them reads as broken.
+            // The account comes first because both modes need it and the
+            // static picker cannot offer a single repo without a token — a tab
+            // of five empty dropdowns above nothing reads as broken.
             Section("GitHub") {
-                SecretField(title: "GitHub token", secret: .shipboxToken,
-                            value: $settings.token, onCommit: onSecretCommitted)
-                    .textContentType(.password)
+                AccountPicker(kind: .github, accounts: accounts,
+                              accountID: $accountID, onManage: onManage)
                 Text("Required. The token is sent only to api.github.com over TLS; a token that can read Actions is enough.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 FetchStatusCaption(
                     source: .shipbox,
-                    clearOn: "\(settings.repoMode.rawValue)\u{0}\(settings.repos.joined(separator: ","))\u{0}\(settings.token)"
+                    clearOn: "\(settings.repoMode.rawValue)\u{0}\(settings.repos.joined(separator: ","))\u{0}\(accountID ?? "")"
                 )
             }
 
@@ -1623,7 +1661,7 @@ private struct ShipBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
-        .task(id: settings.token) { await loadInventory() }
+        .task(id: token) { await loadInventory() }
     }
 
     private var dynamicSection: some View {
@@ -1659,8 +1697,8 @@ private struct ShipBoxSettingsView: View {
     /// Says why the pickers are empty, since an empty dropdown explains
     /// nothing on its own.
     private var staticCaption: String {
-        if settings.token.isEmpty {
-            return "Add a token above to load the repos you can pick from."
+        if token.isEmpty {
+            return "Pick an account above to load the repos you can choose from."
         }
         switch inventoryState {
         case .idle, .loading:
@@ -1694,14 +1732,14 @@ private struct ShipBoxSettingsView: View {
     }
 
     private func loadInventory() async {
-        guard !settings.token.isEmpty else {
+        guard !token.isEmpty else {
             inventory = []
             inventoryState = .idle
             return
         }
         inventoryState = .loading
         do {
-            inventory = try await HostGitHubLoader.repoInventory(token: settings.token)
+            inventory = try await HostGitHubLoader.repoInventory(token: token)
             inventoryState = .loaded
         } catch {
             inventory = []
@@ -1712,26 +1750,22 @@ private struct ShipBoxSettingsView: View {
 
 private struct TaskBoxSettingsView: View {
     @Binding var settings: TaskBoxSettings
-    var onSecretCommitted: (DeckSecret) -> Void = { _ in }
+    @Binding var accountID: String?
+    let accounts: [CredentialAccount]
+    var onManage: () -> Void = {}
 
     var body: some View {
         Form {
             Section("Azure DevOps") {
-                TextField("Organization", text: $settings.organization)
-                TextField("Project", text: $settings.project)
-                SecretField(title: "Personal access token", secret: .taskboxToken,
-                            value: $settings.token, onCommit: onSecretCommitted)
-                    .textContentType(.password)
-                Text("Empty organization, project or token = the widget shows no data. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
+                AccountPicker(kind: .azure, accounts: accounts,
+                              accountID: $accountID, onManage: onManage)
+                Text("The account carries the organization, project and PAT. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Shows open work items assigned to whoever owns the PAT \u{2014} not whoever is signed in to the browser or the az CLI \u{2014} in the project above only.")
+                Text("Shows open work items assigned to whoever owns the PAT \u{2014} not whoever is signed in to the browser or the az CLI \u{2014} in that account's project only.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                FetchStatusCaption(
-                    source: .taskbox,
-                    clearOn: "\(settings.organization)\u{0}\(settings.project)\u{0}\(settings.token)"
-                )
+                FetchStatusCaption(source: .taskbox, clearOn: accountID ?? "")
             }
             Section("Tasks") {
                 Toggle("Show lane legend", isOn: $settings.showLegend)
