@@ -1082,14 +1082,14 @@ private struct CredentialsSettingsView: View {
     @State private var confirmingDelete = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            navigationBar
+        Group {
             if let account = editing.flatMap(account) {
                 detail(account)
             } else {
                 list
             }
         }
+        .toolbar { navigationToolbarItem }
         .sheet(isPresented: $adding) {
             AddAccountSheet(
                 onPick: { kind in
@@ -1105,14 +1105,19 @@ private struct CredentialsSettingsView: View {
         settings.credentials.accounts.first { $0.id == id }
     }
 
-    /// Back and Forward as one joined control, the way System Settings draws
-    /// it. `ControlGroup` is what gives the shared border and the divider; two
-    /// separate bordered buttons read as two buttons.
+    /// Back and Forward as one joined control, in the **window toolbar** beside
+    /// the title, the way System Settings places it.
     ///
-    /// Shown on the list as well as the detail page — always in the same place,
-    /// so navigating never shifts the rest of the pane under the pointer.
-    private var navigationBar: some View {
-        HStack(spacing: 8) {
+    /// `ControlGroup` is what gives the shared border and the divider; two
+    /// separate bordered buttons read as two buttons. A `.toolbar` on a view
+    /// inside the split view's detail column merges into the window's toolbar,
+    /// so this appears only while the Credentials tab is showing.
+    ///
+    /// Just the control — the window title stays "Deck". Which account you are
+    /// looking at is already named by the header inside the page.
+    @ToolbarContentBuilder
+    private var navigationToolbarItem: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
             ControlGroup {
                 Button {
                     goBack()
@@ -1132,14 +1137,7 @@ private struct CredentialsSettingsView: View {
             }
             .controlGroupStyle(.navigation)
             .fixedSize()
-
-            Text(editing.flatMap(account).map(title) ?? "Credentials")
-                .font(.headline)
-            Spacer()
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 4)
     }
 
     private var canGoForward: Bool {
@@ -1161,10 +1159,6 @@ private struct CredentialsSettingsView: View {
     private func open(_ id: String) {
         editing = id
         forwardTarget = nil
-    }
-
-    private func title(_ account: CredentialAccount) -> String {
-        account.label.isEmpty ? account.kind.displayName : account.label
     }
 
     // MARK: - List
@@ -1192,6 +1186,7 @@ private struct CredentialsSettingsView: View {
                 }
             }
             .formStyle(.grouped)
+            .padding(.top, 4)
 
             HStack {
                 Spacer()
@@ -1293,6 +1288,7 @@ private struct CredentialsSettingsView: View {
                 }
             }
             .formStyle(.grouped)
+            .padding(.top, 4)
 
             HStack {
                 Button("Delete Account\u{2026}", role: .destructive) { confirmingDelete = true }
