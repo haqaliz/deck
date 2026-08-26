@@ -1177,7 +1177,10 @@ private struct CredentialsSettingsView: View {
                         Button(verifying.contains(account.id) ? "Verifying\u{2026}" : "Verify\u{2026}") {
                             verify(account.id)
                         }
-                        .disabled(verifying.contains(account.id) || account.token.isEmpty)
+                        .disabled(
+                            verifying.contains(account.id)
+                                || CredentialsCopy.verifyHint(for: account) != nil
+                        )
                     }
                     .padding(.vertical, 2)
                     caption(for: account)
@@ -1252,6 +1255,12 @@ private struct CredentialsSettingsView: View {
             Text(failure)
                 .font(.caption)
                 .foregroundStyle(.red)
+        } else if let hint = CredentialsCopy.verifyHint(for: account) {
+            // Not red: an account still being filled in is unfinished, not
+            // broken. It names the field, and the field really is below.
+            Text(hint)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         } else if account.verifiedIdentity != nil {
             Text(CredentialsCopy.verification(for: account))
                 .font(.caption)
@@ -1329,7 +1338,7 @@ private struct CredentialsSettingsView: View {
     private static func message(for error: Error) -> String {
         switch error {
         case CredentialVerifier.VerifyError.notConfigured:
-            return "Fill in the fields above first."
+            return "This account is missing something Verify needs."
         case CredentialVerifier.VerifyError.serverError(let code) where code == 401 || code == 403:
             return "\(code) \u{2014} the token was rejected, or it lacks the scopes this needs."
         case CredentialVerifier.VerifyError.serverError(let code):

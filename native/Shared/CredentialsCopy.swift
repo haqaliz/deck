@@ -101,6 +101,40 @@ enum CredentialsCopy {
         return "\(names) \(verb) it and will stop fetching until you pick another account. \(removal)"
     }
 
+    /// What Verify still needs before it can run, or nil when it can.
+    ///
+    /// Names the actual field. The first version of this said "Fill in the
+    /// fields above first", which named nothing and pointed the wrong way —
+    /// the caption sits above the fields it is talking about.
+    static func verifyHint(for account: CredentialAccount) -> String? {
+        let missing = missingForVerification(account)
+        guard !missing.isEmpty else { return nil }
+        return "Add \(list(missing)) below to verify this account."
+    }
+
+    /// The fields this account's provider needs before a probe can be made.
+    ///
+    /// An Azure **project** is deliberately not one of them: `connectionData`
+    /// is an organization-level endpoint, and the project only matters once
+    /// TaskBox or PRBox actually queries.
+    static func missingForVerification(_ account: CredentialAccount) -> [String] {
+        var missing: [String] = []
+        switch account.kind {
+        case .opencode:
+            if account.serverURL.trimmingCharacters(in: .whitespaces).isEmpty {
+                missing.append("a server URL")
+            }
+        case .azure:
+            if account.organization.trimmingCharacters(in: .whitespaces).isEmpty {
+                missing.append("an organization")
+            }
+        case .github:
+            break
+        }
+        if account.token.isEmpty { missing.append("a token") }
+        return missing
+    }
+
     /// The per-account verification caption.
     static func verification(for account: CredentialAccount) -> String {
         guard let identity = account.verifiedIdentity, !identity.isEmpty else { return "Not verified" }

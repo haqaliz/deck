@@ -160,6 +160,71 @@ final class CredentialsCopyTests: XCTestCase {
         )
     }
 
+    // MARK: - What Verify still needs
+
+    func testAnAccountWithEverythingItNeedsIsReadyToVerify() {
+        var a = account(.github)
+        a.token = "t"
+        XCTAssertNil(CredentialsCopy.verifyHint(for: a))
+
+        var o = account(.opencode)
+        o.token = "t"
+        o.serverURL = "http://nuc:4096"
+        XCTAssertNil(CredentialsCopy.verifyHint(for: o))
+
+        var z = account(.azure)
+        z.token = "t"
+        z.organization = "acme"
+        XCTAssertNil(CredentialsCopy.verifyHint(for: z))
+    }
+
+    func testAnOpencodeAccountWithNoServerSaysWhichFieldIsMissing() {
+        // The real report: a migrated OpenBox token with no server URL said
+        // "Fill in the fields above first", which named no field and pointed
+        // the wrong way -- the fields are below the caption.
+        var a = account(.opencode)
+        a.token = "t"
+
+        XCTAssertEqual(
+            CredentialsCopy.verifyHint(for: a),
+            "Add a server URL below to verify this account."
+        )
+    }
+
+    func testAnAzureAccountWithNoOrganizationSaysSo() {
+        var a = account(.azure)
+        a.token = "t"
+
+        XCTAssertEqual(
+            CredentialsCopy.verifyHint(for: a),
+            "Add an organization below to verify this account."
+        )
+    }
+
+    func testAGitHubAccountWithNoTokenAsksForOne() {
+        XCTAssertEqual(
+            CredentialsCopy.verifyHint(for: account(.github)),
+            "Add a token below to verify this account."
+        )
+    }
+
+    func testTwoMissingFieldsAreBothNamed() {
+        XCTAssertEqual(
+            CredentialsCopy.verifyHint(for: account(.opencode)),
+            "Add a server URL and a token below to verify this account."
+        )
+    }
+
+    func testAProjectIsNotNeededToVerifyAnAzureAccount() {
+        // connectionData is an organization-level endpoint; the project only
+        // matters once TaskBox or PRBox actually queries.
+        var a = account(.azure)
+        a.token = "t"
+        a.organization = "acme"
+
+        XCTAssertNil(CredentialsCopy.verifyHint(for: a))
+    }
+
     // MARK: - Verification captions
 
     func testAnUnverifiedAccountSaysSoWithoutSoundingBroken() {
