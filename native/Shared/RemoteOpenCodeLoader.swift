@@ -126,22 +126,22 @@ enum RemoteOpenCodeAggregator {
         let model: RemoteModel?
     }
 
-    struct RemoteCache: Codable {
+    struct RemoteCache: Codable, Equatable {
         let read: Double
         let write: Double
     }
 
-    struct RemoteTokens: Codable {
+    struct RemoteTokens: Codable, Equatable {
         let input: Double
         let output: Double
         let cache: RemoteCache
     }
 
-    struct RemoteMessageTime: Codable {
+    struct RemoteMessageTime: Codable, Equatable {
         let created: Double
     }
 
-    struct RemoteMessage: Codable {
+    struct RemoteMessage: Codable, Equatable {
         let id: String
         let sessionID: String
         let role: String
