@@ -13,9 +13,9 @@
 	<key>CFBundleName</key>
 	<string>DeckAgent</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.32</string>
+	<string>1.33</string>
 	<key>CFBundleVersion</key>
-	<string>32</string>
+	<string>33</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Deck reads your calendar to show your next event in the CalBox widget.</string>
 </dict>
