@@ -201,9 +201,10 @@ struct ContentView: View {
             switch gate(.openbox) {
             case .fetch(let credential):
                 do {
-                    snapshot = try await RemoteOpenCodeLoader.load(
-                        serverURL: credential.serverURL, token: credential.token
+                    let (remote, _) = try await RemoteOpenCodeLoader.load(
+                        serverURL: credential.serverURL, token: credential.token, state: nil
                     )
+                    snapshot = remote
                     FetchStatusStore.record(.ok, for: .opencodeRemote)
                 } catch {
                     snapshot = nil

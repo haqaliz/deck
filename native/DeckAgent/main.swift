@@ -65,9 +65,10 @@ Task {
         switch credentialGates[.openbox] {
         case .fetch(let credential):
             do {
-                opencode = try await RemoteOpenCodeLoader.load(
-                    serverURL: credential.serverURL, token: credential.token
+                let (remote, _) = try await RemoteOpenCodeLoader.load(
+                    serverURL: credential.serverURL, token: credential.token, state: nil
                 )
+                opencode = remote
                 FetchStatusStore.record(.ok, for: .opencodeRemote)
             } catch {
                 opencode = nil

@@ -16,7 +16,16 @@ enum RemoteOpenCodeLoader {
         case transport(String)
     }
 
-    static func load(serverURL: String, token: String) async throws -> OpenCodeSnapshot {
+    /// Fetches and aggregates OpenBox metrics. In message mode (a server
+    /// without session-level usage) the fetch is incremental: the caller's
+    /// `state` (an agent-only sidecar, see RemoteOpenCodeSync) decides which
+    /// sessions to skip entirely, and only pages newer than each session's
+    /// watermark are fetched. Returns the snapshot and the state to persist —
+    /// persisted only on success, by the caller.
+    static func load(
+        serverURL: String, token: String,
+        state: RemoteOpenCodeSync.State?
+    ) async throws -> (OpenCodeSnapshot, RemoteOpenCodeSync.State?) {
         let base = try normalizedBase(serverURL)
         let auth = "Basic " + Data("opencode:\(token)".utf8).base64EncodedString()
 
@@ -25,17 +34,57 @@ enum RemoteOpenCodeLoader {
         let sessionCutoff = now.timeIntervalSince1970 * 1000 - 14 * 86_400 * 1000
 
         if sessions.contains(where: { $0.cost != nil || $0.tokens != nil }) {
-            return RemoteOpenCodeAggregator.aggregate(sessions: sessions, now: now)
+            // Session-level usage: the cheap path, one request, no archive.
+            // The state passes through untouched so the sidecar survives a
+            // server that flips between the two modes.
+            return (RemoteOpenCodeAggregator.aggregate(sessions: sessions, now: now), state)
         }
 
-        var messages: [RemoteOpenCodeAggregator.RemoteMessage] = []
-        for remoteSession in sessions where remoteSession.time.updated >= sessionCutoff {
-            let envelopes: [RemoteMessageEnvelope] = try await get(
-                base, auth, path: "/session/\(remoteSession.id)/message"
-            )
-            messages.append(contentsOf: envelopes.map(\.info))
+        let activeSessionIDs = Set(sessions.filter { $0.time.updated >= sessionCutoff }.map(\.id))
+        let effectiveState = RemoteOpenCodeSync.validated(state, for: base.absoluteString)
+        let plans = RemoteOpenCodeSync.plan(state: effectiveState, sessions: sessions, now: now)
+        var syncState = effectiveState ?? RemoteOpenCodeSync.State.new(server: base.absoluteString)
+
+        for session in sessions {
+            guard let plan = plans[session.id], plan != .skip else { continue }
+
+            if plan == .fullFetch {
+                // First tick / new session / capability fallback: one request
+                // for the whole history — today's behavior for that session.
+                let (page, _) = try await messages(base, auth, sessionID: session.id, limit: nil, before: nil)
+                syncState = RemoteOpenCodeSync.merge(
+                    state: syncState, sessionID: session.id, updated: session.time.updated,
+                    page: page, pageWasLimited: false, previousPageIDs: nil, hasNextCursor: false
+                ).state
+            } else {
+                // Page newest-first, following `before` cursors until merge
+                // says we have caught up with the watermark.
+                var previousIDs: Set<String>?
+                var cursor: String?
+                var needMore = true
+                while needMore {
+                    let (page, nextCursor) = try await messages(
+                        base, auth, sessionID: session.id,
+                        limit: RemoteOpenCodeSync.pageLimit, before: cursor
+                    )
+                    let result = RemoteOpenCodeSync.merge(
+                        state: syncState, sessionID: session.id, updated: session.time.updated,
+                        page: page, pageWasLimited: true,
+                        previousPageIDs: previousIDs, hasNextCursor: nextCursor != nil
+                    )
+                    syncState = result.state
+                    needMore = result.needMore
+                    previousIDs = Set(page.map(\.id))
+                    cursor = nextCursor
+                }
+            }
         }
-        return RemoteOpenCodeAggregator.aggregate(sessions: sessions, messages: messages, now: now)
+
+        syncState = RemoteOpenCodeSync.prune(state: syncState, sessionIDs: activeSessionIDs, now: now)
+        let snapshot = RemoteOpenCodeAggregator.aggregate(
+            sessions: sessions, messages: syncState.messages, now: now
+        )
+        return (snapshot, syncState)
     }
 
     /// A cheap "does this work?" probe, for the Credentials tab's Verify.
@@ -55,12 +104,6 @@ enum RemoteOpenCodeLoader {
         return sessions.count
     }
 
-    // MARK: - Server JSON shapes
-
-    private struct RemoteMessageEnvelope: Codable {
-        let info: RemoteOpenCodeAggregator.RemoteMessage
-    }
-
     // MARK: - Transport
 
     private static func normalizedBase(_ raw: String) throws -> URL {
@@ -71,7 +114,44 @@ enum RemoteOpenCodeLoader {
     }
 
     private static func get<T: Decodable>(_ base: URL, _ auth: String, path: String) async throws -> T {
-        guard let url = URL(string: base.absoluteString + path) else {
+        let (data, response) = try await getData(base, auth, path: path, queryItems: nil)
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            throw RemoteError.transport("Invalid JSON: \(error.localizedDescription)")
+        }
+    }
+
+    private static func messages(
+        _ base: URL, _ auth: String, sessionID: String, limit: Int?, before: String?
+    ) async throws -> (page: [RemoteOpenCodeAggregator.RemoteMessage], nextCursor: String?) {
+        var queryItems: [URLQueryItem] = []
+        if let limit {
+            queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
+        }
+        if let before {
+            queryItems.append(URLQueryItem(name: "before", value: before))
+        }
+        let (data, response) = try await getData(
+            base, auth, path: "/session/\(sessionID)/message", queryItems: queryItems
+        )
+        let page: [RemoteOpenCodeAggregator.RemoteMessage]
+        do {
+            page = try RemoteOpenCodeSync.decodeMessages(data)
+        } catch {
+            throw RemoteError.transport("Invalid JSON: \(error.localizedDescription)")
+        }
+        return (page, response.value(forHTTPHeaderField: "X-Next-Cursor"))
+    }
+
+    private static func getData(
+        _ base: URL, _ auth: String, path: String, queryItems: [URLQueryItem]?
+    ) async throws -> (Data, HTTPURLResponse) {
+        guard var components = URLComponents(string: base.absoluteString + path) else {
+            throw RemoteError.invalidURL
+        }
+        components.queryItems = queryItems
+        guard let url = components.url else {
             throw RemoteError.invalidURL
         }
         var request = URLRequest(url: url)
@@ -89,11 +169,7 @@ enum RemoteOpenCodeLoader {
         }
         switch http.statusCode {
         case 200:
-            do {
-                return try JSONDecoder().decode(T.self, from: data)
-            } catch {
-                throw RemoteError.transport("Invalid JSON: \(error.localizedDescription)")
-            }
+            return (data, http)
         case 401, 403:
             throw RemoteError.unauthorized
         default:
