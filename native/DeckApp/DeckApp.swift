@@ -444,6 +444,7 @@ struct ContentView: View {
 
     /// The "Refresh in background" toggle changed: on registers, off unregisters.
     private func registerAgents() {
+        legacyCleanup()
         do {
             try AgentService.registerAll()
             agentError = nil
@@ -462,7 +463,9 @@ struct ContentView: View {
     /// Boot out and delete the pre-SMAppService agents. One-release courtesy
     /// for installs upgraded from ≤1.32: the legacy jobs share labels with the
     /// SMAppService registration, so a stale bootstrap would collide with it.
-    /// Must run before registering.
+    /// Must run before registering — and must finish before registering, hence
+    /// `waitUntilExit`: a fire-and-forget bootout can race the registration
+    /// and the label collision would reject the new job.
     private func legacyCleanup() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         for label in ["com.deck.agent", "com.deck.agent.processes"] {
@@ -470,6 +473,7 @@ struct ContentView: View {
             process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
             process.arguments = ["bootout", "gui/\(getuid())/\(label)"]
             try? process.run()
+            process.waitUntilExit()
             try? FileManager.default.removeItem(
                 at: home.appendingPathComponent("Library/LaunchAgents/\(label).plist")
             )
