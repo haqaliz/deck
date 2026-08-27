@@ -293,8 +293,24 @@ Deferred behind the new widgets by decision on 2026-08-22.
       **Open follow-ups:** inventory pagination past 100 repos, caching the
       discovered set across ticks (~16 MB/hr instead of ~22), per-repo fair
       share so a busy repo cannot crowd out a quiet one.
-- [ ] **OpenBox remote incremental sync** — `limit`-based sync instead of a full
-      resync each tick (`docs/planning/openbox-remote/prd.md:105`).
+- [x] **OpenBox remote incremental sync** — `limit`-based sync instead of a full
+      resync each tick (`docs/planning/openbox-remote/prd.md:105`). Shipped
+      2026-08-27 (`docs/planning/openbox-remote-incremental-sync/`).
+      The agent carries a per-session watermark + a parts-free 13-day message
+      archive in an agent-only sidecar (`opencode-cursor.json`): idle ticks are
+      one `GET /session` and zero message fetches (per-session `time.updated`
+      skip), changed sessions page `limit=100` + `before` cursors newest-first
+      until caught up, and the existing aggregator rebuilds the snapshot from
+      archive + new messages — all decisions pure and unit-pinned
+      (`RemoteOpenCodeSync`, `DeckSharedTests`). Servers that ignore `limit`
+      or `before` are detected on the fly (over-full page / identical page)
+      and fall back to today's behavior, so no live probe was needed. In
+      passing, the loader now decodes both `/session/{id}/message` shapes —
+      the `[{info, parts}]` envelopes it was built against and the flat
+      `[...info, parts]` arrays current servers serve. Dormant on the dev
+      machine until an opencode account carries a `serverURL` (both are empty
+      today); the first tick after upgrade does one full resync, then
+      incremental forever after.
 - [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic
       (`docs/planning/devbox/prd.md:106`).
 

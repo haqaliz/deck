@@ -65,9 +65,17 @@ Task {
         switch credentialGates[.openbox] {
         case .fetch(let credential):
             do {
-                opencode = try await RemoteOpenCodeLoader.load(
-                    serverURL: credential.serverURL, token: credential.token
+                let state = OpenCodeSyncStore.load()
+                let (remote, newState) = try await RemoteOpenCodeLoader.load(
+                    serverURL: credential.serverURL, token: credential.token, state: state
                 )
+                opencode = remote
+                // Persist the incremental cursor only when it changed — an
+                // idle tick writes nothing. Failure above leaves the old file
+                // in place; the next tick's overlapping merge is idempotent.
+                if let newState, newState != state {
+                    OpenCodeSyncStore.save(newState)
+                }
                 FetchStatusStore.record(.ok, for: .opencodeRemote)
             } catch {
                 opencode = nil
