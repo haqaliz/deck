@@ -484,10 +484,10 @@ in CI, the verification gates, and what the identity change resets.
       `SMAppService.agent(plistName:)` from plists sealed in the signed bundle,
       addressing the embedded DeckAgent with a move-proof `BundleProgram`
       (relative to the bundle). Behavior changes that shipped with it:
-      - The "Refresh in background" toggle is now authoritative and mirrors
-        reality: relaunching Deck no longer reinstalls agents the user switched
-        off, and a toggle flipped in System Settings → Login Items is adopted
-        (never fought) on the next launch.
+      - The "Refresh in background" toggle is now authoritative: relaunching
+        Deck no longer reinstalls agents the user switched off. Deck never
+        fights a choice made in System Settings → Login Items; what it does
+        about one depends on the direction (see the correction below).
       - The fast agent's plist pins StartInterval at the 5s minimum of the
         setting range; the agent self-throttles to the configured
         `processRefreshInterval` (pure policy, unit-pinned), and the processes
@@ -507,12 +507,36 @@ in CI, the verification gates, and what the identity change resets.
       registration record survives (status stays `.enabled`, reconcile does
       nothing) and smd does not reload it spontaneously; recovery is a
       toggle-off/on cycle (unregister + re-register) or the next login.
-      Verified before merge: unit suite (throttle + reconcile tables), Release
-      build, live registration and pumping on the dev machine, legacy plist
-      migration, soak (400 runs / 50 overlaps / 0 failures). **Not** verified:
-      the in-app toggle off→on cycle and the System Settings disable→relaunch
-      mirror — both need the settings window driven by hand, and both were
-      merged unexercised.
+      Both hand-driven checks were run after v1.33 shipped, through the
+      accessibility API. The in-app toggle off→on cycle passed: off writes
+      `agentAtLogin = false`, on re-registers both agents
+      (`managed_by = com.apple.xpc.ServiceManagement`), and `processes.json`
+      then rewrites ~20s apart on the 5s launchd tick with a 15s setting —
+      throttled, and written every time.
+
+      The System Settings disable→relaunch check **failed**, and v1.33 shipped
+      with the gap. A user veto in Login Items does not produce
+      `.notRegistered`, which is what the policy's adopt-the-drift row was
+      written for; it produces `.requiresApproval` (confirmed by logging
+      `SMAppService.status.rawValue` from the app: `2`). `sfltool dumpbtm`
+      shows why — the BTM record carries two independent axes, and the veto
+      leaves it `[enabled, disallowed]`: Deck's registration stands, the user's
+      permission does not. `.notRegistered` is only reachable when Deck itself
+      never registered or unregistered. Deck therefore kept its toggle on
+      while nothing ran, silently.
+- [x] **Agents blocked in Login Items are reported, not fought** — follow-up to
+      the above. `(true, .requiresApproval)` now returns `.reportBlocked` and
+      the General tab shows "Turned off in System Settings → Login Items.
+      Deck's agents are not running." under the toggle. Neither side is
+      rewritten, because the same OS state also means "registered, awaiting
+      first approval" on a fresh install — flipping the toggle off there would
+      undo a setting the user never touched. Verified end to end on the
+      installed copy: veto → relaunch → notice shown, toggle still on; re-allow
+      → relaunch → notice gone (status back to `1`).
+
+      One trap found while testing it: **replacing the app bundle resets the
+      veto to `[enabled, allowed]`**, so a disable/reinstall/relaunch sequence
+      tests nothing. Install first, then disable, then relaunch.
 - [ ] **Sparkle auto-update.** Pointless before notarization (the update would
       be Gatekeeper-blocked too), necessary immediately after.
 - [ ] **Landing page** for the launch URL.

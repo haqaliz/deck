@@ -72,11 +72,24 @@ final class AgentReconcilePolicyTests: XCTestCase {
         )
     }
 
-    func testIntentOnAndRequiresApprovalDoesNothing() {
+    /// A user veto in System Settings → Login Items lands here, not on
+    /// `.notRegistered` — the BTM record reads `[enabled, disallowed]`, so
+    /// Deck's registration survives the veto. Neither side is rewritten: the
+    /// toggle stays as the user set it and the app reports the drift.
+    func testIntentOnAndRequiresApprovalReportsBlocked() {
         XCTAssertEqual(
             AgentReconcilePolicy.resolve(intent: true, state: .requiresApproval),
-            []
+            [.reportBlocked]
         )
+    }
+
+    /// The report is the *only* thing that happens — it must not drag the
+    /// toggle off with it, because the same state means "registered, not yet
+    /// approved" on a fresh install.
+    func testRequiresApprovalNeverAdoptsIntent() {
+        let actions = AgentReconcilePolicy.resolve(intent: true, state: .requiresApproval)
+        XCTAssertFalse(actions.contains { if case .adoptIntent = $0 { return true } else { return false } })
+        XCTAssertFalse(actions.contains(.register))
     }
 
     func testIntentOnAndNotFoundRegisters() {

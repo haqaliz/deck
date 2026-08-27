@@ -73,6 +73,7 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
 struct ContentView: View {
     @State private var settings = DeckSettings.load()
     @State private var agentError: String?
+    @State private var agentNotice: String?
     /// Accounts the keychain refused to hand over this launch — a locked
     /// login keychain, most likely. Kept apart from "never set", which is a
     /// different message and a different field to fix.
@@ -104,6 +105,7 @@ struct ContentView: View {
             case .general: GeneralSettingsView(
                 agentAtLogin: $settings.agentAtLogin,
                 agentError: agentError,
+                agentNotice: agentNotice,
                 onRemoveAgents: uninstallAgents,
                 onEraseData: eraseDeckData
             )
@@ -420,6 +422,7 @@ struct ContentView: View {
             attributes: [.posixPermissions: NSNumber(value: 0o700)]
         )
         var registrationError: String?
+        var blocked = false
         for agent in AgentService.all {
             for action in AgentReconcilePolicy.resolve(intent: settings.agentAtLogin, state: agent.state) {
                 switch action {
@@ -434,13 +437,24 @@ struct ContentView: View {
                         settings.agentAtLogin = on
                         settings.save()
                     }
+                case .reportBlocked:
+                    blocked = true
                 case .unregister:
                     break // The policy never unregisters; the toggle handler does.
                 }
             }
         }
         agentError = registrationError
+        agentNotice = blocked ? Self.agentsBlockedNotice : nil
     }
+
+    /// Shown when the agents are registered but the user has switched Deck off
+    /// under System Settings → General → Login Items. Deck does not flip its
+    /// own toggle back — the veto is the user's, and the same OS state also
+    /// means "registered, awaiting first approval".
+    static let agentsBlockedNotice =
+        "Turned off in System Settings → Login Items. Deck's agents are not running."
+
 
     /// The "Refresh in background" toggle changed: on registers, off unregisters.
     private func registerAgents() {
@@ -448,6 +462,9 @@ struct ContentView: View {
         do {
             try AgentService.registerAll()
             agentError = nil
+            agentNotice = AgentService.all.contains { $0.state == .requiresApproval }
+                ? Self.agentsBlockedNotice
+                : nil
         } catch {
             agentError = "Could not register the background agents: \(error.localizedDescription)"
         }
@@ -458,6 +475,9 @@ struct ContentView: View {
     private func removeAgents() {
         AgentService.unregisterAll()
         legacyCleanup()
+        // Nothing is registered any more, so a "blocked in System Settings"
+        // notice would be stale the moment it is read.
+        agentNotice = nil
     }
 
     /// Boot out and delete the pre-SMAppService agents. One-release courtesy
@@ -656,6 +676,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
 private struct GeneralSettingsView: View {
     @Binding var agentAtLogin: Bool
     var agentError: String?
+    var agentNotice: String?
     var onRemoveAgents: () -> Void
     var onEraseData: () -> Void
 
@@ -673,6 +694,11 @@ private struct GeneralSettingsView: View {
                     Text(agentError)
                         .font(.caption)
                         .foregroundStyle(.red)
+                }
+                if let agentNotice {
+                    Label(agentNotice, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                 }
             }
 
