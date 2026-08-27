@@ -361,6 +361,23 @@ Do not delete the container; see the trap below.
   Never describe keychain storage in Deck as protecting a token from other
   local processes; it protects it from being *in a file that gets copied*.
 
+- **A user veto in Login Items is `.requiresApproval`, not `.notRegistered`,
+  and reinstalling erases it.** Measured 2026-08-27 by logging
+  `SMAppService.status.rawValue` from the app. Switching Deck off under System
+  Settings → General → Login Items leaves the BTM record
+  `[enabled, disallowed]` (`sfltool dumpbtm`) — two independent axes, where
+  `enabled` is Deck's registration and `disallowed` is the user's permission —
+  and `status` reports `.requiresApproval` (raw `2`). `.notRegistered` is only
+  reachable when Deck itself never registered or called `unregister`, so a
+  reconcile policy that keys "the user turned us off" on `.notRegistered`
+  never fires and the app silently claims background refresh is on while
+  nothing runs (shipped that way in v1.33). The state is indistinguishable
+  from "registered, awaiting first approval" on a fresh install, so Deck
+  reports it in the General tab rather than rewriting either side. Two further
+  traps when testing this: **replacing the app bundle resets the veto to
+  `[enabled, allowed]`**, so disable-then-reinstall tests nothing (install
+  first, then disable, then relaunch); and replacing the bundle also takes the
+  running jobs down without reloading them, same as a `bootout`.
 - **`build.noindex` does not prevent LaunchServices pollution.** The `.noindex`
   suffix only hides the directory from Spotlight; xcodebuild still runs an
   explicit `RegisterWithLaunchServices` phase that registers the dev copy. Run

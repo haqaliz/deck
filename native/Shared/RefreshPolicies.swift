@@ -31,22 +31,36 @@ enum AgentAction: Equatable {
     case register
     case unregister
     case adoptIntent(Bool)
+    /// The user vetoed the agents in System Settings → Login Items while
+    /// Deck's own toggle is on. Say so; do not rewrite either side.
+    case reportBlocked
 }
 
 /// What launch-time reconciliation should do about the background agents.
 ///
 /// The policy only governs reconciliation: it never unregisters, because
-/// unregistering is the toggle handler's direct action. It mirrors reality in
-/// both directions — a user who disabled the agent in System Settings →
-/// Login Items is never fought, and one who enabled it there has their toggle
-/// flipped back on. `.notFound` is the fresh-install state (the plist is in
-/// the bundle, so registering is ours to try); `.notRegistered` is the
-/// disabled-by-the-user state.
+/// unregistering is the toggle handler's direct action. It never fights the
+/// user: a veto in System Settings is reported, not overridden, and someone
+/// who enabled the agents there has their toggle flipped back on.
+/// `.notFound` is the fresh-install state (the plist is in the bundle, so
+/// registering is ours to try).
+///
+/// `.requiresApproval` is what a user veto in System Settings → Login Items
+/// actually produces — measured 2026-08-27, `sfltool dumpbtm` shows the record
+/// as `[enabled, disallowed]`: Deck's registration stands, the user's
+/// permission does not. It is also the state of a fresh registration nobody
+/// has approved yet, so the two are indistinguishable here and neither side
+/// gets rewritten — the app reports the drift and leaves it to the user.
+/// `.notRegistered` is therefore only reachable when Deck itself never
+/// registered or called `unregister`, not from anything the user does in
+/// System Settings.
 enum AgentReconcilePolicy {
     static func resolve(intent: Bool, state: AgentRegistrationState) -> [AgentAction] {
         switch (intent, state) {
-        case (true, .enabled), (true, .requiresApproval):
+        case (true, .enabled):
             return []
+        case (true, .requiresApproval):
+            return [.reportBlocked]
         case (true, .notFound):
             return [.register]
         case (true, .notRegistered):
