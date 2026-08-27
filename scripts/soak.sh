@@ -5,8 +5,10 @@
 # docs/planning/crash-robustness-pass/runbook-24h.md.
 #
 # What it does:
-#   1. Boots out the two Deck LaunchAgents (com.deck.agent, com.deck.agent.processes)
-#      so the installed production agent cannot race the test surface.
+#   1. Isolates from the installed agents: pre-SMAppService installs have their
+#      two LaunchAgents in ~/Library/LaunchAgents, which the soak boots out and
+#      re-bootstraps; SMAppService-registered agents (plists in the signed
+#      bundle) are left running — the parse-only checks tolerate concurrency.
 #   2. Backs up the snapshot container and writes a throwaway settings fixture
 #      (fixed weather location; no ShipBox repo/token, no OpenBox server/token —
 #      those paths skip; weather may fail offline — that must be a skip, not a
@@ -16,7 +18,8 @@
 #      concurrent-writer race.
 #   4. After every run: exit code must be 0 and every *.json in the container
 #      must parse. At the end: no *.tmp.* leftovers.
-#   5. Restores the backups and re-bootstraps the agents (trap, so Ctrl-C is safe).
+#   5. Restores the backups and re-bootstraps the legacy agents (trap, so Ctrl-C
+#      is safe).
 #
 # Env: SOAK_FULL, SOAK_PROCESSES, SOAK_OVERLAPS to override the counts.
 
@@ -64,8 +67,17 @@ run_agent() {
 }
 
 # --- isolate from the installed agents + user data ------------------------------
-launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.deck.agent.plist" 2>/dev/null || true
-launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.deck.agent.processes.plist" 2>/dev/null || true
+# Two worlds: installs predating SMAppService keep their LaunchAgents in
+# ~/Library/LaunchAgents (boot out + re-bootstrap around the soak); installs
+# since then register the agents via SMAppService from the signed bundle, and
+# those jobs cannot be re-bootstrapped by this script — so the soak leaves
+# them running and relies on the parse-only checks tolerating concurrency
+# (atomic snapshot writes).
+LEGACY_PLIST="$HOME/Library/LaunchAgents/com.deck.agent.plist"
+if [[ -f "$LEGACY_PLIST" ]]; then
+  launchctl bootout "gui/$(id -u)" "$LEGACY_PLIST" 2>/dev/null || true
+  launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.deck.agent.processes.plist" 2>/dev/null || true
+fi
 
 BACKUP="$(mktemp -d)"
 if [[ -d "$CONTAINER" ]]; then
@@ -79,8 +91,12 @@ cleanup() {
     rm -rf "$CONTAINER"
     cp -a "$BACKUP/container" "$CONTAINER"
   fi
-  launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.deck.agent.plist" 2>/dev/null || true
-  launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.deck.agent.processes.plist" 2>/dev/null || true
+  if [[ -f "$LEGACY_PLIST" ]]; then
+    launchctl bootstrap "gui/$(id -u)" "$LEGACY_PLIST" 2>/dev/null || true
+    launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.deck.agent.processes.plist" 2>/dev/null || true
+  else
+    echo "soak: SMAppService agents were left running; nothing to restore"
+  fi
   rm -rf "$BACKUP"
 }
 trap cleanup EXIT INT TERM
