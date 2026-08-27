@@ -72,6 +72,7 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
 
 struct ContentView: View {
     @State private var settings = DeckSettings.load()
+    @State private var agentError: String?
     /// Accounts the keychain refused to hand over this launch — a locked
     /// login keychain, most likely. Kept apart from "never set", which is a
     /// different message and a different field to fix.
@@ -102,6 +103,7 @@ struct ContentView: View {
             switch selection {
             case .general: GeneralSettingsView(
                 agentAtLogin: $settings.agentAtLogin,
+                agentError: agentError,
                 onRemoveAgents: uninstallAgents,
                 onEraseData: eraseDeckData
             )
@@ -151,7 +153,7 @@ struct ContentView: View {
         .onAppear {
             DeckSettings.tightenPermissions()
             adoptKeychainSecrets()
-            installAgentIfNeeded()
+            reconcileAgents()
             Task { await refreshOpenCode() }
             refreshGitBox()
             refreshDevBox()
@@ -184,7 +186,6 @@ struct ContentView: View {
         }
         .onChange(of: settings) { _ in
             settings.save()
-            applyAgent()
             WidgetCenter.shared.reloadAllTimelines()
         }
         .onChange(of: settings.agentAtLogin) { _ in
@@ -400,24 +401,79 @@ struct ContentView: View {
     /// configured refresh interval.
     private func applyAgent() {
         if settings.agentAtLogin {
-            installAgentIfNeeded()
+            registerAgents()
         } else {
-            removeAgent()
+            removeAgents()
         }
     }
 
-    private var agentPlistURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/LaunchAgents/com.deck.agent.plist")
+    /// Launch-time reconciliation: make the actual registration match the
+    /// user's intent, and mirror reality back into the toggle when System
+    /// Settings is the one that changed. Never fights the user — a service the
+    /// user disabled in System Settings → Login Items stays off and flips the
+    /// toggle off; one they enabled there flips it back on.
+    private func reconcileAgents() {
+        legacyCleanup()
+        try? FileManager.default.createDirectory(
+            at: logDirectory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: NSNumber(value: 0o700)]
+        )
+        var registrationError: String?
+        for agent in AgentService.all {
+            for action in AgentReconcilePolicy.resolve(intent: settings.agentAtLogin, state: agent.state) {
+                switch action {
+                case .register:
+                    do {
+                        try agent.register()
+                    } catch {
+                        registrationError = "Could not register the background agents: \(error.localizedDescription)"
+                    }
+                case .adoptIntent(let on):
+                    if settings.agentAtLogin != on {
+                        settings.agentAtLogin = on
+                        settings.save()
+                    }
+                case .unregister:
+                    break // The policy never unregisters; the toggle handler does.
+                }
+            }
+        }
+        agentError = registrationError
     }
 
-    private var processAgentPlistURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/LaunchAgents/com.deck.agent.processes.plist")
+    /// The "Refresh in background" toggle changed: on registers, off unregisters.
+    private func registerAgents() {
+        do {
+            try AgentService.registerAll()
+            agentError = nil
+        } catch {
+            agentError = "Could not register the background agents: \(error.localizedDescription)"
+        }
     }
 
-    private var agentInterval: Int {
-        60
+    /// Unregister both SMAppService agents and remove any legacy
+    /// `~/Library/LaunchAgents` plists left by installs predating SMAppService.
+    private func removeAgents() {
+        AgentService.unregisterAll()
+        legacyCleanup()
+    }
+
+    /// Boot out and delete the pre-SMAppService agents. One-release courtesy
+    /// for installs upgraded from ≤1.32: the legacy jobs share labels with the
+    /// SMAppService registration, so a stale bootstrap would collide with it.
+    /// Must run before registering.
+    private func legacyCleanup() {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        for label in ["com.deck.agent", "com.deck.agent.processes"] {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+            process.arguments = ["bootout", "gui/\(getuid())/\(label)"]
+            try? process.run()
+            try? FileManager.default.removeItem(
+                at: home.appendingPathComponent("Library/LaunchAgents/\(label).plist")
+            )
+        }
     }
 
     /// Agent logs. Not `/tmp`: that directory is world-writable, so any local
@@ -428,104 +484,11 @@ struct ContentView: View {
             .appendingPathComponent("Library/Logs/Deck")
     }
 
-    private func installAgentIfNeeded() {
-        try? FileManager.default.createDirectory(
-            at: logDirectory,
-            withIntermediateDirectories: true,
-            attributes: [.posixPermissions: NSNumber(value: 0o700)]
-        )
-        installAgent(
-            plistURL: agentPlistURL,
-            label: "com.deck.agent",
-            interval: agentInterval,
-            extraArguments: [],
-            logPath: logDirectory.appendingPathComponent("agent.log").path,
-            restartIfChanged: false
-        )
-        installAgent(
-            plistURL: processAgentPlistURL,
-            label: "com.deck.agent.processes",
-            interval: settings.livebox.processRefreshInterval,
-            extraArguments: ["--processes"],
-            logPath: logDirectory.appendingPathComponent("agent-processes.log").path,
-            restartIfChanged: true
-        )
-    }
-
-    private func installAgent(plistURL: URL, label: String, interval: Int, extraArguments: [String], logPath: String, restartIfChanged: Bool) {
-        try? FileManager.default.createDirectory(
-            at: plistURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        // A rewritten plist does not affect a job launchd already loaded, so
-        // reload when anything in it actually changed — including the log path,
-        // which is how installs predating ~/Library/Logs/Deck migrate off /tmp.
-        let intervalChanged = restartIfChanged && currentStartInterval(of: plistURL) != interval
-        if intervalChanged || currentLogPath(of: plistURL) != logPath {
-            runLaunchctl(["bootout", "gui/\(getuid())/\(label)"])
-        }
-        let args = (["/Applications/Deck.app/Contents/MacOS/DeckAgent"] + extraArguments)
-            .map { "<string>\($0)</string>" }
-            .joined(separator: "\n")
-        let content = """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>Label</key>
-            <string>\(label)</string>
-            <key>ProgramArguments</key>
-            <array>
-        \(args)
-            </array>
-            <key>RunAtLoad</key>
-            <true/>
-            <key>StartInterval</key>
-            <integer>\(interval)</integer>
-            <key>StandardOutPath</key>
-            <string>\(logPath)</string>
-            <key>StandardErrorPath</key>
-            <string>\(logPath)</string>
-        </dict>
-        </plist>
-        """
-        try? content.write(to: plistURL, atomically: true, encoding: .utf8)
-        runLaunchctl(["bootstrap", "gui/\(getuid())", plistURL.path])
-    }
-
-    private func currentLogPath(of plistURL: URL) -> String? {
-        plistValue(of: plistURL)?["StandardOutPath"] as? String
-    }
-
-    private func plistValue(of plistURL: URL) -> [String: Any]? {
-        guard
-            let data = try? Data(contentsOf: plistURL),
-            let plist = try? PropertyListSerialization.propertyList(from: data, format: nil)
-        else { return nil }
-        return plist as? [String: Any]
-    }
-
-    private func currentStartInterval(of plistURL: URL) -> Int? {
-        guard
-            let data = try? Data(contentsOf: plistURL),
-            let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
-            let dict = plist as? [String: Any]
-        else { return nil }
-        return dict["StartInterval"] as? Int
-    }
-
-    private func runLaunchctl(_ arguments: [String]) {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-        process.arguments = arguments
-        try? process.run()
-    }
-
     /// Uninstall: stop and forget both LaunchAgents. Also clears the toggle so
     /// the next settings change does not quietly reinstall them.
     private func uninstallAgents() {
         settings.agentAtLogin = false
-        removeAgent()
+        removeAgents()
     }
 
     /// Moves any credential still in `settings.json` into the keychain, then
@@ -593,13 +556,6 @@ struct ContentView: View {
             try? FileManager.default.removeItem(at: item)
         }
         settings = DeckSettings()
-    }
-
-    private func removeAgent() {
-        runLaunchctl(["bootout", "gui/\(getuid())/com.deck.agent"])
-        runLaunchctl(["bootout", "gui/\(getuid())/com.deck.agent.processes"])
-        try? FileManager.default.removeItem(at: agentPlistURL)
-        try? FileManager.default.removeItem(at: processAgentPlistURL)
     }
 
     private func removeSidebarToggleFromWindow() {
@@ -695,6 +651,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
 
 private struct GeneralSettingsView: View {
     @Binding var agentAtLogin: Bool
+    var agentError: String?
     var onRemoveAgents: () -> Void
     var onEraseData: () -> Void
 
@@ -705,12 +662,17 @@ private struct GeneralSettingsView: View {
         Form {
             Section("Background refresh") {
                 Toggle("Refresh in background (launch at login)", isOn: $agentAtLogin)
-                Text("Runs the Deck agent at login to keep widget data fresh even when the app is closed.")
+                Text("Runs the Deck agent at login to keep widget data fresh even when the app is closed. The agents are listed in System Settings → General → Login Items.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if let agentError {
+                    Text(agentError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
             }
 
-            // Deck installs two LaunchAgents on first run. Leaving the only
+            // Deck registers two LaunchAgents on first run. Leaving the only
             // removal path in the README as four terminal commands is not a
             // fair deal for something that starts itself at login.
             Section("Uninstall") {
@@ -720,7 +682,7 @@ private struct GeneralSettingsView: View {
                 }
                 Text(agentsRemoved
                      ? "Removed. Widgets keep their last data but stop refreshing."
-                     : "Stops com.deck.agent and com.deck.agent.processes and deletes their LaunchAgent files.")
+                     : "Unregisters com.deck.agent and com.deck.agent.processes from login items.")
                     .font(.caption)
                     .foregroundStyle(agentsRemoved ? .green : .secondary)
 
