@@ -37,8 +37,12 @@ cask "deck" do
 
   app "Deck.app"
 
-  # Deck installs two LaunchAgents on first run; a plain `brew uninstall` that
-  # left them running would keep relaunching a deleted binary every 60s.
+  # Deck registers two launch agents via SMAppService on first run; a plain
+  # `brew uninstall` that left them running would keep relaunching a deleted
+  # binary every 60s. Removing the app bundle tears down the SMAppService
+  # registrations with it; the bootout + legacy-plist lines below are belt and
+  # suspenders for pre-SMAppService installs (a no-op when absent) and can be
+  # dropped once no such installs remain.
   #
   # The key order here is Homebrew's, enforced by `brew style`, and it is not
   # the execution order: Homebrew runs uninstall directives in a fixed sequence

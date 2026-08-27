@@ -477,8 +477,36 @@ in CI, the verification gates, and what the identity change resets.
       happened to be current — `Color.green` is `0.204, 0.780, 0.349` under
       aqua and `0.188, 0.820, 0.345` under darkAqua. The palette is pinned to
       aqua. No stored colour changes; defaults only apply to absent keys.
-- [ ] **`SMAppService`** instead of hand-written LaunchAgent plists — puts Deck
+- [x] **`SMAppService`** instead of hand-written LaunchAgent plists — puts Deck
       in System Settings → Login Items, where a suspicious user looks first.
+      Shipped 2026-08-27 (`docs/planning/smappservice/`). Both agents
+      (`com.deck.agent` 60s, `com.deck.agent.processes` fast) are registered via
+      `SMAppService.agent(plistName:)` from plists sealed in the signed bundle,
+      addressing the embedded DeckAgent with a move-proof `BundleProgram`
+      (relative to the bundle). Behavior changes that shipped with it:
+      - The "Refresh in background" toggle is now authoritative and mirrors
+        reality: relaunching Deck no longer reinstalls agents the user switched
+        off, and a toggle flipped in System Settings → Login Items is adopted
+        (never fought) on the next launch.
+      - The fast agent's plist pins StartInterval at the 5s minimum of the
+        setting range; the agent self-throttles to the configured
+        `processRefreshInterval` (pure policy, unit-pinned), and the processes
+        snapshot is always written — so LiveBox's process rows no longer go
+        empty on quiet machines.
+      - The per-tick agent file logs are gone (launchd cannot expand `~` in a
+        signed static plist); diagnostics are OSLog-only
+        (`log show --predicate 'subsystem == "com.deck.agent"'`), which was
+        already the documented path.
+      Legacy `~/Library/LaunchAgents` plists are booted out and deleted on
+      launch for one release (upgraded installs), and the manual uninstall
+      commands in README still work. Known limitation: registration requires
+      the app to be in an approved location — a dev build in `build.noindex`
+      cannot register (verify through the installed copy, as usual).
+      Measured 2026-08-27: a `launchctl bootout` of a *registered* agent (while
+      the app is not running) takes the job down until login — the
+      registration record survives (status stays `.enabled`, reconcile does
+      nothing) and smd does not reload it spontaneously; recovery is a
+      toggle-off/on cycle (unregister + re-register) or the next login.
 - [ ] **Sparkle auto-update.** Pointless before notarization (the update would
       be Gatekeeper-blocked too), necessary immediately after.
 - [ ] **Landing page** for the launch URL.

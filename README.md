@@ -242,9 +242,11 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
 - **Agent-pumped data** (OpenBox, process list, GitBox, ClipBox, weather,
   ShipBox, TaskBox, CalBox, PRBox, MarketBox): the widget
   sandbox forbids subprocesses and reading other apps' data, so a silent CLI
-  (`DeckAgent`, embedded in the app) runs every 60s via a LaunchAgent and
-  writes snapshots the widgets render. The top-process snapshot is sampled
-  faster by a dedicated LaunchAgent (`com.deck.agent.processes`, default 15s).
+  (`DeckAgent`, embedded in the app) runs every 60s via a launch agent
+  (`com.deck.agent`, registered with SMAppService — see it under System
+  Settings → General → Login Items) and writes snapshots the widgets render.
+  The top-process snapshot is sampled faster by a dedicated agent
+  (`com.deck.agent.processes`, configured interval, default 15s).
   ClipBox captures the pasteboard on each tick — consecutive copies within a
   minute collapse to the newest.
 - Everything refreshes on a ~60s cadence (WidgetKit throttles faster requests
@@ -350,7 +352,9 @@ widget reporting the last fetch, not a bug: fix the token/repo/location in Deck
 settings (the app refreshes immediately, so the line clears within seconds), or
 check the agent is loaded with `launchctl list | grep com.deck.agent`. Reasons
 are recorded per source in `fetch-{shipbox,weather,opencodeRemote}.json` inside
-the widget container.
+the widget container. If the agents are not listed in System Settings → General
+→ Login Items either, make sure Deck's "Refresh in background" toggle is on and
+Deck has been launched from `/Applications` at least once.
 
 ## Uninstall
 
@@ -362,11 +366,12 @@ brew uninstall --zap --cask deck  # also erases settings, snapshots and tokens
 ```
 
 Otherwise, in the app: **Deck → General → Uninstall** — "Remove background
-agents" stops and deletes both LaunchAgents, "Erase Deck data…" clears every
+agents" unregisters both launch agents, "Erase Deck data…" clears every
 snapshot, setting and token. Then remove the widgets from your desktop and drag
 Deck to the Trash.
 
-By hand, if you prefer:
+By hand, if you prefer (also removes the pre-SMAppService plists, for installs
+older than this one):
 
 ```bash
 launchctl bootout gui/$(id -u)/com.deck.agent

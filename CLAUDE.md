@@ -120,8 +120,16 @@ open /Applications/Deck.app                    # installs the LaunchAgent, refre
 pluginkit -m -i com.deck.app.widgets           # verify the extension registered
 ```
 
-Uninstall the background agent: `launchctl bootout gui/$(id -u)/com.deck.agent`
-and remove `~/Library/LaunchAgents/com.deck.agent.plist`.
+The two background agents are registered with `SMAppService` from plists in
+the signed bundle (`Contents/Library/LaunchAgents/`, `BundleProgram` relative
+addressing); they show up under System Settings → General → Login Items. Manual
+fallback: `launchctl bootout gui/$(id -u)/com.deck.agent` (and
+`.processes`), plus remove any legacy `~/Library/LaunchAgents/*.plist`
+(pre-SMAppService installs). Registration only works from an approved
+location — dev builds in `build.noindex` cannot register; verify through the
+installed copy. Note: booting out a *registered* agent takes the job down
+until the next login or a toggle-off/on cycle — the registration survives
+(status stays `.enabled`), so neither the app's reconcile nor smd reloads it.
 
 ### Repair scripts
 

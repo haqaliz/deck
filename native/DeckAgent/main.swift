@@ -10,7 +10,10 @@ import OSLog
 // Modes:
 //   (default)      full refresh: every snapshot, launched by com.deck.agent
 //   --processes    process snapshot only, launched by com.deck.agent.processes
-//                  at the LiveBox process refresh interval (default 15s)
+//                  at the LiveBox process refresh interval (default 15s);
+//                  the SMAppService-launched instance selects this mode via
+//                  the DECK_AGENT_ROLE=processes environment variable instead
+//                  (BundleProgram plists cannot carry arguments)
 //
 // Logging: one OSLog line per snapshot (written/skipped/failed) so a soak run
 // is auditable via `log show --predicate 'subsystem == "com.deck.agent"'`.
@@ -22,17 +25,29 @@ let semaphore = DispatchSemaphore(value: 0)
 private let agentLog = Logger(subsystem: "com.deck.agent", category: "DeckAgent")
 
 func sampleProcesses() {
-    let processes = ProcessSnapshot(writtenAt: Date(), processes: HostProcessSampler.top(limit: 10))
-    if processes != ProcessSnapshotStore.load() {
-        ProcessSnapshotStore.save(processes)
-        agentLog.info("written processes snapshot")
-    } else {
-        agentLog.info("skipped processes snapshot (unchanged)")
+    // The launchd tick is a fixed 5s (the plist is sealed in the signed
+    // bundle), so the configured interval is enforced here: skip the sample
+    // entirely until the configured cadence has elapsed. Always written when
+    // sampled — writtenAt drives both the throttle and the widget's staleness
+    // window, so a quiet machine keeps a fresh snapshot instead of the process
+    // rows going empty.
+    let interval = DeckSettings.load().livebox.processRefreshInterval
+    let lastSampleAt = ProcessSnapshotStore.load()?.writtenAt
+    guard ProcessRefreshPolicy.shouldSample(
+        lastSampleAt: lastSampleAt, configuredInterval: interval, now: Date()
+    ) else {
+        agentLog.info("skipped processes snapshot (throttled)")
+        return
     }
+    let processes = ProcessSnapshot(writtenAt: Date(), processes: HostProcessSampler.top(limit: 10))
+    ProcessSnapshotStore.save(processes)
+    agentLog.info("written processes snapshot")
 }
 
 Task {
-    if CommandLine.arguments.contains("--processes") {
+    let fastAgent = ProcessInfo.processInfo.environment["DECK_AGENT_ROLE"] == "processes"
+        || CommandLine.arguments.contains("--processes")
+    if fastAgent {
         sampleProcesses()
         semaphore.signal()
         exit(0)
