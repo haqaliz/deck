@@ -68,6 +68,7 @@
 		3F9D2C27AE013737B357EA4D /* ProcessSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */; };
 		41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
 		43222AFDC10A1829EE888C3E /* NetBoxCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */; };
+		43C94E87B1444FE3968131A8 /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
 		4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		45D576EA50BECDA826166348 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
@@ -122,6 +123,7 @@
 		7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */; };
 		78812806AB82947C07528CC1 /* MarketBoxCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F93AE35E753ECCFC7B3CF9 /* MarketBoxCoreTests.swift */; };
 		7ADEE8BA9F19842AD86B99DC /* github_prs.json in Resources */ = {isa = PBXBuildFile; fileRef = 910A3754B71959068BBF2549 /* github_prs.json */; };
+		7B0649E3CEC354D446CBCD0D /* RemoteOpenCodeSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */; };
 		7BA588A2F45314DC0BFF6883 /* MarketBoxParsersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C2D4337B99014556B02507 /* MarketBoxParsersTests.swift */; };
 		822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */; };
 		82D525C8424FF0CFA882A47F /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
@@ -151,6 +153,7 @@
 		A63FED1F6FABE8563FF1E242 /* BatteryCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */; };
 		A94346AFBE99A456A37C9F3A /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		AA9E91EA980B1F6E98C2FF6B /* RemoteOpenCodeAggregatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */; };
+		AB600153AB7326FCBC557576 /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
 		AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */; };
 		AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */; };
 		AD4AF4B05C1E49736F84F66F /* MarketBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */; };
@@ -186,12 +189,14 @@
 		CB54BF2A77B52929C1500593 /* PRBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B129C36246D87142F352B506 /* PRBoxSnapshotTests.swift */; };
 		CC6900F5EAD6D77258D86F4B /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
 		CCC6405CB841E90B3F5496EB /* AccessoryCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 694F80D691C62D93C806CD51 /* AccessoryCoreTests.swift */; };
+		CE021C5C20C5DAD337EBA0BA /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
 		D0E68887D6CF1F2F3EAFA435 /* DeckAgent in Resources */ = {isa = PBXBuildFile; fileRef = EA5EADBCA4E36B421CDE1542 /* DeckAgent */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		D2669CB46930616C7A93FD65 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		D284040183253CE7DFFEABB2 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
 		D2F997BE5BFD2C6761BA3A9C /* CredentialVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */; };
 		D3B023BE033BD1965A89C5B6 /* WeatherSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 561AB4E0A1AD6FABCE740F12 /* WeatherSnapshotTests.swift */; };
+		D446DBBC43FC3D34BE96103A /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
 		D48B0D31B9644A8985F7E702 /* PRBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28CF0C7B395ADB6A8A71C50F /* PRBoxWidget.swift */; };
 		D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */; };
 		D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
@@ -274,6 +279,7 @@
 		13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshot.swift; sourceTree = "<group>"; };
 		13DFA928EDB1DBDEF8503D55 /* RGBAPaletteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RGBAPaletteTests.swift; sourceTree = "<group>"; };
 		16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxSessionCoreTests.swift; sourceTree = "<group>"; };
+		18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeSyncTests.swift; sourceTree = "<group>"; };
 		18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxWidget.swift; sourceTree = "<group>"; };
 		1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychainTests.swift; sourceTree = "<group>"; };
 		1D0F7208894404301344CB11 /* FetchStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchStatusTests.swift; sourceTree = "<group>"; };
@@ -291,6 +297,7 @@
 		2A226CF3C44DC0410557BFFB /* provider-opencode-light.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "provider-opencode-light.pdf"; sourceTree = "<group>"; };
 		2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSnapshotTests.swift; sourceTree = "<group>"; };
 		2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureDevOpsLoader.swift; sourceTree = "<group>"; };
+		2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeSync.swift; sourceTree = "<group>"; };
 		34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckWidgets.swift; sourceTree = "<group>"; };
 		361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxDiskCore.swift; sourceTree = "<group>"; };
 		36B787FA6039451942D992E8 /* provider-github-dark.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "provider-github-dark.pdf"; sourceTree = "<group>"; };
@@ -459,6 +466,7 @@
 				C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */,
 				26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */,
 				37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */,
+				2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */,
 				94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */,
 				C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */,
 				5089372A785C079676513337 /* TaskBoxSnapshot.swift */,
@@ -513,6 +521,7 @@
 				21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */,
 				D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */,
 				5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */,
+				18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */,
 				13DFA928EDB1DBDEF8503D55 /* RGBAPaletteTests.swift */,
 				D6C015468901E17452BF6132 /* ShipBoxDiscoveryTests.swift */,
 				DC563B15EBF100D1CB4139C2 /* ShipBoxMergeTests.swift */,
@@ -853,6 +862,7 @@
 				D48B0D31B9644A8985F7E702 /* PRBoxWidget.swift in Sources */,
 				040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */,
 				E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */,
+				CE021C5C20C5DAD337EBA0BA /* RemoteOpenCodeSync.swift in Sources */,
 				611DC32A1889B095CAE4D132 /* ShipBoxSnapshot.swift in Sources */,
 				7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */,
 				D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */,
@@ -941,6 +951,8 @@
 				F73AFC91E65EE97F20CB23AB /* RGBAPaletteTests.swift in Sources */,
 				AA9E91EA980B1F6E98C2FF6B /* RemoteOpenCodeAggregatorTests.swift in Sources */,
 				4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */,
+				AB600153AB7326FCBC557576 /* RemoteOpenCodeSync.swift in Sources */,
+				7B0649E3CEC354D446CBCD0D /* RemoteOpenCodeSyncTests.swift in Sources */,
 				51C852BFFD446B7CD99A8BDA /* ShipBoxDiscoveryTests.swift in Sources */,
 				37185E555B2E6A0FB7D0A297 /* ShipBoxMergeTests.swift in Sources */,
 				D8DE1BC7D47C480B185987C0 /* ShipBoxSettingsTests.swift in Sources */,
@@ -992,6 +1004,7 @@
 				A2EE3F352DA2E30CB3F4E017 /* PRBoxSnapshot.swift in Sources */,
 				CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */,
 				4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */,
+				43C94E87B1444FE3968131A8 /* RemoteOpenCodeSync.swift in Sources */,
 				E2DE130621C6683B7AA69F2D /* ShipBoxSnapshot.swift in Sources */,
 				92F9D56CB31571F8F4BDB6CC /* SystemMetricsCore.swift in Sources */,
 				A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */,
@@ -1032,6 +1045,7 @@
 				105CA43FD678593FF0D25014 /* PRBoxSnapshot.swift in Sources */,
 				1967FF4D20A83BF47DDFFCB2 /* ProcessSnapshot.swift in Sources */,
 				D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */,
+				D446DBBC43FC3D34BE96103A /* RemoteOpenCodeSync.swift in Sources */,
 				FC125295397F417AA47379E3 /* ShipBoxSnapshot.swift in Sources */,
 				5310A1B92B3CCF57C291D6F4 /* SystemMetricsCore.swift in Sources */,
 				61AE78535BCAC51B5785634B /* TaskBoxSnapshot.swift in Sources */,
