@@ -507,6 +507,12 @@ in CI, the verification gates, and what the identity change resets.
       registration record survives (status stays `.enabled`, reconcile does
       nothing) and smd does not reload it spontaneously; recovery is a
       toggle-off/on cycle (unregister + re-register) or the next login.
+      Verified before merge: unit suite (throttle + reconcile tables), Release
+      build, live registration and pumping on the dev machine, legacy plist
+      migration, soak (400 runs / 50 overlaps / 0 failures). **Not** verified:
+      the in-app toggle off→on cycle and the System Settings disable→relaunch
+      mirror — both need the settings window driven by hand, and both were
+      merged unexercised.
 - [ ] **Sparkle auto-update.** Pointless before notarization (the update would
       be Gatekeeper-blocked too), necessary immediately after.
 - [ ] **Landing page** for the launch URL.
