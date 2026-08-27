@@ -22,6 +22,11 @@ targets:
         script: |
           cp "$BUILT_PRODUCTS_DIR/DeckAgent" "$BUILT_PRODUCTS_DIR/Deck.app/Contents/MacOS/DeckAgent"
           chmod +x "$BUILT_PRODUCTS_DIR/Deck.app/Contents/MacOS/DeckAgent"
+      - name: Embed LaunchAgents
+        script: |
+          mkdir -p "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents"
+          cp "$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.plist" "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/"
+          cp "$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.processes.plist" "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/"
     info:
       path: DeckApp/Info.plist
       properties:
