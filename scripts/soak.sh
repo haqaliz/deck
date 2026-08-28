@@ -27,7 +27,8 @@ set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AGENT="$ROOT/native/build.noindex/Build/Products/Release/DeckAgent"
-CONTAINER="$HOME/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/ids.sh"
+CONTAINER="$DECK_DATA"
 FULL="${SOAK_FULL:-200}"
 PROCESSES="${SOAK_PROCESSES:-200}"
 OVERLAPS="${SOAK_OVERLAPS:-50}"
@@ -73,10 +74,10 @@ run_agent() {
 # those jobs cannot be re-bootstrapped by this script — so the soak leaves
 # them running and relies on the parse-only checks tolerating concurrency
 # (atomic snapshot writes).
-LEGACY_PLIST="$HOME/Library/LaunchAgents/com.deck.agent.plist"
+LEGACY_PLIST="$HOME/Library/LaunchAgents/${DECK_LEGACY_AGENT_LABEL}.plist"
 if [[ -f "$LEGACY_PLIST" ]]; then
   launchctl bootout "gui/$(id -u)" "$LEGACY_PLIST" 2>/dev/null || true
-  launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.deck.agent.processes.plist" 2>/dev/null || true
+  launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/${DECK_LEGACY_FAST_AGENT_LABEL}.plist" 2>/dev/null || true
 fi
 
 BACKUP="$(mktemp -d)"
@@ -93,7 +94,7 @@ cleanup() {
   fi
   if [[ -f "$LEGACY_PLIST" ]]; then
     launchctl bootstrap "gui/$(id -u)" "$LEGACY_PLIST" 2>/dev/null || true
-    launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.deck.agent.processes.plist" 2>/dev/null || true
+    launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/${DECK_LEGACY_FAST_AGENT_LABEL}.plist" 2>/dev/null || true
   else
     echo "soak: SMAppService agents were left running; nothing to restore"
   fi

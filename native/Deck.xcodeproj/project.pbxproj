@@ -871,7 +871,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.processes.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\n";
+			shellScript = "# Clear first. A plain mkdir+cp leaves plists from a previous build\n# in place, so an incremental build across a rename ships BOTH\n# generations, sealed into the signature with nothing complaining.\nrm -rf \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents\"\nmkdir -p \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.processes.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\n";
 		};
 		EE7234FDF9F26715A32519B1 /* Embed DeckAgent */ = {
 			isa = PBXShellScriptBuildPhase;

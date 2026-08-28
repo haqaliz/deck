@@ -19,19 +19,20 @@
 # timeline tick, so allow up to 60 seconds before capturing.
 set -euo pipefail
 
-CONTAINER="$HOME/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/ids.sh"
+CONTAINER="$DECK_DATA"
 BACKUP="$HOME/Library/Application Support/Deck/demo-backup"
 SNAPSHOTS=(calbox taskbox clipbox gitbox shipbox devbox weather processes openbox marketbox)
 
 agents_stop() {
   osascript -e 'quit app "Deck"' 2>/dev/null || true
-  launchctl bootout "gui/$(id -u)/com.deck.agent" 2>/dev/null || true
-  launchctl bootout "gui/$(id -u)/com.deck.agent.processes" 2>/dev/null || true
+  launchctl bootout "gui/$(id -u)/${DECK_AGENT_LABEL}" 2>/dev/null || true
+  launchctl bootout "gui/$(id -u)/${DECK_FAST_AGENT_LABEL}" 2>/dev/null || true
 }
 
 agents_start() {
-  launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.deck.agent.plist" 2>/dev/null || true
-  launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.deck.agent.processes.plist" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/${DECK_LEGACY_AGENT_LABEL}.plist" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/${DECK_LEGACY_FAST_AGENT_LABEL}.plist" 2>/dev/null || true
 }
 
 case "${1:-}" in

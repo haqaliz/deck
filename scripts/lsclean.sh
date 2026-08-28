@@ -17,6 +17,7 @@
 
 set -u
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/ids.sh"
 LSR=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 
 stale=$("$LSR" -dump 2>/dev/null \
@@ -46,4 +47,4 @@ killall chronod 2>/dev/null && echo "restarted chronod"
 echo
 echo "verify (widgets should stop showing placeholders within ~60s):"
 echo "  log show --last 2m --predicate 'process == \"chronod\"' --style compact \\"
-echo "    | grep 'com.deck.app::' | grep -oE 'reload: (succeeded|failed)' | sort | uniq -c"
+echo "    | grep '${DECK_APP_ID}::' | grep -oE 'reload: (succeeded|failed)' | sort | uniq -c"

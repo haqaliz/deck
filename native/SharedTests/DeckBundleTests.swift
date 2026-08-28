@@ -97,6 +97,30 @@ final class DeckBundleTests: XCTestCase {
         XCTAssertEqual(plist?["CFBundleIdentifier"] as? String, DeckBundle.agentLabel)
     }
 
+    /// The shell half. `scripts/lib/ids.sh` is a third copy of these strings —
+    /// the scripts cannot import Swift — so it is pinned here rather than left
+    /// to drift into repairing the wrong container.
+    func testShellIdentifiersMatch() throws {
+        let ids = try String(
+            contentsOf: nativeDir.deletingLastPathComponent()
+                .appendingPathComponent("scripts/lib/ids.sh"),
+            encoding: .utf8
+        )
+        for (variable, expected) in [
+            ("DECK_APP_ID", DeckBundle.appID),
+            ("DECK_AGENT_LABEL", DeckBundle.agentLabel),
+            ("DECK_LEGACY_APP_ID", DeckBundle.Legacy.appID),
+            ("DECK_LEGACY_WIDGETS_ID", DeckBundle.Legacy.widgetsID),
+            ("DECK_LEGACY_AGENT_LABEL", DeckBundle.Legacy.agentLabel),
+            ("DECK_LEGACY_FAST_AGENT_LABEL", DeckBundle.Legacy.fastAgentLabel),
+        ] {
+            XCTAssertTrue(
+                ids.contains("\(variable)=\"\(expected)\"\n"),
+                "scripts/lib/ids.sh does not set \(variable)=\"\(expected)\""
+            )
+        }
+    }
+
     /// `SMAppService.agent(plistName:)` resolves these by filename inside the
     /// bundle, and launchd keys the job by the Label inside them. A rename that
     /// updates one and not the other produces a job that cannot be registered.

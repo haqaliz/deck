@@ -505,10 +505,16 @@ untouched — 16 keys, 4 accounts, `agentAtLogin: true`. LaunchServices swept:
 the renamed dev copy was `lsregister -u`'d and `scripts/lsclean.sh` re-registered
 `/Applications`; zero `io.github.haqaliz.deck` bundles remain known to LS.
 
-**`scripts/lsclean.sh` could not do this on its own** — it hardcodes
-`com.deck`, so it cannot unregister a dev copy built under any other id. Phase 9's
-`scripts/lib/ids.sh` must cover it, and during the flip release both ids need
-sweeping.
+~~**`scripts/lsclean.sh` could not do this on its own** — it hardcodes
+`com.deck`, so it cannot unregister a dev copy built under any other id.~~
+
+**Correction (Phase 9).** That claim is wrong. `lsclean.sh` selects bundles by
+**path** — `grep -E "^path:.*Deck\.app( |$)"` minus `/Applications/` — not by
+bundle id, so it would have swept the renamed dev copy unaided; the manual
+`lsregister -u` here was redundant. The `com.deck` strings in that script are a
+comment and the text of a suggested verify command, neither of which affects
+what it unregisters. Only the verify hint needs the id, and it now comes from
+`scripts/lib/ids.sh`.
 
 ### The round-trip reproduced the Phase 1 fault deliberately
 
