@@ -333,3 +333,143 @@ visible in launchd's own state, not inferred from the BTM dump: replace the
 bundle at `/Applications/Deck.app` and this job runs whatever `Contents/MacOS/
 DeckAgent` is now there — under the **old** label, with the **old** parent
 bundle identifier recorded. Phase 3 can now measure what that does for real.
+
+---
+
+## Phase 2–3 — the renamed build (2026-08-29 00:01–00:10)
+
+Built and installed `io.github.haqaliz.deck` v1.36 over `/Applications/Deck.app`.
+The real v1.35 bundle was `ditto`'d to the scratchpad first (12 MB, signature
+verified) so the restore would not depend on a rebuild.
+
+### R2 — signing identity: fixed, and the second identifier is gone
+
+```
+Deck.app             Identifier=io.github.haqaliz.deck
+DeckAgent            Identifier=io.github.haqaliz.deck.agent
+DeckWidgets.appex    Identifier=io.github.haqaliz.deck.widgets
+```
+
+Giving DeckAgent an explicit `PRODUCT_BUNDLE_IDENTIFIER` removed the synthesised
+`<prefix>.DeckAgent` entirely — the generated `project.pbxproj` now has eight
+`PRODUCT_BUNDLE_IDENTIFIER` lines and **none** of them disagrees with its
+target's `CFBundleIdentifier`. `codesign -dv` belongs in the flip's gate; it is
+the only check that sees what TCC will key the grant to.
+
+### O1 — ANSWERED: containermanagerd provisions the new container by itself
+
+**The new container existed before the app was ever launched — and before it was
+even installed.** It was created at 00:01:18, during the *build*, by the
+`RegisterWithLaunchServices` phase (`lsregister`).
+
+```
+$ ls -la ~/Library/Containers/io.github.haqaliz.deck.widgets/
+700  Data/
+644  .com.apple.containermanagerd.metadata.plist   596B
+$ find Data -maxdepth 2 -type d
+./Documents  ./Library  ./Library/Application Scripts
+./Library/Application Support  ./Library/Caches  ./Library/Images
+./Library/Logs  ./Library/Preferences  ./Library/Saved Application State
+./SystemData  ./tmp
+```
+
+That is the complete standard skeleton — the exact directory list
+`scripts/container-repair.sh` recreates — plus the home symlinks (`Desktop`,
+`Downloads`, `Movies`, `Music`, `Pictures`, `.CFUserTextEncoding`) and a real
+metadata plist. A hand-made `mkdir -p` from `AtomicFile` produces none of that.
+
+**Consequence for the migration:** the feared case does not arise. Registering
+the bundle is enough; by the time the app runs after any normal install the
+container is provisioned by the OS. The migration can write into it directly at
+launch, and does **not** need to poll for the extension's first run. `AtomicFile`
+creating `Library/Application Support/Deck` inside an already-provisioned
+container is ordinary file I/O.
+
+### R3 — REFUTED: the old job does not run the new binary; it fails to spawn
+
+The PRD predicted the old label would execute the replaced binary and pollute
+the new container with default-settings snapshots. It does not.
+
+```
+$ launchctl print gui/502/com.deck.agent.processes
+    program identifier      = Contents/MacOS/DeckAgent (mode: 2)
+    parent bundle identifier = com.deck.app        ← records the OLD identity
+    parent bundle version    = 35
+    last exit code          = 78: EX_CONFIG
+    job state               = spawn failed
+```
+
+Both old jobs report `job state = spawn failed`, and `com.deck.agent.processes`
+exits **78 / EX_CONFIG**. The job stores the parent bundle *identity*, not just
+a path, so when the bundle at that path becomes `io.github.haqaliz.deck` v1.36
+the mismatch is refused rather than resolved.
+
+Measured consequences, both confirmed:
+
+- The **old container stopped being written** the moment the bundle was
+  replaced — `processes.json` frozen at 00:02:29 across three later checks.
+- The **new container got no `Deck/` directory at all** until the app itself
+  launched. The agent never ran.
+
+So the migration does not need to live in `DeckAgent` *for R3's reason*. It is
+still worth putting in `Shared` and calling from both, because the app is not
+guaranteed to be first in general — but the specific default-settings
+corruption R3 predicted cannot happen.
+
+**The flip's real cost is the opposite one:** after the rename, background
+refresh is **dead** until the user launches Deck and it registers the new
+agents. Combined with the Phase 1 finding — Deck cannot see a registered-but-
+unloaded agent — that is a window in which nothing runs and nothing says so.
+
+### O2 — ANSWERED, and worse than expected: two permanent orphans
+
+After launching the renamed Deck:
+
+```
+$ sfltool dumpbtm | grep -E "Identifier: [0-9]+\.(com\.deck|io\.github)"
+    Identifier: 2.io.github.haqaliz.deck
+    Identifier: 8.com.deck.agent                    ← dead
+    Identifier: 8.com.deck.agent.processes          ← dead
+    Identifier: 8.io.github.haqaliz.deck.agent      ← live
+    Identifier: 8.io.github.haqaliz.deck.agent.processes
+  4 Parent Identifier: 2.io.github.haqaliz.deck
+```
+
+Three findings:
+
+1. **The old app record `2.com.deck.app` is gone entirely** (grep count: 0). BTM
+   did not keep two app records; it replaced the one at that URL.
+2. **The two dead agent records were re-parented to the new app** — all four now
+   carry `Parent Identifier: 2.io.github.haqaliz.deck`, and the dead pair's
+   `Generation` reset to 0. So Login Items shows **four** DeckAgent rows under
+   Deck, two of which can never run.
+3. **They cannot be removed.** `launchctl bootout` fails with
+   `3: No such process` (they are not running), and the records survive it. The
+   new app cannot `SMAppService.unregister()` them either: that call resolves a
+   plist **inside the current bundle**, and the renamed bundle no longer ships
+   `com.deck.agent.plist`.
+
+**Design consequence for the flip — a concrete fix.** Ship the **old-named**
+plists in the new bundle for exactly one release, alongside the new ones, purely
+so the renamed app can construct `SMAppService.agent(plistName:
+"com.deck.agent.plist")` and call `unregister()` on it. Drop them the release
+after. This is the same one-release-courtesy shape as the existing
+`legacyCleanup()` and is the only route that removes the records rather than
+hiding them.
+
+### Not verified
+
+Whether a widget **renders** from the new container. The new extension registers
+(`pluginkit -m -i io.github.haqaliz.deck.widgets` → `io.github.haqaliz.deck.widgets(1.36)`)
+but shows without the `+` active marker, and no widget was added, so no timeline
+was written and `Data/SystemData/com.apple.chrono/` does not exist. Given the
+container carries the full, OS-provisioned skeleton, the `unsupportedEntryKey`
+failure mode that motivated the question cannot arise — but rendering itself was
+not observed, and the flip's manual gate must still do it.
+
+### Old container: untouched throughout
+
+`settings.json` 23:58:27, `gitbox.json` 00:02:12, `processes.json` 00:02:29 —
+all unchanged after the swap, and 15 timeline directories intact. The renamed
+Deck never read or wrote the old container, which is the behaviour the migration
+will have to add deliberately.
