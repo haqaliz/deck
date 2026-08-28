@@ -580,3 +580,30 @@ from inside repairs it.
 `processes.json` at 00:19:42 was written by a **hand-run** of the agent during
 this diagnosis, not by launchd. Anyone reading mtimes on this machine after that
 timestamp should discount it.
+
+## Build hygiene: `Embed LaunchAgents` never removes stale plists
+
+Found while verifying Phase 5. The post-build script in `project.yml:26-29` is
+`mkdir -p` followed by two `cp`s — it never clears the destination. So an
+**incremental** build across the rename leaves both generations in the bundle:
+
+```
+$ ls .../Release/Deck.app/Contents/Library/LaunchAgents/
+com.deck.agent.plist                       ← current build
+com.deck.agent.processes.plist             ← current build
+io.github.haqaliz.deck.agent.plist         ← left by the probe build
+io.github.haqaliz.deck.agent.processes.plist
+```
+
+Deleting the app bundle and rebuilding produces the correct two. The stale pair
+is sealed into the signature like any other resource, so nothing complains.
+
+**Why this is a trap for the flip specifically.** The O2 fix deliberately ships
+the *old-named* plists for one release so the renamed app can `unregister()`
+the orphaned records. If the build phase is also leaving them there by accident,
+a passing test of that behaviour proves nothing — and the release *after*, which
+is supposed to drop them, would keep shipping them from stale derived data.
+
+**Fix for Phase 8/9:** make the script `rm -rf` the destination directory before
+copying, so its contents are always exactly what `project.yml` names. Until
+then, the flip must be built from a clean `build.noindex`.

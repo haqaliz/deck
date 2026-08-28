@@ -170,7 +170,7 @@ struct DeckSettings: Codable, Equatable {
     /// Settings live inside the widget extension's sandbox container so both
     /// the (unsandboxed) host app and the sandboxed extension can use them.
     /// NOTE: inside the sandbox, homeDirectoryForCurrentUser already points at
-    /// the container (…/Containers/com.deck.app.widgets/Data), so the two
+    /// the container (…/Containers/<DeckBundle.widgetsID>/Data), so the two
     /// resolve to the same absolute path.
     static var containerDirectory: URL {
         let home = FileManager.default.homeDirectoryForCurrentUser
@@ -178,7 +178,10 @@ struct DeckSettings: Codable, Equatable {
         if isSandboxed {
             return home.appendingPathComponent("Library/Application Support/Deck", isDirectory: true)
         }
-        return home.appendingPathComponent("Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck", isDirectory: true)
+        return home.appendingPathComponent(
+            "Library/Containers/\(DeckBundle.widgetsID)/Data/Library/Application Support/Deck",
+            isDirectory: true
+        )
     }
 
     static var fileURL: URL {

@@ -3,7 +3,7 @@ import SwiftUI
 import Charts
 import OSLog
 
-private let openboxLog = Logger(subsystem: "com.deck.app.widgets", category: "OpenBox")
+private let openboxLog = Logger(subsystem: DeckBundle.widgetsID, category: "OpenBox")
 
 // MARK: - Timeline entry
 

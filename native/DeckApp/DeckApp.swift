@@ -488,7 +488,7 @@ struct ContentView: View {
     /// and the label collision would reject the new job.
     private func legacyCleanup() {
         let home = FileManager.default.homeDirectoryForCurrentUser
-        for label in ["com.deck.agent", "com.deck.agent.processes"] {
+        for label in [DeckBundle.Legacy.agentLabel, DeckBundle.Legacy.fastAgentLabel] {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
             process.arguments = ["bootout", "gui/\(getuid())/\(label)"]
