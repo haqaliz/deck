@@ -286,3 +286,50 @@ the latter, which is why Deck sees a healthy install. CLAUDE.md's recovery —
 toggle cycle cannot be driven from outside the app.
 
 **Blocking:** Phase 3 needs live agents and cannot get them non-interactively.
+
+### Recovery confirmed — the in-app toggle works, and proves the blind spot
+
+The user cycled **General → Refresh in background** off/on at 23:58.
+
+```
+23:58:02  processes.json written   ← first agent write in 6h 07m
+23:58:27  processes.json written   ← 25s later: the 15s throttle on the 5s tick
+BTM Generation: 20 → 34
+```
+
+Sustained, not a `RunAtLoad` blip — which is what distinguishes this from the
+single 23:50:37 write earlier.
+
+The launchd state before and after is the whole finding:
+
+| | before the toggle | after |
+|---|---|---|
+| `launchctl print gui/502/com.deck.agent.processes` | `Could not find service` | full job description |
+| `state` | — | `spawn scheduled` |
+| `managed_by` | — | `com.apple.xpc.ServiceManagement` |
+| `path` | — | `(submitted by smd.96162)` |
+| BTM uuid | `100D7241-ED8C-401A-863E-5C966EB3B1E3` | **same uuid** |
+| BTM disposition | `[enabled, allowed]` | `[enabled, allowed]` |
+
+**The BTM record was identical throughout — same UUID, same disposition — while
+the launchd job went from absent to scheduled.** That is the blind spot stated
+as a measurement: `SMAppService.status` reads the left column and cannot see the
+right one. Six hours of no background refresh, and every signal Deck consults
+said healthy.
+
+### A second thing this proves, for R3
+
+```
+gui/502/com.deck.agent.processes = {
+    program identifier = Contents/MacOS/DeckAgent (mode: 2)
+    parent bundle identifier = com.deck.app
+    parent bundle version = 35
+}
+```
+
+The job stores a **relative** program path resolved through the parent bundle
+identifier, not an absolute path to a specific binary. This is the R3 mechanism
+visible in launchd's own state, not inferred from the BTM dump: replace the
+bundle at `/Applications/Deck.app` and this job runs whatever `Contents/MacOS/
+DeckAgent` is now there — under the **old** label, with the **old** parent
+bundle identifier recorded. Phase 3 can now measure what that does for real.
