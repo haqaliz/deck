@@ -473,3 +473,52 @@ not observed, and the flip's manual gate must still do it.
 all unchanged after the swap, and 15 timeline directories intact. The renamed
 Deck never read or wrote the old container, which is the behaviour the migration
 will have to add deliberately.
+
+### O2 correction — `unregister()` disables the record, it does not delete it
+
+The user switched **Refresh in background** off in the renamed build before the
+restore. The result corrects what was written above:
+
+```
+Disposition: [enabled,  allowed, not notified] (0x3)  8.com.deck.agent            ← dead, untouched
+Disposition: [enabled,  allowed, not notified] (0x3)  8.com.deck.agent.processes  ← dead, untouched
+Disposition: [disabled, allowed, notified]     (0xa)  8.io.github.haqaliz.deck.agent            Generation: 2
+Disposition: [disabled, allowed, notified]     (0xa)  8.io.github.haqaliz.deck.agent.processes  Generation: 2
+```
+
+`SMAppService.unregister()` flips the record to **`[disabled, allowed]`** and
+bumps its generation; **the BTM record itself persists**. So the "ship the
+old-named plists for one release" fix does not *remove* the orphans either — it
+converts them from `enabled`-but-unrunnable into `disabled`, which is the
+honest state and is what Login Items should show. That is still worth doing
+(an `enabled` record whose job fails with EX_CONFIG is a lie), but the flip
+should not promise the records disappear. Nothing short of `sfltool resetbtm` —
+which wipes every login item for every app — removes them.
+
+## Restore (00:10–00:15)
+
+`ditto` of the backed-up v1.35 bundle over `/Applications/Deck.app`:
+`Identifier=com.deck.app`, `CFBundleShortVersionString 1.35`,
+`codesign --verify --deep --strict` passes, `pluginkit` back to
+`+    com.deck.app.widgets(1.35)`. `settings.json` in the old container is
+untouched — 16 keys, 4 accounts, `agentAtLogin: true`. LaunchServices swept:
+the renamed dev copy was `lsregister -u`'d and `scripts/lsclean.sh` re-registered
+`/Applications`; zero `io.github.haqaliz.deck` bundles remain known to LS.
+
+**`scripts/lsclean.sh` could not do this on its own** — it hardcodes
+`com.deck`, so it cannot unregister a dev copy built under any other id. Phase 9's
+`scripts/lib/ids.sh` must cover it, and during the flip release both ids need
+sweeping.
+
+### The round-trip reproduced the Phase 1 fault deliberately
+
+After the restore, `com.deck.agent` and `com.deck.agent.processes` are
+`[enabled, allowed]` with **no launchd job** and `processes.json` frozen — the
+exact registered-but-unloaded state from Phase 1, arrived at through a bundle
+swap rather than a mystery. `SMAppService.status` reports `.enabled`,
+`AgentReconcilePolicy` correctly does nothing, and Deck shows a healthy toggle.
+
+**This is the strongest argument for the liveness check** proposed in Phase 1:
+the rename *will* put every user into this state, and without a check Deck will
+tell them background refresh is on while nothing runs. The flip should not ship
+before it.
