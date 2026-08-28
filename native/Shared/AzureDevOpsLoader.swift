@@ -75,6 +75,81 @@ struct AzureTarget: Equatable {
     }
 }
 
+/// One target per project, for an account that carries several.
+enum AzureTargets {
+    static func normalise(organization: String, projects: [String]) throws -> [AzureTarget] {
+        let names = AzureAccountProjects.normalise(projects)
+        guard !names.isEmpty else { throw AzureDevOpsError.invalidTarget }
+        return try names.map { try AzureTarget.normalise(organization: organization, project: $0) }
+    }
+}
+
+/// Merging several projects' work-item ids into the one organization-scoped
+/// batch call.
+enum AzureIDMerge {
+    /// Round-robin, then truncate.
+    ///
+    /// The batch endpoint takes 200 ids, and concatenating instead would spend
+    /// the whole budget on whichever project happens to be first — a user with
+    /// one busy project would never see a row from the quiet ones. Taking in
+    /// turns gives every project a share of the ceiling.
+    static func interleave(_ lists: [[Int]], limit: Int) -> [Int] {
+        var out: [Int] = []
+        var index = 0
+        var exhausted = false
+        while !exhausted, out.count < limit {
+            exhausted = true
+            for list in lists where index < list.count {
+                exhausted = false
+                out.append(list[index])
+                if out.count == limit { break }
+            }
+            index += 1
+        }
+        return out
+    }
+}
+
+/// What the TaskBox header calls the thing it is showing.
+enum TaskBoxScope {
+    /// One project keeps today's wording exactly. Several show the
+    /// organization, because naming one of them would be a lie about the rest.
+    static func scope(organization: String, targets: [AzureTarget]) -> String {
+        guard targets.count == 1, let only = targets.first else {
+            let trimmed = organization.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? "" : trimmed
+        }
+        return only.scope
+    }
+}
+
+/// "which project could not be read", worded like ShipBox's per-repo note.
+enum AzureProjectNote {
+    struct Failure: Equatable {
+        var project: String
+        var outcome: FetchOutcome
+    }
+
+    /// One failure names itself; several sharing a reason collapse into one
+    /// sentence; mixed reasons name the first rather than implying a shared
+    /// cause.
+    static func compose(failures: [Failure], source: FetchSource) -> String? {
+        guard let first = failures.first else { return nil }
+        guard let line = FetchStatusCopy.line(source: source, outcome: first.outcome),
+              let initial = line.first
+        else { return nil }
+        let reason = line.replacingCharacters(
+            in: line.startIndex...line.startIndex, with: initial.lowercased()
+        )
+        let others = failures.count - 1
+        guard others > 0 else { return "\(first.project): \(reason)" }
+        if failures.allSatisfy({ $0.outcome == first.outcome }) {
+            return "\(first.project) + \(others) more: \(reason)"
+        }
+        return "\(first.project): \(reason) +\(others) more"
+    }
+}
+
 // MARK: - Date parsing (pure)
 
 enum AzureDate {
@@ -178,8 +253,22 @@ enum WorkItemParser {
         return values.compactMap { item(from: $0, target: target) }
     }
 
+    /// The row's own project when it named one, the queried project otherwise.
+    private static func projectBase(for project: String?, in target: AzureTarget) -> String {
+        guard let project,
+              let segment = project.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+        else { return target.projectBase }
+        return "\(target.orgBase)/\(segment)"
+    }
+
     private static func item(from entry: [String: Any], target: AzureTarget) -> TaskItem? {
         guard let fields = entry["fields"] as? [String: Any] else { return nil }
+        // The batch endpoint is organization-scoped, so one response can carry
+        // rows from every configured project. Without this the row would deep
+        // link into whichever project happened to be queried.
+        let project = (fields["System.TeamProject"] as? String)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .flatMap { $0.isEmpty ? nil : $0 }
         // No title, no task. Defaulting to "Untitled" would put a phantom row
         // on the face.
         guard let title = fields["System.Title"] as? String, !title.isEmpty else { return nil }
@@ -193,9 +282,10 @@ enum WorkItemParser {
             title: title,
             state: (fields["System.State"] as? String) ?? "",
             itemType: (fields["System.WorkItemType"] as? String) ?? "",
-            url: "\(target.projectBase)/_workitems/edit/\(id)",
+            url: "\(projectBase(for: project, in: target))/_workitems/edit/\(id)",
             provider: .azureDevOps,
-            changedAt: AzureDate.parse(fields["System.ChangedDate"])
+            changedAt: AzureDate.parse(fields["System.ChangedDate"]),
+            project: project
         )
     }
 }
@@ -210,31 +300,89 @@ enum HostAzureDevOpsLoader {
     /// the `az` CLI or the browser.
     static func fetch(
         organization: String,
-        project: String,
+        projects: [String],
         token: String
     ) async throws -> TaskBoxSnapshot {
-        let target = try AzureTarget.normalise(organization: organization, project: project)
+        let targets = try AzureTargets.normalise(organization: organization, projects: projects)
         let auth = "Basic " + Data(":\(token)".utf8).base64EncodedString()
+        let scope = TaskBoxScope.scope(organization: organization, targets: targets)
 
-        let wiql = try await workItemIDs(target: target, auth: auth)
-        let sprint = await currentSprint(target: target, auth: auth)
+        // Concurrent, not serial: `timeoutInterval` is per request, so five
+        // projects at a 10s timeout could otherwise spend most of the 60s tick
+        // waiting. Five sources measured 9.4s serially against 2.1s in
+        // parallel.
+        let queried = try await inParallel(targets) { target in
+            try await workItemIDs(target: target, auth: auth)
+        }
+
+        var idLists: [[Int]] = []
+        var total = 0
+        var failures: [AzureProjectNote.Failure] = []
+        var firstError: Error?
+        for (target, result) in zip(targets, queried) {
+            switch result {
+            case .success(let wiql):
+                idLists.append(wiql.ids)
+                total += wiql.total
+            case .failure(let error):
+                failures.append(.init(
+                    project: target.projectName, outcome: FetchClassifier.outcome(for: error)
+                ))
+                firstError = firstError ?? error
+            }
+        }
+
+        // Reaching none of them is a failed tick: throwing leaves the last good
+        // snapshot standing rather than blanking the widget. Reaching some is a
+        // partial answer, which is worth more than nothing and says so.
+        if idLists.isEmpty, let firstError { throw firstError }
+        let note = AzureProjectNote.compose(failures: failures, source: .taskbox)
+
+        // The sprint is per project *and* per team, so it can only be shown
+        // when there is exactly one project to be wrong about.
+        let sprint = targets.count == 1
+            ? await currentSprint(target: targets[0], auth: auth)
+            : nil
+
+        let ids = AzureIDMerge.interleave(idLists, limit: WiqlIdParser.idLimit)
 
         // Nothing assigned is a real answer, and it skips the batch entirely.
-        guard !wiql.ids.isEmpty else {
+        guard !ids.isEmpty else {
             return TaskBoxSnapshot(
-                writtenAt: Date(), scope: target.scope,
-                totalCount: wiql.total, sprint: sprint, tasks: []
+                writtenAt: Date(), scope: scope,
+                totalCount: total, sprint: sprint, tasks: [], note: note
             )
         }
 
-        let tasks = try await workItems(ids: wiql.ids, target: target, auth: auth)
+        // One call for every project: `workitemsbatch` is organization-scoped,
+        // and each row names its own project.
+        let tasks = try await workItems(ids: ids, target: targets[0], auth: auth)
         return TaskBoxSnapshot(
             writtenAt: Date(),
-            scope: target.scope,
-            totalCount: wiql.total,
+            scope: scope,
+            totalCount: total,
             sprint: sprint,
-            tasks: TaskFormatting.sorted(tasks)
+            tasks: TaskFormatting.sorted(tasks),
+            note: note
         )
+    }
+
+    /// The ShipBox fan-out, which is the codebase's one concurrent loader.
+    private static func inParallel<S, T>(
+        _ inputs: [S],
+        _ work: @escaping @Sendable (S) async throws -> T
+    ) async throws -> [Result<T, Error>] where S: Sendable, T: Sendable {
+        try await withThrowingTaskGroup(of: (Int, Result<T, Error>).self) { group in
+            for (index, input) in inputs.enumerated() {
+                group.addTask {
+                    do { return (index, .success(try await work(input))) }
+                    catch { return (index, .failure(error)) }
+                }
+            }
+            var collected: [(Int, Result<T, Error>)] = []
+            for try await result in group { collected.append(result) }
+            return collected.sorted { $0.0 < $1.0 }.map(\.1)
+        }
     }
 
     /// Fixed in code rather than user-editable: a hand-written WIQL that
@@ -277,6 +425,9 @@ enum HostAzureDevOpsLoader {
                 "System.State",
                 "System.WorkItemType",
                 "System.ChangedDate",
+                // Load-bearing: the batch is organization-scoped, so this is
+                // the only thing that says which project a row came from.
+                "System.TeamProject",
             ],
             // Required, not cosmetic: without it the whole batch fails when a
             // single id is inaccessible or was deleted between the WIQL call

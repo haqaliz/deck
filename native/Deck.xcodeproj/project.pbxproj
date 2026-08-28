@@ -234,6 +234,7 @@
 		EDD0527FA993CD1BBA58350A /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
 		EF03070D1C89BBB48D30B371 /* MarketBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */; };
 		F1F428C889E3145415BD9E40 /* LiveBoxThermalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C80445C9EC1F419FFAC0DB /* LiveBoxThermalTests.swift */; };
+		F30F2267A3769A3B6B02554B /* AzureMultiProjectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52E64CEB52D9007544C51690 /* AzureMultiProjectTests.swift */; };
 		F4968C6168797484C304D6B5 /* ClipBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */; };
 		F4AB6B9FEEF6A118BD4F284B /* ProcessSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */; };
 		F54A57E18318AB833DE8AF5A /* PRBoxChipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77088C4EE6AAF5F06DCA7953 /* PRBoxChipTests.swift */; };
@@ -329,6 +330,7 @@
 		50A8922BFDCE56FEEAFDE601 /* coinGeckoMarkets.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = coinGeckoMarkets.json; sourceTree = "<group>"; };
 		50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatBoxWidget.swift; sourceTree = "<group>"; };
 		52463282A2101289BD5E16DD /* PRBoxGitHubTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxGitHubTests.swift; sourceTree = "<group>"; };
+		52E64CEB52D9007544C51690 /* AzureMultiProjectTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureMultiProjectTests.swift; sourceTree = "<group>"; };
 		54C2D4337B99014556B02507 /* MarketBoxParsersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxParsersTests.swift; sourceTree = "<group>"; };
 		561AB4E0A1AD6FABCE740F12 /* WeatherSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherSnapshotTests.swift; sourceTree = "<group>"; };
 		5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeAggregatorTests.swift; sourceTree = "<group>"; };
@@ -500,6 +502,7 @@
 				8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */,
 				13A1025AA738F2EC2637AA2C /* AzureAccountProjectsTests.swift */,
 				E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */,
+				52E64CEB52D9007544C51690 /* AzureMultiProjectTests.swift */,
 				4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */,
 				79E814CE71C9E15746C2443A /* CalBoxTests.swift */,
 				F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */,
@@ -936,6 +939,7 @@
 				97918506ABC4C75EC3F7F5D2 /* AzureAccountProjectsTests.swift in Sources */,
 				14D533149620BDF218F5C8A1 /* AzureDevOpsLoader.swift in Sources */,
 				B8D2216F560466E6AB864171 /* AzureDevOpsParserTests.swift in Sources */,
+				F30F2267A3769A3B6B02554B /* AzureMultiProjectTests.swift in Sources */,
 				6551819CA5506A4D266E0D79 /* BatteryCore.swift in Sources */,
 				A63FED1F6FABE8563FF1E242 /* BatteryCoreTests.swift in Sources */,
 				F7D714F5EC3F20D7242F6E85 /* CalBoxSnapshot.swift in Sources */,
