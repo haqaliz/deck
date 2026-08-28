@@ -21,7 +21,14 @@ extension CredentialAccount {
     /// A rename must not invalidate a verification; a new token, a new
     /// organization or a new server must.
     var credentialFingerprint: String {
-        [token, organization, project, serverURL].joined(separator: "\u{0}")
+        // The project list is order-independent: the five slots are a UI
+        // arrangement, and re-ordering them changes nothing the verification
+        // depended on. Adding or removing one does.
+        let projectKey = AzureAccountProjects.normalise(projects)
+            .map { $0.lowercased() }
+            .sorted()
+            .joined(separator: ",")
+        return [token, organization, projectKey, serverURL].joined(separator: "\u{0}")
     }
 
     mutating func recordVerification(_ identity: CredentialIdentity, at date: Date) {
@@ -129,9 +136,15 @@ enum CredentialVerifier {
     }
 
     private static func azure(_ account: CredentialAccount) async throws -> CredentialIdentity {
+        // Verify stays organization-level: the probe below hits the
+        // org-scoped `connectionData`, so the project is only here to satisfy
+        // `normalise`. Checking that all five projects exist would cost five
+        // more calls in the settings window and would fail a whole account over
+        // one mistyped slot; an unreachable project surfaces as a per-project
+        // note on the face instead.
         let target = try AzureTarget.normalise(
             organization: account.organization,
-            project: account.project.isEmpty ? "_" : account.project
+            project: account.projects.first ?? "_"
         )
         guard let url = URL(string: "\(target.orgBase)/_apis/connectionData?api-version=7.1-preview") else {
             throw VerifyError.badResponse

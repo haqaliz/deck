@@ -88,6 +88,36 @@ enum CredentialKind: String, Codable, CaseIterable {
 /// do: that list is fixed and a human can audit it, an unbounded list of
 /// accounts is not. `DeckSettings.scrubbedOfSecrets()` still blanks them, so
 /// there are two independent guarantees rather than one.
+/// The one place a list of Azure project names is made safe to use.
+///
+/// Everything that accepts projects — the account decoder, the gate, the
+/// settings pickers — funnels through here, so a duplicate, a stray space or a
+/// sixth project cannot reach a loader from any direction.
+enum AzureAccountProjects {
+    /// Five slots, matching ShipBox's five repos. Cost is not what bounds this
+    /// (the org probed on 2026-08-28 has six projects, and querying all six
+    /// would be six WIQL calls and one batch) — it is how many pickers fit.
+    static let maxProjects = 5
+
+    /// Trimmed, empties dropped, de-duplicated case-insensitively keeping the
+    /// first spelling, capped, order preserved.
+    ///
+    /// Case-insensitive because Azure resolves a project name that way in a
+    /// URL while displaying it cased: `manifold ops` and `Manifold Ops` are one
+    /// project, and querying both would double every row it owns.
+    static func normalise(_ raw: [String]) -> [String] {
+        var seen = Set<String>()
+        var out: [String] = []
+        for name in raw {
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed.lowercased()).inserted else { continue }
+            out.append(trimmed)
+            if out.count == maxProjects { break }
+        }
+        return out
+    }
+}
+
 struct CredentialAccount: Codable, Equatable, Identifiable {
     /// Opaque, generated once, never rewritten. It is the keychain item name,
     /// so changing it strands whatever the user already pasted.
@@ -100,8 +130,12 @@ struct CredentialAccount: Codable, Equatable, Identifiable {
 
     /// Azure DevOps only.
     var organization: String = ""
-    /// Azure DevOps only.
-    var project: String = ""
+    /// Azure DevOps only. Up to `AzureAccountProjects.maxProjects` of them;
+    /// every one is queried and the results are merged into one face.
+    ///
+    /// Replaces a single `project` string, which is still read once on decode
+    /// for accounts written before the list existed and is never written back.
+    var projects: [String] = []
     /// opencode only. Its emptiness is what makes OpenBox read the local
     /// database instead of a remote server.
     var serverURL: String = ""
@@ -141,7 +175,14 @@ struct CredentialAccount: Codable, Equatable, Identifiable {
         kind = try c.decode(CredentialKind.self, forKey: .kind)
         label = try c.decodeIfPresent(String.self, forKey: .label) ?? ""
         organization = try c.decodeIfPresent(String.self, forKey: .organization) ?? ""
-        project = try c.decodeIfPresent(String.self, forKey: .project) ?? ""
+        // The plural key wins outright: once this build has written a file, the
+        // singular one is gone, and a file carrying both is a hand-edit.
+        if let list = try c.decodeIfPresent([String].self, forKey: .projects) {
+            projects = AzureAccountProjects.normalise(list)
+        } else {
+            let legacy = try c.decodeIfPresent(String.self, forKey: .project) ?? ""
+            projects = AzureAccountProjects.normalise([legacy])
+        }
         serverURL = try c.decodeIfPresent(String.self, forKey: .serverURL) ?? ""
         verifiedIdentity = try c.decodeIfPresent(String.self, forKey: .verifiedIdentity)
         azureIdentityID = try c.decodeIfPresent(String.self, forKey: .azureIdentityID)
@@ -155,7 +196,10 @@ struct CredentialAccount: Codable, Equatable, Identifiable {
         try c.encode(kind, forKey: .kind)
         try c.encode(label, forKey: .label)
         try c.encode(organization, forKey: .organization)
-        try c.encode(project, forKey: .project)
+        // `project` is deliberately absent: a migration that moves a field must
+        // clear the old copy, or the pre-migration fallback keeps answering
+        // from a dead field after the new control has taken over.
+        try c.encode(projects, forKey: .projects)
         try c.encode(serverURL, forKey: .serverURL)
         try c.encodeIfPresent(verifiedIdentity, forKey: .verifiedIdentity)
         try c.encodeIfPresent(azureIdentityID, forKey: .azureIdentityID)
@@ -164,7 +208,7 @@ struct CredentialAccount: Codable, Equatable, Identifiable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, kind, label, organization, project, serverURL
+        case id, kind, label, organization, project, projects, serverURL
         case verifiedIdentity, azureIdentityID, verifiedAt
     }
 }

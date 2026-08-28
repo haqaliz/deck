@@ -13,7 +13,7 @@ final class CredentialsCopyTests: XCTestCase {
     func testAnAzureAccountIsSubtitledByItsOrganizationAndProject() {
         var a = account(.azure)
         a.organization = "acme"
-        a.project = "Manifold"
+        a.projects = ["Manifold"]
 
         XCTAssertEqual(CredentialsCopy.subtitle(for: a), "acme / Manifold")
     }
@@ -57,7 +57,7 @@ final class CredentialsCopyTests: XCTestCase {
     func testAListRowLeadsWithWhatIdentifiesTheAccount() {
         var a = account(.azure)
         a.organization = "acme"
-        a.project = "Manifold"
+        a.projects = ["Manifold"]
 
         XCTAssertEqual(
             CredentialsCopy.rowSubtitle(for: a, among: [a], usedBy: [.taskbox]),
@@ -117,7 +117,7 @@ final class CredentialsCopyTests: XCTestCase {
     func testTheDetailHeaderShowsTheConnectionWhenThereIsOne() {
         var a = account(.azure)
         a.organization = "acme"
-        a.project = "Manifold"
+        a.projects = ["Manifold"]
         a.verifiedIdentity = "Ali Haqiqi"
 
         XCTAssertEqual(CredentialsCopy.connectionSubtitle(for: a), "acme / Manifold")
@@ -237,5 +237,33 @@ final class CredentialsCopyTests: XCTestCase {
         a.verifiedAt = Date(timeIntervalSince1970: 0)
 
         XCTAssertTrue(CredentialsCopy.verification(for: a).hasPrefix("haqaliz"))
+    }
+
+    // MARK: - Several projects in one subtitle
+
+    private func azure(_ projects: [String]) -> CredentialAccount {
+        var a = CredentialAccount(id: "a1", kind: .azure, label: "work")
+        a.organization = "acme"
+        a.projects = projects
+        return a
+    }
+
+    func testOneProjectReadsAsOrgSlashProject() {
+        XCTAssertEqual(
+            CredentialsCopy.connectionSubtitle(for: azure(["Manifold Ops"])),
+            "acme / Manifold Ops"
+        )
+    }
+
+    func testSeveralProjectsNameTheFirstAndCountTheRest() {
+        // Naming the first matters: "acme / 3 projects" says nothing about which.
+        XCTAssertEqual(
+            CredentialsCopy.connectionSubtitle(for: azure(["ForesightManifold", "Manifold Ops", "p3"])),
+            "acme / ForesightManifold +2"
+        )
+    }
+
+    func testNoProjectFallsBackToTheOrganization() {
+        XCTAssertEqual(CredentialsCopy.connectionSubtitle(for: azure([])), "acme")
     }
 }

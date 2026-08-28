@@ -95,7 +95,7 @@ final class CredentialsMigrationTests: XCTestCase {
 
         XCTAssertEqual(settings.account(for: .openbox)?.serverURL, "http://nuc:4096")
         XCTAssertEqual(settings.account(for: .taskbox)?.organization, "acme")
-        XCTAssertEqual(settings.account(for: .taskbox)?.project, "Manifold")
+        XCTAssertEqual(settings.account(for: .taskbox)?.projects, ["Manifold"])
     }
 
     func testTheLegacyItemIsDeletedOnlyAfterTheAccountIsConfirmed() {
@@ -285,7 +285,7 @@ final class CredentialsMigrationTests: XCTestCase {
         XCTAssertEqual(settings.credential(for: .shipbox)?.token, "ghp")
         XCTAssertEqual(settings.credential(for: .openbox)?.serverURL, "http://nuc:4096")
         XCTAssertEqual(settings.credential(for: .taskbox)?.organization, "acme")
-        XCTAssertEqual(settings.credential(for: .prboxAzure)?.project, "F")
+        XCTAssertEqual(settings.credential(for: .prboxAzure)?.projects, ["F"])
     }
 
     func testClearingASlotAfterMigrationResurrectsNothing() {

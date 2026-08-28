@@ -56,7 +56,7 @@ final class CredentialAccountTests: XCTestCase {
     func testEveryNonSecretFieldSurvivesARoundTrip() throws {
         var account = CredentialAccount(id: "a1", kind: .azure, label: "acme")
         account.organization = "acme"
-        account.project = "Manifold"
+        account.projects = ["Manifold"]
         account.verifiedIdentity = "Ali Haqiqi"
         account.azureIdentityID = "1c1e4e0a-0000-4000-8000-000000000001"
         account.verifiedAt = Date(timeIntervalSince1970: 1_700_000_000)

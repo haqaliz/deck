@@ -45,10 +45,7 @@ enum CredentialsCopy {
     static func connectionSubtitle(for account: CredentialAccount) -> String {
         switch account.kind {
         case .azure:
-            let organization = account.organization.trimmingCharacters(in: .whitespaces)
-            let project = account.project.trimmingCharacters(in: .whitespaces)
-            if !organization.isEmpty, !project.isEmpty { return "\(organization) / \(project)" }
-            if !organization.isEmpty { return organization }
+            if let scope = azureScope(for: account) { return scope }
         case .opencode:
             if let host = URL(string: account.serverURL)?.host, !host.isEmpty { return host }
         case .github:
@@ -57,14 +54,27 @@ enum CredentialsCopy {
         return account.kind.displayName
     }
 
+    /// `org / Project`, and `org / Project +2` once an account carries several.
+    ///
+    /// The first project is named rather than counted alone ("acme / 3
+    /// projects" tells the user nothing about *which*), and the overflow is a
+    /// suffix rather than a list because this is a one-line subtitle.
+    static func azureScope(for account: CredentialAccount) -> String? {
+        let organization = account.organization.trimmingCharacters(in: .whitespaces)
+        let projects = AzureAccountProjects.normalise(account.projects)
+        guard !organization.isEmpty else { return nil }
+        guard let first = projects.first else { return organization }
+        let overflow = projects.count - 1
+        return overflow == 0
+            ? "\(organization) / \(first)"
+            : "\(organization) / \(first) +\(overflow)"
+    }
+
     /// Whatever names the connection, or nil when nothing does yet.
     private static func identifyingSubtitle(for account: CredentialAccount) -> String? {
         switch account.kind {
         case .azure:
-            let organization = account.organization.trimmingCharacters(in: .whitespaces)
-            let project = account.project.trimmingCharacters(in: .whitespaces)
-            if !organization.isEmpty, !project.isEmpty { return "\(organization) / \(project)" }
-            if !organization.isEmpty { return organization }
+            if let scope = azureScope(for: account) { return scope }
         case .opencode:
             if let host = URL(string: account.serverURL)?.host, !host.isEmpty { return host }
         case .github:
