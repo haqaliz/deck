@@ -35,7 +35,8 @@
 
 set -u
 
-CONTAINER="$HOME/Library/Containers/com.deck.app.widgets"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/ids.sh"
+CONTAINER="$DECK_CONTAINER"
 DATA="$CONTAINER/Data"
 
 if [[ ! -d "$CONTAINER" ]]; then

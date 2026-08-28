@@ -24,6 +24,10 @@ targets:
           chmod +x "$BUILT_PRODUCTS_DIR/Deck.app/Contents/MacOS/DeckAgent"
       - name: Embed LaunchAgents
         script: |
+          # Clear first. A plain mkdir+cp leaves plists from a previous build
+          # in place, so an incremental build across a rename ships BOTH
+          # generations, sealed into the signature with nothing complaining.
+          rm -rf "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents"
           mkdir -p "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents"
           cp "$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.plist" "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/"
           cp "$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.processes.plist" "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/"

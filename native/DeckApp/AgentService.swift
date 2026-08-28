@@ -32,10 +32,13 @@ enum AgentService {
         }
     }
 
-    static let main = Agent(service: .agent(plistName: "com.deck.agent.plist"), label: "com.deck.agent")
+    static let main = Agent(
+        service: .agent(plistName: "\(DeckBundle.agentLabel).plist"),
+        label: DeckBundle.agentLabel
+    )
     static let processes = Agent(
-        service: .agent(plistName: "com.deck.agent.processes.plist"),
-        label: "com.deck.agent.processes"
+        service: .agent(plistName: "\(DeckBundle.fastAgentLabel).plist"),
+        label: DeckBundle.fastAgentLabel
     )
 
     static var all: [Agent] { [main, processes] }

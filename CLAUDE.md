@@ -402,6 +402,63 @@ Do not delete the container; see the trap below.
   `[enabled, allowed]`**, so disable-then-reinstall tests nothing (install
   first, then disable, then relaunch); and replacing the bundle also takes the
   running jobs down without reloading them, same as a `bootout`.
+- **`SMAppService.status` says a record exists, not that the job runs — and
+  `launchctl list` cannot tell you either.** Measured 2026-08-29
+  (`docs/planning/bundle-identifier/probe.md`). Both agents sat
+  `[enabled, allowed]` in `sfltool dumpbtm` with the "Refresh in background"
+  toggle on, while `launchctl print gui/$(id -u)/com.deck.agent` answered
+  `Could not find service` and **nothing was written for 6 hours**. `.enabled`
+  is what `SMAppService` reports for a registration record; whether launchd
+  bootstrapped the job is a second, invisible axis. `AgentReconcilePolicy`
+  correctly does nothing (intent on, state `.enabled`), and v1.34's notice
+  cannot fire — that one is for `[enabled, disallowed]` → `.requiresApproval`.
+  Three traps around it:
+  1. **`launchctl list | grep com.deck.agent` prints nothing on a healthy
+     install.** SMAppService jobs are not bootstrapped into `gui/<uid>` under
+     their plist label; the labels appear only in the domain's enabled/disabled
+     table. README and the issue template asked for that command from v1.33
+     until it was corrected.
+  2. **`processes.json` is the only unambiguous liveness probe.** The fast agent
+     has been its single writer since v1.30, so its mtime separates "an agent
+     ran" from "the app ran". Every other snapshot is written by both, which is
+     why a dead agent is invisible while Deck is open.
+  3. **`settings.json` is not an off switch.** Setting `agentAtLogin: false`
+     with Deck quit is undone on the next launch: with the record `.enabled` the
+     reconcile policy reads the registration as the newer choice and adopts it
+     back to `true`, never unregistering. Recovery is the in-app toggle
+     (`unregister()` directly) or a login — and `launchctl bootstrap` of the
+     bundle's plists fails with `Input/output error`, because `BundleProgram`
+     resolves only inside the SMAppService context.
+- **Renaming the bundle identifier: four measured surprises.** From a real
+  renamed build installed over `/Applications/Deck.app`
+  (`docs/planning/bundle-identifier/`, prepared but not applied).
+  1. **The new container needs no help.** containermanagerd provisions it — full
+     skeleton, metadata plist, home symlinks — during `lsregister`, *before* the
+     app is installed or the extension ever runs. A migration can write into it
+     directly.
+  2. **The old launchd job does not run the new binary; it dies.** The job
+     records `parent bundle identifier` and `parent bundle version`, not just a
+     path, so after the swap it fails `78: EX_CONFIG` / `spawn failed` rather
+     than executing whatever now sits at `Contents/MacOS/DeckAgent`. Background
+     refresh therefore stops until the renamed app launches and registers.
+  3. **Orphaned agent records are re-parented, not deleted, and `unregister()`
+     only disables.** BTM *replaces* the old app record and re-parents its two
+     agent records to the new app, so Login Items shows four DeckAgent rows, two
+     unrunnable. `launchctl bootout` fails (`No such process`), and
+     `SMAppService.agent(plistName:)` resolves plists **inside the current
+     bundle**, so the new bundle has no handle unless it ships the old names.
+     Doing so flips them to `[disabled, allowed]`; only `sfltool resetbtm`
+     removes them, and it wipes every login item on the machine.
+  4. **Rollback is not symmetric.** Reinstalling the old bundle over the new one
+     leaves **two BTM app records claiming the same URL**, after which launchd
+     refuses both jobs with `EX_CONFIG`. The in-app toggle,
+     `launchctl kickstart -k` and restarting `smd` all fail; only a
+     logout/login repairs it.
+- **`Embed LaunchAgents` used to ship plists from the previous build.** It was
+  `mkdir -p` + `cp` with no clean, so an incremental build across a rename
+  sealed *both* generations into the signature with nothing complaining. Fixed
+  by clearing the destination first (`project.yml`); if you add another
+  copy-into-the-bundle phase, clear its destination too.
 - **`build.noindex` does not prevent LaunchServices pollution.** The `.noindex`
   suffix only hides the directory from Spotlight; xcodebuild still runs an
   explicit `RegisterWithLaunchServices` phase that registers the dev copy. Run

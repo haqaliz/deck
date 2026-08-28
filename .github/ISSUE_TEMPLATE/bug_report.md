@@ -28,7 +28,9 @@ labels: bug
 <!-- These three catch most reports. Please run them before filing. -->
 
 - [ ] `pluginkit -m -i com.deck.app.widgets` lists the extension
-- [ ] `launchctl list | grep com.deck.agent` shows the agent loaded
+- [ ] `stat -f '%Sm' ~/Library/Containers/com.deck.app.widgets/Data/Library/Application\ Support/Deck/processes.json`
+      is recent (the agents' liveness check — `launchctl list` shows nothing
+      even when they are healthy)
 - [ ] I ran `scripts/lsclean.sh` (fixes grey placeholder blocks in every widget)
 
 ## Logs

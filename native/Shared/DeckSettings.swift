@@ -104,6 +104,11 @@ struct DeckSettings: Codable, Equatable {
     /// rather than each owning a token of its own.
     var credentials = CredentialsSettings()
     var agentAtLogin = true
+    /// Whether the one-time "your identifier changed, re-add your widgets"
+    /// notice has been dismissed. Written into the **new** container, so it
+    /// cannot loop — a flag left behind in the old one would be re-read as
+    /// false on every launch.
+    var didShowRenameNotice = false
 
     init() {}
 
@@ -124,7 +129,7 @@ struct DeckSettings: Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
         case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
-        case marketbox, credentials, agentAtLogin
+        case marketbox, credentials, agentAtLogin, didShowRenameNotice
     }
 
     /// Decode-only. See `LegacyHomeBoxSettings`.
@@ -165,12 +170,13 @@ struct DeckSettings: Codable, Equatable {
         marketbox = try c.decodeIfPresent(MarketBoxSettings.self, forKey: .marketbox) ?? MarketBoxSettings()
         credentials = try c.decodeIfPresent(CredentialsSettings.self, forKey: .credentials) ?? CredentialsSettings()
         agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
+        didShowRenameNotice = try c.decodeIfPresent(Bool.self, forKey: .didShowRenameNotice) ?? false
     }
 
     /// Settings live inside the widget extension's sandbox container so both
     /// the (unsandboxed) host app and the sandboxed extension can use them.
     /// NOTE: inside the sandbox, homeDirectoryForCurrentUser already points at
-    /// the container (…/Containers/com.deck.app.widgets/Data), so the two
+    /// the container (…/Containers/<DeckBundle.widgetsID>/Data), so the two
     /// resolve to the same absolute path.
     static var containerDirectory: URL {
         let home = FileManager.default.homeDirectoryForCurrentUser
@@ -178,7 +184,10 @@ struct DeckSettings: Codable, Equatable {
         if isSandboxed {
             return home.appendingPathComponent("Library/Application Support/Deck", isDirectory: true)
         }
-        return home.appendingPathComponent("Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck", isDirectory: true)
+        return home.appendingPathComponent(
+            "Library/Containers/\(DeckBundle.widgetsID)/Data/Library/Application Support/Deck",
+            isDirectory: true
+        )
     }
 
     static var fileURL: URL {

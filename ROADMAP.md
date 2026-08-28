@@ -402,6 +402,69 @@ in CI, the verification gates, and what the identity change resets.
 - [ ] **Bundle identifier.** `com.deck.app` / `com.deck.agent` is reverse-DNS
       for a domain nobody owns. Changing it after launch forces every user to
       re-add their widgets and re-grant TCC, so it has to happen before.
+      **Prepared but deliberately not applied** (2026-08-29,
+      `docs/planning/bundle-identifier/`). The new prefix is
+      `io.github.haqaliz.deck` — backed by the account that already hosts the
+      repo and the tap, so it is a namespace actually controlled. By decision it
+      rides the **notarization** release rather than shipping alone, because
+      that already forces the same re-grant (notarization runbook, Step 6); the
+      one-line flip and its gate are
+      [`flip-runbook.md`](docs/planning/bundle-identifier/flip-runbook.md).
+      What shipped now is everything that can ship dormant: `DeckBundle` as the
+      single Swift source (pinned by tests against `project.yml`, the generated
+      `DeckAgent/Info.plist`, both LaunchAgent plist names and Labels, and
+      `scripts/lib/ids.sh` — drift fails the suite), every call site routed
+      through it, and `ContainerMigration`, which carries `settings.json` into
+      the new container and is inert while the ids match.
+      **Probed live on a real renamed build, and three of the plan's own
+      predictions were wrong:**
+      - **The container needs no help.** containermanagerd provisions the new
+        one — full skeleton, metadata plist, home symlinks — at `lsregister`
+        time, *before* the app is installed, let alone launched. The migration
+        writes into it directly; the feared hand-made-skeleton case cannot
+        arise.
+      - **The old agent does not run the new binary.** The launchd job records
+        the parent bundle *identity* (`parent bundle identifier`,
+        `parent bundle version`), not just a path, so replacing the bundle makes
+        it fail `78: EX_CONFIG` rather than executing whatever now sits there.
+        The default-settings snapshot corruption the plan was designed around
+        cannot happen. The migration still runs from both entry points, because
+        the agent is registered at login and the app is not.
+      - **The orphaned agent records cannot be deleted, only disabled.** The old
+        app record is *replaced* and its two agent records are *re-parented to
+        the new app*, so Login Items shows four DeckAgent rows, two unrunnable.
+        `launchctl bootout` fails (`No such process`) and the new bundle has no
+        handle on them, so the flip ships the old-named plists for one release
+        purely to `unregister()` them — which flips them to
+        `[disabled, allowed]` rather than removing them. Only `sfltool resetbtm`
+        removes them, and it wipes every login item on the machine.
+      Also measured: **rollback is not symmetric.** Reinstalling the old bundle
+      over the new leaves two BTM app records claiming one URL and launchd
+      refuses both jobs; the in-app toggle, `kickstart` and restarting `smd` all
+      fail, and only a logout/login repairs it.
+- [ ] **Agent liveness check** — **prerequisite for the bundle rename**, and a
+      standing bug found while probing it. `SMAppService.status` answers "is
+      there a registration record", not "is the job loaded", and those came
+      apart on the dev machine for **6 hours**: BTM `[enabled, allowed]`, the
+      toggle on, `launchctl print` reporting no such service, and nothing
+      written since 17:51. v1.34's notice cannot catch it — that fires on
+      `[enabled, disallowed]` → `.requiresApproval`; this is `.enabled`, so
+      `AgentReconcilePolicy` correctly does nothing. It is the third distinct
+      way the agents can be down (never registered / user-vetoed /
+      registered-but-unloaded) and the only one Deck is blind to.
+      **The rename puts every user into exactly this state**, since the new
+      agents register only when the renamed app first launches — so this ships
+      first or the flip silently stops background refresh for everyone.
+      Deck already has the ground truth: `processes.json` has been the fast
+      agent's **single writer** since v1.30, so its mtime distinguishes "an
+      agent ran" from "the app ran" with no ambiguity — every other snapshot is
+      written by both, which is why this went unnoticed for so long. Compare it
+      against `processRefreshInterval` while `agentAtLogin` is on and report in
+      General beside the Login Items notice. Recovery is the documented toggle
+      off→on; it cannot be driven from outside the app, because with the record
+      `.enabled` the reconcile policy re-adopts `agentAtLogin: true` from the
+      registration and never unregisters — so `settings.json` is not a test seam
+      for this.
 - [x] **Keychain for the credentials** — shipped 2026-08-26
       (`docs/planning/keychain-tokens/`). **Five** tokens, not the three this
       entry used to claim: OpenBox, ShipBox, TaskBox, and PRBox's separate

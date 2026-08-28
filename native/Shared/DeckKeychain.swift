@@ -38,7 +38,14 @@ enum SecretRead: Equatable {
 /// reads what Deck.app wrote from inside a launchd job without a prompt.
 enum DeckKeychain {
     /// Overridable so tests never touch the real items.
-    static let defaultService = "com.deck.app"
+    ///
+    /// Deliberately the **legacy** app id, and it stays that way across the
+    /// bundle rename. Legacy-keychain access is not bound to the reading
+    /// binary's identity (measured: `docs/planning/keychain-tokens/probe.md`),
+    /// so a renamed, re-signed Deck keeps reading these items with no
+    /// migration — and renaming the service would strand five tokens for
+    /// nothing but tidiness.
+    static let defaultService = DeckBundle.Legacy.appID
 
     static func read(_ secret: DeckSecret, service: String = defaultService) -> SecretRead {
         read(itemName: secret.rawValue, service: service)

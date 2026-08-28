@@ -1,87 +1,107 @@
-# Understanding — ShipBox multi-repo
+# Understanding — bundle identifier rename
 
 ## What the work is really asking
 
-ShipBox is a single-target widget: one `owner/repo` → one GitHub Actions fetch →
-one snapshot → one flat list of runs. The ask is to fan that out over a small
-list of repos while keeping **one** snapshot, **one** fetch-status key and one
-readable face. The fetch itself is already proven — this is a shape change, not
-a new data source.
+Move Deck off `com.deck.*` (reverse-DNS for an unowned domain) to an owned
+prefix. The rename itself is a find-and-replace; the work is **everything the
+old identifier is silently the key to**: the widget extension's sandbox
+container, the placed widgets on the user's desktop, two TCC grants, and the
+`SMAppService` registrations.
 
-## Affected files (all exist; nothing new is invented)
+## Affected files (verified by grep, not assumed)
 
-| File | Change |
-|---|---|
-| `native/Shared/DeckSettings.swift:484` | `ShipBoxSettings.repo: String` → a list + tolerant migration |
-| `native/Shared/ShipBoxSnapshot.swift:10` | `ShipBoxSnapshot.repo: String` → repos; `ShipRun` gains a repo tag |
-| `native/Shared/ShipBoxSnapshot.swift:69` | `HostGitHubLoader.fetch(repo:token:)` → fan-out + partial-failure policy |
-| `native/Shared/FetchStatus.swift:19` | `.shipbox` stays one key; copy may need "N repos" wording |
-| `native/DeckAgent/main.swift:130` | the guard (`repo.isEmpty`) and the `.notConfigured` branch |
-| `native/DeckApp/DeckApp.swift:303` | `refreshShipBox()` mirrors the agent block exactly |
-| `native/DeckApp/DeckApp.swift:1184` | settings tab: one `TextField` → a repo list |
-| `native/DeckWidgets/ShipBoxWidget.swift` | header (`entry.repo`), row label, three faces |
-| `native/SharedTests/ShipBoxSnapshotTests.swift` | parser/formatter/merge tests |
-| `scripts/demo_data.py:102` | sanitizer writes `d["repo"]` — must follow the new shape |
-| `README.md`, `ROADMAP.md` | registration + close `ROADMAP.md:311` |
+**Identity itself**
+- `native/project.yml:3` — `bundleIdPrefix: com.deck`
+- `native/project.yml:42` — DeckApp `com.deck.app`
+- `native/project.yml:79` — DeckWidgets `com.deck.app.widgets`
+- `native/project.yml:107` — DeckAgent `CFBundleIdentifier: com.deck.agent`
+- `native/project.yml:141` — DeckSharedTests `com.deck.sharedtests`
 
-## What the codebase already decided for us
+**Keys derived from it**
+- `native/Shared/DeckSettings.swift:181` — container path
+  `Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck`.
+  This is the *only* place; all 13 snapshot stores go through
+  `DeckSettings.containerDirectory` (`AtomicFile.swift:15` creates it with
+  `withIntermediateDirectories: true`).
+- `native/Shared/DeckKeychain.swift:41` — `defaultService = "com.deck.app"`
+- `native/DeckApp/AgentService.swift:35-38` — two `SMAppService` plist names +
+  labels; the plists themselves are
+  `native/DeckApp/LaunchAgents/com.deck.agent{,.processes}.plist`, whose
+  filenames are hardcoded in the copy step at `project.yml:28-29`
+- `native/DeckApp/DeckApp.swift:491` — `legacyCleanup()` boots out the two
+  labels and deletes `~/Library/LaunchAgents/<label>.plist`
+- `native/DeckAgent/main.swift:25` — OSLog subsystem `com.deck.agent`
 
-- **Partial failure has a shipped precedent.** `HostMarketLoader.fetch`
-  (`MarketBoxSnapshot.swift:193`) fetches each provider best-effort, keeps the
-  first error, returns rows + a `note`, and throws **only when nothing at all
-  could be built**. `MarketSnapshot.note` is rendered as one line on the face
-  (`MarketBoxWidget.swift:165`). ShipBox should copy this verbatim: a repo that
-  fails contributes no runs, the others still render, and the note names the
-  failing repo.
-- **Naming which target failed also has a precedent.** `PRChip.text`
-  (`FetchStatus.swift:349`) composes two providers into one line: both-down-for-
-  the-same-reason collapses to `"GitHub + Azure: <reason>"`, two different
-  reasons become `"GitHub: <reason> +1 more"`. That is exactly the N-repo
-  wording problem, already solved for N=2.
-- **The settings migration has a precedent.** `MarketBoxSettings`
-  (`DeckSettings.swift:770`) reads a legacy `symbols` key when `tickers` is
-  absent, normalizes (trim/dedupe/cap) and **encodes only the new shape**. The
-  `repo` → `repos` migration is the same three lines.
-- **The tolerant-decode trap is documented.** `ROADMAP.md` "Fixed in passing":
-  a non-tolerant decode silently resets *every* setting. `ShipBoxSettings`
-  already has a hand-written `init(from:)`; the new key must join it.
+**Docs / scripts / distribution**
+- `scripts/container-repair.sh:38`, `scripts/demo-data.sh:22,28-34`,
+  `scripts/soak.sh:30,76-96`, `scripts/lsclean.sh:11,49`
+- `homebrew/deck.rb:52-77` — `launchctl` uninstall, `quit:`, and the `zap`
+  paths (and the mirror in the `haqaliz/homebrew-deck` tap)
+- `README.md:125,149,255,258,286,348,362,386-389`
+- `.github/ISSUE_TEMPLATE/bug_report.md:30-36`
+- `docs/planning/notarization/runbook.md:220,245`
 
-## Ambiguities for the interview
+## The one thing that is *not* affected (and shouldn't be touched)
 
-1. **Merged stream or per-repo grouping?** A repo with busy CI can crowd every
-   other repo out of a global newest-first list. Per-repo grouping fixes that
-   and costs vertical space the small face does not have.
-2. **Row label under multi-repo.** Today a row is `"<workflow> #<n>"` +
-   `"<branch> · <duration>"`. Adding the repo makes three identifiers compete
-   for one line at 11pt; something has to give, especially on small.
-3. **Header.** `entry.repo` is the header today. With N repos it becomes what —
-   a count, a rotation, the totals line alone?
-4. **Repo cap.** ~5 was the deck-next suggestion; needs a number. It sets the
-   settings UI (fixed slots vs add/remove) and the worst-case fetch time.
-5. **Fetch concurrency.** No loader in the repo uses `async let` or a
-   `TaskGroup` — MarketBox awaits four providers serially. Five repos × a 10s
-   timeout is 50s serially, against a 60s tick. Concurrent fan-out is likely
-   required, and would be the first in the codebase.
-6. **Deep links.** `ShipRun.htmlURL` is parsed and unused (an explicit non-goal
-   of ShipBox slice 1), but CalBox/TaskBox/PRBox rows became clickable in
-   `5b0c417`/`a6ecd9c`. In scope here or not?
-7. **Snapshot decode across the upgrade.** `ShipBoxSnapshotStore.load()` uses a
-   synthesized decoder, so the first launch after the upgrade fails to decode
-   the old `shipbox.json` and the widget shows "No build data" for one tick.
-   Tolerate it or add a tolerant decode?
+**The keychain does not have to move.** The service string `com.deck.app` is
+just a string — Deck uses the legacy login keychain with no access groups, and
+`docs/planning/keychain-tokens/probe.md` measured that item access is *not*
+bound to the reading binary's identity at all (a separately-signed bare tool,
+an ad-hoc copy, and `/usr/bin/security` all read items the app wrote, with no
+prompt, and `SecItemAdd` ignored an explicit `SecAccess`). So a renamed,
+re-signed Deck keeps reading the five tokens under the old service with no
+migration. Renaming the service for tidiness buys nothing and risks stranding
+tokens — `DeckSecret`'s own doc comment says raw values are "stable on disk"
+for exactly this reason. **Recommend: leave the keychain service alone**, and
+if the cosmetics matter, do it as a separate read-old/write-new migration.
 
-## Shell invariants checked (CLAUDE.md)
+## The real risk: the container
 
-- **No Swift Charts.** ShipBox's face draws no chart today and must not start —
-  a `Chart` in a widget face silently drops the widget from the gallery.
-- **One timeline entry.** The CalBox archive-size lesson; ShipBox already emits
-  a single entry with a 60s reload policy, and N repos must not change that.
-- **Agent path only.** The widget sandbox has no network entitlement; every
-  repo is fetched by `DeckAgent` (and mirrored by the host app's 60s timer).
-- **Atomic writes / single writer.** `ShipBoxSnapshotStore.save` already goes
-  through `AtomicFile`; the fan-out must still write **one** file, once.
-- **Version bump.** Not a new widget, so no descriptor-cache risk, but a
-  release bumps `1.27`/`27` in `native/project.yml` (three targets).
+A new extension id means a new container. `settings.json` and all 13 snapshots
+live in the old one. Two hard constraints:
 
-**No invariant is broken by this work** — it stays inside one widget, one
-snapshot, one status key and the existing agent cadence.
+1. **The old container must not be deleted.** `rm -rf` cannot remove the
+   SIP-protected `.com.apple.containermanagerd.metadata.plist` (confirmed
+   present, 29.7K, mode 644 on this machine), so containermanagerd keeps
+   believing it is provisioned and never rebuilds the skeleton — every widget
+   then renders blank forever (`scripts/container-repair.sh`, CLAUDE.md trap).
+   `eraseDeckData()` (`DeckApp.swift:574`) already models the right shape:
+   delete the *contents*, never the directory.
+2. **Open question — who provisions the new container, and when?** The
+   unsandboxed app writes settings via `AtomicFile`, which will happily
+   `mkdir -p` a container path that containermanagerd has never provisioned.
+   Whether a hand-made skeleton is adopted or poisons provisioning is exactly
+   the failure mode `container-repair.sh` exists for, and it is **not answered
+   anywhere in the repo**. This wants a live probe before the plan is written.
+
+## Sequencing conflict found in the repo (not in the brief)
+
+`docs/planning/notarization/runbook.md:238-249` — **Step 6, "Ride the same
+release with the other install-invalidating changes"** — explicitly lists the
+bundle identifier rename as something to ship *with* the Developer ID switch,
+on the grounds that notarization already forces every user to re-grant
+permissions and "anything else with the same cost should ship in the same
+version rather than inflicting a second round".
+
+The two remaining items in that list have both since shipped standalone
+(keychain in v1.30, SMAppService in v1.33), so the precedent is mixed. But the
+rename is the one item in the list that genuinely carries the same user cost as
+notarization, which makes this a real decision rather than a formality:
+
+- **Ship now, standalone** — users pay re-add + re-grant twice (now, and again
+  at notarization). Cheapest while the user base is small; unblocks the M7 item
+  that is not gated on the $99 program.
+- **Prepare now, ship with notarization** — one disruption, but the code sits
+  on a branch for an unknown period and the M7 checkbox stays open.
+- **Buy the program first** — collapses the question, but is a purchase
+  decision, not an engineering one.
+
+**This is the first interview question.** The second is the new prefix itself,
+which nothing in the repo decides.
+
+## Shell invariants checked
+
+Nothing here touches the widget faces, the two data paths, the 60s cadence, or
+the settings-in-the-app-only rule. The version bump the brief calls for is
+required by the WidgetKit descriptor cache (CLAUDE.md), and is needed anyway
+because the extension id changes.

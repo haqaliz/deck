@@ -1,24 +1,53 @@
-# Brief — Azure DevOps multi-project for TaskBox and PRBox
+# Brief — bundle identifier rename
 
-Source: `deck-next` pick (2026-08-28). No GitHub issue; inline brief.
+**Type:** feat · **Slug:** `bundle-identifier` · **Source:** inline brief (deck-next pick, 2026-08-28)
 
-TaskBox and PRBox each show Azure DevOps work from exactly one project; both
-list "multi-project/multi-org" as an open follow-up (ROADMAP.md:165, :193), and
-TaskBox's own live probe measured 67 items across three projects against the 25
-in the configured one (ROADMAP.md:151) — so most of this org's work is invisible
-today.
+Rename Deck's bundle identifiers off `com.deck.*` — a reverse-DNS prefix for a
+domain nobody owns — to an owned prefix, before launch.
 
-Resolve the model fork first: `CredentialAccount.project` is a single String
-(native/Shared/CredentialAccount.swift:104) and a `CredentialSlot` binds one
-account, so decide between a project list on the account and multiple accounts
-per slot (the latter makes the user paste the same PAT twice, since keychain
-items are keyed per account id) before writing the PRD.
+`ROADMAP.md:402` records the ordering constraint: changing it after launch forces
+every user to re-add their widgets and re-grant TCC, "so it has to happen before."
+Deck is already public — the Homebrew tap `haqaliz/homebrew-deck` is pinned to a
+released v1.35 DMG — so the blast radius widens with every release.
 
-Mind the per-tick cost: TaskBox is WIQL + workitemsbatch + team iterations per
-project and PRBox is one call per project per criterion, against a measured
-9.4s-serial / 2.1s-concurrent fan-out and a 60s agent cadence — cap the project
-count and follow `HostGitHubLoader.inParallel`.
+## Where the identifier is load-bearing
 
-Keep the WIQL `[System.TeamProject]` clause per project (a project-scoped URL
-does not filter) and keep PRBox's `connectionData` identity resolution, which
-must fail rather than fall back.
+Seven places, found by `grep -rn "com\.deck"`:
+
+1. `native/project.yml:3` — `bundleIdPrefix: com.deck`
+2. `native/project.yml:42,79,107` — `PRODUCT_BUNDLE_IDENTIFIER` for DeckApp
+   (`com.deck.app`), DeckWidgets (`com.deck.app.widgets`), and DeckAgent's
+   `CFBundleIdentifier` (`com.deck.agent`); plus `com.deck.sharedtests` at :141
+3. `native/Shared/DeckKeychain.swift:41` — `defaultService = "com.deck.app"`
+   (the service the five migrated tokens live under)
+4. `native/Shared/DeckSettings.swift:181` — the container path
+   `Library/Containers/com.deck.app.widgets/Data/…`, where `settings.json` and
+   every snapshot live
+5. `native/DeckApp/AgentService.swift:35-38` — the two `SMAppService` plist names
+   and labels (`com.deck.agent`, `com.deck.agent.processes`), plus
+   `DeckApp.swift:491` and the LaunchAgent plists copied by the build phase
+   (`project.yml:28-29`)
+6. `native/DeckAgent/main.swift:25` — the OSLog subsystem `com.deck.agent`
+7. `scripts/{container-repair,demo-data,lsclean,soak}.sh` and
+   `homebrew/deck.rb:52-77` — uninstall/zap stanzas and repair paths
+
+## Why this is a data migration, not a rename
+
+The widget container moves. `settings.json`, the snapshots, and the consumers of
+the five keychain tokens all live under the old identifier. The migration must
+carry `settings.json` and the keychain items over **before** the old container is
+orphaned, and must **leave the old container in place** rather than delete it —
+`rm -rf` on a container cannot remove the SIP-protected metadata plist, which
+leaves containermanagerd believing it is still provisioned and renders every
+widget blank (CLAUDE.md trap).
+
+## Known costs, assumed unavoidable
+
+- Both TCC grants reset (the `ps` "data from other apps" prompt and
+  `NSCalendarsFullAccessUsageDescription`) — they are keyed to signature + id.
+- All fourteen widgets must be re-added from the gallery.
+- A version bump is required so the widget descriptor cache invalidates.
+
+## Open question for the PRD
+
+What the new prefix should be.

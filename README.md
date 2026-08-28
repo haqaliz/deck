@@ -359,11 +359,35 @@ registered in the first place.
 **A widget says "Check repo + token" or "Agent hasn't run".** That is the
 widget reporting the last fetch, not a bug: fix the token/repo/location in Deck
 settings (the app refreshes immediately, so the line clears within seconds), or
-check the agent is loaded with `launchctl list | grep com.deck.agent`. Reasons
+check the agent is actually running (below). Reasons
 are recorded per source in `fetch-{shipbox,weather,opencodeRemote}.json` inside
 the widget container. If the agents are not listed in System Settings → General
 → Login Items either, make sure Deck's "Refresh in background" toggle is on and
 Deck has been launched from `/Applications` at least once.
+
+**Checking whether the background agents are actually running.** Not with
+`launchctl list` — agents registered through `SMAppService` are not bootstrapped
+into `gui/<uid>` under their plist label, so that command prints nothing on a
+perfectly healthy install. The reliable check is the fast agent's own output:
+
+```bash
+stat -f '%Sm' ~/Library/Containers/com.deck.app.widgets/Data/Library/Application\ Support/Deck/processes.json
+```
+
+`processes.json` has a single writer — the fast process agent — so a timestamp
+older than a few multiples of the configured process interval means the agents
+are down, whatever anything else says. Every other snapshot is written by the
+app too, so a fresh one proves only that Deck was open.
+
+**"Refresh in background" is on but nothing is running.** A registration record
+and a loaded job are two different things: `sfltool dumpbtm | grep -A8 DeckAgent`
+can report `[enabled, allowed]` while
+`launchctl print gui/$(id -u)/com.deck.agent.processes` answers
+`Could not find service`. Deck cannot currently tell the difference and will
+show the toggle on regardless. Recovery is to switch **Refresh in background**
+off and back on in the General tab, or log out and back in — editing
+`settings.json` will not do it, because with the record enabled Deck adopts the
+registration and turns the setting back on.
 
 ## Uninstall
 

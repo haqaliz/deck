@@ -4,7 +4,7 @@ import Charts
 import OSLog
 import AppIntents
 
-private let liveboxLog = Logger(subsystem: "com.deck.app.widgets", category: "LiveBox")
+private let liveboxLog = Logger(subsystem: DeckBundle.widgetsID, category: "LiveBox")
 
 // MARK: - Sample history (persisted in the extension container so the chart has a rolling window)
 

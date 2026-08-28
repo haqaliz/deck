@@ -34,6 +34,7 @@
 		1B8565F372BC3AA492625092 /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
 		1C87D8AA7039304EE1047703 /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		201551751585A84F66EDF7E1 /* PRBoxAzureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46F38858426CA0E8C705B6F /* PRBoxAzureTests.swift */; };
+		214AF4E948209B3310353969 /* DeckBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B96F825FC76E1267D5ACCC /* DeckBundle.swift */; };
 		21F6F45C09E63559C20C6F2D /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		2204B91FEF36EF22F09364D4 /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
 		2266BFBB98C3E0FBA6312E69 /* CredentialsWiringTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 920FB174B8F493303CA61487 /* CredentialsWiringTests.swift */; };
@@ -86,6 +87,7 @@
 		503A811FFA42B6C95C900C31 /* DecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B881092482BA9425E3F5918 /* DecodeTests.swift */; };
 		50445D949C9BB54B2598D494 /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
 		5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
+		5120DA481AAF09E1AF7936B9 /* ContainerMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FE592855DDE3084D207447 /* ContainerMigration.swift */; };
 		519062F60924DCB8663544C7 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		51C852BFFD446B7CD99A8BDA /* ShipBoxDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6C015468901E17452BF6132 /* ShipBoxDiscoveryTests.swift */; };
 		5310A1B92B3CCF57C291D6F4 /* SystemMetricsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */; };
@@ -111,6 +113,7 @@
 		639C6BD8562F1A7344151EAB /* CredentialsCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB175501853DAE0EDDFA4477 /* CredentialsCopy.swift */; };
 		63CAFAA1018EA45415E903FE /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		6551819CA5506A4D266E0D79 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
+		66B10E484885189925757346 /* DeckBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B96F825FC76E1267D5ACCC /* DeckBundle.swift */; };
 		6993ADF4472F602F7B97C449 /* LiveBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */; };
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6C7827BCFC076B798D66F5A7 /* MarketBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */; };
@@ -123,6 +126,7 @@
 		71756A3125964940AD4F060C /* CredentialAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812063688CE39D11189608C8 /* CredentialAccount.swift */; };
 		72183F6AE6F651DFC0C5A377 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = CBC89EF1D34611CB2B244F15 /* AppIcon.icns */; };
 		73AC55C40799B7FACDF0B935 /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
+		748E15BDD892140C525F8E77 /* ContainerMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FE592855DDE3084D207447 /* ContainerMigration.swift */; };
 		74F07107040B1441641C05C1 /* DeckLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */; };
 		758F397B4CB36B934DA2AD64 /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
 		769F47CE66D9A10A5B348E02 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
@@ -148,6 +152,7 @@
 		933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		94F97F3C03EB1B33F5792A6C /* DevBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8410285538D08E9259413910 /* DevBoxWidget.swift */; };
 		96361F53D4F188186ADAE3BA /* CredentialsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */; };
+		9679FDE5EC8B876A8C611B2D /* ContainerMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */; };
 		96B73870192265B41638143C /* NetBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */; };
 		96DEBAC4E560B48A25B64DE0 /* CredentialKindSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9ED1410532D72412810AE4 /* CredentialKindSearchTests.swift */; };
 		97918506ABC4C75EC3F7F5D2 /* AzureAccountProjectsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1025AA738F2EC2637AA2C /* AzureAccountProjectsTests.swift */; };
@@ -175,6 +180,7 @@
 		B78D28F3EFB86CEA57C9803E /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
 		B8D2216F560466E6AB864171 /* AzureDevOpsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */; };
 		BB0DA9CFEFB09DB47DCA109F /* LiveBoxDiskCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */; };
+		BCA6649CD9EB7F67D4A64B79 /* DeckBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B96F825FC76E1267D5ACCC /* DeckBundle.swift */; };
 		BD8A7273480E5B5E14C8BB51 /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
 		BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */; };
 		BEE3B5436518E052E5427E4B /* CredentialAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812063688CE39D11189608C8 /* CredentialAccount.swift */; };
@@ -193,6 +199,7 @@
 		C712B23DB4009D204713BD6C /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
 		C7E88A04B400DC5C2717A0D8 /* DeckKeychainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */; };
 		C81C2A41FCF6D5766010C765 /* github_repos.json in Resources */ = {isa = PBXBuildFile; fileRef = 734F3EA73D9BBCC09CE2D9BF /* github_repos.json */; };
+		C898F5671F325C95B7E63C85 /* ContainerMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FE592855DDE3084D207447 /* ContainerMigration.swift */; };
 		CA1BF5806D6024A7A49CE577 /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
 		CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		CB137C6731146B546A106840 /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
@@ -214,6 +221,7 @@
 		D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */; };
 		D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		D8DE1BC7D47C480B185987C0 /* ShipBoxSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF045F6211C715FF81858003 /* ShipBoxSettingsTests.swift */; };
+		D969837142F67BF5F92D6160 /* DeckBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B96F825FC76E1267D5ACCC /* DeckBundle.swift */; };
 		D9873960F255D965BA294750 /* CredentialGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277279067EB7808B71A4759B /* CredentialGateTests.swift */; };
 		DAD7D5822D2A6F40FD89DD26 /* AtomicFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */; };
 		DD3E61D42DB4A46DB5C256BF /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
@@ -227,6 +235,8 @@
 		E243A28095E18E5CAD6F03DF /* CredentialVerificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A81DDCB64140958465D2A8 /* CredentialVerificationTests.swift */; };
 		E2DE130621C6683B7AA69F2D /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		E3474B20392275AF6E0E5F68 /* ContainerMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FE592855DDE3084D207447 /* ContainerMigration.swift */; };
+		E409272ECD1F686DFC6C3057 /* DeckBundleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED77CBAE2B1B436BC1E31BF /* DeckBundleTests.swift */; };
 		E664FE89330E4F4FC2851875 /* CredentialsWidgetReadsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */; };
 		E78150B6C51925B5F4A27D11 /* com.deck.agent.processes.plist in Resources */ = {isa = PBXBuildFile; fileRef = E34D57F6804ADB7CB6777F6D /* com.deck.agent.processes.plist */; };
 		E8F963A7402C8695BFC89F71 /* FetchStatusCredentialsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */; };
@@ -360,6 +370,8 @@
 		812063688CE39D11189608C8 /* CredentialAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialAccount.swift; sourceTree = "<group>"; };
 		82736DC13D9569D028C763BC /* DeckKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychain.swift; sourceTree = "<group>"; };
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
+		84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerMigrationTests.swift; sourceTree = "<group>"; };
+		87B96F825FC76E1267D5ACCC /* DeckBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckBundle.swift; sourceTree = "<group>"; };
 		8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialsWidgetReadsTests.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		8D9ED1410532D72412810AE4 /* CredentialKindSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialKindSearchTests.swift; sourceTree = "<group>"; };
@@ -371,6 +383,7 @@
 		92C80445C9EC1F419FFAC0DB /* LiveBoxThermalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThermalTests.swift; sourceTree = "<group>"; };
 		94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSnapshot.swift; sourceTree = "<group>"; };
 		970F6F6A1DFB74AABEE7826C /* ClipBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxWidget.swift; sourceTree = "<group>"; };
+		9ED77CBAE2B1B436BC1E31BF /* DeckBundleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckBundleTests.swift; sourceTree = "<group>"; };
 		9F1A60E3DD45C0E9455E6109 /* com.deck.agent.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.deck.agent.plist; sourceTree = "<group>"; };
 		9F939C5C1255B0A85CA33D70 /* azure_connectiondata.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = azure_connectiondata.json; sourceTree = "<group>"; };
 		9FE2D7379A13510C5A7338BA /* RefreshPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshPolicies.swift; sourceTree = "<group>"; };
@@ -413,6 +426,7 @@
 		DC563B15EBF100D1CB4139C2 /* ShipBoxMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxMergeTests.swift; sourceTree = "<group>"; };
 		E0E922A862E405B58537BA49 /* DeckLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLinkTests.swift; sourceTree = "<group>"; };
 		E34D57F6804ADB7CB6777F6D /* com.deck.agent.processes.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.deck.agent.processes.plist; sourceTree = "<group>"; };
+		E3FE592855DDE3084D207447 /* ContainerMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerMigration.swift; sourceTree = "<group>"; };
 		E55EA63643575600049612BD /* ModelParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelParserTests.swift; sourceTree = "<group>"; };
 		E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureDevOpsParserTests.swift; sourceTree = "<group>"; };
 		EA5EADBCA4E36B421CDE1542 /* DeckAgent */ = {isa = PBXFileReference; includeInIndex = 0; path = DeckAgent; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -467,10 +481,12 @@
 				ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */,
 				7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */,
 				37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */,
+				E3FE592855DDE3084D207447 /* ContainerMigration.swift */,
 				812063688CE39D11189608C8 /* CredentialAccount.swift */,
 				AB175501853DAE0EDDFA4477 /* CredentialsCopy.swift */,
 				B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */,
 				7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */,
+				87B96F825FC76E1267D5ACCC /* DeckBundle.swift */,
 				82736DC13D9569D028C763BC /* DeckKeychain.swift */,
 				CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */,
 				4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */,
@@ -512,6 +528,7 @@
 				79E814CE71C9E15746C2443A /* CalBoxTests.swift */,
 				F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */,
 				AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */,
+				84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */,
 				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
 				633ED2890AE2D2C0B501102A /* CredentialAccountTests.swift */,
 				277279067EB7808B71A4759B /* CredentialGateTests.swift */,
@@ -521,6 +538,7 @@
 				8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */,
 				920FB174B8F493303CA61487 /* CredentialsWiringTests.swift */,
 				D4A81DDCB64140958465D2A8 /* CredentialVerificationTests.swift */,
+				9ED77CBAE2B1B436BC1E31BF /* DeckBundleTests.swift */,
 				1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */,
 				E0E922A862E405B58537BA49 /* DeckLinkTests.swift */,
 				F66AF2CBFD42DE18E87E2455 /* DeckSecretsMigrationTests.swift */,
@@ -853,7 +871,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.processes.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\n";
+			shellScript = "# Clear first. A plain mkdir+cp leaves plists from a previous build\n# in place, so an incremental build across a rename ships BOTH\n# generations, sealed into the signature with nothing complaining.\nrm -rf \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents\"\nmkdir -p \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.processes.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\n";
 		};
 		EE7234FDF9F26715A32519B1 /* Embed DeckAgent */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -892,10 +910,12 @@
 				321052A8E1D6C63E19452D77 /* ClipBoxWidget.swift in Sources */,
 				15C7BB212EDB3631F9DE1647 /* ClockBoxCore.swift in Sources */,
 				E14CADB2CF950D781BA2F195 /* ClockBoxWidget.swift in Sources */,
+				C898F5671F325C95B7E63C85 /* ContainerMigration.swift in Sources */,
 				09092463B54E5E76973919A0 /* CredentialAccount.swift in Sources */,
 				14A001ACD9A00177E27056F6 /* CredentialVerification.swift in Sources */,
 				844CDBF64273FEEC51C5E88F /* CredentialsCopy.swift in Sources */,
 				3BCA007992ED90A3706DAF97 /* CredentialsMigration.swift in Sources */,
+				66B10E484885189925757346 /* DeckBundle.swift in Sources */,
 				E12D02F197A271DD411D4053 /* DeckKeychain.swift in Sources */,
 				143B07F39F62D08E84D9CF21 /* DeckLink.swift in Sources */,
 				53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */,
@@ -956,6 +976,8 @@
 				F4968C6168797484C304D6B5 /* ClipBoxSnapshotTests.swift in Sources */,
 				39DA22900FC1560C2B18F53A /* ClockBoxCore.swift in Sources */,
 				3B5B4D3223749E809A021C84 /* ClockBoxTests.swift in Sources */,
+				E3474B20392275AF6E0E5F68 /* ContainerMigration.swift in Sources */,
+				9679FDE5EC8B876A8C611B2D /* ContainerMigrationTests.swift in Sources */,
 				AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */,
 				71756A3125964940AD4F060C /* CredentialAccount.swift in Sources */,
 				158161B595463B7ECDE20B50 /* CredentialAccountTests.swift in Sources */,
@@ -969,6 +991,8 @@
 				482E9A15C89DD93832340B3B /* CredentialsMigrationTests.swift in Sources */,
 				E664FE89330E4F4FC2851875 /* CredentialsWidgetReadsTests.swift in Sources */,
 				2266BFBB98C3E0FBA6312E69 /* CredentialsWiringTests.swift in Sources */,
+				214AF4E948209B3310353969 /* DeckBundle.swift in Sources */,
+				E409272ECD1F686DFC6C3057 /* DeckBundleTests.swift in Sources */,
 				0ADA696C2CD6D8BE83B10C12 /* DeckKeychain.swift in Sources */,
 				C7E88A04B400DC5C2717A0D8 /* DeckKeychainTests.swift in Sources */,
 				DE08983334C0343BB41BC78D /* DeckLink.swift in Sources */,
@@ -1048,11 +1072,13 @@
 				36AA8FE38FBF4541D88EA3BB /* CalBoxSnapshot.swift in Sources */,
 				0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */,
 				A3610AE8477308D69CE6301A /* ClockBoxCore.swift in Sources */,
+				5120DA481AAF09E1AF7936B9 /* ContainerMigration.swift in Sources */,
 				BEE3B5436518E052E5427E4B /* CredentialAccount.swift in Sources */,
 				2C671351EA35B15FB9B3CD15 /* CredentialVerification.swift in Sources */,
 				F65612E2B49A3D789B301107 /* CredentialsCopy.swift in Sources */,
 				6CF20BD1883D65E7F8EEE3B8 /* CredentialsMigration.swift in Sources */,
 				2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */,
+				BCA6649CD9EB7F67D4A64B79 /* DeckBundle.swift in Sources */,
 				DD9B2E32F244BE3B25773C3C /* DeckKeychain.swift in Sources */,
 				164F1460B1B3EB7B4049FC67 /* DeckLink.swift in Sources */,
 				EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */,
@@ -1091,10 +1117,12 @@
 				5C0FC13FD9210AD4499E5B6E /* CalBoxSnapshot.swift in Sources */,
 				90A811EBE7E73139D552827E /* ClipBoxSnapshot.swift in Sources */,
 				4679230BBFA043E0D068F18F /* ClockBoxCore.swift in Sources */,
+				748E15BDD892140C525F8E77 /* ContainerMigration.swift in Sources */,
 				3AA9C73435EBD0321C2BC3A3 /* CredentialAccount.swift in Sources */,
 				B6109B4ED969BBFCF04F7C1A /* CredentialVerification.swift in Sources */,
 				639C6BD8562F1A7344151EAB /* CredentialsCopy.swift in Sources */,
 				7053AD14D80E837035878289 /* CredentialsMigration.swift in Sources */,
+				D969837142F67BF5F92D6160 /* DeckBundle.swift in Sources */,
 				704E79FBAAD061417024969A /* DeckKeychain.swift in Sources */,
 				74F07107040B1441641C05C1 /* DeckLink.swift in Sources */,
 				4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */,

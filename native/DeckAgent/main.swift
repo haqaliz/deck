@@ -16,13 +16,19 @@ import OSLog
 //                  (BundleProgram plists cannot carry arguments)
 //
 // Logging: one OSLog line per snapshot (written/skipped/failed) so a soak run
-// is auditable via `log show --predicate 'subsystem == "com.deck.agent"'`.
+// is auditable via `log show --predicate 'subsystem == "<DeckBundle.logSubsystem>"'`.
 // Never logs URLs, tokens, repo names, or paths — only snapshot names and
 // outcomes.
 
+// Carry settings across the container move the bundle rename forces, before
+// anything below reads them. The agent is registered at login and the app is
+// not, so on an upgraded install the agent can genuinely run first. Inert
+// until the rename ships; idempotent and never overwriting afterwards.
+ContainerMigration.run()
+
 let semaphore = DispatchSemaphore(value: 0)
 
-private let agentLog = Logger(subsystem: "com.deck.agent", category: "DeckAgent")
+private let agentLog = Logger(subsystem: DeckBundle.logSubsystem, category: "DeckAgent")
 
 func sampleProcesses() {
     // The launchd tick is a fixed 5s (the plist is sealed in the signed

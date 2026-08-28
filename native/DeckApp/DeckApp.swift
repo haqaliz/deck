@@ -6,6 +6,14 @@ import AppKit
 struct DeckApp: App {
     @NSApplicationDelegateAdaptor(DeckAppDelegate.self) private var appDelegate
 
+    /// Carry `settings.json` across the container move the bundle rename
+    /// forces — **before** anything reads settings. `ContentView` loads them in
+    /// a property initialiser, so this cannot be deferred to `onAppear`.
+    /// Inert until the rename ships (both paths resolve to one directory), and
+    /// idempotent afterwards. `DeckAgent` runs the same call for the same
+    /// reason: it is registered at login and can start first.
+    static let migration = ContainerMigration.run()
+
     var body: some Scene {
         WindowGroup("Deck") {
             ContentView()
@@ -71,9 +79,30 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
 }
 
 struct ContentView: View {
-    @State private var settings = DeckSettings.load()
+    @State private var settings: DeckSettings = {
+        _ = DeckApp.migration
+        return DeckSettings.load()
+    }()
     @State private var agentError: String?
     @State private var agentNotice: String?
+
+    /// Wording for the identifier change, or `nil` when there is nothing to
+    /// say. A failure is reported even after the notice has been dismissed:
+    /// dismissing acknowledges "re-add your widgets", not "my settings are
+    /// gone".
+    private var renameNotice: String? {
+        switch DeckApp.migration {
+        case .migrated:
+            return settings.didShowRenameNotice
+                ? nil
+                : "Deck's identifier changed. Remove and re-add your widgets from the Widget Center."
+        case .failed:
+            return "Deck's identifier changed and your settings could not be carried over. "
+                + "The previous copy is still at \(ContainerMigration.legacyDirectory.path)."
+        case .skipped:
+            return nil
+        }
+    }
     /// Accounts the keychain refused to hand over this launch — a locked
     /// login keychain, most likely. Kept apart from "never set", which is a
     /// different message and a different field to fix.
@@ -106,6 +135,17 @@ struct ContentView: View {
                 agentAtLogin: $settings.agentAtLogin,
                 agentError: agentError,
                 agentNotice: agentNotice,
+                renameNotice: renameNotice,
+                // Only a successful migration is dismissible. A failure keeps
+                // reporting itself: dismissing acknowledges "re-add your
+                // widgets", never "my settings are missing".
+                onDismissRenameNotice: {
+                    guard case .migrated = DeckApp.migration else { return nil }
+                    return {
+                        settings.didShowRenameNotice = true
+                        settings.save()
+                    }
+                }(),
                 onRemoveAgents: uninstallAgents,
                 onEraseData: eraseDeckData
             )
@@ -488,7 +528,7 @@ struct ContentView: View {
     /// and the label collision would reject the new job.
     private func legacyCleanup() {
         let home = FileManager.default.homeDirectoryForCurrentUser
-        for label in ["com.deck.agent", "com.deck.agent.processes"] {
+        for label in [DeckBundle.Legacy.agentLabel, DeckBundle.Legacy.fastAgentLabel] {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
             process.arguments = ["bootout", "gui/\(getuid())/\(label)"]
@@ -677,6 +717,12 @@ private struct GeneralSettingsView: View {
     @Binding var agentAtLogin: Bool
     var agentError: String?
     var agentNotice: String?
+    /// One-time wording for the bundle identifier change; see
+    /// `ContentView.renameNotice`.
+    var renameNotice: String?
+    /// `nil` when there is nothing to dismiss — a failed migration keeps
+    /// reporting itself.
+    var onDismissRenameNotice: (() -> Void)?
     var onRemoveAgents: () -> Void
     var onEraseData: () -> Void
 
@@ -699,6 +745,23 @@ private struct GeneralSettingsView: View {
                     Label(agentNotice, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
+                }
+                // Shown once, after the identifier change moved Deck's
+                // container. The widgets already on the desktop point at the
+                // old extension and will never render again; without this the
+                // symptom reads exactly like the blank-widget bug.
+                if let renameNotice {
+                    HStack(alignment: .firstTextBaseline) {
+                        Label(renameNotice, systemImage: "arrow.triangle.2.circlepath")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                        Spacer()
+                        if let onDismissRenameNotice {
+                            Button("Dismiss", action: onDismissRenameNotice)
+                                .buttonStyle(.link)
+                                .font(.caption)
+                        }
+                    }
                 }
             }
 
