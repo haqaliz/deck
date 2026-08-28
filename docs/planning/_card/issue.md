@@ -1,18 +1,24 @@
-# SMAppService for the LaunchAgents
+# Brief — Azure DevOps multi-project for TaskBox and PRBox
 
-Feature (M7 launch readiness). Move Deck's two LaunchAgents
-(`com.deck.agent` 60s + `com.deck.agent.processes` 15s) from hand-written
-`~/Library/LaunchAgents` plists to `SMAppService` registration so Deck appears
-in System Settings → Login Items, where a cautious user looks first.
+Source: `deck-next` pick (2026-08-28). No GitHub issue; inline brief.
 
-Context from `deck-next` (2026-08-27):
+TaskBox and PRBox each show Azure DevOps work from exactly one project; both
+list "multi-project/multi-org" as an open follow-up (ROADMAP.md:165, :193), and
+TaskBox's own live probe measured 67 items across three projects against the 25
+in the configured one (ROADMAP.md:151) — so most of this org's work is invisible
+today.
 
-- M7 is the current milestone: "Deck is feature-complete for a public launch;
-  what is missing is everything around the binary" (ROADMAP.md:317).
-- Must ride the same release as notarization per
-  `docs/planning/notarization/runbook.md:252-253`.
-- Plan the migration from existing hand-installed plists (no double-running
-  agents, no orphaned plists).
-- Keep the General-tab uninstall button able to bootout the new registrations.
-- Verify the agents still pump on their 60s/15s cadences and that DeckAgent
-  runs correctly when launched via SMAppService.
+Resolve the model fork first: `CredentialAccount.project` is a single String
+(native/Shared/CredentialAccount.swift:104) and a `CredentialSlot` binds one
+account, so decide between a project list on the account and multiple accounts
+per slot (the latter makes the user paste the same PAT twice, since keychain
+items are keyed per account id) before writing the PRD.
+
+Mind the per-tick cost: TaskBox is WIQL + workitemsbatch + team iterations per
+project and PRBox is one call per project per criterion, against a measured
+9.4s-serial / 2.1s-concurrent fan-out and a 60s agent cadence — cap the project
+count and follow `HostGitHubLoader.inParallel`.
+
+Keep the WIQL `[System.TeamProject]` clause per project (a project-scoped URL
+does not filter) and keep PRBox's `connectionData` identity resolution, which
+must fail rather than fall back.
