@@ -185,3 +185,27 @@ final class ContainerMigrationRunTests: XCTestCase {
         )
     }
 }
+
+/// `DeckSettings.CodingKeys` is hand-written, so a new property without its
+/// case compiles, decodes as absent and is **never encoded** — the flag would
+/// reset on every launch and the notice would reappear forever. These pin both
+/// halves.
+final class RenameNoticeFlagTests: XCTestCase {
+    func testDefaultsToFalseForSettingsThatPredateIt() throws {
+        let json = Data(#"{"agentAtLogin":true}"#.utf8)
+        let settings = try JSONDecoder().decode(DeckSettings.self, from: json)
+        XCTAssertFalse(settings.didShowRenameNotice)
+        XCTAssertTrue(settings.agentAtLogin, "an unrelated key was disturbed")
+    }
+
+    func testRoundTripsThroughEncode() throws {
+        var settings = DeckSettings()
+        settings.didShowRenameNotice = true
+        let data = try JSONEncoder().encode(settings)
+        XCTAssertTrue(
+            String(data: data, encoding: .utf8)?.contains("didShowRenameNotice") == true,
+            "the key is missing from CodingKeys, so it will never be written"
+        )
+        XCTAssertTrue(try JSONDecoder().decode(DeckSettings.self, from: data).didShowRenameNotice)
+    }
+}

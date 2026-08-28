@@ -20,6 +20,12 @@ import OSLog
 // Never logs URLs, tokens, repo names, or paths — only snapshot names and
 // outcomes.
 
+// Carry settings across the container move the bundle rename forces, before
+// anything below reads them. The agent is registered at login and the app is
+// not, so on an upgraded install the agent can genuinely run first. Inert
+// until the rename ships; idempotent and never overwriting afterwards.
+ContainerMigration.run()
+
 let semaphore = DispatchSemaphore(value: 0)
 
 private let agentLog = Logger(subsystem: DeckBundle.logSubsystem, category: "DeckAgent")
