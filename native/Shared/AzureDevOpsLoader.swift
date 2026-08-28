@@ -486,6 +486,71 @@ enum HostAzureDevOpsLoader {
     }
 }
 
+// MARK: - Project discovery (settings window only)
+
+/// The projects a PAT can see, for the account editor's five slots.
+enum AzureProjectsParser {
+    /// nil means "couldn't read the answer"; an empty array means "this PAT
+    /// sees no project", which the editor words differently.
+    ///
+    /// Sorted by name rather than left in API order or sorted by
+    /// `lastUpdateTime`: a picker whose entries move between openings is worse
+    /// than one that is merely alphabetical.
+    static func parse(_ data: Data) -> [String]? {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let rows = root["value"] as? [[String: Any]]
+        else { return nil }
+
+        return rows
+            .compactMap { row -> String? in
+                guard let name = (row["name"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty
+                else { return nil }
+                // A project mid-creation or mid-deletion cannot be queried;
+                // an absent state is not a claim either way.
+                if let state = row["state"] as? String, state != "wellFormed" { return nil }
+                return name
+            }
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+}
+
+/// Host-app only, and never on the agent tick: this exists to populate a picker
+/// while someone is looking at the settings window.
+enum HostAzureProjectsLoader {
+    static func list(organization: String, token: String) async throws -> [String] {
+        // The project is irrelevant to this endpoint; `normalise` needs one.
+        let target = try AzureTarget.normalise(organization: organization, project: "_")
+        guard let url = URL(string: "\(target.orgBase)/_apis/projects?api-version=7.1&$top=200")
+        else { throw AzureDevOpsError.invalidTarget }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        request.setValue(
+            "Basic " + Data(":\(token)".utf8).base64EncodedString(),
+            forHTTPHeaderField: "Authorization"
+        )
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw AzureDevOpsError.transport(error.localizedDescription)
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw AzureDevOpsError.transport("Not an HTTP response")
+        }
+        guard http.statusCode == 200 else { throw AzureDevOpsError.serverError(http.statusCode) }
+        guard let names = AzureProjectsParser.parse(data) else {
+            throw AzureDevOpsError.invalidPayload
+        }
+        return names
+    }
+}
+
 // MARK: - PRBox: identity (pure)
 //
 // The Git pull-request API takes identity GUIDs for `creatorId` and
