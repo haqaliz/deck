@@ -49,10 +49,15 @@ struct PullRequestItem: Codable, Equatable {
     var isDraft: Bool
     var createdAt: Date
     var url: String
+    /// Azure DevOps only: which project the repository lives in, when one
+    /// account covers several. nil for GitHub, which has no such level, and for
+    /// a row written before the list existed.
+    var project: String?
 
     init(
         id: String, number: Int, title: String, repo: String, role: PRRole,
-        provider: PRProvider, isDraft: Bool, createdAt: Date, url: String
+        provider: PRProvider, isDraft: Bool, createdAt: Date, url: String,
+        project: String? = nil
     ) {
         self.id = id
         self.number = number
@@ -63,6 +68,7 @@ struct PullRequestItem: Codable, Equatable {
         self.isDraft = isDraft
         self.createdAt = createdAt
         self.url = url
+        self.project = project
     }
 
     /// Tolerant on `provider` only. `id`, `number`, `title` and `role` stay
@@ -88,6 +94,7 @@ struct PullRequestItem: Codable, Equatable {
         isDraft = try c.decodeIfPresent(Bool.self, forKey: .isDraft) ?? false
         createdAt = try c.decode(Date.self, forKey: .createdAt)
         url = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
+        project = try c.decodeIfPresent(String.self, forKey: .project)
     }
 }
 
@@ -108,10 +115,15 @@ struct PRBoxSnapshot: Codable, Equatable {
     /// Pre-sorted and pre-deduped by `PRFormatting` — the widget renders, it
     /// does not decide.
     var pullRequests: [PullRequestItem]
+    /// Which Azure projects could not be read, when the others could. A
+    /// provider failing outright is still the chip's job — this is the
+    /// finer-grained case the chip has no room for.
+    var note: String?
 
     init(
         writtenAt: Date, authoredCount: Int, reviewingCount: Int,
-        authoredCapped: Bool, reviewingCapped: Bool, pullRequests: [PullRequestItem]
+        authoredCapped: Bool, reviewingCapped: Bool, pullRequests: [PullRequestItem],
+        note: String? = nil
     ) {
         self.writtenAt = writtenAt
         self.authoredCount = authoredCount
@@ -119,6 +131,7 @@ struct PRBoxSnapshot: Codable, Equatable {
         self.authoredCapped = authoredCapped
         self.reviewingCapped = reviewingCapped
         self.pullRequests = pullRequests
+        self.note = note
     }
 
     /// Lossy on the row array: a row this build cannot decode is skipped and
@@ -144,6 +157,7 @@ struct PRBoxSnapshot: Codable, Equatable {
             }
         }
         pullRequests = rows
+        note = try c.decodeIfPresent(String.self, forKey: .note)
     }
 
     /// Consumes one array element whatever its shape, so a malformed row can be
@@ -305,6 +319,9 @@ struct PRRoleTotals: Equatable {
     var authoredCapped: Bool
     var reviewingCapped: Bool
     var items: [PullRequestItem]
+    /// Which of this provider's projects could not be read, when the others
+    /// could. Azure DevOps only — GitHub fetches one scope.
+    var note: String?
 
     static let empty = PRRoleTotals(
         authoredTotal: 0, reviewingTotal: 0,
@@ -452,7 +469,13 @@ enum PRSnapshotBuilder {
             // Either side being a floor makes the union a floor.
             authoredCapped: sides.contains { $0.authoredCapped },
             reviewingCapped: sides.contains { $0.reviewingCapped },
-            pullRequests: Array(rows.prefix(cap))
+            pullRequests: Array(rows.prefix(cap)),
+            // Only Azure produces one today; joining keeps the shape honest if
+            // GitHub ever fans out too.
+            note: {
+                let notes = sides.compactMap(\.note)
+                return notes.isEmpty ? nil : notes.joined(separator: " · ")
+            }()
         )
     }
 }

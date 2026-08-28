@@ -57,9 +57,9 @@ native colors, corners and materials, at three sizes each.
 | **WeatherBox** | weather for your location (conditions + 3-day forecast); a failed fetch says why |
 | **ClockBox** | world clocks for up to six cities (3 on medium, 6 on large): time, relative day, offset from your own zone |
 | **ShipBox** | GitHub Actions runs across up to five repos, newest first: status dots, durations, totals; clickable rows; a failed fetch says why |
-| **TaskBox** | Azure DevOps work items assigned to you (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
+| **TaskBox** | Azure DevOps work items assigned to you across up to five projects (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
-| **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps in one queue: counts, provider-tagged rows, drafts marked; click a row to open the PR; a failed fetch names the provider |
+| **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps (up to five projects) in one queue: counts, provider-tagged rows, drafts marked; click a row to open the PR; a failed fetch names the provider |
 | **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, and gold per gram — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
 
 All fourteen come in **small / medium / large** sizes.
@@ -182,13 +182,22 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   CoinGecko (crypto), gold-api (gold), Wallex (free-market Toman) and
   open.er-api (fiat cross-rates), fetched by the agent every 60s. A symbol
   outside the curated list is shown, not dropped: `Unknown: XRPX`.
-- **TaskBox** needs an Azure DevOps organization, a project and a personal
-  access token in settings — without all three nothing is fetched (the token
-  goes only to dev.azure.com over TLS, and a read-only *Work Items (Read)*
+- **TaskBox** needs an Azure DevOps organization, at least one project and a
+  personal access token in settings — without all three nothing is fetched (the
+  token goes only to dev.azure.com over TLS, and a read-only *Work Items (Read)*
   scope is enough). It shows open work items assigned to whoever owns the PAT,
-  not whoever is signed in to the browser, and only in the project you
-  configure. The header gives the total open count and your current sprint.
-  Refreshes via the agent every 60s.
+  not whoever is signed in to the browser.
+- **One account can cover up to five projects.** The account editor lists the
+  projects your token can see and gives you five slots to pick from; if the
+  token is too narrowly scoped to list them, type the names instead. Every
+  project is queried and the results are merged into one list. With a single
+  project the header reads `org / project` and shows your current sprint; with
+  several it reads the organization and drops the sprint, because a current
+  sprint belongs to one project and one team. Turn on *Show project on rows* to
+  tag each row with where it came from. If one project can't be read the others
+  still render, with a line naming the one that failed. The same five slots
+  serve PRBox, where the project also prefixes the repository name — a repo
+  name is only unique within its project.
 - **TaskBox lanes** are configurable. Azure DevOps runs two vocabularies on one
   board — tasks move `To Do → In Progress`, while backlog items move
   `New → Approved → Committed` — so the TaskBox tab has a comma-separated,
@@ -262,7 +271,7 @@ Deck reads personal data, so here is exactly what happens to it.
 |---|---|---|
 | WeatherBox | your location (or nothing, and your IP geolocates) | `wttr.in` |
 | ShipBox | your GitHub token, and the repos you watch (or, in Automatic mode, your repo list) | `api.github.com` |
-| TaskBox | your Azure DevOps PAT, org and project | `dev.azure.com` |
+| TaskBox | your Azure DevOps PAT, org and projects | `dev.azure.com` |
 | OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
 | MarketBox | the symbols you typed (e.g. `BTC, USD, GOLD`) | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com` |
 

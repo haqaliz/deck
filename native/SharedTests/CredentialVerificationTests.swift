@@ -115,7 +115,7 @@ final class CredentialVerificationTests: XCTestCase {
         var account = CredentialAccount(id: "a1", kind: .azure, label: "acme")
         account.token = "same"
         account.organization = "acme"
-        account.project = "Manifold"
+        account.projects = ["Manifold"]
         account.recordVerification(.init(identity: "x", detail: nil, azureIdentityID: "guid"),
                                    at: Date(timeIntervalSince1970: 0))
         let fingerprint = account.credentialFingerprint

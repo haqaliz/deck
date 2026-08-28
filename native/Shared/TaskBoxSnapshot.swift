@@ -34,10 +34,15 @@ struct TaskItem: Codable, Equatable {
     var url: String
     var provider: TaskProvider
     var changedAt: Date?
+    /// Which Azure project this row came from, when one account covers several.
+    /// nil for a row written before the list existed, and for a provider with
+    /// no such concept.
+    var project: String?
 
     init(
         id: String, title: String, state: String, itemType: String,
-        url: String, provider: TaskProvider, changedAt: Date?
+        url: String, provider: TaskProvider, changedAt: Date?,
+        project: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -46,6 +51,7 @@ struct TaskItem: Codable, Equatable {
         self.url = url
         self.provider = provider
         self.changedAt = changedAt
+        self.project = project
     }
 
     /// Tolerant on `provider` only: an unknown one reads as `.unknown` so a
@@ -61,6 +67,7 @@ struct TaskItem: Codable, Equatable {
         let rawProvider = try c.decodeIfPresent(String.self, forKey: .provider) ?? ""
         provider = TaskProvider(rawValue: rawProvider) ?? .unknown
         changedAt = try c.decodeIfPresent(Date.self, forKey: .changedAt)
+        project = try c.decodeIfPresent(String.self, forKey: .project)
     }
 }
 
@@ -77,13 +84,21 @@ struct TaskBoxSnapshot: Codable, Equatable {
     /// Pre-sorted by `TaskFormatting.sorted` — the widget renders, it does not
     /// decide.
     var tasks: [TaskItem]
+    /// Which projects could not be read this tick, when the others could.
+    /// nil when everything worked — a fetch that reaches none of its projects
+    /// throws instead, so the last good snapshot stands.
+    var note: String?
 
-    init(writtenAt: Date, scope: String, totalCount: Int, sprint: String?, tasks: [TaskItem]) {
+    init(
+        writtenAt: Date, scope: String, totalCount: Int, sprint: String?,
+        tasks: [TaskItem], note: String? = nil
+    ) {
         self.writtenAt = writtenAt
         self.scope = scope
         self.totalCount = totalCount
         self.sprint = sprint
         self.tasks = tasks
+        self.note = note
     }
 
     init(from decoder: Decoder) throws {
@@ -93,6 +108,7 @@ struct TaskBoxSnapshot: Codable, Equatable {
         totalCount = try c.decodeIfPresent(Int.self, forKey: .totalCount) ?? 0
         sprint = try c.decodeIfPresent(String.self, forKey: .sprint)
         tasks = try c.decodeIfPresent([TaskItem].self, forKey: .tasks) ?? []
+        note = try c.decodeIfPresent(String.self, forKey: .note)
     }
 }
 

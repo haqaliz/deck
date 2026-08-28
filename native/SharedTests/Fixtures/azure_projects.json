@@ -1,0 +1,54 @@
+{
+  "count": 7,
+  "value": [
+    {
+      "name": "Playground",
+      "state": "wellFormed",
+      "revision": 45,
+      "visibility": "private",
+      "lastUpdateTime": "2023-12-22T20:57:12.723Z"
+    },
+    {
+      "name": "InfraSturcture",
+      "state": "wellFormed",
+      "revision": 37,
+      "visibility": "private",
+      "lastUpdateTime": "2022-12-08T14:54:43.133Z"
+    },
+    {
+      "name": "ForesightDevops",
+      "state": "wellFormed",
+      "revision": 25,
+      "visibility": "private",
+      "lastUpdateTime": "2022-11-07T14:28:59.35Z"
+    },
+    {
+      "name": "Manifold Ops",
+      "state": "wellFormed",
+      "revision": 77,
+      "visibility": "private",
+      "lastUpdateTime": "2026-06-30T17:51:00.733Z"
+    },
+    {
+      "name": "MachineLearning",
+      "state": "wellFormed",
+      "revision": 76,
+      "visibility": "private",
+      "lastUpdateTime": "2026-01-12T01:09:26.773Z"
+    },
+    {
+      "name": "ForesightManifold",
+      "state": "wellFormed",
+      "revision": 58,
+      "visibility": "private",
+      "lastUpdateTime": "2024-11-01T15:39:53.167Z"
+    },
+    {
+      "name": "HalfCreated",
+      "state": "createPending",
+      "revision": 1,
+      "visibility": "private",
+      "lastUpdateTime": "2026-08-28T00:00:00.000Z"
+    }
+  ]
+}

@@ -105,13 +105,13 @@ final class CredentialsWiringTests: XCTestCase {
         var one = account("a1", .azure, "acme")
         one.token = "az-secret"
         one.organization = "acme"
-        one.project = "Manifold"
+        one.projects = ["Manifold"]
         settings.credentials.accounts = [one]
 
         let scrubbed = settings.scrubbedOfSecrets()
 
         XCTAssertEqual(scrubbed.credentials.accounts[0].organization, "acme")
-        XCTAssertEqual(scrubbed.credentials.accounts[0].project, "Manifold")
+        XCTAssertEqual(scrubbed.credentials.accounts[0].projects, ["Manifold"])
         XCTAssertEqual(scrubbed.credentials.accounts[0].label, "acme")
     }
 

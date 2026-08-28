@@ -738,11 +738,11 @@ final class PRBoxSettingsTests: XCTestCase {
                        "needs an organization and a project too")
 
         azure.organization = "org"
-        azure.project = "proj"
+        azure.projects = ["proj"]
         s.credentials.accounts[1] = azure
         XCTAssertEqual(
             s.gate(.prboxAzure, unavailable: []),
-            .fetch(ResolvedCredential(token: "t", organization: "org", project: "proj"))
+            .fetch(ResolvedCredential(token: "t", organization: "org", projects: ["proj"]))
         )
     }
 }

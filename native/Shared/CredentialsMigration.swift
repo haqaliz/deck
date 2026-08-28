@@ -6,7 +6,9 @@ import Foundation
 struct ResolvedCredential: Equatable {
     var token: String
     var organization: String = ""
-    var project: String = ""
+    /// Azure DevOps only, and plural: one account covers up to
+    /// `AzureAccountProjects.maxProjects` projects in its organization.
+    var projects: [String] = []
     var serverURL: String = ""
 }
 
@@ -25,7 +27,7 @@ extension DeckSettings {
             return ResolvedCredential(
                 token: account.token,
                 organization: account.organization,
-                project: account.project,
+                projects: account.projects,
                 serverURL: account.serverURL
             )
         }
@@ -51,7 +53,7 @@ extension DeckSettings {
             return ResolvedCredential(
                 token: taskbox.token,
                 organization: taskbox.organization,
-                project: taskbox.project
+                projects: AzureAccountProjects.normalise([taskbox.project])
             )
         case .prboxGitHub:
             return ResolvedCredential(token: prbox.github.token)
@@ -59,7 +61,7 @@ extension DeckSettings {
             return ResolvedCredential(
                 token: prbox.azure.token,
                 organization: prbox.azure.organization,
-                project: prbox.azure.project
+                projects: AzureAccountProjects.normalise([prbox.azure.project])
             )
         }
     }
@@ -113,13 +115,15 @@ extension DeckSettings {
         // Azure needs a target as much as it needs a token, and the loader
         // would only fail later with something less legible.
         let organization = credential.organization.trimmingCharacters(in: .whitespacesAndNewlines)
-        let project = credential.project.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !organization.isEmpty, !project.isEmpty else { return .notConfigured }
+        // The last gate before a loader: a duplicate here would double every
+        // row its project owns, and a sixth would blow the slot budget.
+        let projects = AzureAccountProjects.normalise(credential.projects)
+        guard !organization.isEmpty, !projects.isEmpty else { return .notConfigured }
 
         return .fetch(ResolvedCredential(
             token: credential.token,
             organization: organization,
-            project: project,
+            projects: projects,
             serverURL: credential.serverURL
         ))
     }
@@ -217,7 +221,7 @@ enum CredentialsMigration {
             var account = CredentialAccount(id: makeID(), kind: slot.kind)
             account.token = fields.token
             account.organization = fields.organization
-            account.project = fields.project
+            account.projects = fields.projects
             account.serverURL = fields.serverURL
 
             guard write(account.id, account.token) == errSecSuccess,
@@ -284,7 +288,7 @@ enum CredentialsMigration {
     private static func matches(_ account: CredentialAccount, _ fields: ResolvedCredential) -> Bool {
         account.token == fields.token
             && account.organization == fields.organization
-            && account.project == fields.project
+            && account.projects == fields.projects
             && account.serverURL == fields.serverURL
     }
 

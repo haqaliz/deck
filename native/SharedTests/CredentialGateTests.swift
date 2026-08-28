@@ -13,6 +13,7 @@ final class CredentialGateTests: XCTestCase {
         token: String = "tok",
         organization: String = "",
         project: String = "",
+        projects: [String]? = nil,
         serverURL: String = "",
         on slot: CredentialSlot
     ) -> DeckSettings {
@@ -20,7 +21,7 @@ final class CredentialGateTests: XCTestCase {
         var account = CredentialAccount(id: "a1", kind: kind, label: "x")
         account.token = token
         account.organization = organization
-        account.project = project
+        account.projects = projects ?? (project.isEmpty ? [] : [project])
         account.serverURL = serverURL
         s.credentials.accounts = [account]
         s.setAccountID("a1", for: slot)
@@ -39,7 +40,7 @@ final class CredentialGateTests: XCTestCase {
         let complete = settings(kind: .azure, organization: "acme", project: "Manifold", on: .taskbox)
         XCTAssertEqual(
             complete.gate(.taskbox, unavailable: []),
-            .fetch(ResolvedCredential(token: "tok", organization: "acme", project: "Manifold"))
+            .fetch(ResolvedCredential(token: "tok", organization: "acme", projects: ["Manifold"]))
         )
 
         let noProject = settings(kind: .azure, organization: "acme", on: .taskbox)
@@ -60,7 +61,7 @@ final class CredentialGateTests: XCTestCase {
 
         XCTAssertEqual(
             s.gate(.taskbox, unavailable: []),
-            .fetch(ResolvedCredential(token: "tok", organization: "acme", project: "Manifold"))
+            .fetch(ResolvedCredential(token: "tok", organization: "acme", projects: ["Manifold"]))
         )
     }
 
@@ -161,5 +162,64 @@ final class CredentialGateTests: XCTestCase {
         // clears a stale failure from when it was on.
         XCTAssertEqual(CredentialGate.off.outcome, .ok)
         XCTAssertNil(CredentialGate.fetch(ResolvedCredential(token: "t")).outcome)
+    }
+
+    // MARK: - Several projects
+
+    func testEveryConfiguredProjectReachesTheLoader() {
+        let s = settings(
+            kind: .azure, organization: "acme",
+            projects: ["ForesightManifold", "Manifold Ops"], on: .taskbox
+        )
+
+        XCTAssertEqual(
+            s.gate(.taskbox, unavailable: []),
+            .fetch(ResolvedCredential(
+                token: "tok", organization: "acme",
+                projects: ["ForesightManifold", "Manifold Ops"]
+            ))
+        )
+    }
+
+    func testAnAccountWithNoUsableProjectIsNotConfigured() {
+        // An organization without a project is half a target; the loader would
+        // only fail later with something less legible.
+        let s = settings(kind: .azure, organization: "acme", projects: ["", "  "], on: .taskbox)
+
+        XCTAssertEqual(s.gate(.taskbox, unavailable: []), .notConfigured)
+    }
+
+    func testTheProjectListIsNormalisedOnTheWayThrough() {
+        // The gate is the last gate: a duplicate reaching a loader would double
+        // every row that project owns, and a sixth would blow the slot budget.
+        let s = settings(
+            kind: .azure, organization: "acme",
+            projects: [" Manifold Ops ", "manifold ops", "p3", "p4", "p5", "p6"],
+            on: .prboxAzure
+        )
+
+        XCTAssertEqual(
+            s.gate(.prboxAzure, unavailable: []),
+            .fetch(ResolvedCredential(
+                token: "tok", organization: "acme",
+                projects: ["Manifold Ops", "p3", "p4", "p5", "p6"]
+            ))
+        )
+    }
+
+    func testALegacyProjectStringStillFetchesAsAOneElementList() {
+        // A Deck upgraded but never opened runs on a file the migration has not
+        // touched; the pre-accounts field must still name one project.
+        var s = DeckSettings()
+        s.taskbox.token = "tok"
+        s.taskbox.organization = "acme"
+        s.taskbox.project = "ForesightManifold"
+
+        XCTAssertEqual(
+            s.gate(.taskbox, unavailable: []),
+            .fetch(ResolvedCredential(
+                token: "tok", organization: "acme", projects: ["ForesightManifold"]
+            ))
+        )
     }
 }
