@@ -145,6 +145,24 @@ final class AzureMultiProjectTests: XCTestCase {
         )
     }
 
+    func testTheHeaderStripsAURLFormOrganization() throws {
+        // `normalise` accepts a bare name or a full dev.azure.com URL, and the
+        // single-project header goes through the normalised target. The
+        // multi-project one must too, or an account configured by pasting the
+        // URL renders "https://dev.azure.com/ForesightAnalytics" as its header.
+        let targets = try AzureTargets.normalise(
+            organization: "https://dev.azure.com/ForesightAnalytics",
+            projects: ["ForesightManifold", "Manifold Ops"]
+        )
+
+        XCTAssertEqual(
+            TaskBoxScope.scope(
+                organization: "https://dev.azure.com/ForesightAnalytics", targets: targets
+            ),
+            "ForesightAnalytics"
+        )
+    }
+
     // MARK: - Partial failure
 
     func testOneFailedProjectIsNamedNotSwallowed() {

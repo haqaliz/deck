@@ -114,10 +114,15 @@ enum AzureIDMerge {
 enum TaskBoxScope {
     /// One project keeps today's wording exactly. Several show the
     /// organization, because naming one of them would be a lie about the rest.
+    ///
+    /// The name comes from the **targets**, never from the raw setting: the
+    /// organization field accepts a full `https://dev.azure.com/{org}` URL, and
+    /// only `AzureTarget.normalise` has stripped it.
     static func scope(organization: String, targets: [AzureTarget]) -> String {
         guard targets.count == 1, let only = targets.first else {
-            let trimmed = organization.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? "" : trimmed
+            let name = targets.first?.organizationName
+                ?? organization.trimmingCharacters(in: .whitespacesAndNewlines)
+            return name
         }
         return only.scope
     }
