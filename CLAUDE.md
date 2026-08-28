@@ -361,6 +361,30 @@ Do not delete the container; see the trap below.
   Never describe keychain storage in Deck as protecting a token from other
   local processes; it protects it from being *in a file that gets copied*.
 
+- **Editing `settings.json` by hand while Deck.app is running tests nothing.**
+  The host app holds settings in memory and its own refresh path writes the
+  snapshots (`DeckApp.swift`, the TaskBox and PRBox refreshes), so a running
+  Deck silently overwrites both the file you edited and the snapshot you were
+  inspecting — with its stale copy. Hit while verifying multi-project
+  (2026-08-28): a failure case appeared to produce a *newer, differently
+  shaped* snapshot than the passing case before it, which is impossible from
+  the agent alone. `pgrep -lf "MacOS/Deck$"` is the check; quit Deck first, and
+  drive the agent directly with
+  `/Applications/Deck.app/Contents/MacOS/DeckAgent`. The tell that a snapshot
+  was genuinely left alone is an **unchanged mtime**, not unchanged content.
+- **A repo name is only unique inside its Azure project, and PR numbers are
+  per repo.** `azureDevOps:{repo}#{number}` looked like a safe id for one
+  project and is a collision as soon as an account covers two: two projects
+  each with an `api` repo and a PR #12 produce one id, which SwiftUI collapses
+  into a single row through the duplicate `ForEach` key — no crash, no log,
+  one row simply missing. The project is part of the identity. Same shape of
+  bug in the work-item batch: `workitemsbatch` is **organization**-scoped while
+  WIQL is project-scoped, so one merged call returns rows from every project
+  and `System.TeamProject` must be requested, or every row's URL is built from
+  whichever project was queried first and deep-links into the wrong place.
+  Useful in the other direction too: because the batch and `connectionData` are
+  org-scoped, N projects cost N+1 requests for TaskBox and 2N+1 for PRBox
+  rather than 3N.
 - **A user veto in Login Items is `.requiresApproval`, not `.notRegistered`,
   and reinstalling erases it.** Measured 2026-08-27 by logging
   `SMAppService.status.rawValue` from the app. Switching Deck off under System

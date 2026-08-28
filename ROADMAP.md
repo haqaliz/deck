@@ -162,8 +162,8 @@ the next slate. Ordered by priority, not by cost.
         team using those words really does receive finished items. TaskBox
         gives them a `done` lane (checked before the open lanes) and renders
         them struck through rather than letting them read as outstanding.
-      **Open follow-ups:** multi-project/multi-org,
-      custom WIQL, a second provider, Keychain storage for the PAT.
+      **Open follow-ups:** multi-org, custom WIQL, a second provider.
+      (Multi-project shipped 2026-08-28, see M6; Keychain shipped 2026-08-26.)
 - [x] **PRBox** — review queue: your open PRs + PRs awaiting your review,
       **mixed from GitHub and Azure DevOps Git** in one list (the original
       entry scoped this to GitHub only). Shipped 2026-08-24
@@ -190,9 +190,9 @@ the next slate. Ordered by priority, not by cost.
       large link per row, the small face carries a `widgetURL` to the top pull
       request. Restricted to http(s) with a host — the snapshot is data, not
       instruction.
-      **Open follow-ups:** multi-project/multi-org, review state / approval
-      counts (needs one request per PR), a third provider, Keychain for the two
-      tokens.
+      **Open follow-ups:** multi-org, review state / approval counts (needs one
+      request per PR), a third provider. (Multi-project shipped 2026-08-28, see
+      M6; Keychain shipped 2026-08-26.)
 - [x] **MarketBox** — configured tickers/crypto: price, day change, sparkline.
       Shipped 2026-08-24 (`docs/planning/marketbox/`), and the interview grew
       it past the ROADMAP entry: **mixed assets** (crypto + fiat + gold 1g) all
@@ -311,6 +311,42 @@ Deferred behind the new widgets by decision on 2026-08-22.
       machine until an opencode account carries a `serverURL` (both are empty
       today); the first tick after upgrade does one full resync, then
       incremental forever after.
+- [x] **Azure DevOps multi-project** — one account covers up to five projects
+      in its organization, for **both** TaskBox and PRBox (each listed it as an
+      open follow-up). Shipped 2026-08-28 (`docs/planning/azure-multi-project/`).
+      `CredentialAccount.project` became `projects`; the account editor lists
+      what the PAT can see (`_apis/projects`) behind five slots and falls back
+      to typed names when the token cannot list them.
+      **Probed live first, and the probe corrected the plan twice:** this org
+      has **six** projects, not the two the brief assumed — there is no
+      `Manifold`, the neighbour is **`Manifold Ops`**, whose space exercises URL
+      encoding on the live path. Measured after: **25 items in
+      ForesightManifold, 42 in ForesightDevops, 0 in Manifold Ops** — 67 in
+      total, which is exactly the "67 across three projects" the TaskBox entry
+      recorded as the cost of the single-project scope. All 67 now render.
+      Three findings shaped the implementation:
+      - **Cost is sublinear.** `workitemsbatch` and `connectionData` are
+        organization-scoped while WIQL and the PR query are project-scoped, so
+        TaskBox is N+1 requests and PRBox is 2N+1 — not 3N. The per-project
+        calls fan out with `withThrowingTaskGroup`, the second use of that
+        pattern after ShipBox.
+      - **PRBox row ids collided across projects.** `azureDevOps:{repo}#{n}`
+        is not unique: PR numbers are per repo and a repo name is only unique
+        within its project, so two projects with an `api` repo shared one id —
+        a duplicate `ForEach` key and a silently dropped row. The project is
+        now part of the id, and the regression test asserts on
+        `Set(ids).count`.
+      - **A merged batch needs `System.TeamProject`.** Every row's URL was
+        built from the queried project, so one organization-scoped batch would
+        have deep-linked every row into whichever project came first.
+      Partial failure follows MarketBox: some projects is an answer with a note
+      naming the ones that failed, none throws and the last good snapshot
+      stands (verified by an unchanged file mtime). The sprint chip shows only
+      with exactly one project, since a current sprint is per project and team.
+      **Open follow-ups:** multi-org (needs a slot that binds several accounts,
+      interviewed and deliberately not chosen), review state / approval counts,
+      custom WIQL, raising the five-project cap (one constant — this org has
+      six).
 - [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic
       (`docs/planning/devbox/prd.md:106`).
 
