@@ -14,6 +14,8 @@ struct TaskBoxEntry: TimelineEntry {
     /// Every open item assigned to the user — may exceed `tasks.count`.
     let totalCount: Int
     let sprint: String?
+    /// Which projects could not be read, when the others could.
+    let note: String?
     let tasks: [TaskItem]
     let settings: TaskBoxSettings
 }
@@ -39,6 +41,7 @@ struct TaskBoxProvider: TimelineProvider {
             scope: "Contoso",
             totalCount: 12,
             sprint: "Sprint 1",
+            note: nil,
             tasks: [
                 sample("1001", "Sample backlog item", "New", "Product Backlog Item", now),
                 sample("1002", "Sample task in progress", "In Progress", "Task", now),
@@ -80,7 +83,7 @@ struct TaskBoxProvider: TimelineProvider {
         guard let snapshot else {
             return TaskBoxEntry(
                 date: now, available: false, stale: false, writtenAt: nil,
-                chip: chip, scope: "", totalCount: 0, sprint: nil,
+                chip: chip, scope: "", totalCount: 0, sprint: nil, note: nil,
                 tasks: [], settings: settings
             )
         }
@@ -94,6 +97,7 @@ struct TaskBoxProvider: TimelineProvider {
             scope: snapshot.scope,
             totalCount: snapshot.totalCount,
             sprint: snapshot.sprint,
+            note: snapshot.note,
             tasks: snapshot.tasks,
             settings: settings
         )
@@ -299,6 +303,15 @@ struct TaskBoxWidgetEntryView: View {
                     taskRow(task)
                 }
             }
+            // Which projects are missing from the list above. The small face
+            // has no room, and its chip already covers a total failure.
+            if let note = entry.note, family != .systemSmall {
+                Text(note)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         }
     }
 
@@ -323,6 +336,16 @@ struct TaskBoxWidgetEntryView: View {
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
+            // Off by default: with one project it repeats the header on every
+            // row, and the row already carries a number, a title and a state.
+            if entry.settings.showProject, let project = task.project, !project.isEmpty {
+                Text(project)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .layoutPriority(-1)
+            }
             Text(task.title)
                 .font(.system(size: 11, weight: .medium, design: .rounded))
                 .lineLimit(1)

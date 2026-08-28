@@ -15,6 +15,8 @@ struct PRBoxEntry: TimelineEntry {
     let authoredCapped: Bool
     let reviewingCapped: Bool
     let pullRequests: [PullRequestItem]
+    /// Which Azure projects could not be read, when the others could.
+    let note: String?
     let settings: PRBoxSettings
 }
 
@@ -55,6 +57,7 @@ struct PRBoxProvider: TimelineProvider {
                     createdAt: .now.addingTimeInterval(-172_800), url: ""
                 ),
             ],
+            note: nil,
             settings: PRBoxSettings()
         )
     }
@@ -91,7 +94,7 @@ struct PRBoxProvider: TimelineProvider {
                 date: now, available: false, stale: false, writtenAt: nil, chip: chip,
                 authoredCount: 0, reviewingCount: 0,
                 authoredCapped: false, reviewingCapped: false,
-                pullRequests: [], settings: settings
+                pullRequests: [], note: nil, settings: settings
             )
         }
 
@@ -106,6 +109,7 @@ struct PRBoxProvider: TimelineProvider {
             authoredCapped: snapshot.authoredCapped,
             reviewingCapped: snapshot.reviewingCapped,
             pullRequests: snapshot.pullRequests,
+            note: snapshot.note,
             settings: settings
         )
     }
@@ -281,6 +285,16 @@ struct PRBoxWidgetEntryView: View {
                     row(for: pr)
                 }
             }
+            // Which projects are missing from the queue above. The small face
+            // has no room, and its chip already covers a provider failing
+            // outright.
+            if let note = entry.note, family != .systemSmall {
+                Text(note)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         }
     }
 
@@ -297,7 +311,10 @@ struct PRBoxWidgetEntryView: View {
             Text(tag(for: pr.provider))
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .foregroundStyle(.tertiary)
-            Text("\(pr.repo) #\(pr.number)")
+            // A repository name is only unique within its project, so with an
+            // account covering several the bare name can be ambiguous. Off by
+            // default: with one project it is noise on every row.
+            Text(rowLabel(for: pr))
                 .font(.system(size: 11, weight: .medium, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
@@ -315,6 +332,13 @@ struct PRBoxWidgetEntryView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
+    }
+
+    private func rowLabel(for pr: PullRequestItem) -> String {
+        guard entry.settings.azure.showProject,
+              let project = pr.project, !project.isEmpty
+        else { return "\(pr.repo) #\(pr.number)" }
+        return "\(project)/\(pr.repo) #\(pr.number)"
     }
 
     private func tag(for provider: PRProvider) -> String {
