@@ -219,3 +219,70 @@ and the only one Deck cannot currently see.
 Phase 3 measures what a **live** old agent does when the bundle beneath it is
 replaced (R3). With both agents down that measurement is vacuous, so the agents
 must be revived first — which needs the in-app toggle off→on, or a login.
+
+### Attempted recovery — and why the settings file cannot do it
+
+Three routes were tried to revive the agents without touching the UI.
+
+**1. Accessibility API — Deck's window exposes no AX tree.** System Events sees
+the process and the window (`AXFocusedWindow` → `window Deck`), but
+`count of entire contents` is **0**, focused or not. The v1.33 notes record
+hand-driven checks "through the accessibility API"; whatever that was, a plain
+System Events traversal cannot reach this window's controls today.
+
+**2. `launchctl bootstrap` of the bundle's plists — refused.**
+
+```
+$ launchctl bootstrap gui/502 /Applications/Deck.app/Contents/Library/LaunchAgents/com.deck.agent.plist
+Bootstrap failed: 5: Input/output error
+```
+
+`BundleProgram` resolves only inside the SMAppService context.
+
+**3. Toggling `agentAtLogin` in `settings.json` with Deck quit — a no-op by
+design.** Set to `false`, Deck relaunched, and the value was **`true` again**
+minutes later, with both records still `[enabled, allowed]` and `Generation`
+18 → 20.
+
+This is `AgentReconcilePolicy` behaving exactly as specified.
+`DeckApp.reconcileAgents()` documents it: "a service the user disabled in
+System Settings → Login Items stays off and flips the toggle off; one they
+**enabled** there flips it back on." With intent `false` and state `.enabled`,
+the policy reads the *registration* as the user's newer choice and adopts it —
+so it re-adopts `true` and never unregisters.
+
+**Consequence worth recording: `agentAtLogin` in `settings.json` is not a
+usable off switch.** While the BTM record is `[enabled, allowed]`, the policy
+will always adopt back to on. The only ways off are the in-app toggle (which
+calls `unregister()` directly rather than going through reconcile) and System
+Settings → Login Items. This is correct behaviour, but it means the file is
+not a test seam — anything scripted against it silently gets the opposite
+result.
+
+### The jobs are not bootstrapped anywhere in launchd
+
+`processes.json` did move once, at 23:50:37, after six hours frozen — then
+stopped again for the next 3+ minutes despite a 5s `StartInterval`. That single
+write was `RunAtLoad` firing when smd re-registered, not the schedule resuming.
+
+`launchctl dumpstate` settles where the jobs are: both labels appear **only** in
+the gui domain's enabled/disabled table, and nowhere as services.
+
+```
+$ launchctl print gui/502/com.deck.agent.processes
+Could not find service "com.deck.agent.processes" in domain for user gui: 502
+$ launchctl dumpstate | grep com.deck.agent
+        "com.deck.agent"           => enabled
+        "com.deck.agent.processes" => enabled     ← the enabled table, not a job
+```
+
+For contrast, the running app *is* a real job in that domain
+(`application.com.deck.app.214258026.214258034`, PID 26427).
+
+So the state is precisely: **BTM record present and allowed, launchd job absent.**
+`SMAppService.status` reports `.enabled` from the former and knows nothing of
+the latter, which is why Deck sees a healthy install. CLAUDE.md's recovery —
+"the next login, or a toggle-off/on cycle" — stands, and route 3 above shows the
+toggle cycle cannot be driven from outside the app.
+
+**Blocking:** Phase 3 needs live agents and cannot get them non-interactively.
