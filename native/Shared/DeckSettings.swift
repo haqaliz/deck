@@ -817,6 +817,10 @@ struct TaskBoxSettings: Codable, Equatable {
     /// The lane legend under the header.
     var showLegend = true
     var showList = true
+    /// Tag each row with the Azure project it came from. Off by default: with
+    /// one project it would repeat the header on every row, and the row already
+    /// carries a type, a title and a state.
+    var showProject = false
     var taskCount = 5
     /// Which raw Azure DevOps states feed which lane. Editable because process
     /// templates get customised and board columns get renamed.
@@ -837,6 +841,7 @@ struct TaskBoxSettings: Codable, Equatable {
         accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
         showLegend = try c.decodeIfPresent(Bool.self, forKey: .showLegend) ?? true
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
+        showProject = try c.decodeIfPresent(Bool.self, forKey: .showProject) ?? false
         taskCount = try c.decodeIfPresent(Int.self, forKey: .taskCount) ?? 5
         stateMapping = try c.decodeIfPresent(TaskStateMapping.self, forKey: .stateMapping) ?? TaskStateMapping()
         todoColor = try c.decodeIfPresent(RGBA.self, forKey: .todoColor) ?? RGBA.systemBlue
@@ -994,12 +999,16 @@ struct PRAzureSettings: Codable, Equatable {
     var project = ""
     /// Personal access token — required; no default is ever sent.
     var token = ""
+    /// Prefix each Azure row with its project. Off by default; see
+    /// `TaskBoxSettings.showProject`.
+    var showProject = false
 
     init() {}
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        showProject = try c.decodeIfPresent(Bool.self, forKey: .showProject) ?? false
         organization = try c.decodeIfPresent(String.self, forKey: .organization) ?? ""
         project = try c.decodeIfPresent(String.self, forKey: .project) ?? ""
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""

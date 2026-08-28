@@ -282,4 +282,44 @@ final class AzureMultiProjectTests: XCTestCase {
         )
         XCTAssertNil(snapshot.note)
     }
+
+    // MARK: - New settings keys decode tolerantly
+
+    func testTaskBoxKeepsItsSettingsWhenTheNewKeyIsAbsent() throws {
+        // Adding a key must never make a pre-existing file decode as defaults:
+        // DeckSettings.load() falls back to DeckSettings() on any decode error,
+        // which would silently reset every colour, count and account in it.
+        let json = """
+        {"taskbox":{"taskCount":13,"showLegend":false}}
+        """
+        let settings = try JSONDecoder().decode(DeckSettings.self, from: Data(json.utf8))
+
+        XCTAssertEqual(settings.taskbox.taskCount, 13)
+        XCTAssertFalse(settings.taskbox.showLegend)
+        XCTAssertFalse(settings.taskbox.showProject, "off by default")
+    }
+
+    func testPRBoxKeepsItsSettingsWhenTheNewKeyIsAbsent() throws {
+        let json = """
+        {"prbox":{"prCount":9,"azure":{"organization":"acme"}}}
+        """
+        let settings = try JSONDecoder().decode(DeckSettings.self, from: Data(json.utf8))
+
+        XCTAssertEqual(settings.prbox.prCount, 9)
+        XCTAssertEqual(settings.prbox.azure.organization, "acme")
+        XCTAssertFalse(settings.prbox.azure.showProject, "off by default")
+    }
+
+    func testTheTogglesRoundTrip() throws {
+        var settings = DeckSettings()
+        settings.taskbox.showProject = true
+        settings.prbox.azure.showProject = true
+
+        let decoded = try JSONDecoder().decode(
+            DeckSettings.self, from: try JSONEncoder().encode(settings)
+        )
+
+        XCTAssertTrue(decoded.taskbox.showProject)
+        XCTAssertTrue(decoded.prbox.azure.showProject)
+    }
 }

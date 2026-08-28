@@ -1070,6 +1070,10 @@ private struct CredentialsSettingsView: View {
     @State private var forwardTarget: String?
     @State private var adding = false
     @State private var verifying: Set<String> = []
+    /// Projects discovered per account id. Absent means "not asked yet or the
+    /// ask failed", which is what falls the slots back to plain text fields.
+    @State private var discovered: [String: [String]] = [:]
+    @State private var discovering: Set<String> = []
     /// Verify failures, by account id. Successes live on the account itself.
     @State private var failures: [String: String] = [:]
     @State private var confirmingDelete = false
@@ -1251,12 +1255,7 @@ private struct CredentialsSettingsView: View {
                     case .azure:
                         TextField("Organization (name or dev.azure.com URL)",
                                   text: field(account.id, \.organization))
-                        ForEach(0..<AzureAccountProjects.maxProjects, id: \.self) { slot in
-                            TextField(
-                                slot == 0 ? "Project" : "Project \(slot + 1) (optional)",
-                                text: projectSlot(account.id, slot)
-                            )
-                        }
+                        projectSlots(for: account)
                     case .opencode:
                         TextField("Server URL (opencode serve, e.g. http://host:4096)",
                                   text: field(account.id, \.serverURL))
@@ -1348,6 +1347,61 @@ private struct CredentialsSettingsView: View {
         settings.credentials.accounts[index].clearVerificationIfCredentialChanged(from: before)
         if settings.credentials.accounts[index].credentialFingerprint != before {
             failures[id] = nil
+        }
+    }
+
+    /// Five project slots: pickers once discovery has answered, plain text
+    /// fields until then.
+    ///
+    /// The fallback is not a nicety — a PAT scoped to Work Items (Read) may not
+    /// be able to list projects, and being unable to *type* one would lock that
+    /// user out of a widget their token can otherwise serve.
+    @ViewBuilder
+    private func projectSlots(for account: CredentialAccount) -> some View {
+        let names = discovered[account.id]
+        ForEach(0..<AzureAccountProjects.maxProjects, id: \.self) { slot in
+            let title = slot == 0 ? "Project" : "Project \(slot + 1) (optional)"
+            if let names, !names.isEmpty {
+                Picker(title, selection: projectSlot(account.id, slot)) {
+                    Text("None").tag("")
+                    ForEach(names, id: \.self) { Text($0).tag($0) }
+                    // A stored project the PAT can no longer see would otherwise
+                    // vanish from its own picker and silently reset to None.
+                    let current = projectSlot(account.id, slot).wrappedValue
+                    if !current.isEmpty, !names.contains(current) {
+                        Text("\(current) (not found)").tag(current)
+                    }
+                }
+            } else {
+                TextField(title, text: projectSlot(account.id, slot))
+            }
+        }
+        HStack {
+            Button(discovering.contains(account.id) ? "Loading\u{2026}" : "Load projects") {
+                loadProjects(for: account.id)
+            }
+            .disabled(
+                discovering.contains(account.id)
+                    || account.organization.trimmingCharacters(in: .whitespaces).isEmpty
+                    || account.token.isEmpty
+            )
+            if let names, names.isEmpty {
+                Text("This token can't see any project.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// Discovery is on demand and host-side only — never on the agent tick.
+    private func loadProjects(for id: String) {
+        guard let account = account(id) else { return }
+        discovering.insert(id)
+        Task { @MainActor in
+            discovered[id] = try? await HostAzureProjectsLoader.list(
+                organization: account.organization, token: account.token
+            )
+            discovering.remove(id)
         }
     }
 
@@ -1888,6 +1942,10 @@ private struct PRBoxSettingsView: View {
             Text("Shows pull requests created by, or awaiting review from, whoever owns the PAT \u{2014} not whoever is signed in to the browser. The token is sent only to dev.azure.com over TLS; a read-only PAT that can see Code is enough.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            Toggle("Show project on rows", isOn: $settings.azure.showProject)
+            Text("Prefixes each Azure row with its project. Worth turning on when the account covers several — a repository name is only unique within its project.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             FetchStatusCaption(source: .prboxAzure, clearOn: settings.azure.accountID ?? "")
         }
     }
@@ -2057,10 +2115,10 @@ private struct TaskBoxSettingsView: View {
             Section("Azure DevOps") {
                 AccountPicker(kind: .azure, accounts: accounts,
                               accountID: $accountID, onManage: onManage)
-                Text("The account carries the organization, project and PAT. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
+                Text("The account carries the organization, up to five projects and the PAT. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Shows open work items assigned to whoever owns the PAT \u{2014} not whoever is signed in to the browser or the az CLI \u{2014} in that account's project only.")
+                Text("Shows open work items assigned to whoever owns the PAT \u{2014} not whoever is signed in to the browser or the az CLI \u{2014} across every project the account lists.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 FetchStatusCaption(source: .taskbox, clearOn: accountID ?? "")
@@ -2068,6 +2126,8 @@ private struct TaskBoxSettingsView: View {
             Section("Tasks") {
                 Toggle("Show lane legend", isOn: $settings.showLegend)
                 Toggle("Show task list", isOn: $settings.showList)
+                Toggle("Show project on rows", isOn: $settings.showProject)
+                    .disabled(!settings.showList)
                 Stepper("Task count: \(settings.taskCount)", value: $settings.taskCount, in: 2...15)
                     .disabled(!settings.showList)
             }
