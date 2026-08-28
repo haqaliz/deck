@@ -207,4 +207,79 @@ final class AzureMultiProjectTests: XCTestCase {
         XCTAssertEqual(decoded.note, "A: can't reach Azure DevOps")
         XCTAssertEqual(decoded.tasks[0].project, "Manifold Ops")
     }
+
+    // MARK: - PRBox: ids that cannot collide across projects
+
+    private func prJSON(repo: String, number: Int, me: String = "me") -> String {
+        """
+        {"value":[{
+          "pullRequestId": \(number),
+          "title": "T",
+          "repository": {"name": "\(repo)"},
+          "creationDate": "2026-08-20T10:00:00Z",
+          "reviewers": [{"id": "\(me)", "vote": 0}]
+        }]}
+        """
+    }
+
+    func testTwoProjectsWithASameNamedRepoProduceDistinctRows() throws {
+        // PR numbers are per repo, and a repo name is only unique within its
+        // project. Before the project entered the id, `api#12` in two projects
+        // was one id — a duplicate ForEach key, and one row silently gone.
+        let one = try XCTUnwrap(AzurePRParser.parse(
+            Data(prJSON(repo: "api", number: 12).utf8),
+            role: .authored, me: "me", target: try target("ForesightManifold")
+        ))
+        let two = try XCTUnwrap(AzurePRParser.parse(
+            Data(prJSON(repo: "api", number: 12).utf8),
+            role: .authored, me: "me", target: try target("Manifold Ops")
+        ))
+
+        let ids = (one + two).map(\.id)
+        XCTAssertEqual(Set(ids).count, 2, "same repo name in two projects collapsed into one row")
+        XCTAssertEqual(ids[0], "azureDevOps:ForesightManifold/api#12")
+        XCTAssertEqual(ids[1], "azureDevOps:Manifold Ops/api#12")
+    }
+
+    func testAPullRequestCarriesItsProjectAndLinksIntoIt() throws {
+        let items = try XCTUnwrap(AzurePRParser.parse(
+            Data(prJSON(repo: "api", number: 12).utf8),
+            role: .authored, me: "me", target: try target("Manifold Ops")
+        ))
+
+        XCTAssertEqual(items[0].project, "Manifold Ops")
+        XCTAssertEqual(
+            items[0].url,
+            "https://dev.azure.com/ForesightAnalytics/Manifold%20Ops/_git/api/pullrequest/12"
+        )
+    }
+
+    func testPullRequestDecodesWithoutAProject() throws {
+        let json = """
+        {"id":"x","number":1,"title":"T","repo":"api","role":"authored",
+         "provider":"azureDevOps","isDraft":false,"createdAt":0,"url":"u"}
+        """
+        let item = try JSONDecoder().decode(PullRequestItem.self, from: Data(json.utf8))
+        XCTAssertNil(item.project)
+    }
+
+    func testTheBuilderCarriesAPartialFailureNote() {
+        let azure = PRRoleTotals(
+            authoredTotal: 1, reviewingTotal: 0, authoredCapped: false,
+            reviewingCapped: false, items: [], note: "Manifold Ops: offline"
+        )
+
+        let snapshot = PRSnapshotBuilder.build(
+            github: nil, azure: azure, cap: 6, now: Date(timeIntervalSince1970: 0)
+        )
+
+        XCTAssertEqual(snapshot.note, "Manifold Ops: offline")
+    }
+
+    func testNoFailuresLeavesTheSnapshotNoteEmpty() {
+        let snapshot = PRSnapshotBuilder.build(
+            github: .empty, azure: .empty, cap: 6, now: Date(timeIntervalSince1970: 0)
+        )
+        XCTAssertNil(snapshot.note)
+    }
 }

@@ -549,7 +549,11 @@ enum AzurePRParser {
         if role == .reviewing, !isAwaitingVote(from: me, in: entry) { return nil }
 
         return PullRequestItem(
-            id: "azureDevOps:\(repo)#\(number)",
+            // The project is part of the identity, not decoration: PR numbers
+            // are per repo and a repo name is only unique within its project,
+            // so two projects with an `api` repo would otherwise share an id —
+            // a duplicate ForEach key, and one row silently dropped.
+            id: "azureDevOps:\(target.projectName)/\(repo)#\(number)",
             number: number,
             title: title,
             repo: repo,
@@ -557,7 +561,8 @@ enum AzurePRParser {
             provider: .azureDevOps,
             isDraft: entry["isDraft"] as? Bool ?? false,
             createdAt: createdAt,
-            url: webURL(target: target, repo: repo, number: number)
+            url: webURL(target: target, repo: repo, number: number),
+            project: target.projectName
         )
     }
 
@@ -597,33 +602,86 @@ enum HostAzurePRLoader {
     /// Both roles, identity-scoped. Three requests on the first tick and two
     /// after it, since the GUID only changes when the PAT's owner does.
     static func fetch(
-        organization: String, project: String, token: String, cap: Int
+        organization: String, projects: [String], token: String, cap: Int
     ) async throws -> PRRoleTotals {
-        let target = try AzureTarget.normalise(organization: organization, project: project)
+        let targets = try AzureTargets.normalise(organization: organization, projects: projects)
         let auth = "Basic " + Data(":\(token)".utf8).base64EncodedString()
 
-        let me = try await identity(target: target, auth: auth)
+        // One call for every project: `connectionData` is organization-scoped,
+        // and the identity only changes when the PAT's owner does.
+        let me = try await identity(target: targets[0], auth: auth)
+
+        // Every project × both roles at once. Serially this is 2N round trips
+        // at a 10s timeout each, against a 60s tick.
+        let queries = targets.flatMap { target in
+            [PRRole.authored, PRRole.reviewing].map { (target: target, role: $0) }
+        }
+        let results = try await inParallel(queries) { query in
+            let data = try await send(role: query.role, me: me, target: query.target, auth: auth)
+            guard let parsed = AzurePRParser.parse(
+                data, role: query.role, me: me, target: query.target
+            ) else { throw AzureDevOpsError.invalidPayload }
+            return parsed
+        }
 
         var items: [PullRequestItem] = []
-        var totals: [PRRole: (count: Int, capped: Bool)] = [:]
+        var totals: [PRRole: (count: Int, capped: Bool)] = [
+            .authored: (0, false), .reviewing: (0, false),
+        ]
+        var failures: [AzureProjectNote.Failure] = []
+        var firstError: Error?
+        var succeeded = false
 
-        for role in [PRRole.authored, PRRole.reviewing] {
-            let data = try await send(role: role, me: me, target: target, auth: auth)
-            guard let parsed = AzurePRParser.parse(data, role: role, me: me, target: target) else {
-                throw AzureDevOpsError.invalidPayload
+        for (query, result) in zip(queries, results) {
+            switch result {
+            case .success(let parsed):
+                succeeded = true
+                // Counted after the vote filter, so the header matches the rows.
+                let running = totals[query.role] ?? (0, false)
+                totals[query.role] = (
+                    running.count + parsed.count,
+                    running.capped || AzurePRCap.isCapped(rowCount: parsed.count)
+                )
+                items.append(contentsOf: parsed.prefix(cap))
+            case .failure(let error):
+                let outcome = FetchClassifier.outcome(for: error)
+                // Both roles of one project failing is one thing to say, not two.
+                if !failures.contains(where: { $0.project == query.target.projectName }) {
+                    failures.append(.init(project: query.target.projectName, outcome: outcome))
+                }
+                firstError = firstError ?? error
             }
-            // Counted after the vote filter, so the header matches the rows.
-            totals[role] = (parsed.count, AzurePRCap.isCapped(rowCount: parsed.count))
-            items.append(contentsOf: parsed.prefix(cap))
         }
+
+        // Same rule as TaskBox: some is a partial answer, none is a failed tick.
+        if !succeeded, let firstError { throw firstError }
 
         return PRRoleTotals(
             authoredTotal: totals[.authored]?.count ?? 0,
             reviewingTotal: totals[.reviewing]?.count ?? 0,
             authoredCapped: totals[.authored]?.capped ?? false,
             reviewingCapped: totals[.reviewing]?.capped ?? false,
-            items: items
+            items: items,
+            note: AzureProjectNote.compose(failures: failures, source: .prboxAzure)
         )
+    }
+
+    /// The ShipBox fan-out. See `HostAzureDevOpsLoader.inParallel`.
+    private static func inParallel<S, T>(
+        _ inputs: [S],
+        _ work: @escaping @Sendable (S) async throws -> T
+    ) async throws -> [Result<T, Error>] where S: Sendable, T: Sendable {
+        try await withThrowingTaskGroup(of: (Int, Result<T, Error>).self) { group in
+            for (index, input) in inputs.enumerated() {
+                group.addTask {
+                    do { return (index, .success(try await work(input))) }
+                    catch { return (index, .failure(error)) }
+                }
+            }
+            var collected: [(Int, Result<T, Error>)] = []
+            for try await result in group { collected.append(result) }
+            return collected.sorted { $0.0 < $1.0 }.map(\.1)
+        }
     }
 
     /// Resolves the PAT owner's GUID, or throws. See `ConnectionDataParser` for
