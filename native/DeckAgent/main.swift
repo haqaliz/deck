@@ -211,12 +211,15 @@ Task {
             // unchanged — otherwise a quiet day reads as a stale widget.
             let taskbox = try await HostAzureDevOpsLoader.fetch(
                 organization: credential.organization,
-                project: credential.project,
+                projects: credential.projects,
                 token: credential.token
             )
             TaskBoxSnapshotStore.save(taskbox)
             FetchStatusStore.record(.ok, for: .taskbox)
-            agentLog.info("written taskbox snapshot")
+            // Counts and outcomes only — never a project name.
+            agentLog.info(
+                "written taskbox snapshot (\(credential.projects.count, privacy: .public) projects)"
+            )
         } catch {
             let outcome = FetchClassifier.outcome(for: error)
             FetchStatusStore.record(outcome, for: .taskbox)
@@ -280,7 +283,7 @@ Task {
         do {
             azureTotals = try await HostAzurePRLoader.fetch(
                 organization: credential.organization,
-                project: credential.project,
+                projects: credential.projects,
                 token: credential.token,
                 cap: prbox.prCount
             )

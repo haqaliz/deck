@@ -153,4 +153,39 @@ final class AzureAccountProjectsTests: XCTestCase {
         one.token = "different"
         XCTAssertEqual(one.credentialFingerprint, two.credentialFingerprint)
     }
+
+    // MARK: - Editing one of the five slots
+
+    func testTypingASpaceSurvives() {
+        // Normalising on every keystroke trims the trailing space, which makes
+        // a two-word project name untypeable — and this org has one.
+        XCTAssertEqual(
+            AzureAccountProjects.setSlot(0, in: ["Manifold"], to: "Manifold "),
+            ["Manifold "]
+        )
+    }
+
+    func testWritingPastTheEndPads() {
+        XCTAssertEqual(
+            AzureAccountProjects.setSlot(2, in: ["A"], to: "C"),
+            ["A", "", "C"]
+        )
+    }
+
+    func testClearingAMiddleSlotKeepsTheOnesAfterItInPlace() {
+        XCTAssertEqual(
+            AzureAccountProjects.setSlot(0, in: ["A", "B"], to: ""),
+            ["", "B"]
+        )
+    }
+
+    func testClearingTheLastSlotShrinksTheList() {
+        XCTAssertEqual(AzureAccountProjects.setSlot(1, in: ["A", "B"], to: ""), ["A"])
+        XCTAssertEqual(AzureAccountProjects.setSlot(0, in: ["A"], to: ""), [])
+    }
+
+    func testASlotBeyondTheCapIsIgnored() {
+        let five = ["1", "2", "3", "4", "5"]
+        XCTAssertEqual(AzureAccountProjects.setSlot(5, in: five, to: "6"), five)
+    }
 }

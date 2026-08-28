@@ -99,6 +99,25 @@ enum AzureAccountProjects {
     /// would be six WIQL calls and one batch) — it is how many pickers fit.
     static let maxProjects = 5
 
+    /// Writes one slot of the five, leaving the value exactly as typed.
+    ///
+    /// Deliberately **not** normalised: doing that per keystroke trims the
+    /// space out of "Manifold Ops" as the user types it, making a two-word
+    /// project name unreachable. Normalisation happens at the boundaries that
+    /// matter — decode, the gate, and every loader.
+    ///
+    /// Interior empties are kept so the slots below one being cleared do not
+    /// jump up under the cursor; only trailing ones are dropped, to stop the
+    /// array growing on its own.
+    static func setSlot(_ slot: Int, in projects: [String], to value: String) -> [String] {
+        guard slot < maxProjects else { return projects }
+        var out = projects
+        while out.count <= slot { out.append("") }
+        out[slot] = value
+        while let last = out.last, last.isEmpty { out.removeLast() }
+        return out
+    }
+
     /// Trimmed, empties dropped, de-duplicated case-insensitively keeping the
     /// first spelling, capped, order preserved.
     ///

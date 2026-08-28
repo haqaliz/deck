@@ -316,7 +316,7 @@ struct ContentView: View {
             do {
                 azure = try await HostAzurePRLoader.fetch(
                     organization: credential.organization,
-                    project: credential.project,
+                    projects: credential.projects,
                     token: credential.token,
                     cap: prbox.prCount
                 )
@@ -386,7 +386,7 @@ struct ContentView: View {
         do {
             snapshot = try await HostAzureDevOpsLoader.fetch(
                 organization: credential.organization,
-                project: credential.project,
+                projects: credential.projects,
                 token: credential.token
             )
         } catch {
@@ -1251,7 +1251,12 @@ private struct CredentialsSettingsView: View {
                     case .azure:
                         TextField("Organization (name or dev.azure.com URL)",
                                   text: field(account.id, \.organization))
-                        TextField("Project", text: field(account.id, \.project))
+                        ForEach(0..<AzureAccountProjects.maxProjects, id: \.self) { slot in
+                            TextField(
+                                slot == 0 ? "Project" : "Project \(slot + 1) (optional)",
+                                text: projectSlot(account.id, slot)
+                            )
+                        }
                     case .opencode:
                         TextField("Server URL (opencode serve, e.g. http://host:4096)",
                                   text: field(account.id, \.serverURL))
@@ -1344,6 +1349,27 @@ private struct CredentialsSettingsView: View {
         if settings.credentials.accounts[index].credentialFingerprint != before {
             failures[id] = nil
         }
+    }
+
+    /// One of the five project slots, as a plain string binding.
+    ///
+    /// The value is stored exactly as typed — see `setSlot` for why
+    /// normalising here would make a two-word project name untypeable.
+    private func projectSlot(_ id: String, _ slot: Int) -> Binding<String> {
+        Binding(
+            get: {
+                let projects = settings.credentials.accounts
+                    .first(where: { $0.id == id })?.projects ?? []
+                return slot < projects.count ? projects[slot] : ""
+            },
+            set: { value in
+                edit(id) { account in
+                    account.projects = AzureAccountProjects.setSlot(
+                        slot, in: account.projects, to: value
+                    )
+                }
+            }
+        )
     }
 
     private func field(_ id: String, _ keyPath: WritableKeyPath<CredentialAccount, String>) -> Binding<String> {
