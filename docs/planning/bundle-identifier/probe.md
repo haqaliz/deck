@@ -522,3 +522,61 @@ swap rather than a mystery. `SMAppService.status` reports `.enabled`,
 the rename *will* put every user into this state, and without a check Deck will
 tell them background refresh is on while nothing runs. The flip should not ship
 before it.
+
+## Rollback is not symmetric — and that is a probe artifact, not a flip risk
+
+Restoring v1.35 over the renamed bundle left the machine in a state the forward
+flip never produces. Recorded because it cost time and would cost it again.
+
+**Forward (what users will experience) worked.** With the renamed build
+installed, its own agents registered and ran:
+
+```
+gui/502/io.github.haqaliz.deck.agent.processes
+    parent bundle identifier = io.github.haqaliz.deck
+    parent bundle version    = 36
+    last exit code           = 0
+    job state                = exited          ← normal: runs and exits
+```
+
+**Backward did not.** After `ditto`-ing v1.35 back over the same path and a
+user-driven off→on toggle, both `com.deck.agent*` jobs exist but refuse to
+start — `runs = 15`, every one `78: EX_CONFIG`, `job state = spawn failed` —
+while the binary itself is fine:
+
+```
+$ DECK_AGENT_ROLE=processes /Applications/Deck.app/Contents/MacOS/DeckAgent
+exit=0        ← and processes.json was written
+```
+
+The cause is visible in BTM: **two app records now claim the same URL.**
+
+```
+Identifier: 2.io.github.haqaliz.deck   URL: file:///Applications/Deck.app/
+Identifier: 2.com.deck.app             URL: file:///Applications/Deck.app/
+```
+
+Each with its own two agents correctly parented. During the forward step there
+was only ever **one** app record for that URL — BTM had *replaced*
+`2.com.deck.app` rather than adding alongside it. Restoring recreated it without
+removing the first, and launchd will not spawn a `BundleProgram` job whose path
+is claimed by an ambiguous registration.
+
+Things that did **not** fix it: the in-app off→on toggle (it re-registered the
+jobs — they went from absent to present — but they still fail to spawn),
+`launchctl kickstart -k`, and `killall smd` (smd is not user-killable).
+`sfltool resetbtm` would, but it wipes every login item for every app on the
+machine. The documented reset — **the next login** — is the proportionate fix,
+and CLAUDE.md already names it for this class of fault.
+
+**Implication for the flip: none, in the forward direction.** The implication is
+for *rollback*: if the flip has to be reverted, users who downgrade will land in
+this state and a relaunch will not save them. If a rollback path is ever
+promised, it has to say "log out and back in", because nothing the app can do
+from inside repairs it.
+
+### One measurement muddied
+
+`processes.json` at 00:19:42 was written by a **hand-run** of the agent during
+this diagnosis, not by launchd. Anyone reading mtimes on this machine after that
+timestamp should discount it.
