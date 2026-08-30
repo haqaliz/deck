@@ -117,3 +117,98 @@ final class AgentEvidenceTests: XCTestCase {
         )
     }
 }
+
+/// The three things that make the heartbeat evidence, none of which the type
+/// system can express: the agent writes it, it writes it **first**, and nothing
+/// else writes it at all.
+///
+/// Source-tree assertions, reached through `#filePath` — the idiom
+/// `DeckBundleTests` uses to pin `DeckBundle` against `project.yml`. The
+/// DeckSharedTests scheme builds only its own target, so there is no built
+/// product to inspect instead.
+final class AgentHeartbeatWiringTests: XCTestCase {
+    private var nativeDir: URL {
+        URL(fileURLWithPath: #filePath)      // native/SharedTests/AgentHeartbeatTests.swift
+            .deletingLastPathComponent()      // native/SharedTests
+            .deletingLastPathComponent()      // native
+    }
+
+    private func source(_ relativePath: String) throws -> String {
+        try String(contentsOf: nativeDir.appendingPathComponent(relativePath), encoding: .utf8)
+    }
+
+    private func swiftSources(in directory: String) throws -> [(name: String, text: String)] {
+        let root = nativeDir.appendingPathComponent(directory)
+        let urls = try FileManager.default.subpathsOfDirectory(atPath: root.path)
+            .filter { $0.hasSuffix(".swift") }
+        return try urls.map {
+            (name: "\(directory)/\($0)",
+             text: try String(contentsOf: root.appendingPathComponent($0), encoding: .utf8))
+        }
+    }
+
+    private static let write = "AgentHeartbeatStore.save"
+
+    func testTheAgentWritesTheHeartbeat() throws {
+        XCTAssertTrue(
+            try source("DeckAgent/main.swift").contains(Self.write),
+            "DeckAgent must write the heartbeat, or the 60s agent has no witness at all"
+        )
+    }
+
+    /// **Placement is the design, not a detail.** The full refresh awaits ~10
+    /// mostly serial sources at 10s timeouts each; written at the *end*, a
+    /// slow-but-healthy tick could cross the 240s limit and be reported dead.
+    /// Written at the start it catches strictly more — launchd starts no new
+    /// tick while one is running, so a hung agent stops advancing it either way.
+    func testTheHeartbeatIsWrittenBeforeAnyFetch() throws {
+        let main = try source("DeckAgent/main.swift")
+        let write = try XCTUnwrap(main.range(of: Self.write), "no heartbeat write to place")
+        // The first data the full path goes after, whichever way settings fall.
+        let firstWork = ["RemoteOpenCodeLoader.load", "OpenCodeReader.load",
+                         "HostGitBoxSampler.snapshot", "HostWeatherLoader.fetch"]
+            .compactMap { main.range(of: $0)?.lowerBound }
+            .min()
+        let start = try XCTUnwrap(firstWork, "no loader call found — has the agent been restructured?")
+        XCTAssertLessThan(
+            write.lowerBound, start,
+            "the heartbeat must be written before the agent starts fetching"
+        )
+    }
+
+    /// The witness is a witness **only because one process writes it**. The ten
+    /// snapshots the 60s agent produces are all written by the host app too,
+    /// which is exactly why none of them could answer this question.
+    ///
+    /// Stated plainly: this is a substring search. It catches the realistic
+    /// regression — a heartbeat write copy-pasted into a host refresh path —
+    /// and it would not catch a wrapper function or a renamed store.
+    func testNothingButTheAgentWritesTheHeartbeat() throws {
+        for target in ["DeckApp", "DeckWidgets"] {
+            for file in try swiftSources(in: target) {
+                XCTAssertFalse(
+                    file.text.contains(Self.write),
+                    "\(file.name) writes the heartbeat — that destroys the witness silently"
+                )
+            }
+        }
+    }
+
+    /// `dataAgentInterval` is a Swift literal because launchd reads the plist
+    /// and Swift never does. Retuning the agent's cadence without this test
+    /// would leave a threshold that fires on every healthy tick, with nothing
+    /// failing anywhere.
+    func testTheDataAgentIntervalMatchesTheAgentsPlist() throws {
+        let plist = try source("DeckApp/LaunchAgents/com.deck.agent.plist")
+        let declared = plist
+            .components(separatedBy: "<key>StartInterval</key>")
+            .dropFirst().first?
+            .components(separatedBy: "<integer>").dropFirst().first?
+            .components(separatedBy: "</integer>").first
+        XCTAssertEqual(
+            declared.flatMap { Double($0) },
+            AgentLivenessPolicy.dataAgentInterval,
+            "StartInterval and dataAgentInterval have drifted"
+        )
+    }
+}
