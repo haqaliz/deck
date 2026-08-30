@@ -612,15 +612,24 @@ struct ContentView: View {
     /// and the label collision would reject the new job.
     private func legacyCleanup() {
         let home = FileManager.default.homeDirectoryForCurrentUser
-        for label in [DeckBundle.Legacy.agentLabel, DeckBundle.Legacy.fastAgentLabel] {
+        func plistURL(_ label: String) -> URL {
+            home.appendingPathComponent("Library/LaunchAgents/\(label).plist")
+        }
+        // Only labels that still have a hand-written plist. Without this guard
+        // the bootout below lands on Deck's own running SMAppService jobs,
+        // because before the rename the legacy labels ARE the current ones —
+        // see `LegacyAgentCleanup`.
+        let labels = LegacyAgentCleanup.labelsNeedingCleanup(
+            candidates: [DeckBundle.Legacy.agentLabel, DeckBundle.Legacy.fastAgentLabel],
+            plistExists: { FileManager.default.fileExists(atPath: plistURL($0).path) }
+        )
+        for label in labels {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
             process.arguments = ["bootout", "gui/\(getuid())/\(label)"]
             try? process.run()
             process.waitUntilExit()
-            try? FileManager.default.removeItem(
-                at: home.appendingPathComponent("Library/LaunchAgents/\(label).plist")
-            )
+            try? FileManager.default.removeItem(at: plistURL(label))
         }
     }
 

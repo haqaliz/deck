@@ -439,3 +439,78 @@ final class AgentRegistrationClockTests: XCTestCase {
         )
     }
 }
+
+/// Which pre-SMAppService LaunchAgent plists still need clearing.
+///
+/// The bug this replaces: the cleanup ran unconditionally, and before the
+/// bundle rename `DeckBundle.Legacy.agentLabel` **is** `DeckBundle.agentLabel`.
+/// So every launch of Deck ran `launchctl bootout` on the two jobs SMAppService
+/// was currently running, and nothing put them back — the registration survives
+/// a bootout as `.enabled`, so reconciliation correctly did nothing and
+/// background refresh stayed dead until a toggle cycle or a login.
+final class LegacyAgentCleanupTests: XCTestCase {
+    private let agent = "com.deck.agent"
+    private let fastAgent = "com.deck.agent.processes"
+
+    /// v1.33+ installs: SMAppService registered the agents from the bundle and
+    /// there is no hand-written plist anywhere. Touching launchd here is what
+    /// killed them.
+    func testCleanInstallIsLeftCompletelyAlone() {
+        XCTAssertEqual(
+            LegacyAgentCleanup.labelsNeedingCleanup(
+                candidates: [agent, fastAgent],
+                plistExists: { _ in false }
+            ),
+            []
+        )
+    }
+
+    /// Upgraded from <=1.32: the hand-written plist is real and shares the label
+    /// with the SMAppService registration, so a stale bootstrap would collide
+    /// with the new job. This is the case the cleanup exists for.
+    func testUpgradedInstallCleansBothLabels() {
+        XCTAssertEqual(
+            LegacyAgentCleanup.labelsNeedingCleanup(
+                candidates: [agent, fastAgent],
+                plistExists: { _ in true }
+            ),
+            [agent, fastAgent]
+        )
+    }
+
+    /// A half-migrated install: one plist was already removed by an earlier
+    /// launch, the other was not. Only the survivor is touched.
+    func testOnlyTheLabelsWithAPlistAreCleaned() {
+        XCTAssertEqual(
+            LegacyAgentCleanup.labelsNeedingCleanup(
+                candidates: [agent, fastAgent],
+                plistExists: { $0 == fastAgent }
+            ),
+            [fastAgent]
+        )
+    }
+
+    /// Order is the caller's order, so the bootouts stay deterministic.
+    func testOrderFollowsTheCandidateList() {
+        XCTAssertEqual(
+            LegacyAgentCleanup.labelsNeedingCleanup(
+                candidates: [fastAgent, agent],
+                plistExists: { _ in true }
+            ),
+            [fastAgent, agent]
+        )
+    }
+
+    /// The condition is the plist, not "is this label still current". After the
+    /// rename the legacy labels differ from the current ones, and a leftover
+    /// plist under an old label must still be cleaned.
+    func testPostRenameLeftoverIsStillCleaned() {
+        XCTAssertEqual(
+            LegacyAgentCleanup.labelsNeedingCleanup(
+                candidates: ["com.deck.agent"],
+                plistExists: { $0 == "com.deck.agent" }
+            ),
+            ["com.deck.agent"]
+        )
+    }
+}

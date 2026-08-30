@@ -203,3 +203,43 @@ enum AgentRegistrationClock {
         return stored
     }
 }
+
+/// Which pre-SMAppService LaunchAgent plists still need clearing at launch.
+///
+/// **This guard is the whole point.** The cleanup used to run unconditionally,
+/// and before the bundle rename `DeckBundle.Legacy.agentLabel` *is*
+/// `DeckBundle.agentLabel` — the two only diverge afterwards. So every launch of
+/// Deck ran `launchctl bootout` on the two jobs SMAppService was currently
+/// running, and nothing put them back: a bootout leaves the registration
+/// `.enabled`, so `AgentReconcilePolicy.resolve(intent: true, state: .enabled)`
+/// returns `[]` and reconciliation correctly does nothing. Background refresh
+/// then stayed dead until a toggle cycle or a login. Measured 2026-08-30 —
+/// healthy at `runs = 24`, quit and relaunch, both jobs gone; left alone, the
+/// same registration ran three minutes and twenty clean ticks
+/// (`docs/planning/agent-liveness/verification.md`).
+///
+/// The condition is **the plist file**, not "is this label still current",
+/// because the plist is what the function actually cleans up: a ≤1.32 install
+/// hand-wrote one into `~/Library/LaunchAgents` and its stale bootstrap really
+/// does collide with the SMAppService registration over the same label. A
+/// v1.33+ install has no such file and needs nothing done to it. After the
+/// rename the legacy labels differ from the current ones, and a leftover plist
+/// under an old label must still be cleaned — which this still does.
+///
+/// **Residual case, deliberately not special-cased.** If a hand-written plist
+/// ever existed *alongside* an already-`.enabled` SMAppService registration,
+/// the bootout would take the live job down and reconciliation would then do
+/// nothing (`(true, .enabled)` → `[]`) — the original bug, in miniature.
+/// Nothing creates that combination: the plist is deleted on the first launch
+/// that registers, and nothing writes it back. It is also no longer silent —
+/// `AgentLivenessPolicy` reports it and the General tab offers **Restart
+/// agents** — which is why this stays a comment rather than a re-register
+/// dance that would add risk to the common path.
+enum LegacyAgentCleanup {
+    static func labelsNeedingCleanup(
+        candidates: [String],
+        plistExists: (String) -> Bool
+    ) -> [String] {
+        candidates.filter(plistExists)
+    }
+}
