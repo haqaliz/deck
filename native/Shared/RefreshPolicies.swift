@@ -72,6 +72,26 @@ enum AgentReconcilePolicy {
         }
     }
 }
+/// What a witness file says about the agent that writes it.
+///
+/// `never` and `unreadable` are **different answers**, and collapsing them is a
+/// small lie with a user-visible consequence: the notice tells someone "No
+/// refresh has been recorded" about a file something plainly recorded.
+enum AgentEvidence: Equatable {
+    case ran(at: Date)
+    /// No file at all — the agent has never run since the container was made.
+    case never
+    /// A file exists but does not decode. Something wrote it; a truncated write
+    /// is the realistic cause, which `AtomicFile` makes unlikely rather than
+    /// impossible.
+    case unreadable
+
+    var timestamp: Date? {
+        if case .ran(let at) = self { return at }
+        return nil
+    }
+}
+
 /// Whether the background agents are actually running, as distinct from being
 /// registered.
 ///
