@@ -106,7 +106,9 @@
 		590B4D6F5F70FC9062131040 /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
 		596256D947FA628D3158EA89 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
 		5C0FC13FD9210AD4499E5B6E /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
+		5CE30F9D3500ACC02D8D8BF4 /* AgentLivenessCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5EFA4031BC633B2E191C16 /* AgentLivenessCopyTests.swift */; };
 		5DAADD8D5F4E17021759CBE1 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
+		5DC6BA12A3C8B551D4965197 /* AgentLivenessCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B023DC10E49885E273424 /* AgentLivenessCopy.swift */; };
 		5E8B2B87C2D878BB819860BB /* TaskBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7F059BC77B65DAFC1FC3A3A /* TaskBoxSnapshotTests.swift */; };
 		5F9CA807E95B0B53E322F135 /* MarketBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */; };
 		60889CDEFD75DC832B50E1DB /* provider-github-light.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 45C45FB37B959FD1CACEE470 /* provider-github-light.pdf */; };
@@ -170,6 +172,7 @@
 		A5E22A6827149E7194FB4E64 /* OpenCodeSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */; };
 		A638E6CDE625A460074D45E9 /* AgentHeartbeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69882E34EC81D79A1C21CA9C /* AgentHeartbeat.swift */; };
 		A63FED1F6FABE8563FF1E242 /* BatteryCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */; };
+		A656B25B9D0769C1D32F0746 /* AgentLivenessCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B023DC10E49885E273424 /* AgentLivenessCopy.swift */; };
 		A94346AFBE99A456A37C9F3A /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		AA9E91EA980B1F6E98C2FF6B /* RemoteOpenCodeAggregatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */; };
 		AB600153AB7326FCBC557576 /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
@@ -217,6 +220,7 @@
 		D2669CB46930616C7A93FD65 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		D284040183253CE7DFFEABB2 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
 		D2F997BE5BFD2C6761BA3A9C /* CredentialVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */; };
+		D3434BEA1B0119648BDE00CE /* AgentLivenessCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B023DC10E49885E273424 /* AgentLivenessCopy.swift */; };
 		D3B023BE033BD1965A89C5B6 /* WeatherSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 561AB4E0A1AD6FABCE740F12 /* WeatherSnapshotTests.swift */; };
 		D446DBBC43FC3D34BE96103A /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
 		D48B0D31B9644A8985F7E702 /* PRBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28CF0C7B395ADB6A8A71C50F /* PRBoxWidget.swift */; };
@@ -265,6 +269,7 @@
 		F8D0B9E76E31D7928A486CAA /* wallexMarkets.json in Resources */ = {isa = PBXBuildFile; fileRef = D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */; };
 		FBD849BD3B656D44706F28F6 /* DeckLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E922A862E405B58537BA49 /* DeckLinkTests.swift */; };
 		FC125295397F417AA47379E3 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
+		FC5D26AEE58F54EA84894285 /* AgentLivenessCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B023DC10E49885E273424 /* AgentLivenessCopy.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -351,6 +356,7 @@
 		52E64CEB52D9007544C51690 /* AzureMultiProjectTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureMultiProjectTests.swift; sourceTree = "<group>"; };
 		54C2D4337B99014556B02507 /* MarketBoxParsersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxParsersTests.swift; sourceTree = "<group>"; };
 		561AB4E0A1AD6FABCE740F12 /* WeatherSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherSnapshotTests.swift; sourceTree = "<group>"; };
+		580B023DC10E49885E273424 /* AgentLivenessCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentLivenessCopy.swift; sourceTree = "<group>"; };
 		5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeAggregatorTests.swift; sourceTree = "<group>"; };
 		61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThermalCore.swift; sourceTree = "<group>"; };
 		633ED2890AE2D2C0B501102A /* CredentialAccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialAccountTests.swift; sourceTree = "<group>"; };
@@ -420,6 +426,7 @@
 		CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLink.swift; sourceTree = "<group>"; };
 		CBC89EF1D34611CB2B244F15 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		CCED7DB3FECDD4E23935642E /* WeatherBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherBoxWidget.swift; sourceTree = "<group>"; };
+		CD5EFA4031BC633B2E191C16 /* AgentLivenessCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentLivenessCopyTests.swift; sourceTree = "<group>"; };
 		CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSQLTests.swift; sourceTree = "<group>"; };
 		CE8FC52B15143ACCE8231B27 /* provider-azure-dark.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "provider-azure-dark.pdf"; sourceTree = "<group>"; };
 		CF554B40AD43EFE339212234 /* erApiLatest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = erApiLatest.json; sourceTree = "<group>"; };
@@ -483,6 +490,7 @@
 			children = (
 				420094A8B06783D875A8DCC6 /* AccessoryCore.swift */,
 				69882E34EC81D79A1C21CA9C /* AgentHeartbeat.swift */,
+				580B023DC10E49885E273424 /* AgentLivenessCopy.swift */,
 				7073AE9469C6B027A42C9684 /* AtomicFile.swift */,
 				2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */,
 				23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */,
@@ -528,6 +536,7 @@
 			children = (
 				694F80D691C62D93C806CD51 /* AccessoryCoreTests.swift */,
 				B8EAAB7C3768527CFC875754 /* AgentHeartbeatTests.swift */,
+				CD5EFA4031BC633B2E191C16 /* AgentLivenessCopyTests.swift */,
 				8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */,
 				13A1025AA738F2EC2637AA2C /* AzureAccountProjectsTests.swift */,
 				E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */,
@@ -909,6 +918,7 @@
 			files = (
 				0EB43DC3000E365E99A16A34 /* AccessoryCore.swift in Sources */,
 				2D3805345196A86D57844714 /* AgentHeartbeat.swift in Sources */,
+				A656B25B9D0769C1D32F0746 /* AgentLivenessCopy.swift in Sources */,
 				8DB85954851471484CB62D8C /* AtomicFile.swift in Sources */,
 				C2697957F8E3A81F07B6342B /* AzureDevOpsLoader.swift in Sources */,
 				D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */,
@@ -973,6 +983,8 @@
 				CCC6405CB841E90B3F5496EB /* AccessoryCoreTests.swift in Sources */,
 				A638E6CDE625A460074D45E9 /* AgentHeartbeat.swift in Sources */,
 				B5EFA65564B8F1A28F9C4832 /* AgentHeartbeatTests.swift in Sources */,
+				FC5D26AEE58F54EA84894285 /* AgentLivenessCopy.swift in Sources */,
+				5CE30F9D3500ACC02D8D8BF4 /* AgentLivenessCopyTests.swift in Sources */,
 				712262DD2FEF389783A540A1 /* AtomicFile.swift in Sources */,
 				DAD7D5822D2A6F40FD89DD26 /* AtomicFileTests.swift in Sources */,
 				97918506ABC4C75EC3F7F5D2 /* AzureAccountProjectsTests.swift in Sources */,
@@ -1078,6 +1090,7 @@
 			files = (
 				50445D949C9BB54B2598D494 /* AccessoryCore.swift in Sources */,
 				0CCA2FD72913340759E87FC0 /* AgentHeartbeat.swift in Sources */,
+				D3434BEA1B0119648BDE00CE /* AgentLivenessCopy.swift in Sources */,
 				3E2F3CD69BD386D45D214D04 /* AgentService.swift in Sources */,
 				C302C7E4ACAF175EC6AD3B6E /* AtomicFile.swift in Sources */,
 				AF37865EFBC4BAF79B768D19 /* AzureDevOpsLoader.swift in Sources */,
@@ -1125,6 +1138,7 @@
 			files = (
 				C5E77430380FA2F4C3ED84AC /* AccessoryCore.swift in Sources */,
 				143859E40B1E1D72B88BBCF2 /* AgentHeartbeat.swift in Sources */,
+				5DC6BA12A3C8B551D4965197 /* AgentLivenessCopy.swift in Sources */,
 				99C485D084282BAF9BDD5AA3 /* AtomicFile.swift in Sources */,
 				82D525C8424FF0CFA882A47F /* AzureDevOpsLoader.swift in Sources */,
 				D284040183253CE7DFFEABB2 /* BatteryCore.swift in Sources */,
