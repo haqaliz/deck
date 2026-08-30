@@ -116,3 +116,93 @@ runbook reaching for it should say so. The two queries used here were
 **`settings.json` is rewritten on every launch** by something predating this
 work, so its mtime is not evidence about the liveness clock. The value is what
 matters, and step 7 asserts on the value.
+
+---
+
+# Root cause found: **Deck kills its own agents every time it launches**
+
+Found while checking whether the repair held. It does — for as long as nobody
+opens Deck.
+
+## The measurement
+
+Agents healthy, `runs = 24`, `last exit code = 0`, witness advancing every 20s.
+Quit Deck, relaunch it, change nothing else:
+
+```
+BEFORE   witness = 14:58:21   runs = 24 · last exit code = 0
+         (quit, relaunch, wait 25s)
+AFTER    witness = 14:58:41   com.deck.agent           GONE (Could not find service)
+                              com.deck.agent.processes GONE (Could not find service)
+         +82s    witness = 14:58:41   — frozen at the moment of relaunch
+```
+
+Repeated twice, deliberately the second time. Left alone instead, the same
+registration ran happily for three minutes and twenty clean ticks.
+
+## Why
+
+`reconcileAgents()` runs `legacyCleanup()` on **every launch**. That function
+boots out and deletes `DeckBundle.Legacy.agentLabel` and
+`.Legacy.fastAgentLabel` — and today those are **not** legacy values:
+
+```swift
+enum Legacy {
+    static let agentLabel     = "com.deck.agent"            // == DeckBundle.agentLabel
+    static let fastAgentLabel = "com.deck.agent.processes"  // == DeckBundle.fastAgentLabel
+}
+```
+
+They only diverge *after* the rename. Before it, `legacyCleanup()` is a
+`launchctl bootout` of the two jobs SMAppService is currently running. And then
+nothing puts them back, because of a trap this repo already documented:
+
+> booting out a *registered* agent takes the job down until the next login or a
+> toggle-off/on cycle — the registration survives (status stays `.enabled`), so
+> neither the app's reconcile nor smd reloads it.
+
+So the sequence on every launch is: boot out the live jobs → ask the policy what
+to do → `resolve(intent: true, state: .enabled)` → `[]` → do nothing. Background
+refresh is dead until the user toggles the switch twice or logs in.
+
+## What this explains
+
+- The **6-hour** silence in `../bundle-identifier/probe.md`, Phase 1.
+- The **38-hour** silence found at the top of this document.
+- Why the toggle cycle is the documented recovery, and why `settings.json` is
+  not: both notes are describing the symptom of this.
+- Why it went unnoticed for so long: opening Deck is what breaks it, and opening
+  Deck is also what makes the data look fresh, because the host app pumps every
+  snapshot except `processes.json` itself.
+
+## This blocks shipping the notice as-is
+
+The liveness check works — it caught this three separate times today, including
+once on its own timer with no relaunch. But shipping it against this bug means
+**every user sees the alarm every time they open the settings window**, for a
+fault Deck causes. An alarm for a self-inflicted wound trains people to ignore
+alarms.
+
+## The fix (proposed, not applied)
+
+Boot out only what actually exists. A pre-SMAppService install (≤1.32) has a
+real plist at `~/Library/LaunchAgents/<label>.plist` and genuinely needs the
+bootout, because that hand-written job collides with the SMAppService
+registration over the same label. A clean install has no such file and needs
+nothing:
+
+```swift
+for label in [DeckBundle.Legacy.agentLabel, DeckBundle.Legacy.fastAgentLabel] {
+    let plist = home/"Library/LaunchAgents/\(label).plist"
+    guard FileManager.default.fileExists(atPath: plist.path) else { continue }
+    bootout(label); remove(plist)
+}
+```
+
+Precise, keeps the upgrade path, and the decision ("which labels need cleaning,
+given which plists exist") is pure and unit-testable. Comparing legacy labels
+against current ones would also work but is wrong for the release *after* the
+rename, when the legacy jobs are real and must still go.
+
+**Not applied here** — it is a separate shipped bug from the check that found
+it, and out of this branch's approved scope.
