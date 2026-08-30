@@ -447,6 +447,25 @@ Do not delete the container; see the trap below.
      (`unregister()` directly) or a login — and `launchctl bootstrap` of the
      bundle's plists fails with `Input/output error`, because `BundleProgram`
      resolves only inside the SMAppService context.
+- **Deck boots out its own agents on every launch (shipped bug, unfixed).**
+  Measured 2026-08-30 (`docs/planning/agent-liveness/verification.md`).
+  `reconcileAgents()` calls `legacyCleanup()` on every launch, which
+  `launchctl bootout`s `DeckBundle.Legacy.agentLabel` and `.fastAgentLabel` —
+  and **before the rename those are the current labels**, not old ones. So each
+  launch takes down the two jobs SMAppService is running, and nothing puts them
+  back: the registration survives as `.enabled`, so
+  `resolve(intent: true, state: .enabled)` returns `[]` and reconcile correctly
+  does nothing. Measured directly: healthy at `runs = 24`, quit + relaunch, both
+  jobs `Could not find service` and the snapshot frozen at the relaunch instant;
+  left alone, the same registration ran three minutes and twenty clean ticks.
+  **This is the cause of the 6-hour and 38-hour silences** recorded below and in
+  `docs/planning/bundle-identifier/probe.md` — the toggle-cycle recovery and
+  "settings.json is not an off switch" are both describing this symptom. It went
+  unnoticed because opening Deck is what breaks it *and* what makes the data look
+  fresh, since the host app pumps every snapshot except `processes.json`.
+  Fix (proposed, not applied): boot out only labels whose
+  `~/Library/LaunchAgents/<label>.plist` actually exists — a ≤1.32 install has
+  one and needs the bootout, a clean install has none and needs nothing.
 - **Renaming the bundle identifier: four measured surprises.** From a real
   renamed build installed over `/Applications/Deck.app`
   (`docs/planning/bundle-identifier/`, prepared but not applied).
@@ -478,7 +497,10 @@ Do not delete the container; see the trap below.
      for 38 hours, and replacing the app bundle followed by an in-app
      unregister→register (the **Restart agents** button) fixed it; the agent
      wrote one second later. Which half of that did the work is not isolated,
-     so try it before telling anyone to log out.
+     so try it before telling anyone to log out. Note the two faults are
+     distinct and both were present on that machine: the `EX_CONFIG`
+     spawn-failure above (duplicate BTM records), and the far more common
+     launch-time self-bootout described further up.
 - **`Embed LaunchAgents` used to ship plists from the previous build.** It was
   `mkdir -p` + `cp` with no clean, so an incremental build across a rename
   sealed *both* generations into the signature with nothing complaining. Fixed
