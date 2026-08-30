@@ -513,8 +513,46 @@ in CI, the verification gates, and what the identity change resets.
       found here. It went unnoticed because opening Deck is what breaks it *and*
       what makes the data look fresh — the host app pumps every snapshot except
       `processes.json`. Fixed the same day (`LegacyAgentCleanup`, below).
-      **Open follow-ups:** a heartbeat witness for the 60s agent; distinguishing
-      a corrupt `processes.json` from an absent one (both read as "never ran").
+      **Both open follow-ups shipped 2026-08-31** — see the entry below.
+- [x] **A heartbeat witness for the 60s agent** — shipped 2026-08-31
+      (`docs/planning/agent-heartbeat/`). Closes both follow-ups the liveness
+      check left open. The notice could prove only that
+      `com.deck.agent.processes` ran; `com.deck.agent` writes ten snapshots and
+      the host app writes every one of them, so a dead 60s agent produced **no
+      notice at all** while OpenBox, GitBox, TaskBox, CalBox, PRBox, ShipBox,
+      WeatherBox and MarketBox went stale — with LiveBox ticking in front of the
+      user throughout, which is what made the silence convincing.
+      `agent-heartbeat.json` is the 60s agent's own witness, `AgentEvidence`
+      gives every witness three answers instead of two (a corrupt file is no
+      longer "never ran"), and the notice **names the half that stopped** and
+      says what still works.
+      **Three decisions worth keeping:**
+      - **The witness is a file, not a field on `DeckSettings`.**
+        `ContainerMigration` copies only `settings.json`, so a field would land
+        in the renamed container holding a timestamp from the old install with
+        an agent that has never run there — the exact false positive
+        `AgentRegistrationClock` exists to prevent.
+      - **It is written at the *start* of the tick.** The full path awaits ~10
+        mostly serial sources at 10s timeouts, so an end-write would report a
+        slow-but-healthy tick as dead — and catches nothing extra, because
+        launchd starts no new tick while one is running.
+      - **The upgrade guard is a rule in the policy, not a restart of the grace
+        clock.** The clock version was written first and is resettable by
+        relaunching Deck: a user who reopens the window every few minutes would
+        never see the notice. `.never` from a witness while the *other* agent is
+        demonstrably alive is treated as ambiguous instead — which also covers
+        the release that introduces the witness, where every upgraded install
+        finds it absent.
+      **Measured live, and the fault reproduced rather than synthesized:** the
+      upgrade case was checked against a real 8.9-hour-old registration with the
+      fast agent writing 11 seconds earlier; a `bootout` of the 60s agent alone
+      froze the heartbeat while `processes.json` advanced every ~35s for five
+      minutes; and a Deck relaunch did not reset the verdict. Also measured: a
+      real agent tick is **~68s**, not 60.
+      **Open follow-up:** the rendered notice has not been seen draw — the
+      wording and the verdict are unit-pinned and the inputs measured live, but
+      the visual check was defeated by a two-display `screencapture` and a
+      window count that flipped between 1 and 0 across System Events queries.
 - [x] **`legacyCleanup` no longer boots out the running agents** — fixed
       2026-08-30, the cause of everything the liveness check detects. The
       cleanup now acts only on labels whose `~/Library/LaunchAgents/<label>.plist`

@@ -418,16 +418,37 @@ Do not delete the container; see the trap below.
      their plist label; the labels appear only in the domain's enabled/disabled
      table. README and the issue template asked for that command from v1.33
      until it was corrected.
-  2. **`processes.json` is the only unambiguous liveness probe.** The fast agent
-     has been its single writer since v1.30, so its mtime separates "an agent
-     ran" from "the app ran". Every other snapshot is written by both, which is
-     why a dead agent is invisible while Deck is open. **Deck now reports this
+  2. **The two snapshot witnesses are the only unambiguous liveness probes, one
+     per agent.** `processes.json` has been the fast agent's single writer since
+     v1.30 and `agent-heartbeat.json` is the 60s agent's, added for exactly this
+     reason: every *other* snapshot is written by the host app too, which is why
+     a dead agent is invisible while Deck is open. Their mtimes separate "an
+     agent ran" from "the app ran" — and, since v1.37, which agent.
+     `agent-heartbeat.json` is written at the **start** of the full refresh, not
+     the end: the path awaits ~10 mostly serial sources at 10s timeouts, so an
+     end-write would report a slow-but-healthy tick as dead while catching
+     nothing extra (launchd starts no new tick while one is running, so a hung
+     agent stops advancing it either way). Measured 2026-08-31: a real tick is
+     **~68s**, not 60 — `StartInterval` plus the tick's own duration — which is
+     what the 240s limit actually absorbs. **Deck now reports this
      itself** (`AgentLivenessPolicy`, `docs/planning/agent-liveness/`): the
      General tab says "Background refresh has stopped" with a **Restart agents**
      button once the snapshot is older than
      `max(4 * processRefreshInterval, 120)`, held back by a grace-period clock
      (`DeckSettings.agentsRegisteredAt`) so a fresh install and the first launch
      after a rename stay quiet.
+     Since v1.37 both agents have a witness and the notice **names the half that
+     stopped** — before that, a dead 60s agent alone produced no notice at all
+     while eight widgets went stale and LiveBox kept ticking in front of the
+     user. Two traps came out of building it: **a grace-period guard belongs in
+     the policy, not in the clock**, because a clock is restarted by relaunching
+     Deck and a user who reopens the window every few minutes would never see
+     the notice (the same shape as the bug where opening Deck was both what
+     broke the agents and what made the data look fresh); and **`.never` from a
+     witness is not always a fault** — the release that introduces a witness
+     finds it absent on every upgraded install, so "never written, while the
+     other agent is demonstrably alive" is treated as ambiguous rather than
+     damning.
      **`launchctl print` is not a substitute, even when it finds the job.**
      Measured 2026-08-30: the job was present, with `runs = 13741` and
      `last exit code = 78: EX_CONFIG` / `job state = spawn failed` — thirteen
