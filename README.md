@@ -365,10 +365,18 @@ the widget container. If the agents are not listed in System Settings → Genera
 → Login Items either, make sure Deck's "Refresh in background" toggle is on and
 Deck has been launched from `/Applications` at least once.
 
-**Checking whether the background agents are actually running.** Not with
-`launchctl list` — agents registered through `SMAppService` are not bootstrapped
-into `gui/<uid>` under their plist label, so that command prints nothing on a
-perfectly healthy install. The reliable check is the fast agent's own output:
+**Checking whether the background agents are actually running.** Deck checks
+this itself: open **General** and look under "Refresh in background". If the
+agents are registered but macOS is not running them, Deck says so and offers a
+**Restart agents** button — which is the fix. (There is a third failure mode
+behind that notice: `SMAppService` reports a *registration*, not a loaded job,
+and the two come apart.)
+
+To check by hand, not with `launchctl list` — agents registered through
+`SMAppService` are not bootstrapped into `gui/<uid>` under their plist label, so
+that command prints nothing on a perfectly healthy install. And `launchctl
+print` can find the job while it is failing to spawn on every tick. The reliable
+check is the fast agent's own output:
 
 ```bash
 stat -f '%Sm' ~/Library/Containers/com.deck.app.widgets/Data/Library/Application\ Support/Deck/processes.json

@@ -421,7 +421,25 @@ Do not delete the container; see the trap below.
   2. **`processes.json` is the only unambiguous liveness probe.** The fast agent
      has been its single writer since v1.30, so its mtime separates "an agent
      ran" from "the app ran". Every other snapshot is written by both, which is
-     why a dead agent is invisible while Deck is open.
+     why a dead agent is invisible while Deck is open. **Deck now reports this
+     itself** (`AgentLivenessPolicy`, `docs/planning/agent-liveness/`): the
+     General tab says "Background refresh has stopped" with a **Restart agents**
+     button once the snapshot is older than
+     `max(4 * processRefreshInterval, 120)`, held back by a grace-period clock
+     (`DeckSettings.agentsRegisteredAt`) so a fresh install and the first launch
+     after a rename stay quiet.
+     **`launchctl print` is not a substitute, even when it finds the job.**
+     Measured 2026-08-30: the job was present, with `runs = 13741` and
+     `last exit code = 78: EX_CONFIG` / `job state = spawn failed` — thirteen
+     thousand silent failed spawns at 5s intervals. "Registered but not running"
+     has at least two shapes (job absent; job present but spawn-failing), and
+     only "did it write anything" catches both.
+     Two traps for anyone building on this: **`sfltool dumpbtm` prompts for an
+     admin password and blocks on it** — not read-only from a script's point of
+     view, and minutes to dump; and a grace-period stamp **guarded on `== nil`**
+     silently defeats the rename case, because `ContainerMigration` carries a
+     non-nil timestamp from the old install into an empty container. Registering
+     must restart that clock unconditionally (`AgentRegistrationClock`).
   3. **`settings.json` is not an off switch.** Setting `agentAtLogin: false`
      with Deck quit is undone on the next launch: with the record `.enabled` the
      reconcile policy reads the registration as the newer choice and adopts it
@@ -453,7 +471,14 @@ Do not delete the container; see the trap below.
      leaves **two BTM app records claiming the same URL**, after which launchd
      refuses both jobs with `EX_CONFIG`. The in-app toggle,
      `launchctl kickstart -k` and restarting `smd` all fail; only a
-     logout/login repairs it.
+     logout/login repairs it. **Corrected 2026-08-30**
+     (`docs/planning/agent-liveness/verification.md`): a logout is *not* the
+     only repair. A machine sat in this exact state — two records for
+     `file:///Applications/Deck.app/`, both jobs `EX_CONFIG`, 16 days uptime —
+     for 38 hours, and replacing the app bundle followed by an in-app
+     unregister→register (the **Restart agents** button) fixed it; the agent
+     wrote one second later. Which half of that did the work is not isolated,
+     so try it before telling anyone to log out.
 - **`Embed LaunchAgents` used to ship plists from the previous build.** It was
   `mkdir -p` + `cp` with no clean, so an incremental build across a rename
   sealed *both* generations into the signature with nothing complaining. Fixed

@@ -8,7 +8,7 @@ re-adding widgets and re-granting TCC rather than two.
 
 Run this top to bottom in one release. Do not land it piecemeal.
 
-## Prerequisite — ship the liveness check first
+## Prerequisite — ship the liveness check first  ✅ **SATISFIED 2026-08-30**
 
 Not optional, and not part of this change. The flip puts **every** user into the
 state where the BTM record is `[enabled, allowed]` and no launchd job exists,
@@ -22,6 +22,20 @@ Ship the check — `processes.json` staleness against `processRefreshInterval`
 while `agentAtLogin` is on, reported in General next to the Login Items notice —
 **before** this runbook, or the rename silently stops background refresh for the
 entire user base.
+
+**Done** (`docs/planning/agent-liveness/`). The notice ships with a
+**Restart agents** button, which is the recovery this runbook should point users
+at. Two things from that work bear directly on the flip:
+
+- **The migrated `agentsRegisteredAt` must not be trusted as a grace clock.**
+  `ContainerMigration` copies `settings.json` verbatim, so the renamed app
+  starts with a timestamp from the old install and a container with no
+  `processes.json`. `AgentRegistrationClock` restarts the clock on any
+  registration, unconditionally, which is what keeps the notice quiet through
+  the first launch. Do not "simplify" that guard.
+- **Restart agents repaired the post-rollback `EX_CONFIG` state** without a
+  logout (`../agent-liveness/verification.md`), which softens the rollback
+  warning in step 4 of the CLAUDE.md rename notes — try the button first.
 
 ## What is already done (do not redo)
 

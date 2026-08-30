@@ -442,8 +442,9 @@ in CI, the verification gates, and what the identity change resets.
       over the new leaves two BTM app records claiming one URL and launchd
       refuses both jobs; the in-app toggle, `kickstart` and restarting `smd` all
       fail, and only a logout/login repairs it.
-- [ ] **Agent liveness check** — **prerequisite for the bundle rename**, and a
-      standing bug found while probing it. `SMAppService.status` answers "is
+- [x] **Agent liveness check** — shipped 2026-08-30
+      (`docs/planning/agent-liveness/`). Was the **prerequisite for the bundle
+      rename**, and a standing bug found while probing it. `SMAppService.status` answers "is
       there a registration record", not "is the job loaded", and those came
       apart on the dev machine for **6 hours**: BTM `[enabled, allowed]`, the
       toggle on, `launchctl print` reporting no such service, and nothing
@@ -465,6 +466,45 @@ in CI, the verification gates, and what the identity change resets.
       `.enabled` the reconcile policy re-adopts `agentAtLogin: true` from the
       registration and never unregisters — so `settings.json` is not a test seam
       for this.
+      **What shipped.** `AgentLivenessPolicy` (pure, in `Shared/RefreshPolicies.swift`
+      beside the two policies it belongs with) reads the age of `processes.json`
+      — the fast agent's single writer since v1.30 — against
+      `max(4 * processRefreshInterval, 120)`, and the General tab draws one
+      notice plus a **Restart agents** button when it is stale. `.healthy` and
+      `.unknown` draw nothing; silence is the healthy state.
+      `DeckSettings.agentsRegisteredAt` is the grace-period clock, so a fresh
+      install and the first launch after the rename stay silent.
+      **Scope, stated honestly:** the snapshot witnesses only
+      `com.deck.agent.processes`. The 60s agent has no unambiguous witness (the
+      host app writes everything it writes), so the notice says "background
+      refresh has stopped" and never names an agent.
+      **Two bugs the work caught, both in itself:**
+      - **Keeping the stamp one-time with `guard stored == nil` defeats the
+        rename case outright.** `ContainerMigration` carries a non-nil timestamp
+        from the old install, so a *fresh* registration would never restart the
+        clock and the new container's empty `processes.json` would read as
+        "registered ten days ago, never ran" — the notice firing falsely on the
+        exact release it exists to protect. The rule has two triggers, not one
+        (`AgentRegistrationClock`): registering restarts the clock
+        unconditionally; adoption happens only when there is no clock at all.
+      - **`JSONEncoder` writes `Date` as seconds since the 2001 reference date**,
+        not the Unix epoch. Harmless (same encoder both sides) and confusing to
+        anyone reading `settings.json` by hand, so it is pinned by a test.
+      **Verified against a real fault, not a synthesized one**
+      (`docs/planning/agent-liveness/verification.md`): the dev machine was
+      already in the state, undetected, for **38 hours** — a leftover of the
+      08-29 rename probe. Two corrections came out of it:
+      - **`launchctl print` reported the job as present.** The fault was one
+        line down: `last exit code = 78: EX_CONFIG`, `job state = spawn failed`,
+        **`runs = 13741`** — thirteen thousand failed spawns at 5s intervals. So
+        "registered but not running" has at least two shapes, and a check built
+        on `launchctl print` succeeding would have called this one healthy.
+      - **"Only a logout/login repairs it" is too strong.** The two-BTM-records
+        `EX_CONFIG` state that the rollback note calls logout-only was repaired
+        by replacing the bundle and pressing **Restart agents** — the agent
+        wrote one second later. Which half did the work is not isolated.
+      **Open follow-ups:** a heartbeat witness for the 60s agent; distinguishing
+      a corrupt `processes.json` from an absent one (both read as "never ran").
 - [x] **Keychain for the credentials** — shipped 2026-08-26
       (`docs/planning/keychain-tokens/`). **Five** tokens, not the three this
       entry used to claim: OpenBox, ShipBox, TaskBox, and PRBox's separate
