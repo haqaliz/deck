@@ -1,58 +1,50 @@
-# Agent liveness check
+# Card — Heartbeat witness for the 60s agent
 
-**Type:** feat · **Slug:** `agent-liveness` · **Branch:** `feat/agent-liveness/aliz`
-**Source:** inline brief (deck-next pick, 2026-08-30). No GitHub issue.
+**Type:** feat · **Slug:** `agent-heartbeat` · **Branch:** `feat/agent-heartbeat/aliz`
+**Source:** inline brief (`deck-next`, 2026-08-30). No GitHub issue.
+**Follow-up from:** `ROADMAP.md` M7 agent-liveness entry — *"Open follow-ups: a
+heartbeat witness for the 60s agent; distinguishing a corrupt `processes.json`
+from an absent one (both read as 'never ran')."*
 
 ## The brief
 
-Deck is blind to the third way its agents can be down: `SMAppService.status`
-says a registration *record* exists, not that launchd loaded the job.
+Give the 60s agent (`com.deck.agent`) its own liveness witness.
 
-Measured on the dev machine (`docs/planning/bundle-identifier/probe.md`):
+Today `AgentLivenessPolicy` (`native/Shared/RefreshPolicies.swift:113`) reads a
+single piece of evidence: the age of `processes.json`, which has been the *fast*
+agent's (`com.deck.agent.processes`) single writer since v1.30. So a dead 60s
+agent is invisible: eight widgets (OpenBox, GitBox, TaskBox, CalBox, PRBox,
+ShipBox, WeatherBox, MarketBox) render stale data with an honest timestamp while
+the General tab stays silent and the "Refresh in background" toggle stays on.
 
-- `sfltool dumpbtm` → both agents `[enabled, allowed]`
-- "Refresh in background" toggle → on
-- `launchctl print gui/$(id -u)/com.deck.agent` → `Could not find service`
-- nothing written for **6 hours**
+The scope was stated honestly when the liveness notice shipped rather than
+fixed — the PRD says the notice "says 'background refresh has stopped' and never
+names an agent", because the 60s agent has no unambiguous witness: the host app
+writes everything it writes.
 
-`AgentReconcilePolicy` correctly does nothing here (intent `true`, state
-`.enabled` → `[]`), and v1.34's notice cannot fire — that one is for
-`[enabled, disallowed]` → `.requiresApproval`. This is the third distinct way
-the agents can be down (never registered / user-vetoed / registered-but-
-unloaded) and the only one Deck is blind to.
+## What the work is
 
-## The ask
+1. Write a heartbeat from the **full-role path only** (`DeckAgent/main.swift:54`
+   already branches on `DECK_AGENT_ROLE` / `--processes`).
+2. Extend `AgentLivenessPolicy` to **two witnesses**, so the notice can name
+   which agent stopped instead of speaking about "background refresh".
+3. While in the same code: separate a **corrupt** `processes.json` from an
+   **absent** one — both read as "never ran" today.
 
-Add a liveness check that compares `processes.json` mtime against
-`livebox.processRefreshInterval` while `agentAtLogin` is on, and report it in
-the **General** tab next to the existing Login Items notice. Recovery is the
-documented toggle off→on.
+## Caveats to design around
 
-`processes.json` is the right ground truth: it has been the fast agent's
-**single writer** since v1.30, so its mtime separates "an agent ran" from "the
-app ran" with no ambiguity. Every other snapshot is written by both, which is
-why a dead agent is invisible while Deck is open.
-
-## Why now
-
-It is the named prerequisite for the held bundle rename —
-`docs/planning/bundle-identifier/flip-runbook.md:11`:
-
-> Ship the check … **before** this runbook, or the rename silently stops
-> background refresh for the entire user base.
-
-The flip puts *every* user into exactly this state, since the new agents
-register only when the renamed app first launches.
-
-## Known caveats (from deck-next)
-
-- **`settings.json` is not a test seam.** With the record `.enabled`, the
-  reconcile policy re-adopts `agentAtLogin: true` from the registration and
-  never unregisters (CLAUDE.md trap 3).
-- **The fault is expensive to induce.** The one measured way in is
-  `launchctl bootout` of a *registered* agent while Deck is not running, and
-  that leaves the job down until the next login or a toggle off→on cycle — smd
-  does not reload it spontaneously (measured 2026-08-27).
-- Keep the decision logic pure and unit-pinned like `AgentReconcilePolicy`;
-  budget one hand-driven pass on the installed copy.
-- **Must not fire on a fresh install** where no agent has run yet.
+- **The host app writes every snapshot the full agent writes.** That is the
+  reason the 60s agent has no witness today, and it is what the heartbeat must
+  not repeat: it is only evidence if `DeckApp` never writes it. CLAUDE.md
+  records the related trap — a running Deck silently overwrites the snapshot you
+  are inspecting, and an **unchanged mtime** is the tell that a file was left
+  alone.
+- **`ContainerMigration` must not carry a stale heartbeat** into the renamed
+  container. This is the exact shape of the bug the last cycle caught: a
+  timestamp carried from the old install made a fresh registration read as
+  "registered ten days ago, never ran", firing the notice falsely on the very
+  release it exists to protect.
+- **`AgentRegistrationClock`'s grace window has to cover both witnesses**, or a
+  fresh install accuses itself.
+- Verify on the **installed copy** — SMAppService cannot register from
+  `build.noindex`.
