@@ -85,6 +85,10 @@ struct ContentView: View {
     }()
     @State private var agentError: String?
     @State private var agentNotice: String?
+    /// Whether the agents are actually *running*, as distinct from registered.
+    /// A value rather than a pre-rendered string: the view varies both the
+    /// wording and the presence of a repair button on it.
+    @State private var liveness: AgentLiveness = .unknown
 
     /// Wording for the identifier change, or `nil` when there is nothing to
     /// say. A failure is reported even after the notice has been dismissed:
@@ -135,6 +139,8 @@ struct ContentView: View {
                 agentAtLogin: $settings.agentAtLogin,
                 agentError: agentError,
                 agentNotice: agentNotice,
+                liveness: liveness,
+                onRestartAgents: restartAgents,
                 renameNotice: renameNotice,
                 // Only a successful migration is dismissible. A failure keeps
                 // reporting itself: dismissing acknowledges "re-add your
@@ -207,6 +213,10 @@ struct ContentView: View {
             Task { await refreshPRBox() }
             Task { await refreshMarketBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+                // Cheap (one small file decode), and it means the notice
+                // appears — and clears after a repair — while the user is
+                // watching the tab, which is when they are looking.
+                evaluateLiveness()
                 Task { await refreshOpenCode() }
                 refreshGitBox()
                 refreshDevBox()
@@ -463,12 +473,14 @@ struct ContentView: View {
         )
         var registrationError: String?
         var blocked = false
+        var didRegister = false
         for agent in AgentService.all {
             for action in AgentReconcilePolicy.resolve(intent: settings.agentAtLogin, state: agent.state) {
                 switch action {
                 case .register:
                     do {
                         try agent.register()
+                        didRegister = true
                     } catch {
                         registrationError = "Could not register the background agents: \(error.localizedDescription)"
                     }
@@ -486,6 +498,51 @@ struct ContentView: View {
         }
         agentError = registrationError
         agentNotice = blocked ? Self.agentsBlockedNotice : nil
+
+        // ORDER IS LOAD-BEARING. The stamp must be written before liveness is
+        // evaluated, or the bundle rename becomes this check's first false
+        // positive: ContainerMigration copies settings.json verbatim, so the
+        // renamed app starts with an `agentsRegisteredAt` from days ago and a
+        // brand-new container holding no processes.json — which reads as
+        // "registered long ago, never ran" the moment the window opens, while
+        // the new agents are registering perfectly normally.
+        //
+        // With the stamp first, the new labels are `.notFound`, the loop above
+        // registers them, this writes `now`, and the evaluation below sees a
+        // fresh registration inside its grace window.
+        stampAgentsRegisteredAt(didRegister: didRegister)
+        evaluateLiveness()
+    }
+
+    /// Persist the grace-period clock. The rule itself is
+    /// `AgentRegistrationClock` — two triggers, and the reason they cannot be
+    /// collapsed into one is written up there.
+    private func stampAgentsRegisteredAt(didRegister: Bool) {
+        let stamp = AgentRegistrationClock.stamp(
+            stored: settings.agentsRegisteredAt,
+            didRegister: didRegister,
+            state: AgentService.processes.state,
+            now: Date()
+        )
+        // Only write when it actually changed: `.onChange(of: settings)` saves
+        // the file and reloads every widget timeline, and an ordinary launch
+        // should do neither.
+        guard stamp != settings.agentsRegisteredAt else { return }
+        settings.agentsRegisteredAt = stamp
+        settings.save()
+    }
+
+    /// Ask whether the agents are running, from the one piece of evidence that
+    /// can answer it: `processes.json`, whose single writer is the fast agent.
+    private func evaluateLiveness() {
+        liveness = AgentLivenessPolicy.resolve(
+            intent: settings.agentAtLogin,
+            state: AgentService.processes.state,
+            lastRefreshAt: ProcessSnapshotStore.load()?.writtenAt,
+            registeredAt: settings.agentsRegisteredAt,
+            processRefreshInterval: settings.livebox.processRefreshInterval,
+            now: Date()
+        )
     }
 
     /// Shown when the agents are registered but the user has switched Deck off
@@ -508,6 +565,32 @@ struct ContentView: View {
         } catch {
             agentError = "Could not register the background agents: \(error.localizedDescription)"
         }
+        stampAgentsRegisteredAt(didRegister: true)
+        evaluateLiveness()
+    }
+
+    /// The documented recovery for "registered but not loaded": unregister,
+    /// then register again. It cannot be driven from settings.json — with the
+    /// record `.enabled` the reconcile policy re-adopts `agentAtLogin: true`
+    /// from the registration and never unregisters — so a button is the only
+    /// place it can live.
+    ///
+    /// Goes through `removeAgents()` / `registerAgents()` rather than calling
+    /// `AgentService` directly, because `registerAgents()` runs
+    /// `legacyCleanup()` first **and waits for it**: a fire-and-forget bootout
+    /// races the registration and the label collision rejects the new job. It
+    /// also owns the `agentError` and blocked-notice handling.
+    /// `registerAgents()` restarts the grace-period clock, so the notice goes
+    /// quiet for one grace window after the button is pressed. That is the
+    /// intended "give the repair a moment to take" behaviour rather than an
+    /// accident — but note what it costs: if the re-registration is a silent
+    /// no-op (`Agent.register()` returns early when the status is still
+    /// `.enabled`, and whether `unregister()` drops it synchronously is
+    /// unmeasured), the button *looks* like it worked for one window before
+    /// the notice returns. It does return. Nothing is hidden permanently.
+    private func restartAgents() {
+        removeAgents()
+        registerAgents()
     }
 
     /// Unregister both SMAppService agents and remove any legacy
@@ -518,6 +601,7 @@ struct ContentView: View {
         // Nothing is registered any more, so a "blocked in System Settings"
         // notice would be stale the moment it is read.
         agentNotice = nil
+        evaluateLiveness()
     }
 
     /// Boot out and delete the pre-SMAppService agents. One-release courtesy
@@ -717,6 +801,9 @@ private struct GeneralSettingsView: View {
     @Binding var agentAtLogin: Bool
     var agentError: String?
     var agentNotice: String?
+    /// Registered, but is launchd actually running them? Only `.down` draws.
+    var liveness: AgentLiveness = .unknown
+    var onRestartAgents: () -> Void = {}
     /// One-time wording for the bundle identifier change; see
     /// `ContentView.renameNotice`.
     var renameNotice: String?
@@ -728,6 +815,19 @@ private struct GeneralSettingsView: View {
 
     @State private var confirmingErase = false
     @State private var agentsRemoved = false
+
+    /// Says what is wrong and how long it has been wrong, and nothing about
+    /// *which* agent: the evidence is the process snapshot, which witnesses
+    /// only the fast agent, and claiming more than that would be a guess
+    /// dressed as a diagnosis.
+    private static func livenessNotice(lastRefresh: Date?) -> String {
+        let base = "Background refresh has stopped. Deck's agents are registered "
+            + "but macOS is not running them."
+        guard let lastRefresh else { return base + " No refresh has been recorded." }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return base + " Last refresh: \(formatter.localizedString(for: lastRefresh, relativeTo: Date()))."
+    }
 
     var body: some View {
         Form {
@@ -745,6 +845,26 @@ private struct GeneralSettingsView: View {
                     Label(agentNotice, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
+                }
+                // The third way the agents can be down: registered, allowed,
+                // and never loaded by launchd. Nothing in the OS reports it,
+                // so it is inferred from the age of the one snapshot only the
+                // agent writes. `.healthy` and `.unknown` draw nothing —
+                // silence is the healthy state here, as it is for every other
+                // notice in this tab.
+                if case .down(let lastRefresh) = liveness {
+                    HStack(alignment: .firstTextBaseline) {
+                        Label(
+                            Self.livenessNotice(lastRefresh: lastRefresh),
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        Spacer()
+                        Button("Restart agents", action: onRestartAgents)
+                            .buttonStyle(.link)
+                            .font(.caption)
+                    }
                 }
                 // Shown once, after the identifier change moved Deck's
                 // container. The widgets already on the desktop point at the

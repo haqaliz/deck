@@ -28,9 +28,12 @@ labels: bug
 <!-- These three catch most reports. Please run them before filing. -->
 
 - [ ] `pluginkit -m -i com.deck.app.widgets` lists the extension
-- [ ] `stat -f '%Sm' ~/Library/Containers/com.deck.app.widgets/Data/Library/Application\ Support/Deck/processes.json`
-      is recent (the agents' liveness check — `launchctl list` shows nothing
-      even when they are healthy)
+- [ ] Deck → **General** shows no "Background refresh has stopped" notice.
+      If it does, press **Restart agents** first — that is usually the fix.
+      (By hand: `stat -f '%Sm' ~/Library/Containers/com.deck.app.widgets/Data/Library/Application\ Support/Deck/processes.json`
+      should be recent. Neither `launchctl list` nor `launchctl print` answers
+      this — the first shows nothing even when healthy, the second can find a
+      job that fails to spawn on every tick.)
 - [ ] I ran `scripts/lsclean.sh` (fixes grey placeholder blocks in every widget)
 
 ## Logs

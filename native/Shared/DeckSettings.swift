@@ -109,6 +109,17 @@ struct DeckSettings: Codable, Equatable {
     /// cannot loop — a flag left behind in the old one would be re-read as
     /// false on every launch.
     var didShowRenameNotice = false
+    /// When Deck first knew a registration for its background agents existed —
+    /// either because it registered them, or because it found them already
+    /// `.enabled` and adopted the moment it noticed.
+    ///
+    /// The grace-period clock for `AgentLivenessPolicy`, and nothing else: it
+    /// is a diagnostic timestamp, not a preference. It is never shown, and
+    /// losing it costs exactly one grace window. Without it, "registered ages
+    /// ago and never ran" is indistinguishable from "registered a second ago
+    /// and hasn't run yet" — and the first of those is the state the bundle
+    /// rename puts every user into.
+    var agentsRegisteredAt: Date?
 
     init() {}
 
@@ -130,6 +141,7 @@ struct DeckSettings: Codable, Equatable {
         case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
         case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
         case marketbox, credentials, agentAtLogin, didShowRenameNotice
+        case agentsRegisteredAt
     }
 
     /// Decode-only. See `LegacyHomeBoxSettings`.
@@ -171,6 +183,7 @@ struct DeckSettings: Codable, Equatable {
         credentials = try c.decodeIfPresent(CredentialsSettings.self, forKey: .credentials) ?? CredentialsSettings()
         agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
         didShowRenameNotice = try c.decodeIfPresent(Bool.self, forKey: .didShowRenameNotice) ?? false
+        agentsRegisteredAt = try c.decodeIfPresent(Date.self, forKey: .agentsRegisteredAt)
     }
 
     /// Settings live inside the widget extension's sandbox container so both

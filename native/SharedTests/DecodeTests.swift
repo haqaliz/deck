@@ -426,6 +426,30 @@ final class DeckSettingsSchemaEvolutionTests: XCTestCase {
         XCTAssertEqual(s.taskbox, TaskBoxSettings(), "the new section defaults")
     }
 
+    /// `agentsRegisteredAt` is the liveness grace-period clock. It is absent
+    /// from every settings.json written before the check shipped, and its
+    /// absence must not disturb anything else — reconciliation adopts `now`
+    /// the first time it sees an enabled registration.
+    func testSettingsFileFromBeforeTheLivenessCheckDecodesWithNoClock() throws {
+        let s = try decode("""
+        {"livebox":{"processRefreshInterval":30},"openbox":{"token":"abc"},
+         "agentAtLogin":true}
+        """, as: DeckSettings.self)
+        XCTAssertNil(s.agentsRegisteredAt)
+        XCTAssertEqual(s.livebox.processRefreshInterval, 30)
+        XCTAssertEqual(s.openbox.token, "abc")
+        XCTAssertTrue(s.agentAtLogin)
+    }
+
+    /// Pins the key name on the wire, and the encoding: `JSONEncoder`'s default
+    /// `.deferredToDate` writes seconds since the 2001 reference date, not the
+    /// Unix epoch. Same encoder and decoder on both sides of `save()`/`load()`,
+    /// so this only matters to someone reading settings.json by hand.
+    func testAgentsRegisteredAtDecodesAnExplicitValue() throws {
+        let s = try decode(#"{"agentsRegisteredAt":752025600}"#, as: DeckSettings.self)
+        XCTAssertEqual(s.agentsRegisteredAt, Date(timeIntervalSinceReferenceDate: 752_025_600))
+    }
+
     func testAnyOneSectionCanBeAbsentWithoutLosingTheOthers() throws {
         let s = try decode(#"{"openbox":{"token":"kept"}}"#, as: DeckSettings.self)
         XCTAssertEqual(s.openbox.token, "kept")
@@ -510,6 +534,7 @@ final class DeckSettingsRoundTripTests: XCTestCase {
         s.prbox.prCount = 11
         s.prbox.mineColor = RGBA(red: 0.09, green: 0.08, blue: 0.07)
         s.agentAtLogin = false
+        s.agentsRegisteredAt = Date(timeIntervalSince1970: 1_700_000_000)
         return s
     }
 
@@ -540,6 +565,10 @@ final class DeckSettingsRoundTripTests: XCTestCase {
         XCTAssertEqual(d.calbox, original.calbox, "calbox dropped on decode")
         XCTAssertEqual(d.prbox, original.prbox, "prbox dropped on decode")
         XCTAssertEqual(d.agentAtLogin, original.agentAtLogin, "agentAtLogin dropped on decode")
+        XCTAssertEqual(
+            d.agentsRegisteredAt, original.agentsRegisteredAt,
+            "agentsRegisteredAt dropped on decode — check the CodingKeys case AND the encode line"
+        )
     }
 }
 
