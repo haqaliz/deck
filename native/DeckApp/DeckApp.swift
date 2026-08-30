@@ -139,6 +139,8 @@ struct ContentView: View {
                 agentAtLogin: $settings.agentAtLogin,
                 agentError: agentError,
                 agentNotice: agentNotice,
+                liveness: liveness,
+                onRestartAgents: restartAgents,
                 renameNotice: renameNotice,
                 // Only a successful migration is dismissible. A failure keeps
                 // reporting itself: dismissing acknowledges "re-add your
@@ -567,6 +569,30 @@ struct ContentView: View {
         evaluateLiveness()
     }
 
+    /// The documented recovery for "registered but not loaded": unregister,
+    /// then register again. It cannot be driven from settings.json — with the
+    /// record `.enabled` the reconcile policy re-adopts `agentAtLogin: true`
+    /// from the registration and never unregisters — so a button is the only
+    /// place it can live.
+    ///
+    /// Goes through `removeAgents()` / `registerAgents()` rather than calling
+    /// `AgentService` directly, because `registerAgents()` runs
+    /// `legacyCleanup()` first **and waits for it**: a fire-and-forget bootout
+    /// races the registration and the label collision rejects the new job. It
+    /// also owns the `agentError` and blocked-notice handling.
+    /// `registerAgents()` restarts the grace-period clock, so the notice goes
+    /// quiet for one grace window after the button is pressed. That is the
+    /// intended "give the repair a moment to take" behaviour rather than an
+    /// accident — but note what it costs: if the re-registration is a silent
+    /// no-op (`Agent.register()` returns early when the status is still
+    /// `.enabled`, and whether `unregister()` drops it synchronously is
+    /// unmeasured), the button *looks* like it worked for one window before
+    /// the notice returns. It does return. Nothing is hidden permanently.
+    private func restartAgents() {
+        removeAgents()
+        registerAgents()
+    }
+
     /// Unregister both SMAppService agents and remove any legacy
     /// `~/Library/LaunchAgents` plists left by installs predating SMAppService.
     private func removeAgents() {
@@ -775,6 +801,9 @@ private struct GeneralSettingsView: View {
     @Binding var agentAtLogin: Bool
     var agentError: String?
     var agentNotice: String?
+    /// Registered, but is launchd actually running them? Only `.down` draws.
+    var liveness: AgentLiveness = .unknown
+    var onRestartAgents: () -> Void = {}
     /// One-time wording for the bundle identifier change; see
     /// `ContentView.renameNotice`.
     var renameNotice: String?
@@ -786,6 +815,19 @@ private struct GeneralSettingsView: View {
 
     @State private var confirmingErase = false
     @State private var agentsRemoved = false
+
+    /// Says what is wrong and how long it has been wrong, and nothing about
+    /// *which* agent: the evidence is the process snapshot, which witnesses
+    /// only the fast agent, and claiming more than that would be a guess
+    /// dressed as a diagnosis.
+    private static func livenessNotice(lastRefresh: Date?) -> String {
+        let base = "Background refresh has stopped. Deck's agents are registered "
+            + "but macOS is not running them."
+        guard let lastRefresh else { return base + " No refresh has been recorded." }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return base + " Last refresh: \(formatter.localizedString(for: lastRefresh, relativeTo: Date()))."
+    }
 
     var body: some View {
         Form {
@@ -803,6 +845,26 @@ private struct GeneralSettingsView: View {
                     Label(agentNotice, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
+                }
+                // The third way the agents can be down: registered, allowed,
+                // and never loaded by launchd. Nothing in the OS reports it,
+                // so it is inferred from the age of the one snapshot only the
+                // agent writes. `.healthy` and `.unknown` draw nothing —
+                // silence is the healthy state here, as it is for every other
+                // notice in this tab.
+                if case .down(let lastRefresh) = liveness {
+                    HStack(alignment: .firstTextBaseline) {
+                        Label(
+                            Self.livenessNotice(lastRefresh: lastRefresh),
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        Spacer()
+                        Button("Restart agents", action: onRestartAgents)
+                            .buttonStyle(.link)
+                            .font(.caption)
+                    }
                 }
                 // Shown once, after the identifier change moved Deck's
                 // container. The widgets already on the desktop point at the
