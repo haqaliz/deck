@@ -503,8 +503,30 @@ in CI, the verification gates, and what the identity change resets.
         `EX_CONFIG` state that the rollback note calls logout-only was repaired
         by replacing the bundle and pressing **Restart agents** — the agent
         wrote one second later. Which half did the work is not isolated.
+      **The check found its own cause, and it was a shipped bug.**
+      `reconcileAgents()` called `legacyCleanup()` on every launch, which
+      `launchctl bootout`s the legacy agent labels — and before the rename those
+      *are* the current labels. So opening Deck took down the two jobs
+      SMAppService was running, and nothing put them back (a bootout leaves the
+      registration `.enabled`, so reconciliation correctly does nothing). That
+      is the 6-hour silence in the bundle-identifier probe and the 38-hour one
+      found here. It went unnoticed because opening Deck is what breaks it *and*
+      what makes the data look fresh — the host app pumps every snapshot except
+      `processes.json`. Fixed the same day (`LegacyAgentCleanup`, below).
       **Open follow-ups:** a heartbeat witness for the 60s agent; distinguishing
       a corrupt `processes.json` from an absent one (both read as "never ran").
+- [x] **`legacyCleanup` no longer boots out the running agents** — fixed
+      2026-08-30, the cause of everything the liveness check detects. The
+      cleanup now acts only on labels whose `~/Library/LaunchAgents/<label>.plist`
+      actually exists: a ≤1.32 install has one and its stale bootstrap really
+      does collide with the SMAppService registration over the same label; a
+      v1.33+ install has none and needed nothing done to it. Verified on the
+      installed copy (the only place SMAppService registers) — before, a single
+      quit/relaunch killed both jobs permanently; after, three cycles left them
+      alive with the snapshot advancing throughout. The residual case (a plist
+      alongside an already-`.enabled` registration) is unreachable in practice
+      and is no longer silent if it ever happens, because the liveness notice
+      reports it.
 - [x] **Keychain for the credentials** — shipped 2026-08-26
       (`docs/planning/keychain-tokens/`). **Five** tokens, not the three this
       entry used to claim: OpenBox, ShipBox, TaskBox, and PRBox's separate

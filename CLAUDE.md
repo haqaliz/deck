@@ -447,7 +447,7 @@ Do not delete the container; see the trap below.
      (`unregister()` directly) or a login — and `launchctl bootstrap` of the
      bundle's plists fails with `Input/output error`, because `BundleProgram`
      resolves only inside the SMAppService context.
-- **Deck boots out its own agents on every launch (shipped bug, unfixed).**
+- **Deck used to boot out its own agents on every launch** (fixed 2026-08-30).
   Measured 2026-08-30 (`docs/planning/agent-liveness/verification.md`).
   `reconcileAgents()` calls `legacyCleanup()` on every launch, which
   `launchctl bootout`s `DeckBundle.Legacy.agentLabel` and `.fastAgentLabel` —
@@ -463,9 +463,15 @@ Do not delete the container; see the trap below.
   "settings.json is not an off switch" are both describing this symptom. It went
   unnoticed because opening Deck is what breaks it *and* what makes the data look
   fresh, since the host app pumps every snapshot except `processes.json`.
-  Fix (proposed, not applied): boot out only labels whose
+  **Fixed** by `LegacyAgentCleanup`: boot out only labels whose
   `~/Library/LaunchAgents/<label>.plist` actually exists — a ≤1.32 install has
-  one and needs the bootout, a clean install has none and needs nothing.
+  one and needs the bootout, a clean install has none and needs nothing. The
+  condition is the plist rather than "is this label still current", because the
+  plist is what the function cleans, and a leftover under an old label must
+  still go after the rename. Verified on the installed copy: before, one
+  quit/relaunch killed both jobs permanently; after, three cycles left them
+  alive. **If you add another caller of `legacyCleanup()`, keep the guard** —
+  removing it re-creates a fault whose only symptom is silence.
 - **Renaming the bundle identifier: four measured surprises.** From a real
   renamed build installed over `/Applications/Deck.app`
   (`docs/planning/bundle-identifier/`, prepared but not applied).
