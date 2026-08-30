@@ -532,13 +532,17 @@ struct ContentView: View {
         settings.save()
     }
 
-    /// Ask whether the agents are running, from the one piece of evidence that
-    /// can answer it: `processes.json`, whose single writer is the fast agent.
+    /// Ask whether the agents are running, from the two pieces of evidence that
+    /// can answer it — one per agent, each written by that agent alone:
+    /// `processes.json` for the fast agent, `agent-heartbeat.json` for the 60s
+    /// one. Every other snapshot is written by this app too, and so witnesses
+    /// nothing.
     private func evaluateLiveness() {
         liveness = AgentLivenessPolicy.resolve(
             intent: settings.agentAtLogin,
             state: AgentService.processes.state,
-            lastRefreshAt: ProcessSnapshotStore.load()?.writtenAt,
+            processes: ProcessSnapshotStore.evidence(),
+            data: AgentHeartbeatStore.evidence(),
             registeredAt: settings.agentsRegisteredAt,
             processRefreshInterval: settings.livebox.processRefreshInterval,
             now: Date()
@@ -829,10 +833,12 @@ private struct GeneralSettingsView: View {
     /// *which* agent: the evidence is the process snapshot, which witnesses
     /// only the fast agent, and claiming more than that would be a guess
     /// dressed as a diagnosis.
-    private static func livenessNotice(lastRefresh: Date?) -> String {
+    private static func livenessNotice(down: AgentLiveness.Down) -> String {
         let base = "Background refresh has stopped. Deck's agents are registered "
             + "but macOS is not running them."
-        guard let lastRefresh else { return base + " No refresh has been recorded." }
+        guard let lastRefresh = down.reported.timestamp else {
+            return base + " No refresh has been recorded."
+        }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
         return base + " Last refresh: \(formatter.localizedString(for: lastRefresh, relativeTo: Date()))."
@@ -861,10 +867,10 @@ private struct GeneralSettingsView: View {
                 // agent writes. `.healthy` and `.unknown` draw nothing —
                 // silence is the healthy state here, as it is for every other
                 // notice in this tab.
-                if case .down(let lastRefresh) = liveness {
+                if case .down(let down) = liveness {
                     HStack(alignment: .firstTextBaseline) {
                         Label(
-                            Self.livenessNotice(lastRefresh: lastRefresh),
+                            Self.livenessNotice(down: down),
                             systemImage: "exclamationmark.triangle.fill"
                         )
                         .font(.caption)
