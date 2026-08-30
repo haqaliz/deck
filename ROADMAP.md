@@ -549,10 +549,17 @@ in CI, the verification gates, and what the identity change resets.
       froze the heartbeat while `processes.json` advanced every ~35s for five
       minutes; and a Deck relaunch did not reset the verdict. Also measured: a
       real agent tick is **~68s**, not 60.
-      **Open follow-up:** the rendered notice has not been seen draw — the
-      wording and the verdict are unit-pinned and the inputs measured live, but
-      the visual check was defeated by a two-display `screencapture` and a
-      window count that flipped between 1 and 0 across System Events queries.
+      **The notice was captured rendering** for three of its four shapes
+      (data-agent down, process-agent down, corrupt witness), each against a real
+      booted-out agent, with the toggle left on throughout and **Restart agents**
+      repairing it twice. Both-down was not captured: with both agents out the
+      fast one came back on its own, so the state at capture really was
+      "60s down, fast healthy" and the notice was right about it. That recovery
+      is itself unexplained — `agentsRegisteredAt` was restamped with nothing
+      pressed, which points at `reconcileAgents()` running from a window
+      re-creation; recorded as an observation, not a conclusion.
+      **Open follow-up:** re-add the widgets from the gallery (low risk — the
+      extension's own sources are untouched).
 - [x] **`legacyCleanup` no longer boots out the running agents** — fixed
       2026-08-30, the cause of everything the liveness check detects. The
       cleanup now acts only on labels whose `~/Library/LaunchAgents/<label>.plist`

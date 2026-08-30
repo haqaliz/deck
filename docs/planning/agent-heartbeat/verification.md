@@ -82,26 +82,83 @@ the ambiguity rule does not apply to a heartbeat that *exists* and went stale.
 It is also why the guard was moved out of the clock: a clock-based guard would
 have been reset by exactly this relaunch.
 
-## Not verified here, and honestly so
+## Live — the notice, rendered
 
-**The rendered sentence in the General tab.** The wording is pure and unit-pinned
-(`AgentLivenessCopy`, 8 tests), and the verdict feeding it is unit-pinned and
-now measured live — but nobody has yet *seen* the notice draw. Two attempts
-failed for environment reasons, not product ones: `screencapture -R` on a
-two-display setup (3440×1440 + 3024×1964 Retina) captured the wrong display, and
-System Events reported Deck's window count flipping between 1 and 0 across
-consecutive queries.
+Captured from the running app by `CGWindowID` (see the harness note below).
+Three of the four `.down` shapes were produced against real agent faults:
 
-Left for a human glance, which is also the repair: **open Deck → General**, read
-the notice, press **Restart agents**.
+**60s agent down, fast agent alive** — the case this feature exists for:
 
-`launchctl kickstart -k gui/$(id -u)/com.deck.agent` cannot do it —
-`Could not find service`, consistent with the existing note that `BundleProgram`
-resolves only inside the SMAppService context. The button is the recovery.
+> ⚠ Widget data has stopped refreshing. Deck's data agent is registered but macOS
+> is not running it. LiveBox is still updating. Last refresh: 21 minutes ago.
+> **Restart agents**
+
+**Fast agent down, 60s agent alive** — the mirror:
+
+> ⚠ LiveBox's process rows have stopped refreshing. Deck's process agent is
+> registered but macOS is not running it. Other widget data is still updating.
+> Last refresh: 2 minutes ago.  **Restart agents**
+
+**Corrupt witness** (`printf '{' > processes.json`, fast agent down) — D3 at its
+only user-visible point:
+
+> …Other widget data is still updating. **The last refresh could not be read.**
+
+Not "No refresh has been recorded", which is what the pre-split code would have
+said about a file something had plainly written.
+
+In every case the "Refresh in background" toggle stayed **on** — Deck reports the
+state, it does not rewrite the user's choice — and `.healthy` drew nothing at
+all, before and after.
+
+**The repair works, twice.** Pressing **Restart agents** took `com.deck.agent`
+from absent to `state = running, runs = 1`, with the heartbeat advancing within
+seconds and the notice gone at the next 60s evaluation. The corrupted
+`processes.json` healed itself on the fast agent's next tick (valid JSON, 10
+rows) — which is the argument for not giving corruption its own repair UI.
+
+**Both-down was not captured**, and the attempt is worth recording because of
+what it found rather than what it showed. With both agents booted out the notice
+correctly rendered the *data-agent* wording — because the fast agent had come
+back on its own (`runs = 35`, `processes.json` written 8s earlier, the corruption
+already overwritten). So the state at capture time really was "60s down, fast
+healthy", and the notice was right about it. Both-down is the pre-existing case
+with unchanged wording and is unit-pinned; it was not worth further live effort.
+
+## Two observations that are not about this feature
+
+1. **A booted-out fast agent came back without a login.** `agentsRegisteredAt`
+   was restamped at 00:26:39 with nothing pressed, which means something called
+   `register()`. The likeliest mechanism, unproven: Deck's window was created
+   and destroyed repeatedly during the capture attempts, and a window creation
+   fires `onAppear` → `reconcileAgents()`, which registers an agent it finds
+   `.notFound`. That would also make the recovery *automatic* in a way
+   CLAUDE.md's "recovery is a toggle-off/on cycle or the next login" does not
+   describe. Recorded as an observation, not a conclusion.
+2. **Deck runs windowless once its window is closed, and `open -a Deck` does not
+   bring it back** — `applicationShouldHandleReopen` returns `flag`, which is
+   `false` with no visible windows. Only killing and relaunching produced a
+   window. Unrelated to this work; noted because it cost most of the time in
+   this run.
+
+## Harness notes for the next agent doing a GUI check
+
+- **`screencapture -R x,y,w,h` captures the wrong display on a multi-display
+  setup** (here 3440×1440 + 3024×1964 Retina). It silently returns *something*,
+  which is worse than failing. Use `screencapture -l <CGWindowID>`, and get the
+  id from `CGWindowListCopyWindowInfo` — there is no CLI for it, but a six-line
+  `swift` script run directly works and PyObjC/Quartz is not installed.
+- **Re-read the window's bounds immediately before every synthetic click.**
+  Deck's window moved between displays mid-run (`X: 866` → `X: 1724`), and a
+  stale origin sends the click into whatever is underneath — twice it landed in
+  another app's window.
+- **System Events' `count of windows` is unreliable here**, flipping between 1
+  and 0 across consecutive queries while `CGWindowListCopyWindowInfo` was
+  consistent. Selecting a sidebar row worked (`set selected of row 1 ... to
+  true`); enumerating `entire contents` for text mostly returned nothing.
 
 ## Still to run
 
-- The mirror (bootout the fast agent alone → the process-agent wording) and both
-  together.
-- The corrupt-file wording, with Deck quit: `echo "{" > processes.json`.
-- Re-add each widget from the gallery.
+- Re-add each widget from the gallery. Low risk here — the widget extension's own
+  sources are untouched by this work (`Shared` gained types no widget reads) —
+  but it is the standing rule.
