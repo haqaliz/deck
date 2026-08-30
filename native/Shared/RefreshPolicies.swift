@@ -166,3 +166,40 @@ enum AgentLivenessPolicy {
         return .down(lastRefresh: lastRefreshAt)
     }
 }
+
+/// When to (re)start the grace-period clock that `AgentLivenessPolicy` measures
+/// against.
+///
+/// Pure and separately tested because the rule has **two distinct triggers**,
+/// and collapsing them into one is a real bug rather than a tidy-up. Writing
+/// only when the stored value is nil is the obvious way to keep the write
+/// one-time — and it silently defeats the bundle rename, where
+/// `ContainerMigration` carries a non-nil timestamp from the *old* install into
+/// a brand-new container that has no `processes.json` at all. The clock would
+/// read as "registered ten days ago, never ran" while the new agents were
+/// registering perfectly normally, and every user of that release would be told
+/// background refresh had stopped.
+enum AgentRegistrationClock {
+    /// - Parameters:
+    ///   - stored: what `settings.agentsRegisteredAt` holds now.
+    ///   - didRegister: reconciliation actually registered this pass. A new
+    ///     registration restarts the clock **unconditionally** — this is the
+    ///     trigger the rename needs.
+    ///   - state: the registration state after the reconcile pass.
+    /// - Returns: the value to persist. Unchanged input means nothing to write.
+    static func stamp(
+        stored: Date?,
+        didRegister: Bool,
+        state: AgentRegistrationState,
+        now: Date
+    ) -> Date? {
+        if didRegister { return now }
+        // The upgrade path: an install that already had its agents registered
+        // before this check shipped never calls register() again, so without
+        // adoption the clock stays nil forever and the check is permanently
+        // silent. The field then means "the earliest moment Deck knew a
+        // registration existed", which is what a grace period wants.
+        if state == .enabled, stored == nil { return now }
+        return stored
+    }
+}

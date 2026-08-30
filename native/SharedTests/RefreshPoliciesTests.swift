@@ -350,3 +350,92 @@ final class AgentLivenessPolicyTests: XCTestCase {
         )
     }
 }
+
+/// When the grace-period clock is (re)started.
+///
+/// Two distinct triggers, and collapsing them into one is a real bug: a guard
+/// of "write only when nil" looks like the right way to keep the write
+/// one-time, and it silently defeats the rename case, where the migrated
+/// settings carry a non-nil timestamp from the *old* install.
+final class AgentRegistrationClockTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+    // MARK: Trigger 1 — we just registered
+
+    /// The bundle rename, exactly: ContainerMigration carries a days-old
+    /// timestamp into a brand-new container that has no processes.json, and
+    /// the new labels register for the first time. If registering does not
+    /// restart the clock, every user of the rename release is told background
+    /// refresh has stopped, seconds after launch, while it is starting
+    /// normally.
+    func testRegisteringRestartsAClockCarriedOverByTheRename() {
+        let migrated = now.addingTimeInterval(-864_000) // ten days old
+        XCTAssertEqual(
+            AgentRegistrationClock.stamp(
+                stored: migrated, didRegister: true, state: .enabled, now: now
+            ),
+            now
+        )
+    }
+
+    func testRegisteringFromNothingStartsTheClock() {
+        XCTAssertEqual(
+            AgentRegistrationClock.stamp(
+                stored: nil, didRegister: true, state: .enabled, now: now
+            ),
+            now
+        )
+    }
+
+    // MARK: Trigger 2 — adopting an existing registration
+
+    /// The upgrade path. An install that already had both agents registered
+    /// before this check shipped never calls register() again, so without
+    /// adoption the field stays nil forever and the check is permanently
+    /// silent.
+    func testAdoptsAnAlreadyEnabledRegistrationWhenThereIsNoClock() {
+        XCTAssertEqual(
+            AgentRegistrationClock.stamp(
+                stored: nil, didRegister: false, state: .enabled, now: now
+            ),
+            now
+        )
+    }
+
+    // MARK: Otherwise — leave it alone
+
+    /// A2: an ordinary launch must not rewrite settings. `.onChange(of:
+    /// settings)` saves the file and reloads every widget timeline.
+    func testAnOrdinaryLaunchLeavesTheClockUntouched() {
+        let existing = now.addingTimeInterval(-7_200)
+        XCTAssertEqual(
+            AgentRegistrationClock.stamp(
+                stored: existing, didRegister: false, state: .enabled, now: now
+            ),
+            existing
+        )
+    }
+
+    /// Nothing is registered, so there is no clock to start. Liveness returns
+    /// `.unknown` for these states anyway; this only keeps the field honest.
+    func testNoRegistrationDoesNotStartAClock() {
+        for state in [AgentRegistrationState.notFound, .notRegistered, .requiresApproval] {
+            XCTAssertNil(
+                AgentRegistrationClock.stamp(
+                    stored: nil, didRegister: false, state: state, now: now
+                ),
+                "\(state) should not start the clock"
+            )
+        }
+    }
+
+    func testAVetoDoesNotDisturbAnExistingClock() {
+        let existing = now.addingTimeInterval(-7_200)
+        XCTAssertEqual(
+            AgentRegistrationClock.stamp(
+                stored: existing, didRegister: false, state: .requiresApproval, now: now
+            ),
+            existing
+        )
+    }
+}
