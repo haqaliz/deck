@@ -1,53 +1,58 @@
-# Brief — bundle identifier rename
+# Agent liveness check
 
-**Type:** feat · **Slug:** `bundle-identifier` · **Source:** inline brief (deck-next pick, 2026-08-28)
+**Type:** feat · **Slug:** `agent-liveness` · **Branch:** `feat/agent-liveness/aliz`
+**Source:** inline brief (deck-next pick, 2026-08-30). No GitHub issue.
 
-Rename Deck's bundle identifiers off `com.deck.*` — a reverse-DNS prefix for a
-domain nobody owns — to an owned prefix, before launch.
+## The brief
 
-`ROADMAP.md:402` records the ordering constraint: changing it after launch forces
-every user to re-add their widgets and re-grant TCC, "so it has to happen before."
-Deck is already public — the Homebrew tap `haqaliz/homebrew-deck` is pinned to a
-released v1.35 DMG — so the blast radius widens with every release.
+Deck is blind to the third way its agents can be down: `SMAppService.status`
+says a registration *record* exists, not that launchd loaded the job.
 
-## Where the identifier is load-bearing
+Measured on the dev machine (`docs/planning/bundle-identifier/probe.md`):
 
-Seven places, found by `grep -rn "com\.deck"`:
+- `sfltool dumpbtm` → both agents `[enabled, allowed]`
+- "Refresh in background" toggle → on
+- `launchctl print gui/$(id -u)/com.deck.agent` → `Could not find service`
+- nothing written for **6 hours**
 
-1. `native/project.yml:3` — `bundleIdPrefix: com.deck`
-2. `native/project.yml:42,79,107` — `PRODUCT_BUNDLE_IDENTIFIER` for DeckApp
-   (`com.deck.app`), DeckWidgets (`com.deck.app.widgets`), and DeckAgent's
-   `CFBundleIdentifier` (`com.deck.agent`); plus `com.deck.sharedtests` at :141
-3. `native/Shared/DeckKeychain.swift:41` — `defaultService = "com.deck.app"`
-   (the service the five migrated tokens live under)
-4. `native/Shared/DeckSettings.swift:181` — the container path
-   `Library/Containers/com.deck.app.widgets/Data/…`, where `settings.json` and
-   every snapshot live
-5. `native/DeckApp/AgentService.swift:35-38` — the two `SMAppService` plist names
-   and labels (`com.deck.agent`, `com.deck.agent.processes`), plus
-   `DeckApp.swift:491` and the LaunchAgent plists copied by the build phase
-   (`project.yml:28-29`)
-6. `native/DeckAgent/main.swift:25` — the OSLog subsystem `com.deck.agent`
-7. `scripts/{container-repair,demo-data,lsclean,soak}.sh` and
-   `homebrew/deck.rb:52-77` — uninstall/zap stanzas and repair paths
+`AgentReconcilePolicy` correctly does nothing here (intent `true`, state
+`.enabled` → `[]`), and v1.34's notice cannot fire — that one is for
+`[enabled, disallowed]` → `.requiresApproval`. This is the third distinct way
+the agents can be down (never registered / user-vetoed / registered-but-
+unloaded) and the only one Deck is blind to.
 
-## Why this is a data migration, not a rename
+## The ask
 
-The widget container moves. `settings.json`, the snapshots, and the consumers of
-the five keychain tokens all live under the old identifier. The migration must
-carry `settings.json` and the keychain items over **before** the old container is
-orphaned, and must **leave the old container in place** rather than delete it —
-`rm -rf` on a container cannot remove the SIP-protected metadata plist, which
-leaves containermanagerd believing it is still provisioned and renders every
-widget blank (CLAUDE.md trap).
+Add a liveness check that compares `processes.json` mtime against
+`livebox.processRefreshInterval` while `agentAtLogin` is on, and report it in
+the **General** tab next to the existing Login Items notice. Recovery is the
+documented toggle off→on.
 
-## Known costs, assumed unavoidable
+`processes.json` is the right ground truth: it has been the fast agent's
+**single writer** since v1.30, so its mtime separates "an agent ran" from "the
+app ran" with no ambiguity. Every other snapshot is written by both, which is
+why a dead agent is invisible while Deck is open.
 
-- Both TCC grants reset (the `ps` "data from other apps" prompt and
-  `NSCalendarsFullAccessUsageDescription`) — they are keyed to signature + id.
-- All fourteen widgets must be re-added from the gallery.
-- A version bump is required so the widget descriptor cache invalidates.
+## Why now
 
-## Open question for the PRD
+It is the named prerequisite for the held bundle rename —
+`docs/planning/bundle-identifier/flip-runbook.md:11`:
 
-What the new prefix should be.
+> Ship the check … **before** this runbook, or the rename silently stops
+> background refresh for the entire user base.
+
+The flip puts *every* user into exactly this state, since the new agents
+register only when the renamed app first launches.
+
+## Known caveats (from deck-next)
+
+- **`settings.json` is not a test seam.** With the record `.enabled`, the
+  reconcile policy re-adopts `agentAtLogin: true` from the registration and
+  never unregisters (CLAUDE.md trap 3).
+- **The fault is expensive to induce.** The one measured way in is
+  `launchctl bootout` of a *registered* agent while Deck is not running, and
+  that leaves the job down until the next login or a toggle off→on cycle — smd
+  does not reload it spontaneously (measured 2026-08-27).
+- Keep the decision logic pure and unit-pinned like `AgentReconcilePolicy`;
+  budget one hand-driven pass on the installed copy.
+- **Must not fire on a fresh install** where no agent has run yet.
