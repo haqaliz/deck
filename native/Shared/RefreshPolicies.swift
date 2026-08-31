@@ -72,6 +72,26 @@ enum AgentReconcilePolicy {
         }
     }
 }
+/// What a witness file says about the agent that writes it.
+///
+/// `never` and `unreadable` are **different answers**, and collapsing them is a
+/// small lie with a user-visible consequence: the notice tells someone "No
+/// refresh has been recorded" about a file something plainly recorded.
+enum AgentEvidence: Equatable {
+    case ran(at: Date)
+    /// No file at all — the agent has never run since the container was made.
+    case never
+    /// A file exists but does not decode. Something wrote it; a truncated write
+    /// is the realistic cause, which `AtomicFile` makes unlikely rather than
+    /// impossible.
+    case unreadable
+
+    var timestamp: Date? {
+        if case .ran(let at) = self { return at }
+        return nil
+    }
+}
+
 /// Whether the background agents are actually running, as distinct from being
 /// registered.
 ///
@@ -82,9 +102,51 @@ enum AgentReconcilePolicy {
 enum AgentLiveness: Equatable {
     case healthy
     case unknown
-    /// `lastRefresh` is `nil` when the agent never ran once — the state the
-    /// bundle rename puts every user into.
-    case down(lastRefresh: Date?)
+    case down(Down)
+
+    /// Which half stopped, and what each witness had to say — enough for the
+    /// notice to word itself without re-deriving anything.
+    struct Down: Equatable {
+        enum Scope: Equatable {
+            case both
+            /// The 60s agent: OpenBox, GitBox, TaskBox, CalBox, PRBox, ShipBox,
+            /// WeatherBox and MarketBox. LiveBox keeps updating throughout,
+            /// which is what made this case so convincing while it was silent.
+            case data
+            /// The fast agent: LiveBox's process rows only.
+            case processes
+        }
+
+        let scope: Scope
+        let processes: AgentEvidence
+        let data: AgentEvidence
+
+        /// The evidence the notice reports. For a scoped fault it is that
+        /// agent's own — the healthy one's last refresh says nothing about the
+        /// thing that stopped. For both, it is the last time *anything* ran,
+        /// which is the honest answer to "how long has this been broken".
+        var reported: AgentEvidence {
+            switch scope {
+            case .data: return data
+            case .processes: return processes
+            case .both: return Self.moreInformative(processes, data)
+            }
+        }
+
+        /// A timestamp outranks both non-dates; `.unreadable` outranks `.never`,
+        /// because "No refresh has been recorded" is exactly the false claim
+        /// the corrupt-vs-absent split exists to remove.
+        static func moreInformative(_ a: AgentEvidence, _ b: AgentEvidence) -> AgentEvidence {
+            switch (a, b) {
+            case (.ran(let x), .ran(let y)): return x >= y ? a : b
+            case (.ran, _): return a
+            case (_, .ran): return b
+            case (.unreadable, _): return a
+            case (_, .unreadable): return b
+            default: return .never
+            }
+        }
+    }
 }
 
 /// The third way Deck's agents can be down, and the only one nothing else
@@ -126,10 +188,67 @@ enum AgentLivenessPolicy {
         TimeInterval(max(4 * processRefreshInterval, 120))
     }
 
+    /// The 60s agent's cadence, as declared by `StartInterval` in
+    /// `DeckApp/LaunchAgents/com.deck.agent.plist`. Swift never reads that
+    /// plist at runtime, so the two are pinned together by test — otherwise
+    /// retuning the agent leaves a threshold that fires on every healthy tick
+    /// with nothing failing.
+    static let dataAgentInterval: TimeInterval = 60
+
+    /// Four missed ticks, the same shape as `threshold(processRefreshInterval:)`
+    /// — but keyed to the 60s agent's own fixed cadence rather than to a LiveBox
+    /// setting, which would call it down after 120s at the 5s default.
+    static var dataThreshold: TimeInterval { 4 * dataAgentInterval }
+
+    /// One witness's verdict. `.unknown` means the question is not answerable
+    /// from this witness right now, never a soft `.down`.
+    enum WitnessVerdict: Equatable {
+        case healthy
+        case unknown
+        case down
+    }
+
+    /// - Parameter neverIsAmbiguous: whether `.never` from this witness might
+    ///   simply mean the witness is newer than the install. See the data
+    ///   witness's call below; false for the process witness, which has existed
+    ///   since v1.30.
+    static func verdict(
+        evidence: AgentEvidence,
+        limit: TimeInterval,
+        registeredAt: Date?,
+        neverIsAmbiguous: Bool = false,
+        now: Date
+    ) -> WitnessVerdict {
+        // 1. Recent evidence wins, and is checked BEFORE the grace window so a
+        //    restart that worked clears the notice at the next agent tick
+        //    instead of waiting the grace period out. A stamp in the future is
+        //    a bad clock, not a dead agent: never accuse on the strength of a
+        //    clock.
+        if let at = evidence.timestamp, now.timeIntervalSince(at) < limit {
+            return .healthy
+        }
+
+        // 2. Nothing was ever written, and the absence is explainable by
+        //    something other than a fault. Never guess in that direction.
+        if evidence == .never, neverIsAmbiguous { return .unknown }
+
+        // 3. No clock to judge against. Momentary: reconciliation adopts `now`
+        //    the first time it sees an enabled registration.
+        guard let registeredAt else { return .unknown }
+
+        // 4. Registered too recently to expect anything yet — a fresh install,
+        //    and the first launch after the bundle rename.
+        if now.timeIntervalSince(registeredAt) < limit { return .unknown }
+
+        // 5. Registered long enough ago that silence means something.
+        return .down
+    }
+
     static func resolve(
         intent: Bool,
         state: AgentRegistrationState,
-        lastRefreshAt: Date?,
+        processes: AgentEvidence,
+        data: AgentEvidence,
         registeredAt: Date?,
         processRefreshInterval: Int,
         now: Date
@@ -143,27 +262,53 @@ enum AgentLivenessPolicy {
         //    one condition, the second wrong about the cause.
         guard state == .enabled else { return .unknown }
 
-        let limit = threshold(processRefreshInterval: processRefreshInterval)
+        let processesVerdict = verdict(
+            evidence: processes,
+            limit: threshold(processRefreshInterval: processRefreshInterval),
+            registeredAt: registeredAt,
+            now: now
+        )
 
-        // 3. Recent evidence wins, and is checked BEFORE the grace window so a
-        //    restart that worked clears the notice at the next agent tick
-        //    instead of waiting the grace period out. A stamp in the future is
-        //    a bad clock, not a dead agent: never accuse on the strength of a
-        //    clock.
-        if let lastRefreshAt, now.timeIntervalSince(lastRefreshAt) < limit {
+        // The release that introduces the heartbeat must not accuse the users
+        // who install it. An upgraded install has a days-old registration clock
+        // and both agents `.enabled`, and no build before this one ever wrote a
+        // heartbeat — so the grace window is long spent and this witness is
+        // `.never` on a perfectly healthy machine.
+        //
+        // "The 60s agent has never written once, while the fast agent is
+        // demonstrably alive" is indistinguishable from "this feature just
+        // shipped", so Deck does not guess. It is deliberately expressed here
+        // rather than as a restart of the grace clock: a clock can be restarted
+        // by relaunching Deck, which would let a user who reopens the window
+        // every few minutes never see the notice at all — the same shape as the
+        // bug where opening Deck was both what broke the agents and what made
+        // the data look fresh.
+        //
+        // The cost is bounded and stated: a 60s agent that never runs *even
+        // once* goes unreported here, and is not silent, because each of its
+        // eight widgets says the agent has not run.
+        let dataVerdict = verdict(
+            evidence: data,
+            limit: dataThreshold,
+            registeredAt: registeredAt,
+            neverIsAmbiguous: processesVerdict == .healthy,
+            now: now
+        )
+
+        switch (processesVerdict, dataVerdict) {
+        case (.down, .down):
+            return .down(.init(scope: .both, processes: processes, data: data))
+        case (.down, _):
+            return .down(.init(scope: .processes, processes: processes, data: data))
+        case (_, .down):
+            return .down(.init(scope: .data, processes: processes, data: data))
+        case (.unknown, .unknown):
+            return .unknown
+        default:
+            // One witness healthy, the other merely unproven: Deck has no
+            // complaint to make yet.
             return .healthy
         }
-
-        // 4. No clock to judge against. Momentary: reconciliation adopts `now`
-        //    the first time it sees an enabled registration.
-        guard let registeredAt else { return .unknown }
-
-        // 5. Registered too recently to expect anything yet — a fresh install,
-        //    and the first launch after the bundle rename.
-        if now.timeIntervalSince(registeredAt) < limit { return .unknown }
-
-        // 6. Registered long enough ago that silence means something.
-        return .down(lastRefresh: lastRefreshAt)
     }
 }
 

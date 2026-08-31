@@ -34,6 +34,15 @@ enum ProcessSnapshotStore {
         return try? JSONDecoder().decode(ProcessSnapshot.self, from: data)
     }
 
+    /// The same three answers the heartbeat gives. `load()` above returns `nil`
+    /// for a missing file *and* for undecodable bytes; liveness must not read
+    /// the second as "the agent never ran".
+    static func evidence(at url: URL = fileURL) -> AgentEvidence {
+        AgentEvidenceReader.read(at: url) {
+            try? JSONDecoder().decode(ProcessSnapshot.self, from: $0).writtenAt
+        }
+    }
+
     static func save(_ snapshot: ProcessSnapshot, to url: URL = fileURL) {
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         _ = AtomicFile.write(data, to: url)

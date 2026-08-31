@@ -62,6 +62,20 @@ Task {
     let start = Date()
     agentLog.info("full refresh started")
 
+    // The 60s agent's liveness witness, and the ONLY file it alone writes —
+    // every snapshot below is written by the host app too, which is why a dead
+    // agent used to be invisible while Deck was open.
+    //
+    // Written HERE, before any fetch, and deliberately not at the end: this path
+    // awaits ~10 mostly serial sources at 10s timeouts each, so an end-write
+    // would let a slow-but-healthy tick cross the staleness limit and be
+    // reported dead. It witnesses that this agent was launched and started
+    // work — never that it finished — and that is the honest claim, because
+    // launchd starts no new tick while one is still running, so a hung agent
+    // stops advancing this stamp either way.
+    AgentHeartbeatStore.save(AgentHeartbeat(writtenAt: start))
+    agentLog.info("written agent heartbeat")
+
     var settings = DeckSettings.load()
     // The five API credentials live in the keychain, not in settings.json.
     // A key that FAILED to read (a locked login keychain) is not the same as

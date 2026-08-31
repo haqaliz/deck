@@ -146,6 +146,11 @@ final class AgentLivenessPolicyTests: XCTestCase {
 
     /// Everything healthy unless a test says otherwise; each test varies one
     /// axis so a failure names the rule it broke.
+    ///
+    /// The data witness is held healthy here so this table keeps asserting what
+    /// it always asserted: the **process** witness's behaviour, unchanged by a
+    /// second witness arriving beside it. The two-witness rules have their own
+    /// class below.
     private func resolve(
         intent: Bool = true,
         state: AgentRegistrationState = .enabled,
@@ -156,11 +161,41 @@ final class AgentLivenessPolicyTests: XCTestCase {
         AgentLivenessPolicy.resolve(
             intent: intent,
             state: state,
-            lastRefreshAt: lastRefreshAt,
+            processes: lastRefreshAt.map { AgentEvidence.ran(at: $0) } ?? .never,
+            data: .ran(at: now),
             registeredAt: registeredAt,
             processRefreshInterval: interval,
             now: now
         )
+    }
+
+    /// The process witness's own verdict, for the rules a *combined* verdict
+    /// cannot observe: with the data witness healthy beside it, one witness
+    /// sitting in its grace window resolves to `.healthy` rather than
+    /// `.unknown`. Both are silent — the notice draws on `.down` alone — so the
+    /// property these tests protect is asserted twice below: the ladder returns
+    /// `.unknown`, and the pair says nothing to the user.
+    private func processVerdict(
+        lastRefreshAt: Date?,
+        registeredAt: Date?,
+        interval: Int = 15
+    ) -> AgentLivenessPolicy.WitnessVerdict {
+        AgentLivenessPolicy.verdict(
+            evidence: lastRefreshAt.map { AgentEvidence.ran(at: $0) } ?? .never,
+            limit: AgentLivenessPolicy.threshold(processRefreshInterval: interval),
+            registeredAt: registeredAt,
+            now: now
+        )
+    }
+
+    /// The verdict this table used to spell as a bare last-refresh date: the
+    /// process agent alone, with the data agent healthy.
+    private func processAgentDown(_ lastRefresh: Date?) -> AgentLiveness {
+        .down(AgentLiveness.Down(
+            scope: .processes,
+            processes: lastRefresh.map { AgentEvidence.ran(at: $0) } ?? .never,
+            data: .ran(at: now)
+        ))
     }
 
     // MARK: Threshold
@@ -263,12 +298,12 @@ final class AgentLivenessPolicyTests: XCTestCase {
     // MARK: Rule 4 — no clock to judge against
 
     func testMissingRegistrationTimestampIsSilent() {
-        XCTAssertEqual(
-            resolve(
-                lastRefreshAt: now.addingTimeInterval(-604_800),
-                registeredAt: nil
-            ),
-            .unknown
+        let last = now.addingTimeInterval(-604_800)
+        XCTAssertEqual(processVerdict(lastRefreshAt: last, registeredAt: nil), .unknown)
+        XCTAssertNotEqual(
+            resolve(lastRefreshAt: last, registeredAt: nil), .down(
+                AgentLiveness.Down(scope: .processes, processes: .ran(at: last), data: .ran(at: now))
+            )
         )
     }
 
@@ -277,9 +312,10 @@ final class AgentLivenessPolicyTests: XCTestCase {
     /// A fresh install, and the state the bundle rename puts every user into:
     /// registered seconds ago, first tick not yet due.
     func testNothingWrittenInsideTheGraceWindowIsSilent() {
-        XCTAssertEqual(
-            resolve(lastRefreshAt: nil, registeredAt: now.addingTimeInterval(-30)),
-            .unknown
+        let registered = now.addingTimeInterval(-30)
+        XCTAssertEqual(processVerdict(lastRefreshAt: nil, registeredAt: registered), .unknown)
+        XCTAssertNotEqual(
+            resolve(lastRefreshAt: nil, registeredAt: registered), processAgentDown(nil)
         )
     }
 
@@ -289,7 +325,7 @@ final class AgentLivenessPolicyTests: XCTestCase {
     func testNothingEverWrittenPastTheGraceWindowIsDown() {
         XCTAssertEqual(
             resolve(lastRefreshAt: nil, registeredAt: now.addingTimeInterval(-600)),
-            .down(lastRefresh: nil)
+            processAgentDown(nil)
         )
     }
 
@@ -298,7 +334,7 @@ final class AgentLivenessPolicyTests: XCTestCase {
         let last = now.addingTimeInterval(-21_600)
         XCTAssertEqual(
             resolve(lastRefreshAt: last, registeredAt: now.addingTimeInterval(-86_400)),
-            .down(lastRefresh: last)
+            processAgentDown(last)
         )
     }
 
@@ -308,7 +344,7 @@ final class AgentLivenessPolicyTests: XCTestCase {
         let registered = now.addingTimeInterval(-86_400)
         XCTAssertEqual(
             resolve(lastRefreshAt: last, registeredAt: registered, interval: 15),
-            .down(lastRefresh: last)
+            processAgentDown(last)
         )
         XCTAssertEqual(
             resolve(lastRefreshAt: last, registeredAt: registered, interval: 60),
@@ -322,7 +358,7 @@ final class AgentLivenessPolicyTests: XCTestCase {
         let last = now.addingTimeInterval(-120)
         XCTAssertEqual(
             resolve(lastRefreshAt: last, registeredAt: now.addingTimeInterval(-86_400)),
-            .down(lastRefresh: last)
+            processAgentDown(last)
         )
     }
 
@@ -339,15 +375,274 @@ final class AgentLivenessPolicyTests: XCTestCase {
     func testExactlyAtTheGraceThresholdIsDown() {
         XCTAssertEqual(
             resolve(lastRefreshAt: nil, registeredAt: now.addingTimeInterval(-120)),
-            .down(lastRefresh: nil)
+            processAgentDown(nil)
         )
     }
 
     func testOneSecondUnderTheGraceThresholdIsSilent() {
+        let registered = now.addingTimeInterval(-119)
+        XCTAssertEqual(processVerdict(lastRefreshAt: nil, registeredAt: registered), .unknown)
+        XCTAssertNotEqual(
+            resolve(lastRefreshAt: nil, registeredAt: registered), processAgentDown(nil)
+        )
+    }
+}
+
+/// Two witnesses, and what the notice is allowed to claim from them.
+///
+/// The process witness (`processes.json`) has existed since v1.30 and proves
+/// only that `com.deck.agent.processes` ran. The data witness
+/// (`agent-heartbeat.json`) is the 60s agent's own, and without it a dead
+/// `com.deck.agent` is invisible: it writes ten snapshots and the host app
+/// writes every one of them, so a stale snapshot cannot tell "the agent stopped"
+/// from "Deck is closed".
+final class AgentLivenessTwoWitnessTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func resolve(
+        processes: AgentEvidence,
+        data: AgentEvidence,
+        registeredAt: Date? = Date(timeIntervalSince1970: 1_700_000_000 - 86_400),
+        interval: Int = 15
+    ) -> AgentLiveness {
+        AgentLivenessPolicy.resolve(
+            intent: true,
+            state: .enabled,
+            processes: processes,
+            data: data,
+            registeredAt: registeredAt,
+            processRefreshInterval: interval,
+            now: now
+        )
+    }
+
+    private var fresh: AgentEvidence { .ran(at: now.addingTimeInterval(-10)) }
+    private var stale: AgentEvidence { .ran(at: now.addingTimeInterval(-21_600)) }
+
+    // MARK: The threshold is the data agent's own
+
+    /// The 60s agent's cadence is fixed in its plist and has nothing to do with
+    /// `livebox.processRefreshInterval`. Borrowing the process threshold would
+    /// call it down after 120s at the 5s default — two missed ticks — and
+    /// flicker on every slow fetch.
+    func testDataThresholdIsFourOfTheDataAgentsOwnInterval() {
+        XCTAssertEqual(AgentLivenessPolicy.dataAgentInterval, 60)
+        XCTAssertEqual(AgentLivenessPolicy.dataThreshold, 240)
+    }
+
+    func testTheDataThresholdIgnoresTheProcessInterval() {
+        // 200s old: inside 240s either way, whatever the LiveBox setting says.
+        let last = AgentEvidence.ran(at: now.addingTimeInterval(-200))
+        XCTAssertEqual(resolve(processes: fresh, data: last, interval: 5), .healthy)
+        XCTAssertEqual(resolve(processes: fresh, data: last, interval: 60), .healthy)
+    }
+
+    func testExactlyAtTheDataThresholdIsDown() {
+        let last = AgentEvidence.ran(at: now.addingTimeInterval(-240))
         XCTAssertEqual(
-            resolve(lastRefreshAt: nil, registeredAt: now.addingTimeInterval(-119)),
+            resolve(processes: fresh, data: last),
+            .down(AgentLiveness.Down(scope: .data, processes: fresh, data: last))
+        )
+    }
+
+    func testOneSecondUnderTheDataThresholdIsHealthy() {
+        XCTAssertEqual(
+            resolve(processes: fresh, data: .ran(at: now.addingTimeInterval(-239))),
+            .healthy
+        )
+    }
+
+    // MARK: Scope — which half stopped
+
+    /// The blind spot this whole feature exists to close: LiveBox keeps ticking
+    /// while eight widgets go stale, and before the heartbeat Deck said nothing.
+    func testOnlyTheDataAgentDownIsScopedToTheDataAgent() {
+        XCTAssertEqual(
+            resolve(processes: fresh, data: stale),
+            .down(AgentLiveness.Down(scope: .data, processes: fresh, data: stale))
+        )
+    }
+
+    func testOnlyTheProcessAgentDownIsScopedToTheProcessAgent() {
+        XCTAssertEqual(
+            resolve(processes: stale, data: fresh),
+            .down(AgentLiveness.Down(scope: .processes, processes: stale, data: fresh))
+        )
+    }
+
+    /// The measured fault took both down together — one cause, one notice.
+    func testBothDownIsScopedToBoth() {
+        XCTAssertEqual(
+            resolve(processes: stale, data: stale),
+            .down(AgentLiveness.Down(scope: .both, processes: stale, data: stale))
+        )
+    }
+
+    func testBothHealthyIsHealthy() {
+        XCTAssertEqual(resolve(processes: fresh, data: fresh), .healthy)
+    }
+
+    // MARK: Combining verdicts
+
+    /// A witness inside its grace window is not evidence of a fault, and it is
+    /// not evidence of health either. One healthy witness beside it means Deck
+    /// has no complaint to make yet.
+    func testAnUnknownWitnessBesideAHealthyOneIsHealthy() {
+        XCTAssertEqual(
+            resolve(processes: fresh, data: .never, registeredAt: now.addingTimeInterval(-30)),
+            .healthy
+        )
+    }
+
+    func testBothUnknownIsUnknown() {
+        XCTAssertEqual(
+            resolve(
+                processes: .never, data: .never, registeredAt: now.addingTimeInterval(-30)
+            ),
             .unknown
         )
+    }
+
+    /// Down outranks unknown: a witness still inside its grace window cannot
+    /// excuse one that is demonstrably stale. Registered 200s ago is past the
+    /// process witness's 120s limit and inside the data witness's 240s one, so
+    /// this also pins that the two windows really are separate.
+    func testDownOutranksUnknown() {
+        XCTAssertEqual(
+            resolve(processes: stale, data: .never, registeredAt: now.addingTimeInterval(-200)),
+            .down(AgentLiveness.Down(scope: .processes, processes: stale, data: .never))
+        )
+    }
+
+    // MARK: A witness that has never written anything at all
+
+    /// **The release that introduces the heartbeat must not accuse the users who
+    /// install it.** An upgraded install has a days-old registration clock and
+    /// both agents `.enabled`, and no build before this one ever wrote a
+    /// heartbeat — so the grace window is long spent and the data witness is
+    /// `.never` on a perfectly healthy machine.
+    ///
+    /// "The 60s agent has never written once, while the fast agent is
+    /// demonstrably alive" is genuinely indistinguishable from "this feature
+    /// just shipped", so Deck does not guess. The cost is real and bounded: a
+    /// 60s agent that never runs *even once* goes unreported here — and is not
+    /// silent, because its eight widgets each say the agent has not run.
+    func testAHeartbeatThatNeverExistedIsNotAnAccusationWhileTheProcessAgentIsAlive() {
+        XCTAssertEqual(resolve(processes: fresh, data: .never), .healthy)
+    }
+
+    /// The gate that stops that rule from weakening the check: with no healthy
+    /// witness there is no live agent to make the absence ambiguous, so the
+    /// fault is reported. This is the state the bundle rename produces.
+    func testBothWitnessesSilentIsStillReported() {
+        XCTAssertEqual(
+            resolve(processes: .never, data: .never),
+            .down(AgentLiveness.Down(scope: .both, processes: .never, data: .never))
+        )
+    }
+
+    /// And the fault this feature exists for is untouched by that rule: a
+    /// heartbeat that *existed* and went stale is evidence, not ambiguity.
+    func testAStaleHeartbeatIsReportedEvenWithAHealthyProcessAgent() {
+        XCTAssertEqual(
+            resolve(processes: fresh, data: stale),
+            .down(AgentLiveness.Down(scope: .data, processes: fresh, data: stale))
+        )
+    }
+
+    /// An unreadable heartbeat is not an absent one: something wrote it, so the
+    /// ambiguity that excuses `.never` does not apply.
+    func testAnUnreadableHeartbeatIsReportedEvenWithAHealthyProcessAgent() {
+        XCTAssertEqual(
+            resolve(processes: fresh, data: .unreadable),
+            .down(AgentLiveness.Down(scope: .data, processes: fresh, data: .unreadable))
+        )
+    }
+
+    // MARK: The global guards stay ahead of both witnesses
+
+    /// Keeping these structural is what stops a Login Items veto from raising a
+    /// second notice that is wrong about its own cause.
+    func testTheVetoStillOwnsItsStateWithTwoWitnessesDown() {
+        XCTAssertEqual(
+            AgentLivenessPolicy.resolve(
+                intent: true,
+                state: .requiresApproval,
+                processes: stale,
+                data: stale,
+                registeredAt: now.addingTimeInterval(-86_400),
+                processRefreshInterval: 15,
+                now: now
+            ),
+            .unknown
+        )
+    }
+
+    func testIntentOffIsStillNeverAFault() {
+        XCTAssertEqual(
+            AgentLivenessPolicy.resolve(
+                intent: false,
+                state: .enabled,
+                processes: stale,
+                data: stale,
+                registeredAt: now.addingTimeInterval(-86_400),
+                processRefreshInterval: 15,
+                now: now
+            ),
+            .unknown
+        )
+    }
+
+    // MARK: Which evidence the notice reports
+
+    /// With one agent down, the answer is that agent's own evidence — not the
+    /// healthy one's, which would report a refresh that says nothing about the
+    /// thing that stopped.
+    func testAScopedDownReportsItsOwnAgentsEvidence() {
+        XCTAssertEqual(
+            resolve(processes: fresh, data: stale).downValue?.reported, stale
+        )
+        XCTAssertEqual(
+            resolve(processes: stale, data: fresh).downValue?.reported, stale
+        )
+    }
+
+    /// Both down: "how long has this been broken" is answered by the last time
+    /// *anything* ran, so the more recent timestamp wins.
+    func testBothDownReportsTheMoreRecentTimestamp() {
+        let older = AgentEvidence.ran(at: now.addingTimeInterval(-86_400))
+        let newer = AgentEvidence.ran(at: now.addingTimeInterval(-21_600))
+        XCTAssertEqual(resolve(processes: older, data: newer).downValue?.reported, newer)
+        XCTAssertEqual(resolve(processes: newer, data: older).downValue?.reported, newer)
+    }
+
+    /// A timestamp outranks both non-dates.
+    func testATimestampOutranksNoEvidence() {
+        XCTAssertEqual(resolve(processes: stale, data: .never).downValue?.reported, stale)
+        XCTAssertEqual(resolve(processes: .unreadable, data: stale).downValue?.reported, stale)
+    }
+
+    /// `.unreadable` outranks `.never`, because "No refresh has been recorded"
+    /// is exactly the false claim the corrupt-vs-absent split exists to remove:
+    /// something wrote that file.
+    func testUnreadableOutranksNever() {
+        XCTAssertEqual(
+            resolve(processes: .never, data: .unreadable).downValue?.reported, .unreadable
+        )
+        XCTAssertEqual(
+            resolve(processes: .unreadable, data: .never).downValue?.reported, .unreadable
+        )
+    }
+
+    func testNeitherEverRanReportsNever() {
+        XCTAssertEqual(resolve(processes: .never, data: .never).downValue?.reported, .never)
+    }
+}
+
+private extension AgentLiveness {
+    var downValue: Down? {
+        if case .down(let down) = self { return down }
+        return nil
     }
 }
 
