@@ -368,9 +368,12 @@ Deck has been launched from `/Applications` at least once.
 **Checking whether the background agents are actually running.** Deck checks
 this itself: open **General** and look under "Refresh in background". If the
 agents are registered but macOS is not running them, Deck says so and offers a
-**Restart agents** button — which is the fix. (There is a third failure mode
-behind that notice: `SMAppService` reports a *registration*, not a loaded job,
-and the two come apart.)
+**Restart agents** button — which is the fix. The notice names which half
+stopped: the **data agent** (the 60s one, behind OpenBox, GitBox, TaskBox,
+CalBox, PRBox, ShipBox, WeatherBox and MarketBox), the **process agent**
+(LiveBox's process rows), or both. (There is a third failure mode behind that
+notice: `SMAppService` reports a *registration*, not a loaded job, and the two
+come apart.)
 
 To check by hand, not with `launchctl list` — agents registered through
 `SMAppService` are not bootstrapped into `gui/<uid>` under their plist label, so
@@ -379,20 +382,24 @@ print` can find the job while it is failing to spawn on every tick. The reliable
 check is the fast agent's own output:
 
 ```bash
-stat -f '%Sm' ~/Library/Containers/com.deck.app.widgets/Data/Library/Application\ Support/Deck/processes.json
+cd ~/Library/Containers/com.deck.app.widgets/Data/Library/Application\ Support/Deck
+stat -f '%N %Sm' processes.json agent-heartbeat.json
 ```
 
-`processes.json` has a single writer — the fast process agent — so a timestamp
-older than a few multiples of the configured process interval means the agents
-are down, whatever anything else says. Every other snapshot is written by the
-app too, so a fresh one proves only that Deck was open.
+Each agent has exactly one file only it writes: `processes.json` for the fast
+process agent, `agent-heartbeat.json` for the 60s data agent. A `processes.json`
+older than a few multiples of the configured process interval, or an
+`agent-heartbeat.json` older than about four minutes, means that agent is down
+whatever anything else says. Every *other* snapshot is written by the app too,
+so a fresh one proves only that Deck was open.
 
 **"Refresh in background" is on but nothing is running.** A registration record
 and a loaded job are two different things: `sfltool dumpbtm | grep -A8 DeckAgent`
 can report `[enabled, allowed]` while
 `launchctl print gui/$(id -u)/com.deck.agent.processes` answers
-`Could not find service`. Deck cannot currently tell the difference and will
-show the toggle on regardless. Recovery is to switch **Refresh in background**
+`Could not find service`. Deck detects this and says so under the toggle —
+which stays on, because the registration really is what you asked for. Recovery
+is the **Restart agents** button, or to switch **Refresh in background**
 off and back on in the General tab, or log out and back in — editing
 `settings.json` will not do it, because with the record enabled Deck adopts the
 registration and turns the setting back on.
