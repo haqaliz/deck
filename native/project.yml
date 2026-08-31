@@ -36,8 +36,8 @@ targets:
       properties:
         CFBundleDisplayName: Deck
         CFBundleIconFile: AppIcon
-        CFBundleShortVersionString: "1.36"
-        CFBundleVersion: "36"
+        CFBundleShortVersionString: "1.37"
+        CFBundleVersion: "37"
         LSMinimumSystemVersion: "15.0"
         NSHighResolutionCapable: true
         NSCalendarsFullAccessUsageDescription: "Deck reads your calendar to show your next event in the CalBox widget."
@@ -73,8 +73,8 @@ targets:
       properties:
         CFBundleDisplayName: Deck Widgets
         CFBundleIconFile: AppIcon
-        CFBundleShortVersionString: "1.36"
-        CFBundleVersion: "36"
+        CFBundleShortVersionString: "1.37"
+        CFBundleVersion: "37"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         LSMinimumSystemVersion: "15.0"
@@ -111,8 +111,8 @@ targets:
         CFBundleIdentifier: com.deck.agent
         CFBundleName: DeckAgent
         CFBundleExecutable: DeckAgent
-        CFBundleShortVersionString: "1.36"
-        CFBundleVersion: "36"
+        CFBundleShortVersionString: "1.37"
+        CFBundleVersion: "37"
         NSCalendarsFullAccessUsageDescription: "Deck reads your calendar to show your next event in the CalBox widget."
     settings:
       base:
