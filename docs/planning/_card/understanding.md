@@ -1,90 +1,85 @@
-# Phase 2 — Understanding
+# Understanding — prbox-review-state
+
+**Date:** 2026-09-02 · **Branch:** `feat/prbox-review-state/aliz` · **PRD:** pending
 
 ## What the work is really asking
 
-Not "add a file". The liveness check shipped with a **witness gap**: it can prove
-`com.deck.agent.processes` ran and can prove nothing at all about
-`com.deck.agent`. The ask is to close that gap and then say something more
-precise than "background refresh has stopped".
+PRBox rows currently carry `role` (authored / reviewing), `isDraft`, creation
+date and a link — but **nothing about the PR's review progress**. The queue
+can't be prioritized at a glance: an approved PR and a blocked one look alike.
+The work adds a provider-agnostic **review state** per row so the queue is
+prioritizable (approved / changes requested / no one has voted), closing the
+recorded follow-up (`ROADMAP.md:193`, `docs/planning/prbox/prd.md:255`).
 
-## Ground truth, measured in the code
+## The two providers are not symmetric — this shapes everything
 
-| Fact | Where |
-|---|---|
-| Liveness reads exactly one witness | `DeckApp.swift:541` — `lastRefreshAt: ProcessSnapshotStore.load()?.writtenAt` |
-| That witness is the fast agent's | `DeckAgent/main.swift:33-51` `sampleProcesses()`, reached only when `DECK_AGENT_ROLE == "processes"` |
-| The host app writes **all ten** 60s snapshots | `DeckApp.swift:283, 295, 305, 314, 330, 383, 415, 447, 735, 748` |
-| …so none of them can witness the 60s agent | that is exactly why the PRD scoped the notice to "an agent" |
-| The notice deliberately refuses to name an agent | `DeckApp.swift:826-830` doc comment |
+| | GitHub | Azure DevOps |
+|---|---|---|
+| Review data location | Separate endpoint `GET /repos/{o}/{r}/pulls/{n}/reviews` — **one request per PR** | `reviewers[]` with `vote` is **already in the PR payload** the loader parses today (`AzureDevOpsLoader.swift:640`) — zero extra calls |
+| Vote semantics | `state` per review: APPROVED / CHANGES_REQUESTED / COMMENTED / DISMISSED / PENDING; latest review per reviewer counts; CHANGES_REQUESTED outranks APPROVED | `vote` per reviewer: -10 rejected, -5 waiting for author, 0 no vote, +5 approved w/ suggestions, +10 approved; only my row's vote is filtered today (`isAwaitingVote`, `AzureDevOpsLoader.swift:639`) |
+| My own review | You drop off `review-requested` once you review, so queue rows never carry my review; self-approval is impossible, so authored rows don't either | Same by construction: the `.reviewing` filter keeps only `vote == 0` rows; my vote on my own PR is irrelevant to others' state |
 
-## The two caveats from the card, resolved by the dig
+So the state shown is **other reviewers' aggregate**, never my own — which is
+exactly the prioritization signal. The row's own role dot stays as-is; the new
+glyph is a second, orthogonal signal.
 
-1. **`ContainerMigration` carrying a stale heartbeat — avoided by construction,
-   if the heartbeat is a file.** The migration copies **only `settings.json`**
-   (`ContainerMigration.swift:66`, and its doc comment says so deliberately:
-   everything else "is a snapshot the agent rebuilds within one 60s tick"). So a
-   heartbeat *file* cannot cross the rename, while a heartbeat *field on
-   `DeckSettings`* would cross verbatim and reproduce the exact bug the last
-   cycle caught. **This dictates the storage choice** and is the single most
-   load-bearing finding here.
-2. **The grace clock already covers any witness.** `agentsRegisteredAt` is not
-   per-agent; `AgentLivenessPolicy` step 5 gates on it before returning `.down`.
-   A second witness inherits that, provided it is compared against a threshold
-   and not against zero.
+## Files that change
 
-## What the heartbeat has to be, and what it must not be
+- `native/Shared/PRBoxSnapshot.swift` — `PullRequestItem` gains a review-state
+  field (tolerant decode, nil when absent — upgraded snapshots and providers
+  that didn't fetch it); `HostGitHubPRLoader.fetch` fans out per-PR review
+  fetches (new `withThrowingTaskGroup`, ShipBox precedent) capped to the rows
+  that will render; a pure parser for the reviews payload.
+- `native/Shared/AzureDevOpsLoader.swift` — `AzurePRParser.item(from:...)`
+  derives the state from the already-present `reviewers` (exclude me, fold
+  votes to a coarse state).
+- `native/Shared/DeckSettings.swift` — `PRBoxSettings` gains a show toggle +
+  colors if the face wants them (needs the settings tab too).
+- `native/DeckWidgets/PRBoxWidget.swift` — per-row status glyph (no Charts —
+  the widget-face Charts trap).
+- `native/DeckAgent/main.swift` + `native/DeckApp/DeckApp.swift` — both call
+  sites of `HostGitHubPRLoader.fetch` and `PRSnapshotBuilder.build` (signature
+  or behavior change, e.g. the GitHub cap).
+- Tests: new fixture for the GitHub reviews payload; extend
+  `PRBoxGitHubTests`, `PRBoxAzureTests`, `PRBoxSnapshotTests`.
+- `scripts/demo_data.py` (`demo-data.sh`) — sanitizes the PRBox snapshot;
+  check whether the new field needs a fake value.
 
-- Written **only** on the full-refresh path, and **unconditionally** — it
-  witnesses "the 60s agent ran to completion", never "the fetches succeeded".
-  Every fetch in that path can fail and the heartbeat must still be written, or
-  a user with a revoked token gets told macOS is not running their agents.
-- Never written by `DeckApp`. Nothing structural prevents it: `Shared` compiles
-  into both targets, so a future refresh path could call `save` and silently
-  destroy the witness — the same way the ten snapshots already did. This wants a
-  guard, not just a comment.
-- Swept by `eraseDeckData` for free (`DeckApp.swift:707-713` removes every item
-  in the container directory).
+## Cost & rate-budget arithmetic (the PRD's recorded reason for cutting it)
 
-## The second half: corrupt vs absent
+- GitHub: 2 search calls + up to `prCount` review calls per tick, every 60s.
+  `prCount` default 6 → 8 calls/min ≈ 480/hr, well inside the 5000/hr core
+  budget. The 30/min search budget is untouched (reviews are not search).
+- The real risk is **tick duration**: serial N×RTT; concurrent fan-out (~1 RTT)
+  is the established fix (ShipBox: 9.4s serial → 2.1s concurrent).
+- **Row cap policy:** fetch review state only for the provider's own rows that
+  can render (newest `prCount` of that provider's list, pre-merge) — the merge
+  happens after, so per-provider cap is the honest bound.
 
-`ProcessSnapshotStore.load()` (`ProcessSnapshot.swift:31-34`) returns `nil` for a
-missing file **and** for undecodable bytes — `try? Data(contentsOf:)` then
-`try? decode`. Liveness maps `nil` to "never ran". A truncated snapshot from a
-crash mid-write therefore reads as a dead agent that is running perfectly well.
-`AtomicFile` makes a partial write unlikely, not impossible (it falls back to a
-plain atomic write when `replaceItemAt` throws).
+## Ambiguities to resolve in the PRD interview
 
-## Affected files
+1. **State granularity:** a coarse three-state glyph (approved / changes
+   requested / none), counts ("2✓ / 1✗"), or both? Small face has no rows — is
+   this medium/large only?
+2. **Fail-open semantics:** a per-PR review fetch failing — row shows no glyph
+   (fail-open, don't blank the queue) vs. provider-level note. Precedent says
+   fail-open + MarketBox-style partial note.
+3. **Settings surface:** show toggle (default on/off?), colors, or none
+   (glyph fixed, colored by role colors)?
+4. **Azure vote folding:** is +5/+10 both "approved" and -5/-10 both "changes
+   requested"? Is a PR with approvals *and* rejections "changes requested"?
+5. **DISMISSED / PENDING** on GitHub: excluded, presumably — confirm.
+6. **Probe before PRD?** PRBox's own lesson: live-probe the reviews endpoint
+   shape and real per-PR latency before freezing the design; Azure confirmed
+   free from the existing payload (fixtures already carry `reviewers`).
 
-- `native/DeckAgent/main.swift` — write the heartbeat at the end of the full path.
-- `native/Shared/RefreshPolicies.swift` — `AgentLiveness` + `AgentLivenessPolicy`
-  become two-witness; the shape of the `.down` case has to change.
-- `native/Shared/` — a new heartbeat model + store (small; follows
-  `ProcessSnapshot.swift`'s store pattern over `AtomicFile`).
-- `native/DeckApp/DeckApp.swift` — `evaluateLiveness()` (:537) and
-  `livenessNotice(lastRefresh:)` (:832).
-- `native/SharedTests/RefreshPoliciesTests.swift` — the policy is pure and
-  already table-tested; extend rather than replace.
+## Shell invariants this must respect
 
-## Shell invariants checked
-
-Nothing here touches a widget face, a timeline, or the settings schema (if the
-heartbeat is a file). No new TCC prompt, no subprocess, no network. The widget
-extension never reads the heartbeat — it is host-and-agent only, like
-`ContainerMigration`.
-
-**One build trap applies:** xcodegen enumerates sources at generation time, so a
-new file in `Shared/` or `SharedTests/` is silently not compiled until
-`xcodegen generate` runs — and the suite still reports success (CLAUDE.md).
-
-## Open questions for the interview
-
-1. Does the notice **name** the agent now, or stay one generic notice?
-   What does it say when both are down, versus one?
-2. The 60s agent's cadence is fixed at 60s, but the current threshold is
-   `max(4 * processRefreshInterval, 120)` — the *fast* agent's setting. Does the
-   second witness get its own threshold constant?
-3. What should a **corrupt** `processes.json` produce — its own user-visible
-   state, or just "no evidence" with the ambiguity removed internally?
-4. Does the heartbeat carry anything beyond a timestamp?
-5. `.down(lastRefresh:)` shape: one case carrying both agents, or two cases?
+- Snapshot is data, not instruction: new field tolerant, never changes the
+  fallback behavior; provider half failing never blanks the other half.
+- No Swift Charts in the widget face.
+- Pure parsing + cap policy unit-pinned in `DeckSharedTests` (XCTest, fixtures).
+- Both fetch call sites (agent + app) stay line-for-line.
+- `xcodegen generate` after adding any new test file.
+- No keychain/credentials changes — this rides the existing `.prboxGitHub` /
+  `.prboxAzure` FetchSource keys and gates.
