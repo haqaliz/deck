@@ -43,13 +43,15 @@ struct PRBoxProvider: TimelineProvider {
                 PullRequestItem(
                     id: "github:deck#41", number: 41, title: "Review queue widget",
                     repo: "deck", role: .authored, provider: .github, isDraft: false,
-                    createdAt: .now.addingTimeInterval(-7200), url: ""
+                    createdAt: .now.addingTimeInterval(-7200), url: "",
+                    reviewState: .approved
                 ),
                 PullRequestItem(
                     id: "azureDevOps:manifold#4397", number: 4397,
                     title: "Add Xcelerate to the connection UI",
                     repo: "manifold", role: .reviewing, provider: .azureDevOps, isDraft: false,
-                    createdAt: .now.addingTimeInterval(-864_000), url: ""
+                    createdAt: .now.addingTimeInterval(-864_000), url: "",
+                    reviewState: .changesRequested
                 ),
                 PullRequestItem(
                     id: "github:deck#38", number: 38, title: "wip: agent cadence",
@@ -325,6 +327,9 @@ struct PRBoxWidgetEntryView: View {
                 .foregroundStyle(pr.isDraft ? .tertiary : .secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
+            if entry.settings.showReviewState, let state = pr.reviewState {
+                reviewStateGlyph(state)
+            }
             Spacer(minLength: 4)
             Text(PRFormatting.age(from: pr.createdAt, to: entry.date))
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -332,6 +337,27 @@ struct PRBoxWidgetEntryView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
+    }
+
+    /// The review-state glyph is a second, orthogonal signal to the role dot:
+    /// has someone other than you approved (green ✓), or is someone asking
+    /// for changes (red ✗). Nothing renders when nobody has substantively
+    /// voted. Fixed colors on purpose — green/red are already the palette's
+    /// semantic colors, and the glyph must not compete with the role dot.
+    private func reviewStateGlyph(_ state: PRReviewState) -> some View {
+        let systemName: String
+        let color: Color
+        switch state {
+        case .approved:
+            systemName = "checkmark.circle.fill"
+            color = RGBA.systemGreen.color
+        case .changesRequested:
+            systemName = "xmark.circle.fill"
+            color = RGBA.systemRed.color
+        }
+        return Image(systemName: systemName)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(color)
     }
 
     private func rowLabel(for pr: PullRequestItem) -> String {

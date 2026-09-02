@@ -2082,6 +2082,7 @@ private struct PRBoxSettingsView: View {
 
             Section("Queue") {
                 Toggle("Show list", isOn: $settings.showList)
+                Toggle("Show review state", isOn: $settings.showReviewState)
                 Stepper(
                     "PR count: \(settings.prCount)",
                     value: $settings.prCount,
@@ -2089,6 +2090,9 @@ private struct PRBoxSettingsView: View {
                 )
                 .disabled(!settings.showList)
                 Text("The count is for the large widget \u{2014} medium shows at most three rows.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("Review state marks each row approved or needing changes; hiding it also skips the GitHub per-PR fetches.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
