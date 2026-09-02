@@ -723,6 +723,22 @@ final class PRBoxSettingsTests: XCTestCase {
         XCTAssertEqual(s.prCount, 8)
     }
 
+    /// Review state is a face aid, not a data source — it defaults on. A file
+    /// written before the field existed reads as on.
+    func testShowReviewStateDefaultsOn() throws {
+        XCTAssertTrue(PRBoxSettings().showReviewState)
+        let s = try JSONDecoder().decode(PRBoxSettings.self, from: Data(#"{"prCount":6}"#.utf8))
+        XCTAssertTrue(s.showReviewState)
+    }
+
+    func testShowReviewStateRoundTrips() throws {
+        var s = PRBoxSettings()
+        s.showReviewState = false
+        let data = try JSONEncoder().encode(s)
+        let decoded = try JSONDecoder().decode(PRBoxSettings.self, from: data)
+        XCTAssertFalse(decoded.showReviewState)
+    }
+
     /// `prCount` is the *large* row count; medium shows at most three, so a
     /// value out of range would silently mean something different per size.
     func testRowCountClampsToRange() throws {
