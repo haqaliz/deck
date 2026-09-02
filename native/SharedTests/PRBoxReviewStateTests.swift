@@ -175,6 +175,60 @@ final class GitHubReviewStateCapTests: XCTestCase {
     }
 }
 
+// MARK: - The per-PR query
+
+final class GitHubReviewQueryTests: XCTestCase {
+    private func item(repo: String, number: Int, path: String?) -> PullRequestItem {
+        var item = PullRequestItem(
+            id: "github:\(repo)#\(number)", number: number, title: "t", repo: repo,
+            role: .authored, provider: .github, isDraft: false,
+            createdAt: Date(timeIntervalSince1970: 0), url: ""
+        )
+        item.repositoryPath = path
+        return item
+    }
+
+    /// The reviews endpoint needs the full owner/repo, which the search
+    /// payload only carries as the tail of `repository_url`.
+    func testBuildsReviewsURLFromRepositoryPath() throws {
+        let url = try XCTUnwrap(GitHubReviewQuery.url(for: item(repo: "deck", number: 41, path: "haqaliz/deck")))
+        XCTAssertEqual(url.absoluteString, "https://api.github.com/repos/haqaliz/deck/pulls/41/reviews")
+    }
+
+    func testNoPathYieldsNoURL() {
+        XCTAssertNil(GitHubReviewQuery.url(for: item(repo: "deck", number: 41, path: nil)))
+    }
+}
+
+// MARK: - The repository path stamp
+
+final class GitHubRepositoryPathTests: XCTestCase {
+    private func fixture(_ name: String) throws -> Data {
+        let url = Bundle(for: Self.self).url(forResource: name, withExtension: "json")
+        return try Data(contentsOf: try XCTUnwrap(url, "missing fixture \(name).json"))
+    }
+
+    /// The search parser captures the full owner/repo from `repository_url`
+    /// so the loader can build per-PR review URLs without another identity
+    /// call or a model reshape.
+    func testParserStampsRepositoryPath() throws {
+        let items = try XCTUnwrap(GitHubPRParser.parse(try fixture("github_prs"), role: .authored))
+        let deck = try XCTUnwrap(items.first(where: { $0.number == 7 }))
+        XCTAssertEqual(deck.repositoryPath, "haqaliz/deck")
+        let dev = try XCTUnwrap(items.first(where: { $0.number == 1 }))
+        XCTAssertEqual(dev.repositoryPath, "haqaliz/dev")
+    }
+
+    func testAbsentRepositoryPathDecodesNil() throws {
+        let json = """
+        {"id":"github:deck#1","number":1,"title":"t","role":"authored",
+         "provider":"github","createdAt":0,"url":""}
+        """
+        let row = try JSONDecoder().decode(PullRequestItem.self, from: Data(json.utf8))
+        XCTAssertNil(row.repositoryPath)
+    }
+}
+
 // MARK: - Azure vote folding
 
 final class AzureReviewFoldTests: XCTestCase {

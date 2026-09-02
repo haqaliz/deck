@@ -66,11 +66,16 @@ struct PullRequestItem: Codable, Equatable {
     /// substantively reviewed, or when the state is unknown (a per-PR fetch
     /// failed, or a snapshot written before the field existed).
     var reviewState: PRReviewState?
+    /// Full "owner/repo" for GitHub rows — the search payload only carries the
+    /// short name, and the per-PR review query needs the owner. Fetch-internal:
+    /// the face renders nothing from it, and Azure rows leave it nil.
+    var repositoryPath: String?
 
     init(
         id: String, number: Int, title: String, repo: String, role: PRRole,
         provider: PRProvider, isDraft: Bool, createdAt: Date, url: String,
-        project: String? = nil, reviewState: PRReviewState? = nil
+        project: String? = nil, reviewState: PRReviewState? = nil,
+        repositoryPath: String? = nil
     ) {
         self.id = id
         self.number = number
@@ -83,6 +88,7 @@ struct PullRequestItem: Codable, Equatable {
         self.url = url
         self.project = project
         self.reviewState = reviewState
+        self.repositoryPath = repositoryPath
     }
 
     /// Tolerant on `provider` only. `id`, `number`, `title` and `role` stay
@@ -110,6 +116,7 @@ struct PullRequestItem: Codable, Equatable {
         url = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
         project = try c.decodeIfPresent(String.self, forKey: .project)
         reviewState = try c.decodeIfPresent(PRReviewState.self, forKey: .reviewState)
+        repositoryPath = try c.decodeIfPresent(String.self, forKey: .repositoryPath)
     }
 }
 
@@ -383,7 +390,8 @@ enum GitHubPRParser {
             provider: .github,
             isDraft: entry["draft"] as? Bool ?? false,
             createdAt: createdAt,
-            url: entry["html_url"] as? String ?? ""
+            url: entry["html_url"] as? String ?? "",
+            repositoryPath: String(repositoryURL.split(separator: "/repos/").last ?? "")
         )
     }
 
@@ -520,15 +528,33 @@ enum GitHubReviewStateCap {
 
 // MARK: - GitHub fetch (host/agent only — unsandboxed)
 
+enum GitHubReviewQuery {
+    /// The reviews endpoint needs the full owner/repo, which the search
+    /// payload only carries as the tail of `repository_url` (captured into
+    /// `PullRequestItem.repositoryPath` by the parser).
+    static func url(for item: PullRequestItem) -> URL? {
+        guard let path = item.repositoryPath, !path.isEmpty else { return nil }
+        return URL(string: "https://api.github.com/repos/\(path)/pulls/\(item.number)/reviews")
+    }
+}
+
 enum HostGitHubPRLoader {
     /// Both roles in two requests. Deliberately two and only two: the search
     /// endpoint allows 30 requests a minute against a 60s tick, and any
     /// per-repository fan-out would spend that budget for detail the face does
     /// not show.
     ///
+    /// Review state is the one exception: one `pulls/{n}/reviews` request per
+    /// row, capped to the provider's own newest `cap` rows (the only ones that
+    /// can render), fanned out concurrently — measured 6.31s serial vs 1.09s
+    /// concurrent (probe §2). A per-PR failure is a row without a glyph, never
+    /// a failed tick.
+    ///
     /// Throws `HostGitHubLoader.GitHubError` so `FetchClassifier` needs no new
     /// case.
-    static func fetch(token: String, scope: String, cap: Int) async throws -> PRRoleTotals {
+    static func fetch(
+        token: String, scope: String, cap: Int, reviewState: Bool = true
+    ) async throws -> PRRoleTotals {
         var items: [PullRequestItem] = []
         var authoredTotal = 0
         var reviewingTotal = 0
@@ -548,6 +574,17 @@ enum HostGitHubPRLoader {
             }
         }
 
+        if reviewState {
+            let states = await fetchReviewStates(
+                for: GitHubReviewStateCap.limit(items, to: cap),
+                token: token
+            )
+            for index in items.indices {
+                let key = "\(items[index].repo)#\(items[index].number)"
+                items[index].reviewState = states[key] ?? nil
+            }
+        }
+
         return PRRoleTotals(
             authoredTotal: authoredTotal,
             reviewingTotal: reviewingTotal,
@@ -555,6 +592,34 @@ enum HostGitHubPRLoader {
             reviewingCapped: false,
             items: items
         )
+    }
+
+    /// One request per capped row, concurrently. Returns a map keyed by
+    /// "repo#number"; a row whose fetch or parse failed is absent from the map
+    /// — its state reads as nil (fail-open, PRD §5).
+    private static func fetchReviewStates(
+        for targets: [PullRequestItem], token: String
+    ) async -> [String: PRReviewState?] {
+        var out: [String: PRReviewState?] = [:]
+        await withTaskGroup(of: (String, PRReviewState?).self) { group in
+            for item in targets {
+                group.addTask {
+                    let state = await reviewState(for: item, token: token)
+                    return ("\(item.repo)#\(item.number)", state)
+                }
+            }
+            for await (key, state) in group {
+                out[key] = state
+            }
+        }
+        return out
+    }
+
+    private static func reviewState(for item: PullRequestItem, token: String) async -> PRReviewState? {
+        guard let url = GitHubReviewQuery.url(for: item) else { return nil }
+        guard let data = try? await send(url: url, token: token) else { return nil }
+        guard let reviews = GitHubReviewParser.parse(data) else { return nil }
+        return PRReviewState.fold(reviews)
     }
 
     /// Same request shape as `HostGitHubLoader.fetch` — Bearer token, the
