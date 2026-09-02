@@ -190,9 +190,26 @@ the next slate. Ordered by priority, not by cost.
       large link per row, the small face carries a `widgetURL` to the top pull
       request. Restricted to http(s) with a host — the snapshot is data, not
       instruction.
-      **Open follow-ups:** multi-org, review state / approval counts (needs one
-      request per PR), a third provider. (Multi-project shipped 2026-08-28, see
-      M6; Keychain shipped 2026-08-26.)
+      **Review state shipped 2026-09-02** (`docs/planning/prbox-review-state/`):
+      each row carries a coarse `✓`/`✗` glyph — someone else approved /
+      someone is asking for changes, never your own vote — with a
+      **Show review state** toggle (default ON) that also gates the GitHub
+      per-PR fetches. Probed live, and the probe settled the two open
+      questions:
+      - **Azure needs zero extra requests.** `reviewers[]` with `vote` values
+        (+5/+10 approved, −5/−10 changes requested) is already in the
+        `pullrequests` payload the loader parses; the fold excludes the PAT
+        owner, whose own `+10` rides authored rows and must not read as
+        "approved".
+      - **GitHub is one request per PR, and the original non-goal's arithmetic
+        was too pessimistic.** The 30/min budget is for the *search* API; the
+        reviews endpoint is core (5000/hr). Measured: 6 PRs = 6.31s serial,
+        **1.09s concurrent** — the fan-out reuses `withThrowingTaskGroup`, and
+        the probe set is capped to the provider's own newest `prCount` rows
+        (the only ones that can render). A per-PR failure is a row without a
+        glyph, never a failed tick.
+      **Open follow-ups:** multi-org, a third provider. (Multi-project shipped
+      2026-08-28, see M6; Keychain shipped 2026-08-26.)
 - [x] **MarketBox** — configured tickers/crypto: price, day change, sparkline.
       Shipped 2026-08-24 (`docs/planning/marketbox/`), and the interview grew
       it past the ROADMAP entry: **mixed assets** (crypto + fiat + gold 1g) all

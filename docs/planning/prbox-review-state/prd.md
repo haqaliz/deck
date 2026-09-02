@@ -74,15 +74,15 @@ render. `prCount` is the honest bound: the merged face shows at most
 
 **Aggregation (pure, both providers).** The row's state is the **latest
 substantive review from each distinct reviewer**, folded:
-- **GitHub: latest-per-user among *substantive* reviews only** — APPROVED and
-  CHANGES_REQUESTED are the only states that count; COMMENTED, PENDING and
-  DISMISSED never do (a dismissed approval is not an approval, and a pending
-  review is not a submitted one — this is GitHub's own decision logic). Ties
-  on `submitted_at` break by array order, so the fold is deterministic.
-  - any reviewer's latest substantive review is CHANGES_REQUESTED →
-    `.changesRequested` (CHANGES_REQUESTED outranks APPROVED);
-  - else any reviewer's latest is APPROVED → `.approved`;
-  - else (no substantive reviews) → nil.
+- **GitHub: per reviewer, the latest review decides — with two exceptions.**
+  DISMISSED as the latest review removes that reviewer's contribution
+  entirely (a dismissed approval is not an approval — GitHub's documented
+  dismissal semantics); COMMENTED/PENDING as the latest do **not** supersede
+  that reviewer's earlier substantive state (commenting after approving keeps
+  the approval). The remaining latest states fold: any CHANGES_REQUESTED →
+  `.changesRequested` (outranks APPROVED); else any APPROVED → `.approved`;
+  else nil. Ties on `submitted_at` break by array order, so the fold is
+  deterministic.
 - **Azure: any negative vote (−5, −10) → `.changesRequested`** (mixed folds
   negative, mirroring GitHub's precedence); else any vote ≥ 5 → `.approved`;
   else → nil.
