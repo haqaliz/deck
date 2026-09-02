@@ -618,7 +618,7 @@ enum AzurePRParser {
         // unvoted ones makes one list mean one thing.
         if role == .reviewing, !isAwaitingVote(from: me, in: entry) { return nil }
 
-        return PullRequestItem(
+        var item = PullRequestItem(
             // The project is part of the identity, not decoration: PR numbers
             // are per repo and a repo name is only unique within its project,
             // so two projects with an `api` repo would otherwise share an id —
@@ -634,6 +634,13 @@ enum AzurePRParser {
             url: webURL(target: target, repo: repo, number: number),
             project: target.projectName
         )
+        // The reviewers array rides the same payload — zero extra requests —
+        // but the owner's own vote must not count (probe §1).
+        item.reviewState = PRReviewState.fold(
+            azureReviewers: entry["reviewers"] as? [[String: Any]] ?? [],
+            excluding: me
+        )
+        return item
     }
 
     private static func isAwaitingVote(from me: String, in entry: [String: Any]) -> Bool {

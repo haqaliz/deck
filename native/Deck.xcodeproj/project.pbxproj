@@ -11,6 +11,7 @@
 		040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F06724D8333A9A74C4156DB6 /* SmokeTests.swift */; };
 		09092463B54E5E76973919A0 /* CredentialAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812063688CE39D11189608C8 /* CredentialAccount.swift */; };
+		0A951556D9FDE10F29C3A1EB /* PRBoxReviewStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94F22FC7144344D976F92FEC /* PRBoxReviewStateTests.swift */; };
 		0ADA696C2CD6D8BE83B10C12 /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
 		0CCA2FD72913340759E87FC0 /* AgentHeartbeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69882E34EC81D79A1C21CA9C /* AgentHeartbeat.swift */; };
 		0D92FA03A401FBF07703028E /* ToolCountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */; };
@@ -215,6 +216,7 @@
 		CC6900F5EAD6D77258D86F4B /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
 		CCC6405CB841E90B3F5496EB /* AccessoryCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 694F80D691C62D93C806CD51 /* AccessoryCoreTests.swift */; };
 		CE021C5C20C5DAD337EBA0BA /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
+		CE062D2F4728EBFDF662CACE /* github_pr_reviews.json in Resources */ = {isa = PBXBuildFile; fileRef = 8F194F129DDFDA60312EA5D1 /* github_pr_reviews.json */; };
 		D0E68887D6CF1F2F3EAFA435 /* DeckAgent in Resources */ = {isa = PBXBuildFile; fileRef = EA5EADBCA4E36B421CDE1542 /* DeckAgent */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		D2669CB46930616C7A93FD65 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
@@ -387,6 +389,7 @@
 		8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialsWidgetReadsTests.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		8D9ED1410532D72412810AE4 /* CredentialKindSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialKindSearchTests.swift; sourceTree = "<group>"; };
+		8F194F129DDFDA60312EA5D1 /* github_pr_reviews.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = github_pr_reviews.json; sourceTree = "<group>"; };
 		8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicFileTests.swift; sourceTree = "<group>"; };
 		90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxSnapshot.swift; sourceTree = "<group>"; };
 		910A3754B71959068BBF2549 /* github_prs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = github_prs.json; sourceTree = "<group>"; };
@@ -394,6 +397,7 @@
 		923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchStatusCredentialsTests.swift; sourceTree = "<group>"; };
 		92C80445C9EC1F419FFAC0DB /* LiveBoxThermalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThermalTests.swift; sourceTree = "<group>"; };
 		94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSnapshot.swift; sourceTree = "<group>"; };
+		94F22FC7144344D976F92FEC /* PRBoxReviewStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxReviewStateTests.swift; sourceTree = "<group>"; };
 		970F6F6A1DFB74AABEE7826C /* ClipBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxWidget.swift; sourceTree = "<group>"; };
 		9ED77CBAE2B1B436BC1E31BF /* DeckBundleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckBundleTests.swift; sourceTree = "<group>"; };
 		9F1A60E3DD45C0E9455E6109 /* com.deck.agent.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.deck.agent.plist; sourceTree = "<group>"; };
@@ -580,6 +584,7 @@
 				C46F38858426CA0E8C705B6F /* PRBoxAzureTests.swift */,
 				77088C4EE6AAF5F06DCA7953 /* PRBoxChipTests.swift */,
 				52463282A2101289BD5E16DD /* PRBoxGitHubTests.swift */,
+				94F22FC7144344D976F92FEC /* PRBoxReviewStateTests.swift */,
 				B129C36246D87142F352B506 /* PRBoxSnapshotTests.swift */,
 				21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */,
 				D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */,
@@ -650,6 +655,7 @@
 				7416BC1BF6361C4AA3485A19 /* azure_prs.json */,
 				50A8922BFDCE56FEEAFDE601 /* coinGeckoMarkets.json */,
 				CF554B40AD43EFE339212234 /* erApiLatest.json */,
+				8F194F129DDFDA60312EA5D1 /* github_pr_reviews.json */,
 				910A3754B71959068BBF2549 /* github_prs.json */,
 				734F3EA73D9BBCC09CE2D9BF /* github_repos.json */,
 				AB6827E74F3CB5B26EA2537F /* github_user.json */,
@@ -854,6 +860,7 @@
 				01BB25D086A5451976DCC54A /* azure_prs_votes.json in Resources */,
 				713B88D412C1D34D897E1B3F /* coinGeckoMarkets.json in Resources */,
 				57F5796192299650422752B1 /* erApiLatest.json in Resources */,
+				CE062D2F4728EBFDF662CACE /* github_pr_reviews.json in Resources */,
 				7ADEE8BA9F19842AD86B99DC /* github_prs.json in Resources */,
 				C81C2A41FCF6D5766010C765 /* github_repos.json in Resources */,
 				C4364123C8EC5694D890C272 /* github_user.json in Resources */,
@@ -1055,6 +1062,7 @@
 				201551751585A84F66EDF7E1 /* PRBoxAzureTests.swift in Sources */,
 				F54A57E18318AB833DE8AF5A /* PRBoxChipTests.swift in Sources */,
 				A5B35DC87D98A640C07225DE /* PRBoxGitHubTests.swift in Sources */,
+				0A951556D9FDE10F29C3A1EB /* PRBoxReviewStateTests.swift in Sources */,
 				1B8565F372BC3AA492625092 /* PRBoxSnapshot.swift in Sources */,
 				CB54BF2A77B52929C1500593 /* PRBoxSnapshotTests.swift in Sources */,
 				933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */,

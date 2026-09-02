@@ -34,6 +34,15 @@ enum PRRole: String, Codable, Equatable {
     case reviewing
 }
 
+/// The coarse review progress of a pull request, provider-agnostic: has
+/// someone (other than you) approved, or is someone asking for changes.
+/// `nil` means no substantive review yet — or that the state could not be
+/// fetched, which renders identically (fail-open; see the PRD §5).
+enum PRReviewState: String, Codable, Equatable {
+    case approved
+    case changesRequested
+}
+
 struct PullRequestItem: Codable, Equatable {
     /// "github:owner/repo#41" — a String so a provider with non-numeric ids
     /// fits without reshaping the store.
@@ -53,11 +62,15 @@ struct PullRequestItem: Codable, Equatable {
     /// account covers several. nil for GitHub, which has no such level, and for
     /// a row written before the list existed.
     var project: String?
+    /// Other reviewers' aggregate review state. nil when nobody has
+    /// substantively reviewed, or when the state is unknown (a per-PR fetch
+    /// failed, or a snapshot written before the field existed).
+    var reviewState: PRReviewState?
 
     init(
         id: String, number: Int, title: String, repo: String, role: PRRole,
         provider: PRProvider, isDraft: Bool, createdAt: Date, url: String,
-        project: String? = nil
+        project: String? = nil, reviewState: PRReviewState? = nil
     ) {
         self.id = id
         self.number = number
@@ -69,6 +82,7 @@ struct PullRequestItem: Codable, Equatable {
         self.createdAt = createdAt
         self.url = url
         self.project = project
+        self.reviewState = reviewState
     }
 
     /// Tolerant on `provider` only. `id`, `number`, `title` and `role` stay
@@ -95,6 +109,7 @@ struct PullRequestItem: Codable, Equatable {
         createdAt = try c.decode(Date.self, forKey: .createdAt)
         url = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
         project = try c.decodeIfPresent(String.self, forKey: .project)
+        reviewState = try c.decodeIfPresent(PRReviewState.self, forKey: .reviewState)
     }
 }
 
@@ -373,6 +388,134 @@ enum GitHubPRParser {
     }
 
     private static let iso8601 = ISO8601DateFormatter()
+}
+
+// MARK: - GitHub review state (pure)
+//
+// Review state is NOT in the search payload — getting it means one request
+// per PR (the cost the original PRD cut it on; the probe re-derived it: 6 PRs
+// 6.31s serial, 1.09s concurrent — so the loader fans out and caps). The
+// payload shape is pinned by `github_pr_reviews.json`, hand-built on the
+// documented /pulls/{n}/reviews shape because the dev token's granted repos
+// have no reviewed PRs (probe §3).
+
+struct GitHubReview: Equatable {
+    let login: String
+    let state: String
+    /// nil for PENDING reviews, which are not submitted and therefore carry
+    /// no timestamp.
+    let submittedAt: Date?
+}
+
+enum GitHubReviewParser {
+    /// nil means "couldn't read the answer" — a per-PR failure leaves that
+    /// row without a glyph (fail-open), never a failed tick.
+    static func parse(_ data: Data) -> [GitHubReview]? {
+        guard let raw = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return nil
+        }
+        return raw.compactMap { entry in
+            guard
+                let user = entry["user"] as? [String: Any],
+                let login = user["login"] as? String,
+                let state = entry["state"] as? String
+            else { return nil }
+            let submitted = (entry["submitted_at"] as? String)
+                .flatMap { iso8601.date(from: $0) }
+            return GitHubReview(login: login, state: state, submittedAt: submitted)
+        }
+    }
+
+    private static let iso8601 = ISO8601DateFormatter()
+}
+
+extension PRReviewState {
+    /// Fold a PR's reviews to one coarse state.
+    ///
+    /// Per reviewer, the latest review decides, with GitHub's own two
+    /// exceptions:
+    /// - a DISMISSED latest review removes that reviewer's contribution
+    ///   entirely (a dismissed approval is not an approval);
+    /// - a COMMENTED/PENDING latest review does NOT supersede that reviewer's
+    ///   earlier substantive state (commenting after approving keeps the
+    ///   approval).
+    /// Remaining latest states fold with CHANGES_REQUESTED outranking APPROVED.
+    /// Ties on `submittedAt` break by array order, so the fold is
+    /// deterministic between ticks.
+    static func fold(_ reviews: [GitHubReview]) -> PRReviewState? {
+        let dated = reviews.compactMap { $0.submittedAt == nil ? nil : $0 }
+        let chronological = dated.sorted { $0.submittedAt! < $1.submittedAt! }
+
+        var latestByLogin: [String: GitHubReview] = [:]
+        var effectiveByLogin: [String: GitHubReview] = [:]
+        for review in chronological {
+            latestByLogin[review.login] = review
+            if review.state == "APPROVED"
+                || review.state == "CHANGES_REQUESTED"
+                || review.state == "DISMISSED" {
+                effectiveByLogin[review.login] = review
+            }
+        }
+        for login in effectiveByLogin.keys {
+            guard let latest = latestByLogin[login] else { continue }
+            switch latest.state {
+            case "APPROVED", "CHANGES_REQUESTED":
+                effectiveByLogin[login] = latest
+            case "DISMISSED":
+                effectiveByLogin[login] = nil
+            default:
+                break // COMMENTED/PENDING do not supersede; the earlier state stands.
+            }
+        }
+
+        if effectiveByLogin.values.contains(where: { $0.state == "CHANGES_REQUESTED" }) {
+            return .changesRequested
+        }
+        if effectiveByLogin.values.contains(where: { $0.state == "APPROVED" }) {
+            return .approved
+        }
+        return nil
+    }
+
+    /// Fold Azure DevOps reviewer votes to the same two states.
+    ///
+    /// The PAT owner's own entry is excluded: an authored PR carries the
+    /// author's own +10 in `reviewers` (measured live — probe §1), which must
+    /// not make the row read as approved by itself.
+    ///
+    /// Votes: +5/+10 approved; −5/−10 changes requested; 0 no vote. Mixed
+    /// folds negative, mirroring GitHub's CHANGES_REQUESTED precedence.
+    static func fold(azureReviewers: [[String: Any]], excluding me: String) -> PRReviewState? {
+        var requestedChanges = false
+        var approved = false
+        for reviewer in azureReviewers {
+            // An entry without an id is unidentifiable — it could be the
+            // owner's own vote, so it is skipped rather than counted.
+            guard let id = reviewer["id"] as? String, !id.isEmpty, id != me else { continue }
+            guard let vote = reviewer["vote"] as? Int else { continue }
+            if vote < 0 {
+                requestedChanges = true
+            } else if vote >= 5 {
+                approved = true
+            }
+        }
+        if requestedChanges { return .changesRequested }
+        if approved { return .approved }
+        return nil
+    }
+}
+
+/// Which GitHub rows are worth a per-PR review-state fetch.
+///
+/// The merged face renders at most `cap` rows and a provider cannot know the
+/// other provider's rows pre-merge, so the provider's own newest `cap` (by
+/// creation date, in the same order `PRFormatting.sorted` would produce) is
+/// the honest bound — fetching state for more of them pays the per-PR fan-out
+/// for rows that can never render.
+enum GitHubReviewStateCap {
+    static func limit(_ items: [PullRequestItem], to cap: Int) -> [PullRequestItem] {
+        Array(PRFormatting.sorted(items).prefix(cap))
+    }
 }
 
 // MARK: - GitHub fetch (host/agent only — unsandboxed)
