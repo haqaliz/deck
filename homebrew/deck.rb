@@ -21,8 +21,8 @@
 # All of this goes away the day notarization lands; drop it from here, the tap
 # and the README then.
 cask "deck" do
-  version "1.37"
-  sha256 "7f8fc6c59e8b938eca0fcf4e539df2ecc0b076544e2f386789ddb5a3dd2ec53a"
+  version "1.38"
+  sha256 "c9ff11750b5637c0f18fde3907c510b1ae74a8242a10ee8eda465cedbd754200"
 
   url "https://github.com/haqaliz/deck/releases/download/v#{version}/Deck-v#{version}.dmg"
   name "Deck"
