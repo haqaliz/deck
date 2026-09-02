@@ -122,6 +122,21 @@ def devbox(d):
         port["command"] = cycle(COMMANDS, i)
 
 
+def prbox(d):
+    # PRBox rows carry personal repo names, titles and the owner/repo path the
+    # review-state fetches ride on; the review state itself is public-shaped.
+    # A deterministic pattern keeps the screenshot representative: approved,
+    # changes requested, then no state.
+    for i, pr in enumerate(d.get("pullRequests", [])):
+        repo = cycle(REPOS, i)
+        pr["repo"] = repo
+        pr["title"] = cycle(TASKS, i)
+        pr["url"] = "https://example.com/pull/%d" % pr.get("number", i)
+        pr["project"] = None
+        pr["repositoryPath"] = "example/%s" % repo
+        pr["reviewState"] = ["approved", "changesRequested", None][i % 3]
+
+
 def weather(d):
     d["location"] = "San Francisco"
     d["country"] = "United States"
@@ -157,5 +172,6 @@ for name, fn in [
     ("calbox", calbox), ("taskbox", taskbox), ("clipbox", clipbox),
     ("gitbox", gitbox), ("shipbox", shipbox), ("devbox", devbox),
     ("weather", weather), ("processes", processes), ("marketbox", marketbox),
+    ("prbox", prbox),
 ]:
     edit(name, fn)

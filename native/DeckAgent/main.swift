@@ -279,7 +279,8 @@ Task {
             githubTotals = try await HostGitHubPRLoader.fetch(
                 token: credential.token,
                 scope: prbox.github.scope,
-                cap: prbox.prCount
+                cap: prbox.prCount,
+                reviewState: prbox.showReviewState
             )
             FetchStatusStore.record(.ok, for: .prboxGitHub)
         } catch {

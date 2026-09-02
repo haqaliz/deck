@@ -1044,6 +1044,10 @@ struct PRBoxSettings: Codable, Equatable {
     var showList = true
     /// Rows on the large face, 3...12. Medium shows at most three.
     var prCount = 6
+    /// Per-row review-state glyph (approved / changes requested). Off hides
+    /// the glyphs and skips the GitHub per-PR fetches — don't pay the rate
+    /// budget for a feature the user hid. Azure costs nothing either way.
+    var showReviewState = true
     var mineColor = RGBA.systemBlue
     var reviewColor = RGBA.systemOrange
 
@@ -1065,6 +1069,7 @@ struct PRBoxSettings: Codable, Equatable {
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
         let rawCount = try c.decodeIfPresent(Int.self, forKey: .prCount) ?? 6
         prCount = min(max(rawCount, Self.rowCountRange.lowerBound), Self.rowCountRange.upperBound)
+        showReviewState = try c.decodeIfPresent(Bool.self, forKey: .showReviewState) ?? true
         mineColor = try c.decodeIfPresent(RGBA.self, forKey: .mineColor) ?? RGBA.systemBlue
         reviewColor = try c.decodeIfPresent(RGBA.self, forKey: .reviewColor) ?? RGBA.systemOrange
     }

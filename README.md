@@ -59,7 +59,7 @@ native colors, corners and materials, at three sizes each.
 | **ShipBox** | GitHub Actions runs across up to five repos, newest first: status dots, durations, totals; clickable rows; a failed fetch says why |
 | **TaskBox** | Azure DevOps work items assigned to you across up to five projects (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
-| **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps (up to five projects) in one queue: counts, provider-tagged rows, drafts marked; click a row to open the PR; a failed fetch names the provider |
+| **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps (up to five projects) in one queue: counts, provider-tagged rows, drafts marked, per-row review state (approved / changes requested), click a row to open the PR; a failed fetch names the provider |
 | **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, and gold per gram — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
 
 All fourteen come in **small / medium / large** sizes.
@@ -198,6 +198,14 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   still render, with a line naming the one that failed. The same five slots
   serve PRBox, where the project also prefixes the repository name — a repo
   name is only unique within its project.
+- **PRBox review state** marks each row `✓` (green — someone else has
+  approved) or `✗` (red — someone is asking for changes); a row with no
+  substantive review shows nothing. It is *other* reviewers' aggregate state,
+  never your own, so the review queue is prioritizable at a glance. Off by
+  choice in the PRBox tab ("Show review state", on by default) — hiding it
+  also skips the per-PR GitHub fetches. Azure DevOps needs no extra requests
+  (the votes ride the same payload); GitHub costs one request per row, capped
+  to the rows that can render, fanned out concurrently.
 - **TaskBox lanes** are configurable. Azure DevOps runs two vocabularies on one
   board — tasks move `To Do → In Progress`, while backlog items move
   `New → Approved → Committed` — so the TaskBox tab has a comma-separated,
