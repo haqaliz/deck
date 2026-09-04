@@ -22,6 +22,117 @@ private func makeRun(
     )
 }
 
+final class ShipBoxFairMergeTests: XCTestCase {
+    /// The point of the feature: a busy repo's history must not hide a quiet
+    /// repo's latest run. With k repos, every repo's newest run sits in the
+    /// first k positions.
+    func testEveryReposNewestRunSitsInTheFirstRepoCountPositions() {
+        let merged = ShipBoxMerge.fairMerge([
+            [makeRun("a/busy", 3, at: 300), makeRun("a/busy", 2, at: 200), makeRun("a/busy", 1, at: 100)],
+            [makeRun("b/quiet", 1, at: 150)],
+            [makeRun("c/mid", 2, at: 250), makeRun("c/mid", 1, at: 50)],
+        ])
+        XCTAssertEqual(Set(merged.prefix(3).map(\.repo)), ["a/busy", "b/quiet", "c/mid"])
+    }
+
+    /// Round-robin, not quota: a busy repo's second-newest run never outranks
+    /// a quiet repo's newest — once every repo has one slot, the second round
+    /// begins.
+    func testABusyReposSecondNewestDoesNotOutrankAQuietReposNewest() {
+        let merged = ShipBoxMerge.fairMerge([
+            [makeRun("a/busy", 2, at: 100), makeRun("a/busy", 1, at: 99)],
+            [makeRun("b/quiet", 1, at: 98)],
+        ])
+        XCTAssertEqual(merged.map(\.repo), ["a/busy", "b/quiet", "a/busy"])
+    }
+
+    /// The first element stays the globally newest run, so the small face's
+    /// link target and the "latest build" story do not change.
+    func testTheFirstElementIsStillTheGloballyNewestRun() {
+        let merged = ShipBoxMerge.fairMerge([
+            [makeRun("a/x", 3, at: 300), makeRun("a/x", 2, at: 100)],
+            [makeRun("b/y", 1, at: 250)],
+            [makeRun("c/z", 1, at: 10)],
+        ])
+        XCTAssertEqual(merged.first?.repo, "a/x")
+        XCTAssertEqual(merged.first?.runNumber, 3)
+    }
+
+    /// Within a round, the freshest runs come first — the top of the list
+    /// still reads "what is newest right now".
+    func testWithinARoundRunsOrderByCreationDate() {
+        let merged = ShipBoxMerge.fairMerge([
+            [makeRun("a/x", 1, at: 200)],
+            [makeRun("b/y", 1, at: 300)],
+            [makeRun("c/z", 1, at: 100)],
+        ])
+        XCTAssertEqual(merged.map(\.repo), ["b/y", "a/x", "c/z"])
+    }
+
+    /// A repo's own runs stay newest-first relative to each other.
+    func testAReposOwnRunsStayNewestFirst() {
+        let merged = ShipBoxMerge.fairMerge([
+            [makeRun("a/x", 5, at: 500), makeRun("a/x", 4, at: 400), makeRun("a/x", 3, at: 300)],
+            [makeRun("b/y", 1, at: 450)],
+        ])
+        XCTAssertEqual(merged.filter { $0.repo == "a/x" }.map(\.runNumber), [5, 4, 3])
+    }
+
+    /// Two runs created in the same second must not reorder between ticks —
+    /// the same stability rule the existing merge pins; ties break by the
+    /// order the repos were fetched.
+    func testTiesBreakStablyByFetchOrder() {
+        let first = ShipBoxMerge.fairMerge([
+            [makeRun("a/first", 1, at: 100)],
+            [makeRun("b/second", 2, at: 100)],
+        ])
+        XCTAssertEqual(first.map(\.repo), ["a/first", "b/second"])
+        let second = ShipBoxMerge.fairMerge([
+            [makeRun("a/first", 1, at: 100)],
+            [makeRun("b/second", 2, at: 100)],
+        ])
+        XCTAssertEqual(first, second)
+    }
+
+    /// One repo is the current behavior: pure newest-first.
+    func testOneRepoDegradesToTheCurrentMerge() {
+        let runs = [makeRun("a/x", 3, at: 300), makeRun("a/x", 2, at: 200), makeRun("a/x", 1, at: 100)]
+        XCTAssertEqual(ShipBoxMerge.fairMerge([runs]), runs)
+    }
+
+    /// No repos, or only empty fetches, contribute nothing.
+    func testEmptyInputsContributeNothing() {
+        XCTAssertTrue(ShipBoxMerge.fairMerge([]).isEmpty)
+        XCTAssertTrue(ShipBoxMerge.fairMerge([[], [], []]).isEmpty)
+    }
+
+    /// Repos with fewer runs than the deepest round are skipped, not padded
+    /// with placeholders.
+    func testShortReposAreSkippedNotPadded() {
+        let merged = ShipBoxMerge.fairMerge([
+            [makeRun("a/x", 1, at: 100)],
+            [makeRun("b/y", 3, at: 300), makeRun("b/y", 2, at: 200), makeRun("b/y", 1, at: 50)],
+        ])
+        XCTAssertEqual(merged.map(\.runNumber), [3, 1, 2, 1])
+    }
+
+    /// The page-sufficiency property: with every repo long enough, filling
+    /// the first runCount positions needs at most ceil(runCount / repoCount)
+    /// runs from any one repo — within today's per_page = max(runCount, 2).
+    /// (The uneven case — short repos exhausting early — is bounded by
+    /// runCount itself, which per_page already supplies.)
+    func testFillingTheVisibleWindowConsumesAtMostCeilPerRepo() {
+        let perRepo = (0..<5).map { index in
+            (1...8).map { makeRun("r\(index)/repo", $0, at: TimeInterval($0 * 10 + index)) }
+        }
+        let merged = ShipBoxMerge.fairMerge(perRepo)
+        let visible = Array(merged.prefix(8))
+        let counts = Dictionary(grouping: visible, by: \.repo).mapValues(\.count)
+        XCTAssertEqual(counts.values.max(), 2, "ceil(8/5) = 2 runs from any repo in the first 8")
+        XCTAssertEqual(counts.count, 5, "all five repos are visible in the first 8")
+    }
+}
+
 final class ShipBoxMergeTests: XCTestCase {
     func testRunsFromSeveralReposInterleaveByCreationDate() {
         let merged = ShipBoxMerge.merge([
