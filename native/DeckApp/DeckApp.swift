@@ -2196,6 +2196,10 @@ private struct ShipBoxSettingsView: View {
                 Toggle("Show runs list", isOn: $settings.showList)
                 Stepper("Run count: \(settings.runCount)", value: $settings.runCount, in: 2...8)
                     .disabled(!settings.showList)
+                Toggle("Fair share across repos", isOn: $settings.fairShare)
+                Text("Each repo's newest run is shown before any repo repeats.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Status colors") {
                 ColorPicker("Queued", selection: $settings.queuedColor.color)
