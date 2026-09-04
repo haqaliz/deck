@@ -333,7 +333,9 @@ enum HostGitHubLoader {
             }
         }
 
-        let merged = ShipBoxMerge.merge(perRepoRuns)
+        let merged = settings.fairShare
+            ? ShipBoxMerge.fairMerge(perRepoRuns)
+            : ShipBoxMerge.merge(perRepoRuns)
         // Nothing came back and something broke: report the failure and let the
         // last-good snapshot stand rather than overwriting it with emptiness.
         if merged.isEmpty, let firstError { throw firstError }
