@@ -10,9 +10,10 @@ import Foundation
 // MARK: - Symbol resolution
 
 enum MarketSymbolResolver {
-    /// Curated crypto symbol → CoinGecko id. A symbol outside the map is
-    /// surfaced as "Unknown", never silently dropped. This map is also the
-    /// settings picker's source, so the two can never disagree.
+    /// Curated crypto symbol → CoinGecko id. Since `marketbox-coin-lookup`
+    /// this is no longer the catalogue: it is the migration table for files
+    /// written before ids were stored, and the picker's offline "Popular"
+    /// list. Nothing consults it at fetch time.
     static let cryptoIDs: [String: String] = [
         "BTC": "bitcoin",
         "ETH": "ethereum",
@@ -95,26 +96,6 @@ enum MarketSymbolResolver {
     /// `GOLD` means 1 gram of gold (spot per troy ounce ÷ 31.1035).
     static let goldSymbol = "GOLD"
 
-    /// Every symbol the settings picker offers, in display order: crypto,
-    /// then GOLD, then the fiat codes.
-    static var allPickableSymbols: [String] {
-        Array(cryptoIDs.keys).sorted() + [goldSymbol] + Array(fiatISOs).sorted()
-    }
-
-    /// "BTC → Bitcoin", "USD → US Dollar", "GOLD → Gold"; falls back to the
-    /// symbol itself when there is no name.
-    static func pickerLabel(for symbol: String) -> String {
-        let s = symbol.uppercased()
-        let name: String
-        switch kind(for: s) {
-        case .crypto: name = cryptoNames[s] ?? ""
-        case .fiat: name = fiatNames[s] ?? ""
-        case .gold: name = "Gold"
-        case nil: name = ""
-        }
-        return name.isEmpty ? s : "\(s) — \(name)"
-    }
-
     static func cryptoID(for symbol: String) -> String? {
         cryptoIDs[symbol.uppercased()]
     }
@@ -145,6 +126,123 @@ enum MarketSymbolResolver {
             .reduce(into: []) { result, symbol in
                 if !result.contains(symbol) { result.append(symbol) }
             }
+    }
+}
+
+// MARK: - Configured tickers
+
+/// One configured row: the CoinGecko id is what the agent fetches, the symbol
+/// is what the face draws, and the name is cached so the settings list still
+/// reads right with no network.
+///
+/// `kind` is **derived, never stored**, so the two can never disagree.
+struct MarketTicker: Codable, Equatable {
+    /// Uppercased for display: "BTC".
+    var symbol: String
+    /// "Bitcoin" — cached at pick time for offline display.
+    var name: String
+    /// The CoinGecko id ("bitcoin"). Empty for fiat and gold, which are not
+    /// CoinGecko rows at all.
+    var coinID: String
+    /// `market_cap_rank` at pick time. Kept because it records what was
+    /// chosen; not rendered in the list, because a stored rank goes stale.
+    var rank: Int?
+
+    init(symbol: String, name: String, coinID: String, rank: Int? = nil) {
+        self.symbol = symbol
+        self.name = name
+        self.coinID = coinID
+        self.rank = rank
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case symbol, name, coinID, rank
+    }
+
+    /// Tolerant on purpose: a throw in here reaches
+    /// `MarketBoxSettings.init(from:)` and then `DeckSettings.load()`, which
+    /// falls back to a blank `DeckSettings()` on any decode error — one
+    /// hand-edited entry would reset every setting in the file. An entry with
+    /// no symbol survives decoding and is dropped by `normalized`.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        symbol = try c.decodeIfPresent(String.self, forKey: .symbol) ?? ""
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        coinID = try c.decodeIfPresent(String.self, forKey: .coinID) ?? ""
+        rank = try c.decodeIfPresent(Int.self, forKey: .rank)
+    }
+
+    /// Crypto is "has an id"; the curated table is not consulted, which is the
+    /// whole point — a coin outside it must still price.
+    var kind: MarketKind? {
+        if !coinID.isEmpty { return .crypto }
+        let s = symbol.uppercased()
+        if s == MarketSymbolResolver.goldSymbol { return .gold }
+        if MarketSymbolResolver.fiatISOs.contains(s) { return .fiat }
+        return nil
+    }
+}
+
+/// The add/remove list's operations, kept pure so the settings view stays
+/// layout only. These replace what twelve numbered slots did implicitly:
+/// ordering, the cap, and what happens when a symbol is already taken.
+enum MarketTickerList {
+    enum AddResult: Equatable {
+        case added([MarketTicker])
+        /// The symbol already in the list. Refused **out loud** — the old
+        /// slot UI deduped silently, so clicking Add appeared to do nothing.
+        case duplicate(String)
+        case full
+    }
+
+    static func adding(_ ticker: MarketTicker, to list: [MarketTicker]) -> AddResult {
+        let symbol = ticker.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if let existing = list.first(where: { $0.symbol.uppercased() == symbol }) {
+            return .duplicate(existing.symbol)
+        }
+        guard list.count < MarketBoxSettings.maxCount else { return .full }
+        var next = list
+        var added = ticker
+        added.symbol = symbol
+        next.append(added)
+        return .added(next)
+    }
+
+    /// Order *is* display order, so this is the whole reordering affordance.
+    static func moved(_ list: [MarketTicker], at index: Int, by offset: Int) -> [MarketTicker] {
+        let target = index + offset
+        guard list.indices.contains(index), list.indices.contains(target) else { return list }
+        var next = list
+        next.swapAt(index, target)
+        return next
+    }
+
+    static func removing(at index: Int, from list: [MarketTicker]) -> [MarketTicker] {
+        guard list.indices.contains(index) else { return list }
+        var next = list
+        next.remove(at: index)
+        return next
+    }
+}
+
+/// The curated map's remaining job: turning the symbols older files stored into
+/// tickers. It is no longer consulted at fetch time.
+enum MarketTickerMigration {
+    static let defaults: [MarketTicker] = tickers(fromSymbols: ["BTC", "ETH", "USD", "GOLD"])
+
+    /// A symbol the table does not know survives with an empty `coinID` — it
+    /// still renders as `Unknown: X`, which is what it did before. Losing it
+    /// silently would be worse than carrying it unresolvable.
+    static func tickers(fromSymbols symbols: [String]) -> [MarketTicker] {
+        symbols.map { raw in
+            let symbol = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            return MarketTicker(
+                symbol: symbol,
+                name: MarketSymbolResolver.cryptoNames[symbol]
+                    ?? MarketSymbolResolver.name(for: symbol),
+                coinID: MarketSymbolResolver.cryptoID(for: symbol) ?? ""
+            )
+        }
     }
 }
 
@@ -203,17 +301,45 @@ struct MarketBuild: Equatable {
     var rows: [MarketRow]
     var unresolved: [String]
     var omitted: [String]
+    /// Tickers the source answered about by saying nothing: the fetch
+    /// succeeded and the id was not in the response. Measured 2026-09-05 —
+    /// CoinGecko drops unknown ids silently with a 200, so this is the only
+    /// evidence there is. Distinct from `omitted`, because "the source is
+    /// down" and "this coin has no data" have different fixes.
+    var noData: [String] = []
 
     var isEmpty: Bool { rows.isEmpty }
 
-    /// "Unknown: XRPX · Gold unavailable · Crypto unavailable"; nil when fine.
+    /// "Unknown: XRPX · No data: DEAD · Gold unavailable"; nil when fine.
     var note: String? {
         var parts: [String] = []
         if !unresolved.isEmpty {
             parts.append("Unknown: " + unresolved.joined(separator: ", "))
         }
+        if !noData.isEmpty {
+            parts.append("No data: " + noData.joined(separator: ", "))
+        }
         parts.append(contentsOf: omitted.map { $0 + " unavailable" })
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+}
+
+/// What the loader will ask the network for, decided purely.
+enum MarketFetchPlan {
+    /// The CoinGecko ids to price, deduped, in order, blanks dropped.
+    ///
+    /// **Never build a request from an empty list.** Measured 2026-09-05:
+    /// `coins/markets?ids=` with no ids answers 200 with the top 100 coins
+    /// (83.6 KB), which would render as though it were the user's list.
+    static func cryptoIDs(for tickers: [MarketTicker]) -> [String] {
+        var kept: [String] = []
+        var seen: Set<String> = []
+        for ticker in tickers {
+            let id = ticker.coinID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !id.isEmpty, seen.insert(id).inserted else { continue }
+            kept.append(id)
+        }
+        return kept
     }
 }
 
@@ -225,10 +351,14 @@ enum MarketBuilder {
     /// that could be built are still returned — the widget renders a partial
     /// list with a note rather than blanking. `isEmpty` tells the caller
     /// whether to record a failure instead.
+    /// `quotesByID` has three states, and conflating two of them tells a user
+    /// who owns only USD and GOLD that crypto is unavailable:
+    /// `[:]` = no crypto tickers, nothing was asked · `nil` = the fetch was
+    /// attempted and failed · populated = the fetch succeeded.
     static func build(
         display: MarketCurrency,
-        symbols: [String],
-        quotesByID: [String: CryptoQuote],
+        tickers: [MarketTicker],
+        quotesByID: [String: CryptoQuote]?,
         tmn: Double?,
         goldUSDPerGram: Double?,
         fx: [String: Double]?
@@ -236,13 +366,23 @@ enum MarketBuilder {
         var rows: [MarketRow] = []
         var unresolved: [String] = []
         var omitted: [String] = []
+        var noData: [String] = []
 
-        for symbol in symbols {
-            switch MarketSymbolResolver.kind(for: symbol) {
+        for ticker in tickers {
+            let symbol = ticker.symbol
+            switch ticker.kind {
             case .crypto:
+                guard let quotesByID else {
+                    // The fetch failed outright.
+                    omitted.append(symbol)
+                    continue
+                }
+                guard let quote = quotesByID[ticker.coinID] else {
+                    // It succeeded and said nothing about this id.
+                    noData.append(symbol)
+                    continue
+                }
                 guard
-                    let id = MarketSymbolResolver.cryptoID(for: symbol),
-                    let quote = quotesByID[id],
                     let priceUSD = quote.priceUSD,
                     let price = MarketConverter.perUSD(priceUSD, display: display, tmn: tmn, fx: fx)
                 else {
@@ -297,19 +437,26 @@ enum MarketBuilder {
             }
         }
 
-        collapse(omitted: &omitted, rows: rows, symbols: symbols)
+        collapse(omitted: &omitted, rows: rows, symbols: tickers.map(\.symbol), kinds: tickers.map(\.kind))
 
-        return MarketBuild(rows: rows, unresolved: unresolved, omitted: omitted)
+        return MarketBuild(rows: rows, unresolved: unresolved, omitted: omitted, noData: noData)
     }
 
     /// When every configured symbol of a kind failed, name the kind once
     /// ("Crypto", "Rates", "Gold") instead of listing each symbol.
-    private static func collapse(omitted: inout [String], rows: [MarketRow], symbols: [String]) {
-        let crypto = symbols.filter { MarketSymbolResolver.kind(for: $0) == .crypto }
-        let fiat = symbols.filter { MarketSymbolResolver.kind(for: $0) == .fiat }
-        let gold = symbols.contains { MarketSymbolResolver.kind(for: $0) == .gold }
+    private static func collapse(omitted: inout [String], rows: [MarketRow], symbols: [String], kinds: [MarketKind?]) {
+        let pairs = zip(symbols, kinds)
+        let crypto = pairs.filter { $0.1 == .crypto }.map(\.0)
+        let fiat = pairs.filter { $0.1 == .fiat }.map(\.0)
+        let gold = kinds.contains { $0 == .gold }
 
-        if !crypto.isEmpty, !rows.contains(where: { $0.kind == .crypto }) {
+        // Guarded on there actually being an omitted crypto symbol: a crypto
+        // ticker can now fail into `noData` instead, and collapsing on
+        // "no crypto rows" alone would claim the source was unavailable when
+        // it answered fine and simply had nothing for that coin.
+        if !crypto.isEmpty,
+           !rows.contains(where: { $0.kind == .crypto }),
+           omitted.contains(where: { crypto.contains($0) }) {
             omitted.removeAll { crypto.contains($0) }
             omitted.append("Crypto")
         }
@@ -341,9 +488,31 @@ enum MarketPriceFormatter {
             return prefix + grouped(Int(value.rounded()))
         case 1..<1_000:
             return prefix + String(format: "%.2f", value)
-        default:
+        case 0.01..<1:
             return prefix + String(format: "%.4f", value)
+        case 1e-9..<0.01:
+            // %.4f printed "$0.0000" for SHIB, PEPE and BONK — three symbols
+            // in the shipped curated list — so a 50% move looked like no
+            // move. Significant digits instead, trailing zeros trimmed.
+            return prefix + significant(value, digits: 3)
+        case 0:
+            return prefix + "0.00"
+        default:
+            // Thirteen leading zeros do not fit a widget row.
+            return prefix + String(format: "%.1e", value)
         }
+    }
+
+    /// `5.47e-06` → `0.00000547`, `0.005` → `0.005`.
+    private static func significant(_ value: Double, digits: Int) -> String {
+        let exponent = Int(floor(log10(abs(value))))
+        let decimals = max(0, digits - 1 - exponent)
+        var text = String(format: "%.\(decimals)f", value)
+        if text.contains(".") {
+            while text.hasSuffix("0") { text.removeLast() }
+            if text.hasSuffix(".") { text.removeLast() }
+        }
+        return text
     }
 
     /// "+1.0%" / "-2.4%" / "0.0%"; nil when there is no change (fiat/gold rows).

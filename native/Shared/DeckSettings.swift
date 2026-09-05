@@ -1084,11 +1084,12 @@ struct PRBoxSettings: Codable, Equatable {
 // MARK: - MarketBox
 
 struct MarketBoxSettings: Codable, Equatable {
-    /// The configured symbols in display order, deduped and uppercased; at
-    /// most `maxCount`. Picked from the curated list in the settings tab —
-    /// the free-text field was retired because symbols typed blind were
-    /// unknowable to the user.
-    var tickers = ["BTC", "ETH", "USD", "GOLD"]
+    /// The configured tickers in display order, deduped by symbol and capped
+    /// at `maxCount`. Each carries the CoinGecko id, so the agent no longer
+    /// resolves symbols through a curated table and the catalogue is not
+    /// capped at 43 coins.
+    var tickerList = MarketTickerMigration.defaults
+
     /// The one display currency every row is priced in.
     var displayCurrency = MarketCurrency.usd
     /// Rows on the large face (1...12). Medium shows at most 4, small at most
@@ -1112,12 +1113,20 @@ struct MarketBoxSettings: Codable, Equatable {
         // with. Carry it over rather than silently resetting someone's list;
         // a file with neither key keeps the default list.
         let legacy = try c.decodeIfPresent(String.self, forKey: .legacySymbols)
-        if let decoded = try c.decodeIfPresent([String].self, forKey: .tickers) {
-            tickers = Self.normalized(decoded)
+        // Four steps, newest shape first. `tickerList` is a *new* key on
+        // purpose: reusing `tickers` with a new element type would make an
+        // older Deck throw in here, and `DeckSettings.load()` falls back to a
+        // blank `DeckSettings()` on any decode error — resetting every
+        // setting. With a new key a downgrade costs this list alone.
+        if let list = try c.decodeIfPresent([MarketTicker].self, forKey: .tickerList) {
+            tickerList = Self.normalized(list)
+        } else if let decoded = try c.decodeIfPresent([String].self, forKey: .tickers) {
+            tickerList = Self.normalized(MarketTickerMigration.tickers(fromSymbols: decoded))
         } else if let legacy {
-            tickers = MarketSymbolResolver.normalizedSymbols(from: legacy)
+            tickerList = Self.normalized(MarketTickerMigration.tickers(
+                fromSymbols: MarketSymbolResolver.normalizedSymbols(from: legacy)))
         } else {
-            tickers = ["BTC", "ETH", "USD", "GOLD"]
+            tickerList = MarketTickerMigration.defaults
         }
         displayCurrency = MarketCurrency(rawValue: try c.decodeIfPresent(String.self, forKey: .displayCurrency) ?? "") ?? .usd
         // Floor at 1, cap at maxCount so a hand-edited file cannot push more
@@ -1134,7 +1143,10 @@ struct MarketBoxSettings: Codable, Equatable {
     /// migrates once and then stays clean.
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(tickers, forKey: .tickers)
+        // Only `tickerList`: the legacy `tickers` array and `symbols` string
+        // are read on the way in and dropped on the way out, so a file
+        // migrates once and then stays clean.
+        try c.encode(tickerList, forKey: .tickerList)
         try c.encode(displayCurrency, forKey: .displayCurrency)
         try c.encode(tickerCount, forKey: .tickerCount)
         try c.encode(showDayChange, forKey: .showDayChange)
@@ -1143,21 +1155,25 @@ struct MarketBoxSettings: Codable, Equatable {
         try c.encode(accentColor, forKey: .accentColor)
     }
 
-    /// Uppercased, deduped, capped at `maxCount`, empty symbols dropped.
-    static func normalized(_ symbols: [String]) -> [String] {
-        var seen: [String] = []
-        for symbol in symbols {
-            let s = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-            if !s.isEmpty, !seen.contains(s) {
-                seen.append(s)
-            }
-            if seen.count == maxCount { break }
+    /// One symbol, one row: the face draws `Text(row.symbol)` and nothing
+    /// else, so two rows reading "PEPE" would be indistinguishable. Identity
+    /// is the `coinID`; the symbol is what makes it unique in a list.
+    static func normalized(_ tickers: [MarketTicker]) -> [MarketTicker] {
+        var kept: [MarketTicker] = []
+        var seen: Set<String> = []
+        for ticker in tickers {
+            var ticker = ticker
+            ticker.symbol = ticker.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            ticker.coinID = ticker.coinID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !ticker.symbol.isEmpty, seen.insert(ticker.symbol).inserted else { continue }
+            kept.append(ticker)
+            if kept.count == maxCount { break }
         }
-        return seen
+        return kept
     }
 
     private enum CodingKeys: String, CodingKey {
-        case tickers, displayCurrency, tickerCount
+        case tickerList, tickers, displayCurrency, tickerCount
         case showDayChange, upColor, downColor, accentColor
         case legacySymbols = "symbols"
     }

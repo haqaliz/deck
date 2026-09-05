@@ -192,13 +192,16 @@ enum HostMarketLoader {
     /// outcome and the widget keeps its last-good snapshot.
     static func fetch(settings: MarketBoxSettings) async throws -> MarketSnapshot {
         // Settings normalize on decode (uppercase, dedupe, cap at maxCount).
-        let symbols = settings.tickers
-        guard !symbols.isEmpty else { throw MarketLoaderError.notConfigured }
+        let tickers = settings.tickerList
+        guard !tickers.isEmpty else { throw MarketLoaderError.notConfigured }
 
         let display = settings.displayCurrency
-        let needsCrypto = symbols.contains { MarketSymbolResolver.kind(for: $0) == .crypto }
-        let needsGold = symbols.contains { MarketSymbolResolver.kind(for: $0) == .gold }
-        let needsFiat = symbols.contains { MarketSymbolResolver.kind(for: $0) == .fiat }
+        // Kinds come off the tickers now, never from the curated table — that
+        // table answers nil for every coin outside its 43 entries.
+        let cryptoIDs = MarketFetchPlan.cryptoIDs(for: tickers)
+        let needsCrypto = !cryptoIDs.isEmpty
+        let needsGold = tickers.contains { $0.kind == .gold }
+        let needsFiat = tickers.contains { $0.kind == .fiat }
         // IRT/IRR need the free-market Toman anchor; CAD/EUR/AED displays need
         // the open.er-api rate set (as do fiat tickers).
         let needsToman = display == .irt || display == .irr
@@ -207,11 +210,21 @@ enum HostMarketLoader {
         // Fetch only what the tickers + display currency need, and remember the
         // first failure so the "no rows at all" case can be classified honestly.
         var firstError: Error?
-        let crypto: [CryptoQuote]?
+        // Three states, and the difference is load-bearing (see
+        // `MarketBuilder.build`): nil only ever means "attempted and failed".
+        var quotesByID: [String: CryptoQuote]? = [:]
         if needsCrypto {
-            do { crypto = try await fetchCrypto(symbols: symbols) }
-            catch { crypto = nil; firstError = firstError ?? error }
-        } else { crypto = nil }
+            do {
+                var map: [String: CryptoQuote] = [:]
+                for quote in try await fetchCrypto(ids: cryptoIDs) where !quote.id.isEmpty {
+                    map[quote.id] = quote
+                }
+                quotesByID = map
+            } catch {
+                quotesByID = nil
+                firstError = firstError ?? error
+            }
+        }
 
         let goldUSDPerOunce: Double?
         if needsGold {
@@ -231,14 +244,9 @@ enum HostMarketLoader {
             catch { fx = nil; firstError = firstError ?? error }
         } else { fx = nil }
 
-        var quotesByID: [String: CryptoQuote] = [:]
-        for quote in crypto ?? [] where !quote.id.isEmpty {
-            quotesByID[quote.id] = quote
-        }
-
         let build = MarketBuilder.build(
             display: display,
-            symbols: symbols,
+            tickers: tickers,
             quotesByID: quotesByID,
             tmn: toman,
             goldUSDPerGram: goldUSDPerOunce.map(MarketConverter.goldPerGram),
@@ -259,8 +267,10 @@ enum HostMarketLoader {
         )
     }
 
-    private static func fetchCrypto(symbols: [String]) async throws -> [CryptoQuote] {
-        let ids = symbols.compactMap { MarketSymbolResolver.cryptoID(for: $0) }
+    /// Second belt on the empty-ids guard: `MarketFetchPlan` already keeps the
+    /// caller from asking, and this keeps the request from ever being built.
+    private static func fetchCrypto(ids: [String]) async throws -> [CryptoQuote] {
+        guard !ids.isEmpty else { return [] }
         let query = ids.joined(separator: ",")
         let url = URL(string: "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=\(query)&price_change_percentage=24h")!
         let data = try await get(url)

@@ -248,10 +248,49 @@ the next slate. Ordered by priority, not by cost.
       slot pickers, the ClockBox pattern) instead of typed free text — a
       blind-typed symbol was unknowable to the user; the old `symbols` string
       migrates to `tickers`.
+      **Live coin lookup shipped 2026-09-05**
+      (`docs/planning/marketbox-coin-lookup/`): settings hold the CoinGecko
+      **id**, not a bare symbol, so the agent stops resolving through a
+      hand-written table and the catalogue opens from 43 coins to all of them.
+      The twelve numbered slots become an add/remove list with an **Add
+      Ticker…** search sheet. **Probed live first, and the probe rewrote the
+      plan four times:**
+      - **`/coins/list` — the endpoint this entry named — is the wrong one.**
+        1.24 MB, 19,594 coins, `{id, symbol, name}` with no rank, and **2,396
+        of 15,090 distinct symbols map to more than one coin** (`BTC` is 11,
+        `PEPE` 21, `GOLD` 9; alphabetically `batcat` precedes `bitcoin`).
+        Picking by symbol over it recreates the blind-typed-symbol problem the
+        curated list was introduced to kill.
+      - **`/search?query=` is the right one:** 10.5 KB, keyless, server-side,
+        already market-cap ordered, and carrying the `market_cap_rank` that
+        makes a choice possible. `/coins/markets?per_page=250` works (197 KB)
+        but is unnecessary — the curated 43 serve the empty-query state for
+        free and offline, which is all that map is still for.
+      - **The rate limit is shared with the agent and bit during the probe:**
+        six requests in ~2 minutes returned **429 with `retry-after: 55`**,
+        while the agent already spends up to 4 calls per 60s tick on the same
+        public IP. A keystroke-per-request picker would blank MarketBox while
+        the user was choosing a ticker. Hence a 600 ms debounce, a 2 s floor, a
+        per-query cache, host-app-only execution, and a 429 that degrades the
+        sheet and can never fail a tick.
+      - **CoinGecko drops an unknown id silently** — `ids=bitcoin,not-a-coin`
+        answers 200 with one row, and an **empty `ids=` answers 200 with the
+        top 100 coins (83.6 KB)**, which would render as the user's own list.
+        So the builder now separates "the source is down" (`Crypto
+        unavailable`) from "this coin has no data" (`No data: X`), and the
+        empty-ids request is guarded twice.
+      Two things the self-critique caught that the PRD had wrong: keyed on
+      symbols the whole feature would have rendered `Unknown: PURPE` for every
+      new coin (the curated table answers nil outside its 43), and a duplicate
+      symbol would have been dropped silently — the face draws `Text(row.symbol)`
+      alone, so one symbol means one row, refused out loud.
+      **Fixed in passing:** `MarketPriceFormatter` fell through to `%.4f` below
+      1.0, so **SHIB, PEPE and BONK — all three already in the shipped curated
+      list — rendered as `$0.0000` in v1.39**, and a 50% move looked identical
+      to no move. Sub-cent prices now use significant digits.
       **Open follow-ups:** fiat/gold 24h % + sparklines (needs a history
       source), stocks/indices, the Toman rate's own 24h change on the USD row
-      (Wallex `24h_ch`, already parsed), a live `/coins/list` lookup instead
-      of the curated symbol map.
+      (Wallex `24h_ch`, already parsed).
 - [x] **BlueBox** — peripheral battery (AirPods, Magic Mouse/Keyboard).
       **Already shipped inside BatBox** (`542c893`,
       `docs/planning/batbox-accessories/`) and ticked in M3; this entry was

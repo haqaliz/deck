@@ -15,23 +15,23 @@ final class MarketSymbolResolverTests: XCTestCase {
         XCTAssertEqual(MarketSymbolResolver.cryptoID(for: "WBTC"), "wrapped-bitcoin")
     }
 
-    /// Every pickable symbol must resolve — the picker list and the loader can
-    /// never disagree.
-    func testEveryPickableSymbolResolvesToAKind() {
-        let symbols = MarketSymbolResolver.allPickableSymbols
-        XCTAssertEqual(symbols.count, MarketSymbolResolver.cryptoIDs.count + MarketSymbolResolver.fiatISOs.count + 1)
-        XCTAssertTrue(symbols.contains("GOLD"))
-        XCTAssertTrue(symbols.contains("USD"))
-        for symbol in symbols {
-            XCTAssertNotNil(MarketSymbolResolver.kind(for: symbol), "\(symbol) must resolve")
-        }
-    }
+    /// Everything the picker's offline sections offer must produce a usable
+    /// ticker — the list the user sees and the thing the loader prices can
+    /// never disagree. Same invariant the old `allPickableSymbols` test
+    /// pinned, now against the path that actually runs.
+    func testEveryOfferedSymbolBecomesAUsableTicker() {
+        let offered = MarketSymbolResolver.cryptoIDs.keys.sorted()
+            + [MarketSymbolResolver.goldSymbol]
+            + MarketSymbolResolver.fiatISOs.sorted()
+        let tickers = MarketTickerMigration.tickers(fromSymbols: offered)
 
-    func testPickerLabels() {
-        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "BTC"), "BTC — Bitcoin")
-        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "USD"), "USD — US Dollar")
-        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "GOLD"), "GOLD — Gold")
-        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "XRPX"), "XRPX", "unknown falls back to the symbol")
+        XCTAssertEqual(tickers.count, MarketSymbolResolver.cryptoIDs.count + MarketSymbolResolver.fiatISOs.count + 1)
+        for ticker in tickers {
+            XCTAssertNotNil(ticker.kind, "\(ticker.symbol) must resolve to a kind")
+            XCTAssertFalse(ticker.name.isEmpty, "\(ticker.symbol) must have a display name")
+        }
+        XCTAssertEqual(tickers.first(where: { $0.symbol == "GOLD" })?.kind, .gold)
+        XCTAssertEqual(tickers.first(where: { $0.symbol == "USD" })?.kind, .fiat)
     }
 
     func testSymbolsAreCaseInsensitive() {
@@ -130,7 +130,7 @@ final class MarketBuilderTests: XCTestCase {
     func testBuildsAllKindsInIrt() {
         let build = MarketBuilder.build(
             display: .irt,
-            symbols: ["BTC", "USD", "CAD", "GOLD"],
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["BTC", "USD", "CAD", "GOLD"]),
             quotesByID: quotes,
             tmn: tmn,
             goldUSDPerGram: 149.3,
@@ -157,7 +157,7 @@ final class MarketBuilderTests: XCTestCase {
     func testBuildsInCadDisplayWithoutToman() {
         let build = MarketBuilder.build(
             display: .cad,
-            symbols: ["BTC", "USD", "CAD", "GOLD"],
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["BTC", "USD", "CAD", "GOLD"]),
             quotesByID: quotes,
             tmn: nil,
             goldUSDPerGram: 149.3,
@@ -174,7 +174,7 @@ final class MarketBuilderTests: XCTestCase {
     func testCadDisplayWithoutFxFailsEveryRow() {
         let build = MarketBuilder.build(
             display: .cad,
-            symbols: ["BTC", "USD", "GOLD"],
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["BTC", "USD", "GOLD"]),
             quotesByID: quotes,
             tmn: tmn,
             goldUSDPerGram: 149.3,
@@ -187,7 +187,7 @@ final class MarketBuilderTests: XCTestCase {
     func testUnknownSymbolIsSurfacedNotDropped() {
         let build = MarketBuilder.build(
             display: .usd,
-            symbols: ["BTC", "XRPX"],
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["BTC", "XRPX"]),
             quotesByID: quotes,
             tmn: nil,
             goldUSDPerGram: nil,
@@ -202,7 +202,7 @@ final class MarketBuilderTests: XCTestCase {
     func testMissingGoldOmitsOnlyGold() {
         let build = MarketBuilder.build(
             display: .usd,
-            symbols: ["BTC", "GOLD"],
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["BTC", "GOLD"]),
             quotesByID: quotes,
             tmn: nil,
             goldUSDPerGram: nil,
@@ -217,7 +217,7 @@ final class MarketBuilderTests: XCTestCase {
     func testMissingTomanAnchorFailsEveryRowInIrt() {
         let build = MarketBuilder.build(
             display: .irt,
-            symbols: ["BTC", "USD", "GOLD"],
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["BTC", "USD", "GOLD"]),
             quotesByID: quotes,
             tmn: nil,
             goldUSDPerGram: 149.3,
@@ -231,7 +231,7 @@ final class MarketBuilderTests: XCTestCase {
     func testAllUnknownSymbolsIsEmptyWithNoKindOmission() {
         let build = MarketBuilder.build(
             display: .usd,
-            symbols: ["XRPX", "FOO"],
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["XRPX", "FOO"]),
             quotesByID: [:],
             tmn: nil,
             goldUSDPerGram: nil,
@@ -243,24 +243,30 @@ final class MarketBuilderTests: XCTestCase {
         XCTAssertEqual(build.note, "Unknown: XRPX, FOO")
     }
 
-    func testPartialCryptoFailureNamesTheSymbolNotTheKind() {
+    /// One crypto worked, so the kind is fine and the missing one is named.
+    /// Since `marketbox-coin-lookup` it is named as **no data** rather than
+    /// unavailable: the fetch plainly succeeded, so the source answering
+    /// nothing about this id is a fact about the coin, not about the source.
+    func testPartialCryptoMissNamesTheSymbolAsNoData() {
         let build = MarketBuilder.build(
             display: .usd,
-            symbols: ["BTC", "ETH"],
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["BTC", "ETH"]),
             quotesByID: ["bitcoin": quotes["bitcoin"]!],
             tmn: nil,
             goldUSDPerGram: nil,
             fx: nil
         )
         XCTAssertEqual(build.rows.map(\.symbol), ["BTC"])
-        XCTAssertEqual(build.omitted, ["ETH"], "one crypto worked, so the kind is fine")
+        XCTAssertEqual(build.noData, ["ETH"])
+        XCTAssertTrue(build.omitted.isEmpty, "one crypto worked, so the kind is fine")
+        XCTAssertEqual(build.note, "No data: ETH")
     }
 
     func testEmptyPriceOmitsTheRow() {
         let empty = quote("x", symbol: "x", name: "X", price: nil)
         let build = MarketBuilder.build(
             display: .usd,
-            symbols: ["BTC"],
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["BTC"]),
             quotesByID: ["bitcoin": empty],
             tmn: nil,
             goldUSDPerGram: nil,
@@ -294,5 +300,172 @@ final class MarketPriceFormatterTests: XCTestCase {
         XCTAssertEqual(MarketPriceFormatter.change(-2.4), "-2.4%")
         XCTAssertEqual(MarketPriceFormatter.change(0), "0.0%")
         XCTAssertNil(MarketPriceFormatter.change(nil), "no change for fiat/gold rows")
+    }
+}
+// MARK: - Phase 2 of marketbox-coin-lookup
+
+/// The builder stops resolving symbols through the curated table, and learns to
+/// tell "the crypto source is down" from "this coin has no data".
+final class MarketBuilderTickerTests: XCTestCase {
+    private let quotes: [String: CryptoQuote] = [
+        "bitcoin": CryptoQuote(id: "bitcoin", symbol: "btc", name: "Bitcoin", priceUSD: 77_850, priceChangePct24h: 0.85, sparkline: nil),
+        "purple-pepe": CryptoQuote(id: "purple-pepe", symbol: "purpe", name: "PURPLE PEPE", priceUSD: 1.752e-05, priceChangePct24h: -3.0, sparkline: nil),
+    ]
+
+    private func ticker(_ symbol: String, _ coinID: String) -> MarketTicker {
+        MarketTicker(symbol: symbol, name: "", coinID: coinID)
+    }
+
+    /// The C2 regression: a coin outside the curated 43 must price. Keyed on
+    /// symbols, `MarketSymbolResolver.kind(for: "PURPE")` answers nil and the
+    /// whole feature renders "Unknown: PURPE" with no price.
+    func testACoinOutsideTheCuratedTablePrices() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [ticker("PURPE", "purple-pepe")],
+            quotesByID: quotes,
+            tmn: nil, goldUSDPerGram: nil, fx: nil
+        )
+        XCTAssertEqual(build.rows.map(\.symbol), ["PURPE"])
+        XCTAssertEqual(build.rows.first?.price, 1.752e-05)
+        XCTAssertTrue(build.unresolved.isEmpty)
+        XCTAssertNil(build.note)
+    }
+
+    /// State 1 of 3: no crypto tickers at all. Says nothing about crypto.
+    func testNoCryptoTickersSaysNothingAboutCrypto() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [ticker("USD", "")],
+            quotesByID: [:],
+            tmn: nil, goldUSDPerGram: nil, fx: ["USD": 1.0]
+        )
+        XCTAssertEqual(build.rows.map(\.symbol), ["USD"])
+        XCTAssertNil(build.note, "a USD+GOLD user must not be told crypto is unavailable")
+    }
+
+    /// State 2 of 3: the fetch was attempted and failed.
+    func testAFailedCryptoFetchReadsAsUnavailable() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [ticker("BTC", "bitcoin")],
+            quotesByID: nil,
+            tmn: nil, goldUSDPerGram: nil, fx: nil
+        )
+        XCTAssertTrue(build.isEmpty)
+        XCTAssertEqual(build.omitted, ["Crypto"])
+        XCTAssertEqual(build.note, "Crypto unavailable")
+    }
+
+    /// State 3 of 3: the fetch succeeded and CoinGecko simply did not return
+    /// this id — measured, it drops unknown ids silently with a 200.
+    func testAnIDTheSourceDidNotReturnReadsAsNoData() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [ticker("BTC", "bitcoin"), ticker("DEAD", "dead-coin")],
+            quotesByID: quotes,
+            tmn: nil, goldUSDPerGram: nil, fx: nil
+        )
+        XCTAssertEqual(build.rows.map(\.symbol), ["BTC"])
+        XCTAssertEqual(build.noData, ["DEAD"])
+        XCTAssertEqual(build.note, "No data: DEAD")
+        XCTAssertFalse(build.isEmpty)
+    }
+
+    /// A retired id must not be folded into the "every crypto failed" collapse
+    /// — the two sentences mean different things and have different fixes.
+    func testNoDataIsNotCollapsedIntoCryptoUnavailable() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [ticker("DEAD", "dead-coin")],
+            quotesByID: quotes,
+            tmn: nil, goldUSDPerGram: nil, fx: nil
+        )
+        XCTAssertEqual(build.noData, ["DEAD"])
+        XCTAssertTrue(build.omitted.isEmpty)
+        XCTAssertEqual(build.note, "No data: DEAD")
+    }
+
+    func testATickerWithNoKindIsStillUnknown() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [ticker("XRPX", "")],
+            quotesByID: quotes,
+            tmn: nil, goldUSDPerGram: nil, fx: nil
+        )
+        XCTAssertEqual(build.unresolved, ["XRPX"])
+        XCTAssertEqual(build.note, "Unknown: XRPX")
+    }
+}
+
+/// What the loader asks for, decided without touching the network.
+final class MarketFetchPlanTests: XCTestCase {
+    private func ticker(_ symbol: String, _ coinID: String) -> MarketTicker {
+        MarketTicker(symbol: symbol, name: "", coinID: coinID)
+    }
+
+    /// Measured 2026-09-05: `coins/markets?ids=` with an empty list answers
+    /// **200 with the top 100 coins (83.6 KB)** — not an error, not an empty
+    /// list. It would render as the user's list, so the request must never be
+    /// built.
+    func testNoCryptoTickersAsksForNothing() {
+        let ids = MarketFetchPlan.cryptoIDs(for: [ticker("USD", ""), ticker("GOLD", "")])
+        XCTAssertTrue(ids.isEmpty)
+    }
+
+    func testABlankCoinIDNeverReachesTheQuery() {
+        let ids = MarketFetchPlan.cryptoIDs(for: [ticker("BTC", "bitcoin"), ticker("ODD", "   ")])
+        XCTAssertEqual(ids, ["bitcoin"])
+    }
+
+    func testIDsAreDedupedAndOrdered() {
+        let ids = MarketFetchPlan.cryptoIDs(for: [
+            ticker("BTC", "bitcoin"), ticker("ETH", "ethereum"), ticker("BTC2", "bitcoin"),
+        ])
+        XCTAssertEqual(ids, ["bitcoin", "ethereum"])
+    }
+}
+
+/// Phase 3 of `marketbox-coin-lookup`. `%.4f` below 1.0 printed `$0.0000` for
+/// three symbols **already in the shipped curated list** — measured live on
+/// 2026-09-05 — so a 50% move rendered identically to no move. Widening the
+/// catalogue to 19,594 coins makes sub-cent the norm rather than the edge.
+final class MarketSubCentPriceTests: XCTestCase {
+    private func usd(_ v: Double) -> String { MarketPriceFormatter.price(v, currency: .usd) }
+
+    func testTheThreeShippedTickersThatRenderedAsZero() {
+        XCTAssertEqual(usd(5.47e-06), "$0.00000547", "SHIB")
+        XCTAssertEqual(usd(3.57e-06), "$0.00000357", "PEPE")
+        XCTAssertEqual(usd(3.27e-06), "$0.00000327", "BONK")
+    }
+
+    func testThreeSignificantDigitsWithNoTrailingZeros() {
+        XCTAssertEqual(usd(1.752e-05), "$0.0000175")
+        XCTAssertEqual(usd(0.005), "$0.005")
+    }
+
+    func testVerySmallPricesGoExponentialRatherThanPrintingZeros() {
+        // Thirteen leading zeros do not fit a widget row.
+        XCTAssertEqual(usd(5.5e-11), "$5.5e-11")
+    }
+
+    func testTheBoundariesHoldOnBothSides() {
+        XCTAssertEqual(usd(0.01), "$0.0100", "the >= 0.01 branch is untouched")
+        XCTAssertEqual(usd(1e-9), "$0.000000001")
+    }
+
+    func testZeroIsNotExponential() {
+        XCTAssertEqual(usd(0), "$0.00")
+    }
+
+    func testLargeValuesAreUnchanged() {
+        XCTAssertEqual(usd(77_850), "$77,850")
+        XCTAssertEqual(usd(1.757e+09), "$1.8B")
+        XCTAssertEqual(usd(2_468), "$2,468")
+        XCTAssertEqual(usd(1.75), "$1.75")
+    }
+
+    func testTheCurrencyPrefixStillOnlyAppliesToUsd() {
+        XCTAssertEqual(MarketPriceFormatter.price(5.47e-06, currency: .irt), "0.00000547")
     }
 }

@@ -2472,30 +2472,47 @@ private struct CalBoxSettingsView: View {
 
 private struct MarketBoxSettingsView: View {
     @Binding var settings: MarketBoxSettings
+    @State private var showingAdd = false
+    @State private var listMessage: String?
 
     var body: some View {
         Form {
             Section("Tickers") {
-                // One picker per slot rather than free text: a symbol typed
-                // blind is unknowable to the user. Slot order *is* display
-                // order, so a plain indexed list keeps the two in sync.
-                ForEach(0..<MarketBoxSettings.maxCount, id: \.self) { slot in
-                    Picker("Ticker \(slot + 1)", selection: tickerBinding(slot: slot)) {
-                        Text("None").tag("")
-                        ForEach(pickableSymbols, id: \.self) { symbol in
-                            Text(MarketSymbolResolver.pickerLabel(for: symbol)).tag(symbol)
-                        }
-                        // Symbols from an older free-text file stay visible so
-                        // they can be changed, not silently lost.
-                        ForEach(configuredSymbolsNotInPicker, id: \.self) { symbol in
-                            Text(MarketSymbolResolver.pickerLabel(for: symbol)).tag(symbol)
-                        }
+                // An add/remove list rather than twelve numbered slots: the
+                // catalogue is 19,594 coins, so no fixed menu can hold it.
+                // Slots carried display order for free — these rows carry it
+                // in the arrows, because order *is* display order.
+                ForEach(Array(settings.tickerList.enumerated()), id: \.element.symbol) { index, ticker in
+                    HStack(spacing: 8) {
+                        Text(ticker.symbol)
+                            .font(.system(.body, design: .rounded))
+                            .frame(minWidth: 60, alignment: .leading)
+                        // The name is stored at pick time, so the list reads
+                        // right with no network. Rank is deliberately absent:
+                        // a rank stored then is stale now.
+                        Text(ticker.name)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Spacer()
+                        Button { move(index, by: -1) } label: { Image(systemName: "chevron.up") }
+                            .disabled(index == 0)
+                        Button { move(index, by: 1) } label: { Image(systemName: "chevron.down") }
+                            .disabled(index == settings.tickerList.count - 1)
+                        Button { remove(index) } label: { Image(systemName: "minus.circle") }
+                    }
+                    .buttonStyle(.borderless)
+                }
+                HStack(spacing: 8) {
+                    Button("Add Ticker…") { showingAdd = true }
+                        .disabled(settings.tickerList.count >= MarketBoxSettings.maxCount)
+                    if let listMessage {
+                        Text(listMessage).font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                Text("Crypto like BTC or ETH, fiat codes like USD or CAD, and GOLD for 1 gram of gold. Fiat and gold show price only.")
+                Text("Crypto is searched live from CoinGecko; fiat codes and GOLD (1 gram) come from a fixed list. Fiat and gold show price only.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                FetchStatusCaption(source: .marketbox, clearOn: settings.tickers.joined(separator: ","))
+                FetchStatusCaption(source: .marketbox, clearOn: clearKey)
             }
             Section("Display") {
                 Picker("Display currency", selection: $settings.displayCurrency) {
@@ -2517,30 +2534,197 @@ private struct MarketBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+        .sheet(isPresented: $showingAdd) {
+            AddTickerSheet(onPick: add)
+        }
     }
 
-    private var pickableSymbols: [String] {
-        MarketSymbolResolver.allPickableSymbols
+    /// The fetch-error sentence clears when the thing that causes it changes.
+    /// Keyed on the ids rather than the retired `tickers` array, or it goes
+    /// stale under a control that no longer feeds it.
+    private var clearKey: String {
+        settings.tickerList.map { $0.coinID.isEmpty ? $0.symbol : $0.coinID }.joined(separator: ",")
     }
 
-    /// A configured symbol the curated list does not offer (left over from a
-    /// free-text file) is appended to the first picker that holds it, so it
-    /// stays visible and changeable.
-    private var configuredSymbolsNotInPicker: [String] {
-        settings.tickers.filter { !pickableSymbols.contains($0) }
+    private func move(_ index: Int, by offset: Int) {
+        settings.tickerList = MarketTickerList.moved(settings.tickerList, at: index, by: offset)
+        listMessage = nil
     }
 
-    /// Slots are positional: an empty pick clears that slot and the remaining
-    /// tickers close up, so the widget never renders a gap.
-    private func tickerBinding(slot: Int) -> Binding<String> {
-        Binding(
-            get: { slot < settings.tickers.count ? settings.tickers[slot] : "" },
-            set: { newValue in
-                var tickers = settings.tickers
-                while tickers.count < MarketBoxSettings.maxCount { tickers.append("") }
-                tickers[slot] = newValue
-                settings.tickers = MarketBoxSettings.normalized(tickers)
+    private func remove(_ index: Int) {
+        settings.tickerList = MarketTickerList.removing(at: index, from: settings.tickerList)
+        listMessage = nil
+    }
+
+    /// Adding is refused out loud, never silently: the slot UI deduped by
+    /// symbol, so clicking a second PEPE simply appeared to do nothing.
+    private func add(_ ticker: MarketTicker) {
+        switch MarketTickerList.adding(ticker, to: settings.tickerList) {
+        case .added(let list):
+            settings.tickerList = list
+            listMessage = nil
+            showingAdd = false
+        case .duplicate(let symbol):
+            listMessage = "\(symbol) is already in your list."
+            showingAdd = false
+        case .full:
+            listMessage = "\(MarketBoxSettings.maxCount) is the maximum."
+            showingAdd = false
+        }
+    }
+}
+
+/// The coin picker. Crypto is searched live; fiat and gold stay curated,
+/// because they are not CoinGecko rows at all.
+///
+/// The search shares one public IP budget with `DeckAgent`, which spends up to
+/// four calls per 60s tick — six requests in ~2 minutes returned 429 during
+/// the probe. Hence: nothing on a keystroke, a debounce, a floor between
+/// requests, a per-query cache, and a 429 that degrades **this sheet** and
+/// never the widget's data.
+private struct AddTickerSheet: View {
+    let onPick: (MarketTicker) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var query = ""
+    @State private var hits: [CoinSearchHit] = []
+    @State private var cache: [String: [CoinSearchHit]] = [:]
+    @State private var lastRequest: Date?
+    @State private var status: Status = .idle
+
+    private enum Status: Equatable {
+        case idle, searching, noResults, busy, offline, failed
+
+        var message: String? {
+            switch self {
+            case .idle: return nil
+            case .searching: return "Searching…"
+            case .noResults: return "No coins match that."
+            case .busy: return "Search is busy — try again in a moment."
+            case .offline: return "Search needs a connection."
+            case .failed: return "Search failed."
             }
-        )
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Add Ticker").font(.headline)
+                Spacer()
+                Button("Done") { dismiss() }
+            }
+            TextField("Search coins", text: $query)
+                .textFieldStyle(.roundedBorder)
+
+            if let message = status.message {
+                Text(message).font(.caption).foregroundStyle(.secondary)
+            }
+
+            List {
+                if isSearching {
+                    ForEach(hits, id: \.coinID) { hit in
+                        row(symbol: hit.symbol, name: hit.name, rank: hit.rank) {
+                            onPick(hit.ticker)
+                        }
+                    }
+                } else {
+                    // Empty query: the curated 43, zero network calls, so the
+                    // sheet opens instantly and still works offline. This is
+                    // all the old hand-written map is still for.
+                    Section("Popular") {
+                        ForEach(popular, id: \.symbol) { ticker in
+                            row(symbol: ticker.symbol, name: ticker.name, rank: nil) {
+                                onPick(ticker)
+                            }
+                        }
+                    }
+                    Section("Fiat & Gold") {
+                        ForEach(fiatAndGold, id: \.symbol) { ticker in
+                            row(symbol: ticker.symbol, name: ticker.name, rank: nil) {
+                                onPick(ticker)
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(minHeight: 280)
+        }
+        .padding(16)
+        .frame(width: 420, height: 460)
+        .task(id: query) { await search() }
+    }
+
+    private var isSearching: Bool {
+        CoinSearchPolicy.cacheKey(for: query).count >= CoinSearchPolicy.minimumLength
+    }
+
+    private var popular: [MarketTicker] {
+        MarketTickerMigration.tickers(fromSymbols: MarketSymbolResolver.cryptoIDs.keys.sorted())
+    }
+
+    private var fiatAndGold: [MarketTicker] {
+        MarketTickerMigration.tickers(
+            fromSymbols: [MarketSymbolResolver.goldSymbol] + MarketSymbolResolver.fiatISOs.sorted())
+    }
+
+    private func row(symbol: String, name: String, rank: Int?, pick: @escaping () -> Void) -> some View {
+        Button(action: pick) {
+            HStack(spacing: 8) {
+                // Rank is shown here and only here, where it is fresh by
+                // construction — it is what lets someone tell rank-56 PEPE
+                // from the twenty impostors sharing its symbol.
+                Text(rank.map { "#\($0)" } ?? "")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 52, alignment: .leading)
+                Text(symbol)
+                    .font(.system(.body, design: .rounded))
+                    .frame(minWidth: 72, alignment: .leading)
+                Text(name).foregroundStyle(.secondary).lineLimit(1)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func search() async {
+        let key = CoinSearchPolicy.cacheKey(for: query)
+        guard key.count >= CoinSearchPolicy.minimumLength else {
+            hits = []
+            status = .idle
+            return
+        }
+        if let cached = cache[key] {
+            hits = cached
+            status = cached.isEmpty ? .noResults : .idle
+            return
+        }
+
+        // A new keystroke cancels this task, so the sleep *is* the debounce.
+        do { try await Task.sleep(nanoseconds: UInt64(CoinSearchPolicy.debounce * 1_000_000_000)) }
+        catch { return }
+
+        // Then wait out the floor rather than firing early.
+        while !CoinSearchPolicy.shouldSearch(query: query, lastRequest: lastRequest, now: Date()) {
+            do { try await Task.sleep(nanoseconds: 200_000_000) } catch { return }
+        }
+
+        status = .searching
+        lastRequest = Date()
+        do {
+            let found = try await HostCoinSearchLoader.search(query: query)
+            guard !Task.isCancelled else { return }
+            cache[key] = found
+            hits = found
+            status = found.isEmpty ? .noResults : .idle
+        } catch CoinSearchFailure.rateLimited {
+            status = .busy
+        } catch CoinSearchFailure.offline {
+            status = .offline
+        } catch {
+            status = .failed
+        }
     }
 }
