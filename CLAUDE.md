@@ -252,6 +252,22 @@ Do not delete the container; see the trap below.
   `total_count: 0`** for a repo with no workflows (an unknown repo is a 404).
   Recency is a good proxy but not a reliable one — 7 of 19 owned repos had any
   runs, and the first miss was the 7th by push date.
+- **The settings window and the agent share one rate-limit budget, and the
+  agent loses.** Found building MarketBox's coin picker (2026-09-05). CoinGecko
+  is keyless, so every request from this machine counts against one public-IP
+  quota: **six requests in ~2 minutes returned 429 with `retry-after: 55`**,
+  and `DeckAgent` already spends up to **4 calls per 60s tick** on it (crypto,
+  gold, Toman, FX). A search-as-you-type picker would therefore 429 *the agent*
+  and blank the widget while the user was choosing a ticker — the settings UI
+  breaking the data path it configures. Any live lookup behind a settings
+  control needs a debounce, a floor between requests and a per-query cache
+  (`CoinSearchPolicy`), must run **host-app-only on user interaction**, and must
+  degrade itself rather than the snapshot. Two more measured facts about that
+  API worth keeping: an **unknown id is dropped silently** (`ids=bitcoin,nope`
+  → 200 with one row, nothing saying the other was ignored), and an **empty
+  `ids=` returns the top 100 coins** (200, 83.6 KB) rather than an error or an
+  empty list — so a request with no ids must never be built, or the widget
+  renders a stranger's portfolio as the user's own.
 - **Fan out concurrently or miss the tick.** `URLSession.timeoutInterval` is
   per *request*, so N serial fetches can stall for N×10s against a 60s agent
   cadence. Five repos measured **9.4s serially, 2.1s concurrently**. ShipBox's

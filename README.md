@@ -174,9 +174,13 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   round-robin so each repo's newest run appears before any repo repeats — a
   busy repo's history can't hide a quiet repo's red CI. Turn it off for a
   strictly newest-first list.
-- **MarketBox** tickers are picked from a list, not typed: twelve slots in the
-  MarketBox tab, each a picker over the curated symbols (crypto, fiat codes,
-  and `GOLD` for 1 gram of gold — slot order is display order). Prices are
+- **MarketBox** tickers are picked, never typed blind: the MarketBox tab holds
+  your list (up to twelve rows, drag order with the arrows — list order is
+  display order), and **Add Ticker…** opens a search over CoinGecko's whole
+  catalogue. Results carry the market-cap rank, which is what tells rank-56
+  `PEPE` from the twenty other coins using that symbol. With the search box
+  empty the sheet shows a popular list plus the fiat codes and `GOLD` (1 gram
+  of gold), all offline — it makes no network call until you type. Prices are
   priced in one display currency, picked from a list: **USD**, **IRR**
   (Iranian Rial), **IRT** (Toman — the free-market rate, IRT = IRR ÷ 10),
   **CAD**, **EUR** or **AED** (live FX rate). The small widget shows up to
@@ -285,10 +289,12 @@ Deck reads personal data, so here is exactly what happens to it.
 | ShipBox | your GitHub token, and the repos you watch (or, in Automatic mode, your repo list) | `api.github.com` |
 | TaskBox | your Azure DevOps PAT, org and projects | `dev.azure.com` |
 | OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
-| MarketBox | the symbols you typed (e.g. `BTC, USD, GOLD`) | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com` |
+| MarketBox | the coins you picked (e.g. `bitcoin`), and what you type in the ticker search | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com` |
 
-MarketBox sends only the ticker symbols you typed — no tokens, no identity, and
-it never sends anything on behalf of a row's price.
+MarketBox sends only the coins you picked — no tokens, no identity, and it never
+sends anything on behalf of a row's price. The ticker search sends what you type
+to CoinGecko while the picker is open, and only then: it runs in the Deck app,
+never in the widget or the background agent.
 
 Nothing else makes a network request. There is no analytics, no telemetry, no
 crash reporting, and no Deck server — the project has no backend at all. The
