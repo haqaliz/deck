@@ -317,6 +317,27 @@ Do not delete the container; see the trap below.
   `0.188, 0.820, 0.345` under darkAqua, so whichever appearance was current
   when a settings file was first written got frozen into it. The palette is
   pinned to the aqua values, which is what a headless process resolves.
+- **`hdiutil create -fs HFS+` silently produces an unmountable DMG on macOS 26,
+  and nothing downstream notices.** Cost an hour releasing v1.40 (2026-09-05).
+  The release job created the image, `codesign` warned, `shasum` recorded the
+  bytes, `gh release create` published it, and the run was **green** — but
+  `hdiutil attach` and `hdiutil convert` both answered **"corrupt image"**, three
+  cut attempts running. Everything that usually localises a bad download says
+  the file is fine: two different tools fetch identical bytes, the sha256
+  **matches the release's own `SHA256SUMS.txt`** (so the runner really did
+  publish this), the `koly` trailer arithmetic is consistent, and the embedded
+  XML plist parses with all 8 `blkx` entries — the damage is inside the
+  compressed data fork. Ruled out by measurement, not guesswork: the runner
+  image (identical `macos-26-arm64` 20260831.0337.3 / macOS 26.6.2 built a
+  working v1.39 hours earlier), and `codesign --force` failing with "no identity
+  found" (it leaves the file **byte-identical and still valid** — that warning
+  is a red herring the log ordering makes look guilty). **Fix: build the image
+  as `-fs APFS`.** APFS disk images are readable on 10.13+, far below Deck's
+  macOS 15 deployment target. **And verify before publishing** — the job now
+  runs `hdiutil verify` plus a real `attach`/`test -d Deck.app`/`detach`, because
+  the whole failure mode is that a green run happily ships an image nobody
+  opened. Locally the same content packed 8/8 good as HFS+, so do not expect to
+  reproduce it on your own Mac.
 - **Launching a quarantined Deck deletes it, and `--no-quarantine` is gone.**
   Measured 2026-08-26 on Homebrew 6.0.19 / macOS 15 while wiring up the tap.
   Two separate problems with the install instructions this repo shipped for
