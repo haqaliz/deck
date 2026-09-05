@@ -425,3 +425,47 @@ final class MarketFetchPlanTests: XCTestCase {
         XCTAssertEqual(ids, ["bitcoin", "ethereum"])
     }
 }
+
+/// Phase 3 of `marketbox-coin-lookup`. `%.4f` below 1.0 printed `$0.0000` for
+/// three symbols **already in the shipped curated list** — measured live on
+/// 2026-09-05 — so a 50% move rendered identically to no move. Widening the
+/// catalogue to 19,594 coins makes sub-cent the norm rather than the edge.
+final class MarketSubCentPriceTests: XCTestCase {
+    private func usd(_ v: Double) -> String { MarketPriceFormatter.price(v, currency: .usd) }
+
+    func testTheThreeShippedTickersThatRenderedAsZero() {
+        XCTAssertEqual(usd(5.47e-06), "$0.00000547", "SHIB")
+        XCTAssertEqual(usd(3.57e-06), "$0.00000357", "PEPE")
+        XCTAssertEqual(usd(3.27e-06), "$0.00000327", "BONK")
+    }
+
+    func testThreeSignificantDigitsWithNoTrailingZeros() {
+        XCTAssertEqual(usd(1.752e-05), "$0.0000175")
+        XCTAssertEqual(usd(0.005), "$0.005")
+    }
+
+    func testVerySmallPricesGoExponentialRatherThanPrintingZeros() {
+        // Thirteen leading zeros do not fit a widget row.
+        XCTAssertEqual(usd(5.5e-11), "$5.5e-11")
+    }
+
+    func testTheBoundariesHoldOnBothSides() {
+        XCTAssertEqual(usd(0.01), "$0.0100", "the >= 0.01 branch is untouched")
+        XCTAssertEqual(usd(1e-9), "$0.000000001")
+    }
+
+    func testZeroIsNotExponential() {
+        XCTAssertEqual(usd(0), "$0.00")
+    }
+
+    func testLargeValuesAreUnchanged() {
+        XCTAssertEqual(usd(77_850), "$77,850")
+        XCTAssertEqual(usd(1.757e+09), "$1.8B")
+        XCTAssertEqual(usd(2_468), "$2,468")
+        XCTAssertEqual(usd(1.75), "$1.75")
+    }
+
+    func testTheCurrencyPrefixStillOnlyAppliesToUsd() {
+        XCTAssertEqual(MarketPriceFormatter.price(5.47e-06, currency: .irt), "0.00000547")
+    }
+}

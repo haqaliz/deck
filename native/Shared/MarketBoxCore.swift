@@ -465,9 +465,31 @@ enum MarketPriceFormatter {
             return prefix + grouped(Int(value.rounded()))
         case 1..<1_000:
             return prefix + String(format: "%.2f", value)
-        default:
+        case 0.01..<1:
             return prefix + String(format: "%.4f", value)
+        case 1e-9..<0.01:
+            // %.4f printed "$0.0000" for SHIB, PEPE and BONK — three symbols
+            // in the shipped curated list — so a 50% move looked like no
+            // move. Significant digits instead, trailing zeros trimmed.
+            return prefix + significant(value, digits: 3)
+        case 0:
+            return prefix + "0.00"
+        default:
+            // Thirteen leading zeros do not fit a widget row.
+            return prefix + String(format: "%.1e", value)
         }
+    }
+
+    /// `5.47e-06` → `0.00000547`, `0.005` → `0.005`.
+    private static func significant(_ value: Double, digits: Int) -> String {
+        let exponent = Int(floor(log10(abs(value))))
+        let decimals = max(0, digits - 1 - exponent)
+        var text = String(format: "%.\(decimals)f", value)
+        if text.contains(".") {
+            while text.hasSuffix("0") { text.removeLast() }
+            if text.hasSuffix(".") { text.removeLast() }
+        }
+        return text
     }
 
     /// "+1.0%" / "-2.4%" / "0.0%"; nil when there is no change (fiat/gold rows).
