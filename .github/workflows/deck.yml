@@ -110,6 +110,19 @@ jobs:
               || echo "::warning::DMG signing failed; shipping it unsigned"
           fi
 
+          # The image must be readable before it is published. v1.40 was cut
+          # twice with a DMG that failed `hdiutil attach` and `hdiutil convert`
+          # with "corrupt image" -- structurally intact (koly trailer fine, XML
+          # plist parsing with 8 blkx entries) but with a damaged data fork, on
+          # the same runner image that built a working v1.39. Nothing in the
+          # job noticed: the run was green, the release published, and the
+          # checksum matched the broken bytes exactly. Verify, and mount it,
+          # before anyone can download it.
+          hdiutil verify "Deck-${VERSION}.dmg"
+          hdiutil attach "Deck-${VERSION}.dmg" -nobrowse -readonly -mountpoint /tmp/dmgcheck
+          test -d /tmp/dmgcheck/Deck.app || { echo "::error::DMG mounted but has no Deck.app"; exit 1; }
+          hdiutil detach /tmp/dmgcheck
+
           # Checksums last, so they cover the final bytes of every artifact.
           shasum -a 256 "Deck-${VERSION}.dmg" > SHA256SUMS.txt
           cat SHA256SUMS.txt
