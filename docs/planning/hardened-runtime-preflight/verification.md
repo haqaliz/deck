@@ -164,6 +164,25 @@ Stated at its real strength: this is a human confirmation that the faces look
 right, not an instrumented pixel check. It is the same standard every Deck
 widget has shipped under.
 
+## The gate ran on a runner, not only on this Mac
+
+CI, run 33994504529 on the PR branch — **success**, every step, with the signing
+secrets present so the signed build path actually executed:
+
+```
+Verify hardened runtime
+  ok   Deck.app                                     flags=0x10000(runtime)
+  ok   Deck.app/Contents/PlugIns/DeckWidgets.appex  flags=0x10000(runtime)
+  ok   Deck.app/Contents/MacOS/DeckAgent            flags=0x10000(runtime)
+```
+
+This settles something the local runs could not: a fresh `macos-latest` runner
+signs **and hardens** all three targets under automatic Apple Development
+signing with no change to the provisioning flags. The release job therefore
+needs nothing further before the identity switch — which is also why
+`-allowProvisioningDeviceRegistration` was left alone rather than removed on
+spec.
+
 ## Verdict
 
 Every criterion in the PRD passed. Hardened runtime costs Deck nothing measurable under its existing identity: no

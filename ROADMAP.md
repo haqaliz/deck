@@ -498,6 +498,10 @@ in CI, the verification gates, and what the identity change resets.
         lines included — so an AMFI query looks identically silent whether or
         not anything happened. The silence was only admitted after a positive
         control proved the log was answering.
+      Verified on CI as well as locally: a fresh `macos-latest` runner signs and
+      hardens all three targets under automatic Apple Development signing with
+      no change to the provisioning flags, so the release job needs nothing
+      further before the identity switch.
 - [ ] **The expiry cliff.** Xcode signs development builds with no secure
       timestamp (`Signed Time=`, not `Timestamp=`), so signature validity is
       tied to the certificate: **2027-08-09**, after which every copy of Deck
