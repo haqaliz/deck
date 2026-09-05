@@ -308,8 +308,16 @@ Deferred behind the new widgets by decision on 2026-08-22.
       the fetch chip — the old precedence could render two green rows while
       another repo was red.
       **Open follow-ups:** inventory pagination past 100 repos, caching the
-      discovered set across ticks (~16 MB/hr instead of ~22), per-repo fair
-      share so a busy repo cannot crowd out a quiet one.
+      discovered set across ticks (~16 MB/hr instead of ~22).
+      **Fair share shipped 2026-09-05** (`docs/planning/shipbox-fair-share/`):
+      a busy repo can no longer crowd out a quiet one. `ShipBoxMerge.fairMerge`
+      interleaves the merged list round-robin — each repo's newest run lands
+      in the first `repoCount` rows, the first element stays the globally
+      newest run (so the small face's link target is unchanged), and the
+      toggle **Fair share across repos** (default ON) returns the list to
+      strictly newest-first. Pure policy, unit-pinned; the existing
+      `per_page = max(runCount, 2)` provably suffices. This retires the
+      multi-repo PRD's "no fair share" non-goal (`prd.md:190-191`).
 - [x] **OpenBox remote incremental sync** — `limit`-based sync instead of a full
       resync each tick (`docs/planning/openbox-remote/prd.md:105`). Shipped
       2026-08-27 (`docs/planning/openbox-remote-incremental-sync/`).

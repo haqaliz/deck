@@ -170,6 +170,10 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   the repos your token can see. A repo that fails while the others succeed
   doesn't blank the widget — its runs are simply absent and a note names it.
   Runs refresh via the agent every 60s, and clicking a row opens that run.
+  **Fair share across repos** (on by default) interleaves the merge
+  round-robin so each repo's newest run appears before any repo repeats — a
+  busy repo's history can't hide a quiet repo's red CI. Turn it off for a
+  strictly newest-first list.
 - **MarketBox** tickers are picked from a list, not typed: twelve slots in the
   MarketBox tab, each a picker over the curated symbols (crypto, fiat codes,
   and `GOLD` for 1 gram of gold — slot order is display order). Prices are

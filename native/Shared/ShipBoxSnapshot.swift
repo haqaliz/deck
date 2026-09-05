@@ -173,6 +173,32 @@ enum ShipBoxMerge {
             }
             .map(\.1)
     }
+
+    /// The fair-share variant: round-robin across repos, one run per repo
+    /// per level, so a busy repo's history never hides a quiet repo's latest
+    /// run. With k repos each having a run, every repo appears within the
+    /// first k positions. The first element stays the globally newest run.
+    ///
+    /// Within a level, `createdAt` descending with ties broken by fetch
+    /// order — the same stability rule as `merge`, so a stable snapshot
+    /// never reshuffles between ticks.
+    static func fairMerge(_ perRepo: [[ShipRun]]) -> [ShipRun] {
+        let deepestLevel = perRepo.map(\.count).max() ?? 0
+        guard deepestLevel > 0 else { return [] }
+        return (0..<deepestLevel).flatMap { level -> [ShipRun] in
+            perRepo
+                .enumerated()
+                .compactMap { index, runs -> (Int, ShipRun)? in
+                    guard runs.count > level else { return nil }
+                    return (index, runs[level])
+                }
+                .sorted { lhs, rhs in
+                    if lhs.1.createdAt != rhs.1.createdAt { return lhs.1.createdAt > rhs.1.createdAt }
+                    return lhs.0 < rhs.0
+                }
+                .map(\.1)
+        }
+    }
 }
 
 enum ShipBoxLabels {
@@ -307,7 +333,9 @@ enum HostGitHubLoader {
             }
         }
 
-        let merged = ShipBoxMerge.merge(perRepoRuns)
+        let merged = settings.fairShare
+            ? ShipBoxMerge.fairMerge(perRepoRuns)
+            : ShipBoxMerge.merge(perRepoRuns)
         // Nothing came back and something broke: report the failure and let the
         // last-good snapshot stand rather than overwriting it with emptiness.
         if merged.isEmpty, let firstError { throw firstError }

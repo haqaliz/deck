@@ -100,3 +100,35 @@ final class ShipBoxSettingsNormalizationTests: XCTestCase {
         XCTAssertEqual(s.failureColor, RGBA.systemRed)
     }
 }
+
+final class ShipBoxSettingsFairShareTests: XCTestCase {
+    /// The interview default: fair share is the fix for a defect, so a file
+    /// written before the key existed gets the new behavior, not the old.
+    func testAnAbsentKeyDefaultsToOn() throws {
+        let s = try decode(#"{"runCount":7}"#, as: ShipBoxSettings.self)
+        XCTAssertTrue(s.fairShare)
+    }
+
+    func testTheDefaultIsOn() {
+        XCTAssertTrue(ShipBoxSettings().fairShare)
+    }
+
+    /// An explicit choice must survive a round trip — off means off, even
+    /// though the default is on.
+    func testExplicitOffRoundTrips() throws {
+        let s = try decode(#"{"fairShare":false}"#, as: ShipBoxSettings.self)
+        XCTAssertFalse(s.fairShare)
+        let json = try roundTrip(s)
+        XCTAssertEqual(json["fairShare"] as? Bool, false)
+        XCTAssertEqual(try decode(#"{"fairShare":true}"#, as: ShipBoxSettings.self).fairShare, true)
+    }
+
+    /// A legacy single-repo file migrates with the new default intact — no
+    /// migration interaction, but the combined shape is the one real upgrades
+    /// see.
+    func testLegacyFileDecodesWithFairShareOn() throws {
+        let s = try decode(#"{"repo":"haqaliz/deck","token":"t"}"#, as: ShipBoxSettings.self)
+        XCTAssertEqual(s.repos, ["haqaliz/deck"])
+        XCTAssertTrue(s.fairShare)
+    }
+}

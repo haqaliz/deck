@@ -737,6 +737,10 @@ struct ShipBoxSettings: Codable, Equatable {
     var accountID: String?
     var showList = true
     var runCount = 4
+    /// Round-robin interleave across repos so a busy repo's history cannot
+    /// hide a quiet repo's latest run (ShipBoxMerge.fairMerge). Read by the
+    /// agent at merge time; the widget extension never reads it.
+    var fairShare = true
     var queuedColor = RGBA.systemOrange
     var runningColor = RGBA.systemYellow
     var successColor = RGBA.systemGreen
@@ -777,6 +781,7 @@ struct ShipBoxSettings: Codable, Equatable {
         accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
         runCount = try c.decodeIfPresent(Int.self, forKey: .runCount) ?? 4
+        fairShare = try c.decodeIfPresent(Bool.self, forKey: .fairShare) ?? true
         queuedColor = try c.decodeIfPresent(RGBA.self, forKey: .queuedColor) ?? RGBA.systemOrange
         runningColor = try c.decodeIfPresent(RGBA.self, forKey: .runningColor) ?? RGBA.systemYellow
         successColor = try c.decodeIfPresent(RGBA.self, forKey: .successColor) ?? RGBA.systemGreen
@@ -794,6 +799,7 @@ struct ShipBoxSettings: Codable, Equatable {
         try c.encodeIfPresent(accountID, forKey: .accountID)
         try c.encode(showList, forKey: .showList)
         try c.encode(runCount, forKey: .runCount)
+        try c.encode(fairShare, forKey: .fairShare)
         try c.encode(queuedColor, forKey: .queuedColor)
         try c.encode(runningColor, forKey: .runningColor)
         try c.encode(successColor, forKey: .successColor)
@@ -817,7 +823,7 @@ struct ShipBoxSettings: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case repoMode, repos, maxRepoCount, token, accountID, showList, runCount
+        case repoMode, repos, maxRepoCount, token, accountID, showList, runCount, fairShare
         case queuedColor, runningColor, successColor, failureColor
         case legacyRepo = "repo"
     }
