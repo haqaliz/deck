@@ -244,10 +244,11 @@ the next slate. Ordered by priority, not by cost.
       WidgetKit **silently drop the widget from the gallery** (the Charts-in-a-
       widget-face trap, see CLAUDE.md); the user then removed the sparkline
       requirement entirely, and the loader no longer asks CoinGecko for the
-      series. Tickers are **picked from a curated list** in settings (twelve
-      slot pickers, the ClockBox pattern) instead of typed free text — a
-      blind-typed symbol was unknowable to the user; the old `symbols` string
-      migrates to `tickers`.
+      series. Tickers are **picked, not typed** — a blind-typed symbol was
+      unknowable to the user; the old `symbols` string migrates to `tickers`.
+      *(As shipped this was a curated list behind twelve slot pickers, the
+      ClockBox pattern; superseded by the live lookup below, which kept the
+      "picked, not typed" rule and replaced the fixed list.)*
       **Live coin lookup shipped 2026-09-05**
       (`docs/planning/marketbox-coin-lookup/`): settings hold the CoinGecko
       **id**, not a bare symbol, so the agent stops resolving through a

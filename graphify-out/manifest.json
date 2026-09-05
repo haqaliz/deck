@@ -1,0 +1,707 @@
+{
+  "homebrew/deck.rb": {
+    "mtime": 1788167853.1462305,
+    "ast_hash": "3c9a9e8ce022be80c38fe1138e0d00e1",
+    "semantic_hash": "3c9a9e8ce022be80c38fe1138e0d00e1"
+  },
+  "native/DeckAgent/main.swift": {
+    "mtime": 1788167580.0986824,
+    "ast_hash": "c59cd29d4cd3f76c228ef4912c39cc22",
+    "semantic_hash": "c59cd29d4cd3f76c228ef4912c39cc22"
+  },
+  "native/DeckApp/AgentService.swift": {
+    "mtime": 1787954290.0541308,
+    "ast_hash": "ea86e69dbd34568362e63d9dfc8e863b",
+    "semantic_hash": "ea86e69dbd34568362e63d9dfc8e863b"
+  },
+  "native/DeckApp/DeckApp.swift": {
+    "mtime": 1788167580.099599,
+    "ast_hash": "d635079a1c8aff395ca7ad3a025c93a6",
+    "semantic_hash": "d635079a1c8aff395ca7ad3a025c93a6"
+  },
+  "native/DeckWidgets/BatBoxWidget.swift": {
+    "mtime": 1787436069.8288763,
+    "ast_hash": "3d951330d33a1174d6635e2cd2986057",
+    "semantic_hash": "3d951330d33a1174d6635e2cd2986057"
+  },
+  "native/DeckWidgets/CalBoxWidget.swift": {
+    "mtime": 1787562494.192996,
+    "ast_hash": "0d7a440148965ca725be133b2d1308a6",
+    "semantic_hash": "0d7a440148965ca725be133b2d1308a6"
+  },
+  "native/DeckWidgets/ClipBoxWidget.swift": {
+    "mtime": 1787611256.0673795,
+    "ast_hash": "e5a4b13b32098c213fa201c8c5cf9a9b",
+    "semantic_hash": "e5a4b13b32098c213fa201c8c5cf9a9b"
+  },
+  "native/DeckWidgets/ClockBoxWidget.swift": {
+    "mtime": 1787611256.0679076,
+    "ast_hash": "1274c91dac851211fcf9dad354fedec1",
+    "semantic_hash": "1274c91dac851211fcf9dad354fedec1"
+  },
+  "native/DeckWidgets/DeckWidgets.swift": {
+    "mtime": 1787610873.7536077,
+    "ast_hash": "b3f2ec3fa4b106dcc45e0033a4fd5e56",
+    "semantic_hash": "b3f2ec3fa4b106dcc45e0033a4fd5e56"
+  },
+  "native/DeckWidgets/DevBoxWidget.swift": {
+    "mtime": 1786550287.829069,
+    "ast_hash": "005c86c4cfce5d8d334becc0342b47f7",
+    "semantic_hash": "005c86c4cfce5d8d334becc0342b47f7"
+  },
+  "native/DeckWidgets/GitBoxWidget.swift": {
+    "mtime": 1786446578.3596926,
+    "ast_hash": "8e55c89e8781fdb18d251a05675cd774",
+    "semantic_hash": "8e55c89e8781fdb18d251a05675cd774"
+  },
+  "native/DeckWidgets/LiveBoxWidget.swift": {
+    "mtime": 1787954290.0548646,
+    "ast_hash": "429c45af2c17e23264666bac66f8f49a",
+    "semantic_hash": "429c45af2c17e23264666bac66f8f49a"
+  },
+  "native/DeckWidgets/Loaders/BatteryMetrics.swift": {
+    "mtime": 1787436069.8294313,
+    "ast_hash": "80c3364a02f19475fcbc916b9d567fed",
+    "semantic_hash": "80c3364a02f19475fcbc916b9d567fed"
+  },
+  "native/DeckWidgets/Loaders/SystemMetrics.swift": {
+    "mtime": 1787054618.2550864,
+    "ast_hash": "fe23515852a54e48f6453c45fa18ed20",
+    "semantic_hash": "fe23515852a54e48f6453c45fa18ed20"
+  },
+  "native/DeckWidgets/MarketBoxWidget.swift": {
+    "mtime": 1787611256.0681293,
+    "ast_hash": "9d51e5abad3001a8201a96b5dd852206",
+    "semantic_hash": "9d51e5abad3001a8201a96b5dd852206"
+  },
+  "native/DeckWidgets/NetBoxWidget.swift": {
+    "mtime": 1787428158.181111,
+    "ast_hash": "503514e1a3bff12560a33506f5b5f9a3",
+    "semantic_hash": "503514e1a3bff12560a33506f5b5f9a3"
+  },
+  "native/DeckWidgets/OpenBoxWidget.swift": {
+    "mtime": 1787954290.0552573,
+    "ast_hash": "d7ae193076089c2ad4773874494c84ee",
+    "semantic_hash": "d7ae193076089c2ad4773874494c84ee"
+  },
+  "native/DeckWidgets/PRBoxWidget.swift": {
+    "mtime": 1787944304.864901,
+    "ast_hash": "ef52377ed7f42ae241a84416bd0939c4",
+    "semantic_hash": "ef52377ed7f42ae241a84416bd0939c4"
+  },
+  "native/DeckWidgets/ShipBoxWidget.swift": {
+    "mtime": 1787673961.4587798,
+    "ast_hash": "f6092c8e07ca1e3a805d07dcc5f63ab7",
+    "semantic_hash": "f6092c8e07ca1e3a805d07dcc5f63ab7"
+  },
+  "native/DeckWidgets/TaskBoxWidget.swift": {
+    "mtime": 1787944304.8655033,
+    "ast_hash": "4152525dcaa1b1a2d12096e56ec31ea4",
+    "semantic_hash": "4152525dcaa1b1a2d12096e56ec31ea4"
+  },
+  "native/DeckWidgets/WeatherBoxWidget.swift": {
+    "mtime": 1787428158.1812983,
+    "ast_hash": "036b0ced722fac830261123f960abf40",
+    "semantic_hash": "036b0ced722fac830261123f960abf40"
+  },
+  "native/Shared/AccessoryCore.swift": {
+    "mtime": 1787436069.8296962,
+    "ast_hash": "7431685652e81647327d33218bcc110c",
+    "semantic_hash": "7431685652e81647327d33218bcc110c"
+  },
+  "native/Shared/AgentHeartbeat.swift": {
+    "mtime": 1788167580.1001682,
+    "ast_hash": "a3b2b05ee352b39d8b4ea24267034d53",
+    "semantic_hash": "a3b2b05ee352b39d8b4ea24267034d53"
+  },
+  "native/Shared/AgentLivenessCopy.swift": {
+    "mtime": 1788167580.100498,
+    "ast_hash": "0ae669dcb09ec4692367d41ba8b7f6b5",
+    "semantic_hash": "0ae669dcb09ec4692367d41ba8b7f6b5"
+  },
+  "native/Shared/AtomicFile.swift": {
+    "mtime": 1787440297.2623606,
+    "ast_hash": "6ef158da4335d1f9580fbe0ae44492ee",
+    "semantic_hash": "6ef158da4335d1f9580fbe0ae44492ee"
+  },
+  "native/Shared/AzureDevOpsLoader.swift": {
+    "mtime": 1787944304.8658414,
+    "ast_hash": "66565eb3e772b8bbcab91df009d20290",
+    "semantic_hash": "66565eb3e772b8bbcab91df009d20290"
+  },
+  "native/Shared/BatteryCore.swift": {
+    "mtime": 1787428158.1815586,
+    "ast_hash": "62de37f4cbe99784ad588f98f3d0d14f",
+    "semantic_hash": "62de37f4cbe99784ad588f98f3d0d14f"
+  },
+  "native/Shared/CalBoxSnapshot.swift": {
+    "mtime": 1787562494.195154,
+    "ast_hash": "db6a9de2a534d471d0d4765a20d2e609",
+    "semantic_hash": "db6a9de2a534d471d0d4765a20d2e609"
+  },
+  "native/Shared/ClipBoxSnapshot.swift": {
+    "mtime": 1787440297.2625825,
+    "ast_hash": "2f8d3395107a943d9e0ff29835e70745",
+    "semantic_hash": "2f8d3395107a943d9e0ff29835e70745"
+  },
+  "native/Shared/ClockBoxCore.swift": {
+    "mtime": 1787428158.1817946,
+    "ast_hash": "2ea02ae8f299ed0001d796ed548e2311",
+    "semantic_hash": "2ea02ae8f299ed0001d796ed548e2311"
+  },
+  "native/Shared/ContainerMigration.swift": {
+    "mtime": 1787954290.0555248,
+    "ast_hash": "35a5f330828ff6ef353b482d7ae04392",
+    "semantic_hash": "35a5f330828ff6ef353b482d7ae04392"
+  },
+  "native/Shared/CredentialAccount.swift": {
+    "mtime": 1787944304.8662112,
+    "ast_hash": "f73463de85dd228e1d14fcfcf7b0fb26",
+    "semantic_hash": "f73463de85dd228e1d14fcfcf7b0fb26"
+  },
+  "native/Shared/CredentialVerification.swift": {
+    "mtime": 1787944304.8665698,
+    "ast_hash": "266dac6d3fc98bee88778d97688ef24d",
+    "semantic_hash": "266dac6d3fc98bee88778d97688ef24d"
+  },
+  "native/Shared/CredentialsCopy.swift": {
+    "mtime": 1787944304.8667529,
+    "ast_hash": "7cca97d2977fb92769182694c53f92f4",
+    "semantic_hash": "7cca97d2977fb92769182694c53f92f4"
+  },
+  "native/Shared/CredentialsMigration.swift": {
+    "mtime": 1787944304.8669758,
+    "ast_hash": "8c51ccd91f4e29fb4e78fb986cbbd826",
+    "semantic_hash": "8c51ccd91f4e29fb4e78fb986cbbd826"
+  },
+  "native/Shared/DeckBundle.swift": {
+    "mtime": 1787954290.0557432,
+    "ast_hash": "6bd5fdcececcecce952433b46c093a76",
+    "semantic_hash": "6bd5fdcececcecce952433b46c093a76"
+  },
+  "native/Shared/DeckKeychain.swift": {
+    "mtime": 1787954290.0561001,
+    "ast_hash": "4fe516fe41bc6d06993121739db5aefc",
+    "semantic_hash": "4fe516fe41bc6d06993121739db5aefc"
+  },
+  "native/Shared/DeckLink.swift": {
+    "mtime": 1787562494.1954591,
+    "ast_hash": "d01d9b96648e0a53dc039fa633fbec81",
+    "semantic_hash": "d01d9b96648e0a53dc039fa633fbec81"
+  },
+  "native/Shared/DeckSettings.swift": {
+    "mtime": 1788093802.8322916,
+    "ast_hash": "74b6ec0ca4312e32c94b9cd3ebc87796",
+    "semantic_hash": "74b6ec0ca4312e32c94b9cd3ebc87796"
+  },
+  "native/Shared/DevBoxSnapshot.swift": {
+    "mtime": 1787132928.1135163,
+    "ast_hash": "5ff99aa3f2baa3e83b8b79db3549651c",
+    "semantic_hash": "5ff99aa3f2baa3e83b8b79db3549651c"
+  },
+  "native/Shared/FetchStatus.swift": {
+    "mtime": 1787697597.3314402,
+    "ast_hash": "ec901502778b0bead27df9e2b049631c",
+    "semantic_hash": "ec901502778b0bead27df9e2b049631c"
+  },
+  "native/Shared/GitBoxSnapshot.swift": {
+    "mtime": 1787132928.1141346,
+    "ast_hash": "8be1721396ca20460bf6f1e2f2d7f6a6",
+    "semantic_hash": "8be1721396ca20460bf6f1e2f2d7f6a6"
+  },
+  "native/Shared/LiveBoxCore.swift": {
+    "mtime": 1787143352.306228,
+    "ast_hash": "c050f0894dae8d877c40bdcb12cfa8be",
+    "semantic_hash": "c050f0894dae8d877c40bdcb12cfa8be"
+  },
+  "native/Shared/LiveBoxDiskCore.swift": {
+    "mtime": 1787005620.4384267,
+    "ast_hash": "0070bdd6e6b98765e3da19724f4879d3",
+    "semantic_hash": "0070bdd6e6b98765e3da19724f4879d3"
+  },
+  "native/Shared/LiveBoxThermalCore.swift": {
+    "mtime": 1787259277.8589516,
+    "ast_hash": "d5a8d96222b4cff214c01c500ffb0b00",
+    "semantic_hash": "d5a8d96222b4cff214c01c500ffb0b00"
+  },
+  "native/Shared/MarketBoxCore.swift": {
+    "mtime": 1787610873.755705,
+    "ast_hash": "9db585800f19c36c15d6bfeb26a6a135",
+    "semantic_hash": "9db585800f19c36c15d6bfeb26a6a135"
+  },
+  "native/Shared/MarketBoxSnapshot.swift": {
+    "mtime": 1787610873.7560496,
+    "ast_hash": "bc87d4a5077dae01ea8d81ddcb7b437b",
+    "semantic_hash": "bc87d4a5077dae01ea8d81ddcb7b437b"
+  },
+  "native/Shared/NetBoxCore.swift": {
+    "mtime": 1787428158.1828225,
+    "ast_hash": "2cfb32380af638ca666b43311c632221",
+    "semantic_hash": "2cfb32380af638ca666b43311c632221"
+  },
+  "native/Shared/OpenBoxCore.swift": {
+    "mtime": 1786811073.6088529,
+    "ast_hash": "b930d581e528bb826fe343c24b59ed42",
+    "semantic_hash": "b930d581e528bb826fe343c24b59ed42"
+  },
+  "native/Shared/OpenCodeReader.swift": {
+    "mtime": 1786811073.6090233,
+    "ast_hash": "15de6870411fbcb59d3c5ee9194b3d1f",
+    "semantic_hash": "15de6870411fbcb59d3c5ee9194b3d1f"
+  },
+  "native/Shared/OpenCodeSnapshot.swift": {
+    "mtime": 1787132928.1152823,
+    "ast_hash": "e167eebde882ac78366d0a598e6003fb",
+    "semantic_hash": "e167eebde882ac78366d0a598e6003fb"
+  },
+  "native/Shared/PRBoxSnapshot.swift": {
+    "mtime": 1787944304.8674989,
+    "ast_hash": "59a3e59bd18b0944aa8c7a7814e457ae",
+    "semantic_hash": "59a3e59bd18b0944aa8c7a7814e457ae"
+  },
+  "native/Shared/ProcessSnapshot.swift": {
+    "mtime": 1788167580.1033132,
+    "ast_hash": "85b3af1b87421635c9f430474995cd29",
+    "semantic_hash": "85b3af1b87421635c9f430474995cd29"
+  },
+  "native/Shared/RefreshPolicies.swift": {
+    "mtime": 1788167580.1037607,
+    "ast_hash": "4ecce3e68b3ac4f0af6cb6dc9a8687af",
+    "semantic_hash": "4ecce3e68b3ac4f0af6cb6dc9a8687af"
+  },
+  "native/Shared/RemoteOpenCodeLoader.swift": {
+    "mtime": 1787824474.3305619,
+    "ast_hash": "9398d021838a94f5cd8e5c9e47b45e3d",
+    "semantic_hash": "9398d021838a94f5cd8e5c9e47b45e3d"
+  },
+  "native/Shared/RemoteOpenCodeSync.swift": {
+    "mtime": 1787824474.3307202,
+    "ast_hash": "aa01c05f99b9b4b635d5d81210dc618d",
+    "semantic_hash": "aa01c05f99b9b4b635d5d81210dc618d"
+  },
+  "native/Shared/ShipBoxSnapshot.swift": {
+    "mtime": 1787761713.1552038,
+    "ast_hash": "f42a9ecb9993478b8bb6806e3e452f91",
+    "semantic_hash": "f42a9ecb9993478b8bb6806e3e452f91"
+  },
+  "native/Shared/SystemMetricsCore.swift": {
+    "mtime": 1787054618.2576776,
+    "ast_hash": "6ecb85e517ed173972ca38e9f36bd672",
+    "semantic_hash": "6ecb85e517ed173972ca38e9f36bd672"
+  },
+  "native/Shared/TaskBoxSnapshot.swift": {
+    "mtime": 1787944304.8679194,
+    "ast_hash": "4945df8b6f955a696229f20469c5234f",
+    "semantic_hash": "4945df8b6f955a696229f20469c5234f"
+  },
+  "native/Shared/WeatherSnapshot.swift": {
+    "mtime": 1787428158.1830173,
+    "ast_hash": "01c84d6667fb44007bab0ca28c820fba",
+    "semantic_hash": "01c84d6667fb44007bab0ca28c820fba"
+  },
+  "native/SharedTests/AccessoryCoreTests.swift": {
+    "mtime": 1787436069.830286,
+    "ast_hash": "19a24bf8c944d1ac8fd9fd26b66559db",
+    "semantic_hash": "19a24bf8c944d1ac8fd9fd26b66559db"
+  },
+  "native/SharedTests/AgentHeartbeatTests.swift": {
+    "mtime": 1788167580.104274,
+    "ast_hash": "cf4d6820bcbfeb7ce083b7020e7a62b0",
+    "semantic_hash": "cf4d6820bcbfeb7ce083b7020e7a62b0"
+  },
+  "native/SharedTests/AgentLivenessCopyTests.swift": {
+    "mtime": 1788167580.104579,
+    "ast_hash": "46dfad949bf5337b936bba3f43a85f37",
+    "semantic_hash": "46dfad949bf5337b936bba3f43a85f37"
+  },
+  "native/SharedTests/AtomicFileTests.swift": {
+    "mtime": 1787132928.1163971,
+    "ast_hash": "76bf32c7ec0c2e24e3126e83923c4465",
+    "semantic_hash": "76bf32c7ec0c2e24e3126e83923c4465"
+  },
+  "native/SharedTests/AzureAccountProjectsTests.swift": {
+    "mtime": 1787944304.868069,
+    "ast_hash": "9d9788b364d56329ef5f49475d5df5b9",
+    "semantic_hash": "9d9788b364d56329ef5f49475d5df5b9"
+  },
+  "native/SharedTests/AzureDevOpsParserTests.swift": {
+    "mtime": 1787353259.172447,
+    "ast_hash": "4acd26162a95dce1e20b596f0e9b250f",
+    "semantic_hash": "4acd26162a95dce1e20b596f0e9b250f"
+  },
+  "native/SharedTests/AzureMultiProjectTests.swift": {
+    "mtime": 1787944304.8682265,
+    "ast_hash": "167b827c9d805dd05eb3e9c4a3a3b9e0",
+    "semantic_hash": "167b827c9d805dd05eb3e9c4a3a3b9e0"
+  },
+  "native/SharedTests/AzureProjectsParserTests.swift": {
+    "mtime": 1787944304.868339,
+    "ast_hash": "7ba70ab3cf5d1d16431abbfd2a670810",
+    "semantic_hash": "7ba70ab3cf5d1d16431abbfd2a670810"
+  },
+  "native/SharedTests/BatteryCoreTests.swift": {
+    "mtime": 1787428158.183259,
+    "ast_hash": "7af5c303ab635d688d44f9d8859255ef",
+    "semantic_hash": "7af5c303ab635d688d44f9d8859255ef"
+  },
+  "native/SharedTests/CalBoxTests.swift": {
+    "mtime": 1787404671.014326,
+    "ast_hash": "a4b16ce33ffe7a6395a104f57c855e35",
+    "semantic_hash": "a4b16ce33ffe7a6395a104f57c855e35"
+  },
+  "native/SharedTests/ClipBoxSnapshotTests.swift": {
+    "mtime": 1787440297.262945,
+    "ast_hash": "6e946eac3a08fdf0378ab85d614d30fc",
+    "semantic_hash": "6e946eac3a08fdf0378ab85d614d30fc"
+  },
+  "native/SharedTests/ClockBoxTests.swift": {
+    "mtime": 1787428158.183608,
+    "ast_hash": "91e33320d9e4789b278b080b8e93872c",
+    "semantic_hash": "91e33320d9e4789b278b080b8e93872c"
+  },
+  "native/SharedTests/ContainerMigrationTests.swift": {
+    "mtime": 1787954290.0565512,
+    "ast_hash": "6aff430aaa5f74037504743719cd9461",
+    "semantic_hash": "6aff430aaa5f74037504743719cd9461"
+  },
+  "native/SharedTests/CostSeriesTests.swift": {
+    "mtime": 1786746869.9308522,
+    "ast_hash": "690b0e87c73598f9294cec6a3199c3a7",
+    "semantic_hash": "690b0e87c73598f9294cec6a3199c3a7"
+  },
+  "native/SharedTests/CredentialAccountTests.swift": {
+    "mtime": 1787944304.868597,
+    "ast_hash": "8e9b49810f43b74bf2e6c68c1991f563",
+    "semantic_hash": "8e9b49810f43b74bf2e6c68c1991f563"
+  },
+  "native/SharedTests/CredentialGateTests.swift": {
+    "mtime": 1787944304.868889,
+    "ast_hash": "9fe8df49f0621087fac3ccae2b391197",
+    "semantic_hash": "9fe8df49f0621087fac3ccae2b391197"
+  },
+  "native/SharedTests/CredentialKindSearchTests.swift": {
+    "mtime": 1787761713.155965,
+    "ast_hash": "4afcf0ce17df58d9610fa3a77612a2bc",
+    "semantic_hash": "4afcf0ce17df58d9610fa3a77612a2bc"
+  },
+  "native/SharedTests/CredentialVerificationTests.swift": {
+    "mtime": 1787944304.869056,
+    "ast_hash": "2ace6d2dcd7a9edbf97518a6dfb6b403",
+    "semantic_hash": "2ace6d2dcd7a9edbf97518a6dfb6b403"
+  },
+  "native/SharedTests/CredentialsCopyTests.swift": {
+    "mtime": 1787944304.869245,
+    "ast_hash": "e1f6852e6522147cb2effc6ce2e69e02",
+    "semantic_hash": "e1f6852e6522147cb2effc6ce2e69e02"
+  },
+  "native/SharedTests/CredentialsMigrationTests.swift": {
+    "mtime": 1787944304.8695562,
+    "ast_hash": "63a82fd0bb7705131458d2ea4ba4f9ce",
+    "semantic_hash": "63a82fd0bb7705131458d2ea4ba4f9ce"
+  },
+  "native/SharedTests/CredentialsWidgetReadsTests.swift": {
+    "mtime": 1787761713.1564617,
+    "ast_hash": "8ba06bc7936f75574dcdb8c76c4e18cf",
+    "semantic_hash": "8ba06bc7936f75574dcdb8c76c4e18cf"
+  },
+  "native/SharedTests/CredentialsWiringTests.swift": {
+    "mtime": 1787944304.8698,
+    "ast_hash": "42dbc3546e567ffca1b59938feb18949",
+    "semantic_hash": "42dbc3546e567ffca1b59938feb18949"
+  },
+  "native/SharedTests/DeckBundleTests.swift": {
+    "mtime": 1787954290.0567694,
+    "ast_hash": "1b8792e5cf79989c49000856b8b5244e",
+    "semantic_hash": "1b8792e5cf79989c49000856b8b5244e"
+  },
+  "native/SharedTests/DeckKeychainTests.swift": {
+    "mtime": 1787761713.1570044,
+    "ast_hash": "3fe9c5b640ed8fa05780a46473d70e91",
+    "semantic_hash": "3fe9c5b640ed8fa05780a46473d70e91"
+  },
+  "native/SharedTests/DeckLinkTests.swift": {
+    "mtime": 1787562494.1972544,
+    "ast_hash": "250e5d26ecca059060cb62880fe2e03b",
+    "semantic_hash": "250e5d26ecca059060cb62880fe2e03b"
+  },
+  "native/SharedTests/DeckSecretsMigrationTests.swift": {
+    "mtime": 1787697597.3322043,
+    "ast_hash": "4f69d8142ecdc64c6e97e859639cd494",
+    "semantic_hash": "4f69d8142ecdc64c6e97e859639cd494"
+  },
+  "native/SharedTests/DeckSettingsSecretsTests.swift": {
+    "mtime": 1787697597.3325844,
+    "ast_hash": "04761cda3c587af769f74f104752df79",
+    "semantic_hash": "04761cda3c587af769f74f104752df79"
+  },
+  "native/SharedTests/DecodeTests.swift": {
+    "mtime": 1788093802.8350499,
+    "ast_hash": "083cd5f576f95fae005a362dcaa73620",
+    "semantic_hash": "083cd5f576f95fae005a362dcaa73620"
+  },
+  "native/SharedTests/DevBoxSnapshotTests.swift": {
+    "mtime": 1787047877.4312153,
+    "ast_hash": "204ef4a95342bf94a985ee826f6450ee",
+    "semantic_hash": "204ef4a95342bf94a985ee826f6450ee"
+  },
+  "native/SharedTests/FetchStatusCredentialsTests.swift": {
+    "mtime": 1787697597.3329284,
+    "ast_hash": "f896bed4dfc18bde5ce7ddff512206f3",
+    "semantic_hash": "f896bed4dfc18bde5ce7ddff512206f3"
+  },
+  "native/SharedTests/FetchStatusTests.swift": {
+    "mtime": 1787610873.7564394,
+    "ast_hash": "5fc7a9558d3be912a1203f2ddce5d31d",
+    "semantic_hash": "5fc7a9558d3be912a1203f2ddce5d31d"
+  },
+  "native/SharedTests/Fixtures/amsterdam_j1.json": {
+    "mtime": 1786746869.9312248,
+    "ast_hash": "7a8de9286610511cd19ffbcf253d6978",
+    "semantic_hash": "7a8de9286610511cd19ffbcf253d6978"
+  },
+  "native/SharedTests/Fixtures/azure_connectiondata.json": {
+    "mtime": 1787562494.1978803,
+    "ast_hash": "99c51fd812ea8906a14b93d65ee4ef3d",
+    "semantic_hash": "99c51fd812ea8906a14b93d65ee4ef3d"
+  },
+  "native/SharedTests/Fixtures/azure_projects.json": {
+    "mtime": 1787944304.8701594,
+    "ast_hash": "8c978c605f61fa4ad07b8a1d9cbdf61b",
+    "semantic_hash": "8c978c605f61fa4ad07b8a1d9cbdf61b"
+  },
+  "native/SharedTests/Fixtures/azure_prs.json": {
+    "mtime": 1787562494.1982093,
+    "ast_hash": "b86da7eeb599683349b0ef9dd82ea148",
+    "semantic_hash": "b86da7eeb599683349b0ef9dd82ea148"
+  },
+  "native/SharedTests/Fixtures/azure_prs_votes.json": {
+    "mtime": 1787562494.1985865,
+    "ast_hash": "1c79b4b7f078d32339c9eeb8930a1805",
+    "semantic_hash": "1c79b4b7f078d32339c9eeb8930a1805"
+  },
+  "native/SharedTests/Fixtures/coinGeckoMarkets.json": {
+    "mtime": 1787610873.7568455,
+    "ast_hash": "c8481318d02ae1700be5b24645f07890",
+    "semantic_hash": "c8481318d02ae1700be5b24645f07890"
+  },
+  "native/SharedTests/Fixtures/erApiLatest.json": {
+    "mtime": 1787610873.7570486,
+    "ast_hash": "6e5aa94a2b17c968de4d788400ab3ca7",
+    "semantic_hash": "6e5aa94a2b17c968de4d788400ab3ca7"
+  },
+  "native/SharedTests/Fixtures/github_prs.json": {
+    "mtime": 1787562494.1991181,
+    "ast_hash": "46b0724a7b21e388834432a8e68f1e86",
+    "semantic_hash": "46b0724a7b21e388834432a8e68f1e86"
+  },
+  "native/SharedTests/Fixtures/github_repos.json": {
+    "mtime": 1787673961.461043,
+    "ast_hash": "0ea4710376c6191f64c0728ca2501ef8",
+    "semantic_hash": "0ea4710376c6191f64c0728ca2501ef8"
+  },
+  "native/SharedTests/Fixtures/github_user.json": {
+    "mtime": 1787761713.1576326,
+    "ast_hash": "6f8d9c1f0ec9ed3ea6e1797bcc5b4ff1",
+    "semantic_hash": "6f8d9c1f0ec9ed3ea6e1797bcc5b4ff1"
+  },
+  "native/SharedTests/Fixtures/goldXau.json": {
+    "mtime": 1787610873.7573504,
+    "ast_hash": "0e6fc4ce1f8b276a4df83ce8798d69c9",
+    "semantic_hash": "0e6fc4ce1f8b276a4df83ce8798d69c9"
+  },
+  "native/SharedTests/Fixtures/wallexMarkets.json": {
+    "mtime": 1787610873.7576792,
+    "ast_hash": "511705f19f07edd49e9a6dc8606a0702",
+    "semantic_hash": "511705f19f07edd49e9a6dc8606a0702"
+  },
+  "native/SharedTests/GitBoxSnapshotTests.swift": {
+    "mtime": 1786746869.9313707,
+    "ast_hash": "bb6f7ec469b6cd3c3f68cec6c96c501c",
+    "semantic_hash": "bb6f7ec469b6cd3c3f68cec6c96c501c"
+  },
+  "native/SharedTests/LiveBoxDiskCoreTests.swift": {
+    "mtime": 1787005620.4389188,
+    "ast_hash": "2aeb5de67b8102e042658977932cc64b",
+    "semantic_hash": "2aeb5de67b8102e042658977932cc64b"
+  },
+  "native/SharedTests/LiveBoxThermalTests.swift": {
+    "mtime": 1787259277.859224,
+    "ast_hash": "655f130ec5533c872fe7f9a188b82885",
+    "semantic_hash": "655f130ec5533c872fe7f9a188b82885"
+  },
+  "native/SharedTests/LiveBoxThresholdTests.swift": {
+    "mtime": 1787143352.306738,
+    "ast_hash": "994fb13b1b3f96766d952d1889a812ac",
+    "semantic_hash": "994fb13b1b3f96766d952d1889a812ac"
+  },
+  "native/SharedTests/MarketBoxCoreTests.swift": {
+    "mtime": 1787610873.757861,
+    "ast_hash": "d07d89b6667a8756aaeb04822b6fa85a",
+    "semantic_hash": "d07d89b6667a8756aaeb04822b6fa85a"
+  },
+  "native/SharedTests/MarketBoxParsersTests.swift": {
+    "mtime": 1787610873.758123,
+    "ast_hash": "b7d147928f3bca3b618c64f300b09fc7",
+    "semantic_hash": "b7d147928f3bca3b618c64f300b09fc7"
+  },
+  "native/SharedTests/MarketBoxSnapshotTests.swift": {
+    "mtime": 1787770874.6571946,
+    "ast_hash": "50ebf60e0a32c45bba45a0841f3f4442",
+    "semantic_hash": "50ebf60e0a32c45bba45a0841f3f4442"
+  },
+  "native/SharedTests/ModelParserTests.swift": {
+    "mtime": 1786746869.9319775,
+    "ast_hash": "34aec1d10afd3f91c7a1b4ec97b3e5dc",
+    "semantic_hash": "34aec1d10afd3f91c7a1b4ec97b3e5dc"
+  },
+  "native/SharedTests/NetBoxCoreTests.swift": {
+    "mtime": 1787428158.1843271,
+    "ast_hash": "f02072141abbb69fae8572a27ce18822",
+    "semantic_hash": "f02072141abbb69fae8572a27ce18822"
+  },
+  "native/SharedTests/NetBoxThresholdTests.swift": {
+    "mtime": 1786959800.8452237,
+    "ast_hash": "9032738679ae27da8b571d6c119cdfdf",
+    "semantic_hash": "9032738679ae27da8b571d6c119cdfdf"
+  },
+  "native/SharedTests/OpenBoxSessionCoreTests.swift": {
+    "mtime": 1786811073.6096368,
+    "ast_hash": "23ca5e1edcd5a04814886610c3f3f378",
+    "semantic_hash": "23ca5e1edcd5a04814886610c3f3f378"
+  },
+  "native/SharedTests/OpenCodeSQLTests.swift": {
+    "mtime": 1787562494.1996424,
+    "ast_hash": "aefa8ad387f2aa879ad4fe6d8b6a951c",
+    "semantic_hash": "aefa8ad387f2aa879ad4fe6d8b6a951c"
+  },
+  "native/SharedTests/PRBoxAzureTests.swift": {
+    "mtime": 1787944304.8704958,
+    "ast_hash": "65ae6036d0ad4586a1e6e78ab8bd6216",
+    "semantic_hash": "65ae6036d0ad4586a1e6e78ab8bd6216"
+  },
+  "native/SharedTests/PRBoxChipTests.swift": {
+    "mtime": 1787562494.2002265,
+    "ast_hash": "b859965b12214de784b3cd09d18369ff",
+    "semantic_hash": "b859965b12214de784b3cd09d18369ff"
+  },
+  "native/SharedTests/PRBoxGitHubTests.swift": {
+    "mtime": 1787562494.2006392,
+    "ast_hash": "a6cf06350b7e0c420fd72b74e37d0512",
+    "semantic_hash": "a6cf06350b7e0c420fd72b74e37d0512"
+  },
+  "native/SharedTests/PRBoxSnapshotTests.swift": {
+    "mtime": 1787562494.200965,
+    "ast_hash": "4753f1e4575ec98faaa5cc4aea678286",
+    "semantic_hash": "4753f1e4575ec98faaa5cc4aea678286"
+  },
+  "native/SharedTests/ProcessSnapshotStoreTests.swift": {
+    "mtime": 1787132928.1166034,
+    "ast_hash": "6a7ec67a6fc51998cc21d73dd58e98e0",
+    "semantic_hash": "6a7ec67a6fc51998cc21d73dd58e98e0"
+  },
+  "native/SharedTests/ProcessSnapshotTests.swift": {
+    "mtime": 1787054618.2581122,
+    "ast_hash": "ae79f7c7e0b5f301648be3d081e29f86",
+    "semantic_hash": "ae79f7c7e0b5f301648be3d081e29f86"
+  },
+  "native/SharedTests/RGBAPaletteTests.swift": {
+    "mtime": 1787770874.6574996,
+    "ast_hash": "3ce55225ef208c077a4408267025aa52",
+    "semantic_hash": "3ce55225ef208c077a4408267025aa52"
+  },
+  "native/SharedTests/RefreshPoliciesTests.swift": {
+    "mtime": 1788167580.1053681,
+    "ast_hash": "671cf09e70a04e5e57305399124f332a",
+    "semantic_hash": "671cf09e70a04e5e57305399124f332a"
+  },
+  "native/SharedTests/RemoteOpenCodeAggregatorTests.swift": {
+    "mtime": 1787047877.431515,
+    "ast_hash": "6ba3cf69617488389722f14956f9d274",
+    "semantic_hash": "6ba3cf69617488389722f14956f9d274"
+  },
+  "native/SharedTests/RemoteOpenCodeSyncTests.swift": {
+    "mtime": 1787824474.3309307,
+    "ast_hash": "3a5e6c4a9d877cf120c2b608c2ddfdb1",
+    "semantic_hash": "3a5e6c4a9d877cf120c2b608c2ddfdb1"
+  },
+  "native/SharedTests/ShipBoxDiscoveryTests.swift": {
+    "mtime": 1787673961.4616013,
+    "ast_hash": "b24c91373e774816577ec28eb51ffc04",
+    "semantic_hash": "b24c91373e774816577ec28eb51ffc04"
+  },
+  "native/SharedTests/ShipBoxMergeTests.swift": {
+    "mtime": 1787673961.4618132,
+    "ast_hash": "c96617c3ff21e391ffbf71bc3866fcd2",
+    "semantic_hash": "c96617c3ff21e391ffbf71bc3866fcd2"
+  },
+  "native/SharedTests/ShipBoxSettingsTests.swift": {
+    "mtime": 1787770874.6582165,
+    "ast_hash": "a78a1b9dbc5bdb86643d9215ad76165a",
+    "semantic_hash": "a78a1b9dbc5bdb86643d9215ad76165a"
+  },
+  "native/SharedTests/ShipBoxSnapshotTests.swift": {
+    "mtime": 1786746869.9322202,
+    "ast_hash": "5a536e26d6f8b11d2c207ab87c7acc39",
+    "semantic_hash": "5a536e26d6f8b11d2c207ab87c7acc39"
+  },
+  "native/SharedTests/SmokeTests.swift": {
+    "mtime": 1786746869.9324398,
+    "ast_hash": "d5fe684306860acfaf8f4ad1f2b3541a",
+    "semantic_hash": "d5fe684306860acfaf8f4ad1f2b3541a"
+  },
+  "native/SharedTests/SystemMetricsCoreTests.swift": {
+    "mtime": 1787054618.2582574,
+    "ast_hash": "1e1ab811b846195e43d2f4793888dabe",
+    "semantic_hash": "1e1ab811b846195e43d2f4793888dabe"
+  },
+  "native/SharedTests/TaskBoxSnapshotTests.swift": {
+    "mtime": 1787353259.1732962,
+    "ast_hash": "1cd4a08e74509dd3ebbf20657f89ac98",
+    "semantic_hash": "1cd4a08e74509dd3ebbf20657f89ac98"
+  },
+  "native/SharedTests/ThresholdTierTests.swift": {
+    "mtime": 1786813826.6911619,
+    "ast_hash": "46adcf25fdbfbfc3d4c53f9cb48fd6e8",
+    "semantic_hash": "46adcf25fdbfbfc3d4c53f9cb48fd6e8"
+  },
+  "native/SharedTests/ToolCountTests.swift": {
+    "mtime": 1786746869.9325385,
+    "ast_hash": "2338c72e30ba1e5640130b5aef7660bc",
+    "semantic_hash": "2338c72e30ba1e5640130b5aef7660bc"
+  },
+  "native/SharedTests/WeatherSnapshotTests.swift": {
+    "mtime": 1787428158.1844559,
+    "ast_hash": "ca09e50a81d389d80fa9c19ef1e201aa",
+    "semantic_hash": "ca09e50a81d389d80fa9c19ef1e201aa"
+  },
+  "scripts/container-repair.sh": {
+    "mtime": 1787954290.0574749,
+    "ast_hash": "3e79f97343d9afada707a11a8869250a",
+    "semantic_hash": "3e79f97343d9afada707a11a8869250a"
+  },
+  "scripts/demo-data.sh": {
+    "mtime": 1787954290.057924,
+    "ast_hash": "a36758d00a8ae5a51eb32f98d1e8c11e",
+    "semantic_hash": "a36758d00a8ae5a51eb32f98d1e8c11e"
+  },
+  "scripts/demo_data.py": {
+    "mtime": 1787673961.4625685,
+    "ast_hash": "446ae819b8a088f430e0a0b7fd70a205",
+    "semantic_hash": "446ae819b8a088f430e0a0b7fd70a205"
+  },
+  "scripts/lib/ids.sh": {
+    "mtime": 1787954290.0580812,
+    "ast_hash": "83c33aed7a602e3f291ecdca31cd2af2",
+    "semantic_hash": "83c33aed7a602e3f291ecdca31cd2af2"
+  },
+  "scripts/lsclean.sh": {
+    "mtime": 1787954290.0584142,
+    "ast_hash": "9e68af917b5fdc1a3949e87e9485848c",
+    "semantic_hash": "9e68af917b5fdc1a3949e87e9485848c"
+  },
+  "scripts/soak.sh": {
+    "mtime": 1787954290.058791,
+    "ast_hash": "2d2debe4a79aea363009eee4b8462c57",
+    "semantic_hash": "2d2debe4a79aea363009eee4b8462c57"
+  }
+}

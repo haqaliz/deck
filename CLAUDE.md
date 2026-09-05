@@ -47,7 +47,9 @@ widget.
   below.
 - **MarketBox** — markets: crypto, fiat and gold priced in one display
   currency (USD/IRR/IRT/CAD/EUR/AED), from four keyless providers. Tickers are
-  picked from a curated list; no charts in the face (see the Swift Charts trap).
+  **picked, never typed**, from a live CoinGecko search in the settings tab —
+  settings store the coin's id, so the agent resolves nothing at fetch time; no
+  charts in the face (see the Swift Charts trap).
 
 All fourteen ship in one WidgetKit extension: `Deck.app` (host + settings window)
 → `DeckWidgets.appex`.
