@@ -78,6 +78,28 @@ jobs:
             -derivedDataPath native/build.noindex -allowProvisioningUpdates \
             -allowProvisioningDeviceRegistration build
 
+      - name: Verify hardened runtime
+        if: steps.signing.outputs.available == 'true'
+        run: |
+          # The unit suite guards project.yml; this guards the product. A green
+          # run has published an unopenable artifact here before (the HFS+ DMG
+          # that shipped as v1.40), and an unhardened binary fails notarization
+          # the same way -- late, and after the release exists.
+          cd native/build.noindex/Build/Products/Release
+          fail=0
+          for target in \
+            "Deck.app" \
+            "Deck.app/Contents/PlugIns/DeckWidgets.appex" \
+            "Deck.app/Contents/MacOS/DeckAgent"; do
+            flags=$(codesign -dvvv "$target" 2>&1 | grep -oE 'flags=0x[0-9a-f]+ *\([^)]*\)' || true)
+            case "$flags" in
+              *runtime*) echo "ok   $target  $flags" ;;
+              *)         echo "::error::$target would ship without hardened runtime (${flags:-no signature})"
+                         fail=1 ;;
+            esac
+          done
+          exit $fail
+
       - name: Build (unsigned, compile check)
         if: steps.signing.outputs.available == 'false'
         run: |
