@@ -4,12 +4,19 @@ Everything Deck needs to become a normally installable Mac app, in order, with
 the verification gate for each step. Nothing here is possible without the paid
 [Apple Developer Program](https://developer.apple.com/programs/) ($99/yr).
 
-Status as of v1.20: Deck is signed with an **Apple Development** certificate and
-is **not notarized**. It runs on any Mac once the quarantine flag is cleared by
-hand (`xattr -dr com.apple.quarantine`), which is what `--no-quarantine` does in
-the Homebrew cask. There is no device restriction — the bundle carries no
-provisioning profile, and its only entitlement is `app-sandbox` on the
-extension. Gatekeeper is the sole obstacle.
+Status as of v1.41: Deck is signed with an **Apple Development** certificate and
+is **not notarized**, but it already runs with the **hardened runtime** on all
+three shipping targets — landed early and deliberately, so that this runbook's
+Step 2 changes the identity and nothing else
+(`docs/planning/hardened-runtime-preflight/`).
+
+It runs on any Mac once the quarantine flag is cleared by hand
+(`xattr -dr com.apple.quarantine`, **before** the first launch — a quarantined
+launch makes Gatekeeper delete the app, and Homebrew's `--no-quarantine` no
+longer exists). There is no device restriction: the bundle carries no
+provisioning profile, and the only entitlements anywhere in it are `app-sandbox`
+on the extension and `application-identifier` on the agent. Gatekeeper is the
+sole obstacle.
 
 ## Why this is worth $99
 
@@ -90,14 +97,21 @@ one person's 2FA), but the three secrets already configured are enough to start.
 **Gate:** `security find-identity -v -p codesigning` lists
 `Developer ID Application: … (TEAMID)`.
 
-## Step 2 — Switch the project to Developer ID + hardened runtime
+## Step 2 — Switch the project to Developer ID
+
+**Hardened runtime is already on.** It shipped in v1.41 under the existing Apple
+Development identity, precisely so this step would not be the first time it was
+tried — see [`../hardened-runtime-preflight/verification.md`](../hardened-runtime-preflight/verification.md).
+So this step changes the identity and nothing else.
 
 In `native/project.yml`, for **all three shipping targets** (`DeckApp`,
 `DeckWidgets`, `DeckAgent` — not `DeckSharedTests`):
 
 ```yaml
         CODE_SIGN_IDENTITY: "Developer ID Application"   # was "Apple Development"
-        ENABLE_HARDENED_RUNTIME: YES                     # was NO — required to notarize
+        # ENABLE_HARDENED_RUNTIME: YES  — already set; a unit guard fails the
+        # suite if any shipping target loses it, and the release job refuses to
+        # package a build whose binaries do not report `runtime`.
 ```
 
 Keep `CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO` under `configs: Release:`.
@@ -128,21 +142,33 @@ codesign -dvvv native/build.noindex/Build/Products/Release/Deck.app 2>&1 \
 
 shows the Developer ID authority **and** the `runtime` flag.
 
-### Hardened runtime: what to watch
+### Hardened runtime: what was watched, and what it did
 
-Nothing Deck does should need an exception, but confirm rather than assume:
+This list used to be three predictions. They were measured on 2026-09-06 against
+a hardened v1.41 install, and all three held:
 
-- **DeckAgent spawns subprocesses** (`ps`, `docker`, `git`). Hardened runtime
-  does not restrict spawning children, so no entitlement is required.
+- **DeckAgent spawns subprocesses** (`ps`, `docker`, `git`). All three ran: 10
+  process rows, 9 listening ports with `dockerState = noContainers` (a
+  successful spawn returning an empty list, which the snapshot distinguishes
+  from a failed one), and a git snapshot across 91 repos.
 - **BatBox binds `IOPSCopyPowerSourcesByType` with `@_silgen_name`.** Private
-  API is rejected by *App Store review*, not by *notarization*, so Developer ID
-  distribution is fine. It still must be re-verified inside the sandboxed
-  extension after the identity change (Step 5).
-- Deck uses no JIT, no `DYLD_INSERT_LIBRARIES`, no unsigned executable memory,
-  so none of the corresponding exception entitlements apply.
+  API is rejected by *App Store review*, not by *notarization*. Verified in the
+  sandboxed extension under hardened runtime; still worth re-checking after the
+  identity change, because that is a different signature.
+- **No exception entitlement was needed.** Deck runs hardened with library
+  validation on, and the app carries no entitlements at all. If a `cs.*` key
+  ever appears in this project, something has regressed.
+
+Also measured, and useful when this step is taken: **TCC grants survived**. The
+calendar grant and the process-list grant both held across the re-signature —
+so if grants reset on the Developer ID release, the *identity* is why, not the
+runtime flag.
 
 If a hardened-runtime crash does appear, `log stream --predicate 'sender ==
-"AMFI"'` names the restriction it hit.
+"AMFI"'` names the restriction it hit — **but check the log is answering
+first.** Deck's own agent logs at `info` level, so `log show` without
+`--info --debug` returns nothing for it and an AMFI query looks identically
+silent whether or not anything happened.
 
 ## Step 3 — Notarize and staple in CI
 
