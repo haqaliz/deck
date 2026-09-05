@@ -4,3 +4,4 @@ native/build.noindex/
 .claude/worktrees/
 .DS_Store
 CalBoxCore/.build/
+graphify-out/
