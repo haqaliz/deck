@@ -443,8 +443,12 @@ in CI, the verification gates, and what the identity change resets.
 - [x] **Uninstall is a button** (General tab): remove the agents, erase the
       data. The container itself is deliberately never deleted.
 - [x] **Homebrew cask** (`homebrew/deck.rb` → tap `haqaliz/homebrew-deck`).
-      `--no-quarantine` is what spares users the `xattr` dance until
-      notarization lands.
+      The `xattr -dr com.apple.quarantine` line in the caveats is what users
+      need until notarization lands — and it must run **before** the first
+      launch, because a quarantined launch makes Gatekeeper *delete* the app.
+      This entry used to credit `--no-quarantine`; Homebrew removed that flag,
+      and `README.md` and `homebrew/deck.rb` were corrected while this was
+      still telling readers to use an uncommand.
 - [x] **Screenshot pipeline** — `scripts/demo-data.sh` sanitizes the snapshots
       in place so the widgets can be captured without publishing real calendar
       entries, work items, clipboard contents or repo paths.
@@ -453,11 +457,51 @@ in CI, the verification gates, and what the identity change resets.
       extension on a machine outside the signing team. Test before announcing
       anywhere.
 - [ ] **Notarization** — needs the paid Apple Developer Program. Developer ID
-      Application certificate, `ENABLE_HARDENED_RUNTIME: YES` on all three
-      targets, `notarytool submit --wait` + `stapler staple` in the release
-      job, drop `-allowProvisioningDeviceRegistration`. This also removes the
-      hard expiry below. Full runbook:
+      Application certificate, `notarytool submit --wait` + `stapler staple` in
+      the release job, drop `-allowProvisioningDeviceRegistration`. This also
+      removes the hard expiry below. Full runbook:
       [`docs/planning/notarization/runbook.md`](docs/planning/notarization/runbook.md).
+      **Hardened runtime is no longer part of this** — it shipped in v1.41 under
+      the existing identity (see below), so the paid day changes the certificate
+      and only the certificate.
+- [x] **Hardened runtime, landed early** — shipped v1.41, 2026-09-06
+      (`docs/planning/hardened-runtime-preflight/`). `ENABLE_HARDENED_RUNTIME`
+      was `NO` on DeckApp and DeckWidgets and **absent entirely on DeckAgent**,
+      which is one of the two causes the runbook names for a first `Invalid`
+      notarization; absent and `NO` look different in the file and identical in
+      the product. All three now declare it, a unit guard enumerates the targets
+      out of `project.yml` (so a target added later fails the suite rather than
+      shipping unhardened), and the release job refuses to package a build whose
+      binaries do not report `runtime`.
+      **Done now, separately, on purpose.** The notarization release changes the
+      identity, the runtime flag, the CI flags and — by decision — the bundle
+      id, all at once; it resets every user's TCC grants, forces every user to
+      re-add their widgets, and its rollback is documented as not symmetric. One
+      of those four variables can be spent while a rollback is still `cp -R` of
+      the previous build, so it was.
+      **Measured on a real install rather than assumed**
+      (`verification.md`): all three binaries `flags=0x10000(runtime)`;
+      **no exception entitlement needed** (the app still carries none at all, so
+      Deck runs hardened with library validation on); both agents tick; `ps`,
+      `docker` and `git` all still spawn; the sandboxed extension launches and
+      chronod schedules all fourteen widget kinds; AMFI logs nothing.
+      Three findings worth keeping:
+      - **TCC grants survive a re-signature under an unchanged identity.** Six
+        calendar events read, no prompt. So when grants reset on the Developer
+        ID release, the *identity* is the reason — not the runtime flag.
+      - **chronod's failed reloads are pre-existing.** 11.3% of reloads failed
+        before the change and 11.1% after; they are stale `HomeBoxWidget`
+        timeline archives (`CHSErrorDomain 1100`) left from the HomeBox →
+        WeatherBox/ClockBox split, plus three `1103`s. A count taken only after
+        a change would have read as damage.
+      - **`log show` without `--info --debug` returns nothing for Deck**, agent
+        lines included — so an AMFI query looks identically silent whether or
+        not anything happened. The silence was only admitted after a positive
+        control proved the log was answering.
+      Verified on CI as well as locally: a fresh `macos-latest` runner signs and
+      hardens all three targets under automatic Apple Development signing with
+      no change to the provisioning flags, so the release job needs nothing
+      further before the identity switch.
 - [ ] **The expiry cliff.** Xcode signs development builds with no secure
       timestamp (`Signed Time=`, not `Timestamp=`), so signature validity is
       tied to the certificate: **2027-08-09**, after which every copy of Deck

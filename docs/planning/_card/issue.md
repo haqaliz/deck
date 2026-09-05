@@ -1,40 +1,47 @@
-# Card — MarketBox live coin lookup
+# Card — hardened-runtime pre-flight
 
-**Type:** feat · **Slug:** `marketbox-coin-lookup` · **Branch:** `feat/marketbox-coin-lookup/aliz`
-**Source:** inline brief (`deck-next`, 2026-09-05). No GitHub issue.
-**Closes:** `ROADMAP.md:253-254` (MarketBox open follow-up — *"a live `/coins/list`
-lookup instead of the curated symbol map"*).
+**Type:** feat · **Branch:** `feat/hardened-runtime-preflight/aliz` · **Source:** inline brief (`deck-next`, 2026-09-06)
 
-## Brief
+Turn on `ENABLE_HARDENED_RUNTIME` for all three shipping targets (DeckApp,
+DeckWidgets, DeckAgent — not DeckSharedTests) while still signing with the
+existing "Apple Development" identity, so the notarization release is a
+certificate swap rather than a debugging session on a release that also resets
+every user's TCC grant and cannot be rolled back symmetrically.
 
-MarketBox's ticker pickers are fed by `MarketSymbolResolver.cryptoIDs`
-(`native/Shared/MarketBoxCore.swift:16`) — a hand-maintained map of 43 coins that
-is both the picker's source and the pricing route
-(`coins/markets?ids=…`, `native/Shared/MarketBoxSnapshot.swift:265`). Anything
-outside those 43 is unpickable and unpriceable, and the map silently drifts as
-CoinGecko ids change. Replace it with a live, searchable lookup behind the same
-twelve slot pickers, keeping tickers **picked** rather than blind-typed
-(`ROADMAP.md:240` records why free text was removed).
+`native/project.yml` currently has `ENABLE_HARDENED_RUNTIME: NO` at :51 and :88
+and the key is missing entirely from the DeckAgent target at :123 — a missed
+target is one of the two typical causes of an `Invalid` notarization per
+`docs/planning/notarization/runbook.md` Step 2.
 
-## Caveats to probe live before the PRD
+Verify against the installed copy in `/Applications`, not `build.noindex`:
 
-- `/coins/list` is the endpoint the ROADMAP names but is probably wrong:
-  multi-megabyte, unranked, and dozens of coins share a ticker like `BTC`, which
-  recreates the "unknowable symbol" problem the curated list exists to prevent.
-  Compare against `coins/markets?order=market_cap_desc&per_page=250`, which
-  carries symbol, name, id **and** market-cap rank in one keyless call — and is
-  the endpoint MarketBox already talks to.
-- CoinGecko's free tier is rate-limited. The fetch belongs to the **host app on
-  picker open**, cached in an app-side sidecar (the `opencode-cursor.json`
-  precedent) — not the 60s agent tick, and **not** the widget extension, which
-  has no such access.
-- Decide what happens to a ticker already stored whose id the live list no
-  longer resolves.
+- the extension registers (`pluginkit`), all fourteen widgets re-add from the
+  gallery and render at all three sizes;
+- both agents write (`processes.json` and `agent-heartbeat.json` mtimes advance);
+- DeckAgent's subprocesses still run (`ps`, `docker`, `git`);
+- BatBox's `@_silgen_name` `IOPSCopyPowerSourcesByType` accessory section still
+  populates **inside the sandboxed extension** — check it against
+  `pmset -g accps` rather than the unified log, which can be empty on this
+  machine.
 
-## Shell invariants this must not break
+If AMFI objects, `log stream --predicate 'sender == "AMFI"'` names the
+restriction.
 
-- Settings live in the Deck app window only; the widget extension reads
-  `settings.json` and has no keychain or network-credential access.
-- Anything the extension reads must stay answerable from `settings.json`
-  (CLAUDE.md: "Two settings fields are read *inside the widget extension*").
-- No Swift Charts in a widget face (CLAUDE.md) — not expected to apply here.
+While in project.yml/CI, also:
+
+- drop `-allowProvisioningDeviceRegistration` from the release build line;
+- fix the stale `--no-quarantine` claim in ROADMAP.md's Homebrew entry (the flag
+  no longer exists; README.md:92 is already correct).
+
+Record the result in `docs/planning/hardened-runtime-preflight/` and cross-link
+it from the notarization runbook so the paid day starts with Step 1.
+
+## Why this, now (from `deck-next`)
+
+- M3 and M5 are both marked *candidate list exhausted*; the three remaining
+  widget ideas carry recorded blockers (MediaRemote entitlement, SMC private
+  API, Mail Envelope Index). Everything unchecked lives in M7 — launch readiness.
+- Notarization is the highest-value M7 item (it removes the Gatekeeper dance
+  that currently *deletes* `/Applications/Deck.app` on a quarantined launch, and
+  the 2027-08-09 expiry cliff), but it is gated on a $99 purchase and an
+  individual-vs-organization decision. This is the part of it that needs neither.

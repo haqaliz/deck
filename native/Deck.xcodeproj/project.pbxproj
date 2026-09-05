@@ -247,6 +247,7 @@
 		DDF03B7E05EAF62474FC15C6 /* provider-opencode-dark.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 73F96E7BFEC173880798A099 /* provider-opencode-dark.pdf */; };
 		DE08983334C0343BB41BC78D /* DeckLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */; };
 		DF3E69473804CC777ED434B4 /* MarketBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */; };
+		E09BA881F8C82EBC75B0C74D /* HardenedRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2278DCFD3ACC03FB29D2680 /* HardenedRuntimeTests.swift */; };
 		E12D02F197A271DD411D4053 /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
 		E14CADB2CF950D781BA2F195 /* ClockBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 246CB064D9531380A28D9673 /* ClockBoxWidget.swift */; };
 		E1EBE95E84F8F791E5B3D34A /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
@@ -462,6 +463,7 @@
 		ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalBoxSnapshot.swift; sourceTree = "<group>"; };
 		F06724D8333A9A74C4156DB6 /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		F184F1820A5FC6758145DCAD /* DeckWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DeckWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F2278DCFD3ACC03FB29D2680 /* HardenedRuntimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardenedRuntimeTests.swift; sourceTree = "<group>"; };
 		F291A6BF3E8077A4206A68E9 /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentService.swift; sourceTree = "<group>"; };
 		F43C960DDF3AB3D1461849AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F44048FEBB8DD2831A60146B /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
@@ -583,6 +585,7 @@
 				923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */,
 				1D0F7208894404301344CB11 /* FetchStatusTests.swift */,
 				3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */,
+				F2278DCFD3ACC03FB29D2680 /* HardenedRuntimeTests.swift */,
 				06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */,
 				92C80445C9EC1F419FFAC0DB /* LiveBoxThermalTests.swift */,
 				D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */,
@@ -1058,6 +1061,7 @@
 				A5D18790439106076A579311 /* FetchStatusTests.swift in Sources */,
 				29301B875DF6C63903F7C456 /* GitBoxSnapshot.swift in Sources */,
 				D74629484729CBEAE1664FFD /* GitBoxSnapshotTests.swift in Sources */,
+				E09BA881F8C82EBC75B0C74D /* HardenedRuntimeTests.swift in Sources */,
 				2204B91FEF36EF22F09364D4 /* LiveBoxCore.swift in Sources */,
 				1C87D8AA7039304EE1047703 /* LiveBoxDiskCore.swift in Sources */,
 				BB0DA9CFEFB09DB47DCA109F /* LiveBoxDiskCoreTests.swift in Sources */,
@@ -1234,7 +1238,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = K6X49DG8VF;
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DeckApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1258,6 +1262,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				DEVELOPMENT_TEAM = K6X49DG8VF;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DeckAgent/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1282,6 +1287,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				DEVELOPMENT_TEAM = K6X49DG8VF;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DeckAgent/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1306,7 +1312,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = K6X49DG8VF;
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DeckWidgets/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks";
@@ -1327,7 +1333,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = K6X49DG8VF;
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DeckWidgets/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks";
@@ -1348,7 +1354,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = K6X49DG8VF;
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DeckApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

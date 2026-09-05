@@ -36,8 +36,8 @@ targets:
       properties:
         CFBundleDisplayName: Deck
         CFBundleIconFile: AppIcon
-        CFBundleShortVersionString: "1.40"
-        CFBundleVersion: "40"
+        CFBundleShortVersionString: "1.41"
+        CFBundleVersion: "41"
         LSMinimumSystemVersion: "15.0"
         NSHighResolutionCapable: true
         NSCalendarsFullAccessUsageDescription: "Deck reads your calendar to show your next event in the CalBox widget."
@@ -48,7 +48,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
         DEVELOPMENT_TEAM: K6X49DG8VF
-        ENABLE_HARDENED_RUNTIME: NO
+        ENABLE_HARDENED_RUNTIME: YES
         OTHER_LDFLAGS: "$(inherited) -lsqlite3"
         SWIFT_VERSION: "5.10"
         GENERATE_INFOPLIST_FILE: NO
@@ -73,8 +73,8 @@ targets:
       properties:
         CFBundleDisplayName: Deck Widgets
         CFBundleIconFile: AppIcon
-        CFBundleShortVersionString: "1.40"
-        CFBundleVersion: "40"
+        CFBundleShortVersionString: "1.41"
+        CFBundleVersion: "41"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         LSMinimumSystemVersion: "15.0"
@@ -85,7 +85,7 @@ targets:
         CODE_SIGN_IDENTITY: "Apple Development"
         DEVELOPMENT_TEAM: K6X49DG8VF
         CODE_SIGN_ENTITLEMENTS: DeckWidgets/DeckWidgets.entitlements
-        ENABLE_HARDENED_RUNTIME: NO
+        ENABLE_HARDENED_RUNTIME: YES
         SWIFT_VERSION: "5.10"
         GENERATE_INFOPLIST_FILE: NO
         MACOSX_DEPLOYMENT_TARGET: "15.0"
@@ -111,8 +111,8 @@ targets:
         CFBundleIdentifier: com.deck.agent
         CFBundleName: DeckAgent
         CFBundleExecutable: DeckAgent
-        CFBundleShortVersionString: "1.40"
-        CFBundleVersion: "40"
+        CFBundleShortVersionString: "1.41"
+        CFBundleVersion: "41"
         NSCalendarsFullAccessUsageDescription: "Deck reads your calendar to show your next event in the CalBox widget."
     settings:
       base:
@@ -122,6 +122,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
         DEVELOPMENT_TEAM: K6X49DG8VF
+        ENABLE_HARDENED_RUNTIME: YES
         SWIFT_VERSION: "5.10"
         MACOSX_DEPLOYMENT_TARGET: "15.0"
         OTHER_LDFLAGS: "$(inherited) -lsqlite3"

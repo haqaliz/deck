@@ -155,6 +155,32 @@ Do not delete the container; see the trap below.
   identity. Requires a real Apple identity: **ad-hoc/self-signed extensions
   are rejected by `pluginkit`**.
 - The widget extension is sandboxed; the host app and DeckAgent are not.
+- **Hardened runtime is on (v1.41), and it needed no exception entitlement.**
+  All three shipping targets declare `ENABLE_HARDENED_RUNTIME: YES`; the app
+  carries **no entitlements at all**, the extension only `app-sandbox`, the
+  agent only `application-identifier`. If a `com.apple.security.cs.*` key ever
+  appears, something regressed — Deck runs hardened with library validation on.
+  It was landed early, under the still-unchanged Apple Development identity, so
+  the notarization release changes the certificate and nothing else
+  (`docs/planning/hardened-runtime-preflight/`). Two measured facts from that
+  run are worth keeping: **TCC grants survive a re-signature while the code
+  requirement is unchanged** (the calendar and process-list grants both held
+  across a new CDHash — so when grants reset on the Developer ID release, the
+  identity is why); and **`ENABLE_HARDENED_RUNTIME` absent reads exactly like
+  `NO`** in the product but not in the file, which is why the drift guard
+  enumerates the targets out of `project.yml` and reports three states rather
+  than grepping for `: NO`.
+- **An AMFI check needs a positive control before its silence means anything.**
+  `log stream --predicate 'sender == "AMFI"'` is the documented way to name a
+  hardened-runtime restriction, and on this machine it prints nothing whether or
+  not one was hit. Deck's own agent logs at `info` level, so `log show` without
+  `--info --debug` also returns nothing for `subsystem == "com.deck.agent"` —
+  which looks identical to a dead log. Prove the log is answering (the agent's
+  own tick lines, with those flags) in the same window, then read the silence.
+  Related: chronod's failed-reload count is **not** zero on a healthy install —
+  it sat at 11.3% before a signing change and 11.1% after, mostly stale
+  `HomeBoxWidget` archives (`CHSErrorDomain 1100`) left from the HomeBox split.
+  A count taken only after a change reads as damage.
 - `DeckAgent` is embedded at `Deck.app/Contents/MacOS/DeckAgent` (copied by a
   post-build script, sealed with the app).
 - First run of DeckAgent prompts once for "access data from other apps"
