@@ -76,3 +76,63 @@ enum CoinSearchPolicy {
         return now.timeIntervalSince(lastRequest) >= floor
     }
 }
+
+/// What a search attempt can come back as.
+enum CoinSearchOutcome: Equatable {
+    case ok
+    /// The one failure the user can fix by waiting — worth its own wording.
+    case rateLimited
+    case serverError(Int)
+}
+
+enum CoinSearchFailure: Error, Equatable {
+    case rateLimited
+    case offline
+    case badResponse
+}
+
+/// Host-app only. **Never** call this from `DeckAgent` or the widget
+/// extension: it exists to serve a settings picker on user interaction, and
+/// putting it on any refresh path would spend the agent's shared rate-limit
+/// budget. Verified by grep in the phase-5 checks.
+enum HostCoinSearchLoader {
+    /// `URLComponents` is what stops a query like `a&b=c` from injecting a
+    /// second parameter.
+    static func url(for query: String) -> URL? {
+        var components = URLComponents(string: "https://api.coingecko.com/api/v3/search")
+        components?.queryItems = [URLQueryItem(name: "query", value: query)]
+        return components?.url
+    }
+
+    static func classify(status: Int) -> CoinSearchOutcome {
+        switch status {
+        case 200: return .ok
+        case 429: return .rateLimited
+        default: return .serverError(status)
+        }
+    }
+
+    /// One `GET /search`. The caller owns the debounce, the floor and the
+    /// cache (`CoinSearchPolicy`); this just performs the request.
+    static func search(query: String) async throws -> [CoinSearchHit] {
+        guard let url = url(for: query) else { throw CoinSearchFailure.badResponse }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw CoinSearchFailure.offline
+        }
+        guard let http = response as? HTTPURLResponse else { throw CoinSearchFailure.badResponse }
+        switch classify(status: http.statusCode) {
+        case .rateLimited: throw CoinSearchFailure.rateLimited
+        case .serverError: throw CoinSearchFailure.badResponse
+        case .ok: break
+        }
+        guard let hits = CoinSearchParser.parse(data) else { throw CoinSearchFailure.badResponse }
+        return hits
+    }
+}

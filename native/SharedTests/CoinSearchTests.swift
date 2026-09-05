@@ -114,3 +114,28 @@ final class CoinSearchPolicyTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(CoinSearchPolicy.debounce, 0.5)
     }
 }
+
+/// Phase 5. The loader itself is thin — the parser and policy carry the
+/// behaviour — but two of its decisions are worth pinning.
+final class HostCoinSearchLoaderTests: XCTestCase {
+
+    func testTheQueryIsPercentEncoded() throws {
+        let url = try XCTUnwrap(HostCoinSearchLoader.url(for: "purple pepe"))
+        XCTAssertEqual(url.absoluteString,
+                       "https://api.coingecko.com/api/v3/search?query=purple%20pepe")
+    }
+
+    func testAnAmpersandCannotInjectAQueryParameter() throws {
+        let url = try XCTUnwrap(HostCoinSearchLoader.url(for: "a&b=c"))
+        XCTAssertFalse(url.absoluteString.contains("&b=c"))
+    }
+
+    /// 429 is its own outcome, not a server error: it is the one failure the
+    /// user can fix by waiting, and the picker says so instead of looking broken.
+    func testRateLimitingIsItsOwnOutcome() {
+        XCTAssertEqual(HostCoinSearchLoader.classify(status: 429), .rateLimited)
+        XCTAssertEqual(HostCoinSearchLoader.classify(status: 200), .ok)
+        XCTAssertEqual(HostCoinSearchLoader.classify(status: 500), .serverError(500))
+        XCTAssertEqual(HostCoinSearchLoader.classify(status: 404), .serverError(404))
+    }
+}
