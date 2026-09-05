@@ -1,0 +1,67 @@
+{
+  "coins": [
+    {
+      "id": "pepe",
+      "name": "Pepe",
+      "api_symbol": "pepe",
+      "symbol": "PEPE",
+      "market_cap_rank": 56,
+      "thumb": "https://coin-images.coingecko.com/coins/images/29850/thumb/pepe-token.jpeg",
+      "large": "https://coin-images.coingecko.com/coins/images/29850/large/pepe-token.jpeg"
+    },
+    {
+      "id": "ape-and-pepe",
+      "name": "Ape and Pepe",
+      "api_symbol": "ape-and-pepe",
+      "symbol": "APEPE",
+      "market_cap_rank": 163,
+      "thumb": "https://coin-images.coingecko.com/coins/images/39614/thumb/APEPE_200.png",
+      "large": "https://coin-images.coingecko.com/coins/images/39614/large/APEPE_200.png"
+    },
+    {
+      "id": "pepecoin-2",
+      "name": "PepeCoin",
+      "api_symbol": "pepecoin-2",
+      "symbol": "PEPECOIN",
+      "market_cap_rank": 1090,
+      "thumb": "https://coin-images.coingecko.com/coins/images/30219/thumb/pepecoin-icon_200x200.png",
+      "large": "https://coin-images.coingecko.com/coins/images/30219/large/pepecoin-icon_200x200.png"
+    },
+    {
+      "id": "pepecoin-network",
+      "name": "Pepecoin",
+      "api_symbol": "pepecoin-network",
+      "symbol": "PEP",
+      "market_cap_rank": 1093,
+      "thumb": "https://coin-images.coingecko.com/coins/images/36520/thumb/Pepecoin_onWhite_IconOnly-RGB__Converted_200x200.png",
+      "large": "https://coin-images.coingecko.com/coins/images/36520/large/Pepecoin_onWhite_IconOnly-RGB__Converted_200x200.png"
+    },
+    {
+      "id": "pepefork",
+      "name": "PepeFork",
+      "api_symbol": "pepefork",
+      "symbol": "PORK",
+      "market_cap_rank": 1369,
+      "thumb": "https://coin-images.coingecko.com/coins/images/34913/thumb/pork.png",
+      "large": "https://coin-images.coingecko.com/coins/images/34913/large/pork.png"
+    },
+    {
+      "id": "purple-pepe",
+      "name": "PURPLE PEPE",
+      "api_symbol": "purple-pepe",
+      "symbol": "PURPE",
+      "market_cap_rank": null,
+      "thumb": "https://coin-images.coingecko.com/coins/images/38962/thumb/IMG_3953.jpeg",
+      "large": "https://coin-images.coingecko.com/coins/images/38962/large/IMG_3953.jpeg"
+    }
+  ],
+  "exchanges": [],
+  "nfts": [
+    {
+      "id": "opepen-edition",
+      "name": "Opepen Edition",
+      "symbol": "OPEPEN",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/2540/thumb/opepen.jpeg"
+    }
+  ]
+}
