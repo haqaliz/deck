@@ -62,12 +62,15 @@ final class MarketBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.displayCurrency, .usd)
     }
 
-    /// The one-way migration: encoding writes only the current shape.
-    func testEncodeDropsLegacySymbolsKey() throws {
+    /// The one-way migration: encoding writes only the current shape. Both
+    /// older shapes — the `symbols` free-text string and the `tickers` symbol
+    /// array — are read on the way in and dropped on the way out.
+    func testEncodeDropsBothLegacyTickerKeys() throws {
         let s = try decode(#"{"symbols":"BTC, ETH"}"#, as: MarketBoxSettings.self)
         let data = try JSONEncoder().encode(s)
         let json = try XCTUnwrap(String(data: data, encoding: .utf8))
-        XCTAssertTrue(json.contains("\"tickers\""))
+        XCTAssertTrue(json.contains("\"tickerList\""))
+        XCTAssertFalse(json.contains("\"tickers\""))
         XCTAssertFalse(json.contains("\"symbols\""))
     }
 

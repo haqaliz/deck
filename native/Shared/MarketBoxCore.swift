@@ -148,6 +148,81 @@ enum MarketSymbolResolver {
     }
 }
 
+// MARK: - Configured tickers
+
+/// One configured row: the CoinGecko id is what the agent fetches, the symbol
+/// is what the face draws, and the name is cached so the settings list still
+/// reads right with no network.
+///
+/// `kind` is **derived, never stored**, so the two can never disagree.
+struct MarketTicker: Codable, Equatable {
+    /// Uppercased for display: "BTC".
+    var symbol: String
+    /// "Bitcoin" — cached at pick time for offline display.
+    var name: String
+    /// The CoinGecko id ("bitcoin"). Empty for fiat and gold, which are not
+    /// CoinGecko rows at all.
+    var coinID: String
+    /// `market_cap_rank` at pick time. Kept because it records what was
+    /// chosen; not rendered in the list, because a stored rank goes stale.
+    var rank: Int?
+
+    init(symbol: String, name: String, coinID: String, rank: Int? = nil) {
+        self.symbol = symbol
+        self.name = name
+        self.coinID = coinID
+        self.rank = rank
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case symbol, name, coinID, rank
+    }
+
+    /// Tolerant on purpose: a throw in here reaches
+    /// `MarketBoxSettings.init(from:)` and then `DeckSettings.load()`, which
+    /// falls back to a blank `DeckSettings()` on any decode error — one
+    /// hand-edited entry would reset every setting in the file. An entry with
+    /// no symbol survives decoding and is dropped by `normalized`.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        symbol = try c.decodeIfPresent(String.self, forKey: .symbol) ?? ""
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        coinID = try c.decodeIfPresent(String.self, forKey: .coinID) ?? ""
+        rank = try c.decodeIfPresent(Int.self, forKey: .rank)
+    }
+
+    /// Crypto is "has an id"; the curated table is not consulted, which is the
+    /// whole point — a coin outside it must still price.
+    var kind: MarketKind? {
+        if !coinID.isEmpty { return .crypto }
+        let s = symbol.uppercased()
+        if s == MarketSymbolResolver.goldSymbol { return .gold }
+        if MarketSymbolResolver.fiatISOs.contains(s) { return .fiat }
+        return nil
+    }
+}
+
+/// The curated map's remaining job: turning the symbols older files stored into
+/// tickers. It is no longer consulted at fetch time.
+enum MarketTickerMigration {
+    static let defaults: [MarketTicker] = tickers(fromSymbols: ["BTC", "ETH", "USD", "GOLD"])
+
+    /// A symbol the table does not know survives with an empty `coinID` — it
+    /// still renders as `Unknown: X`, which is what it did before. Losing it
+    /// silently would be worse than carrying it unresolvable.
+    static func tickers(fromSymbols symbols: [String]) -> [MarketTicker] {
+        symbols.map { raw in
+            let symbol = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            return MarketTicker(
+                symbol: symbol,
+                name: MarketSymbolResolver.cryptoNames[symbol]
+                    ?? MarketSymbolResolver.name(for: symbol),
+                coinID: MarketSymbolResolver.cryptoIDs[symbol] ?? ""
+            )
+        }
+    }
+}
+
 // MARK: - Currency conversion
 
 enum MarketConverter {

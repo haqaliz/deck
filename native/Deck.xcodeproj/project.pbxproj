@@ -34,6 +34,7 @@
 		181D20A2D1C49B8ECF82CFFA /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
 		18600374BCF4CECC18E75B9B /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		1967FF4D20A83BF47DDFFCB2 /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
+		1A2807D3CB78C4EDA54FB71A /* MarketTickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 873043B93448D9154A158983 /* MarketTickerTests.swift */; };
 		1B8565F372BC3AA492625092 /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
 		1C87D8AA7039304EE1047703 /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		201551751585A84F66EDF7E1 /* PRBoxAzureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46F38858426CA0E8C705B6F /* PRBoxAzureTests.swift */; };
@@ -385,6 +386,7 @@
 		82736DC13D9569D028C763BC /* DeckKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychain.swift; sourceTree = "<group>"; };
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
 		84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerMigrationTests.swift; sourceTree = "<group>"; };
+		873043B93448D9154A158983 /* MarketTickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketTickerTests.swift; sourceTree = "<group>"; };
 		87B96F825FC76E1267D5ACCC /* DeckBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckBundle.swift; sourceTree = "<group>"; };
 		8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialsWidgetReadsTests.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -576,6 +578,7 @@
 				B6F93AE35E753ECCFC7B3CF9 /* MarketBoxCoreTests.swift */,
 				54C2D4337B99014556B02507 /* MarketBoxParsersTests.swift */,
 				39345060F67E6A48EE022B19 /* MarketBoxSnapshotTests.swift */,
+				873043B93448D9154A158983 /* MarketTickerTests.swift */,
 				E55EA63643575600049612BD /* ModelParserTests.swift */,
 				AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */,
 				C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */,
@@ -1050,6 +1053,7 @@
 				7BA588A2F45314DC0BFF6883 /* MarketBoxParsersTests.swift in Sources */,
 				1368FA26430D63F4E6E579F1 /* MarketBoxSnapshot.swift in Sources */,
 				37CFE0394AC57F9627C3915F /* MarketBoxSnapshotTests.swift in Sources */,
+				1A2807D3CB78C4EDA54FB71A /* MarketTickerTests.swift in Sources */,
 				56242BA287F3C3D8CD8A380D /* ModelParserTests.swift in Sources */,
 				5DAADD8D5F4E17021759CBE1 /* NetBoxCore.swift in Sources */,
 				43222AFDC10A1829EE888C3E /* NetBoxCoreTests.swift in Sources */,
