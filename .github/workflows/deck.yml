@@ -98,8 +98,14 @@ jobs:
           rm -rf dmg-stage && mkdir dmg-stage
           cp -R Deck.app dmg-stage/
           ln -s /Applications dmg-stage/Applications
+          # APFS, not HFS+. macOS 26 is deprecating HFS+, and on the
+          # macos-26-arm64 runner `hdiutil create -fs HFS+` produced an image
+          # that would not mount -- three times running, for v1.40, on the same
+          # runner image that built a working v1.39 hours earlier. APFS disk
+          # images are readable on macOS 10.13+, far below Deck's own macOS 15
+          # deployment target, so nothing is lost.
           hdiutil create -volname Deck -srcfolder dmg-stage -ov \
-            -format UDZO -fs HFS+ "Deck-${VERSION}.dmg"
+            -format UDZO -fs APFS "Deck-${VERSION}.dmg"
           rm -rf dmg-stage
 
           # Signing the DMG is cosmetic while the app is Apple Development
