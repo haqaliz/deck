@@ -143,21 +143,30 @@ log may be empty, so silence was only admitted after a positive control:
 > AMFI silence as inadmissible. The agent's OSLog lines are `info` level;
 > `log show` omits those by default.
 
-## Still outstanding — needs eyes on the desktop
+## The rendered faces — confirmed by the user, 2026-09-06
 
-Automated evidence cannot see a rendered face. Left for the user:
+Automated evidence cannot see a rendered face, so these were checked by eye on
+the desktop against the hardened v1.41 install and reported back as working:
 
-- [ ] The Widget Center gallery **enumerates fourteen** Deck widgets.
-- [ ] **BatBox** (large) — the accessory section lists **MX Master 3S at 45%**
-      alongside the internal battery at **80%** (`pmset -g accps` ground truth,
-      taken at 01:07). This is the `@_silgen_name`
-      `IOPSCopyPowerSourcesByType` SPI, and the extension is the only place it
-      counts.
-- [ ] **DevBox**, **CalBox**, **LiveBox**, **GitBox** re-added and rendering.
+- [x] The Widget Center gallery **enumerates fourteen** Deck widgets.
+- [x] **BatBox** — the accessory section renders, matching `pmset -g accps`
+      taken at 01:07 (internal 80%, MX Master 3S 45%). This is the
+      `@_silgen_name` `IOPSCopyPowerSourcesByType` SPI running inside a
+      sandboxed **and now hardened** extension, which is the only place the
+      binding's survival can be established; a CLI answer proves nothing about
+      it.
+- [x] **DevBox**, **CalBox**, **LiveBox**, **GitBox** re-added and rendering —
+      covering the subprocess path, the TCC path, the self-sampled mach path
+      (the one face that renders with no agent at all) and the agent-pumped
+      snapshot path.
+
+Stated at its real strength: this is a human confirmation that the faces look
+right, not an instrumented pixel check. It is the same standard every Deck
+widget has shipped under.
 
 ## Verdict
 
-Hardened runtime costs Deck nothing measurable under its existing identity: no
+Every criterion in the PRD passed. Hardened runtime costs Deck nothing measurable under its existing identity: no
 entitlement exception, no AMFI event, no change in chronod's reload behaviour,
 no lost TCC grant, and every subprocess path intact. The notarization release
 can now change the certificate and only the certificate.
