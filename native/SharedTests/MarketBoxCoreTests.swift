@@ -15,23 +15,23 @@ final class MarketSymbolResolverTests: XCTestCase {
         XCTAssertEqual(MarketSymbolResolver.cryptoID(for: "WBTC"), "wrapped-bitcoin")
     }
 
-    /// Every pickable symbol must resolve — the picker list and the loader can
-    /// never disagree.
-    func testEveryPickableSymbolResolvesToAKind() {
-        let symbols = MarketSymbolResolver.allPickableSymbols
-        XCTAssertEqual(symbols.count, MarketSymbolResolver.cryptoIDs.count + MarketSymbolResolver.fiatISOs.count + 1)
-        XCTAssertTrue(symbols.contains("GOLD"))
-        XCTAssertTrue(symbols.contains("USD"))
-        for symbol in symbols {
-            XCTAssertNotNil(MarketSymbolResolver.kind(for: symbol), "\(symbol) must resolve")
-        }
-    }
+    /// Everything the picker's offline sections offer must produce a usable
+    /// ticker — the list the user sees and the thing the loader prices can
+    /// never disagree. Same invariant the old `allPickableSymbols` test
+    /// pinned, now against the path that actually runs.
+    func testEveryOfferedSymbolBecomesAUsableTicker() {
+        let offered = MarketSymbolResolver.cryptoIDs.keys.sorted()
+            + [MarketSymbolResolver.goldSymbol]
+            + MarketSymbolResolver.fiatISOs.sorted()
+        let tickers = MarketTickerMigration.tickers(fromSymbols: offered)
 
-    func testPickerLabels() {
-        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "BTC"), "BTC — Bitcoin")
-        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "USD"), "USD — US Dollar")
-        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "GOLD"), "GOLD — Gold")
-        XCTAssertEqual(MarketSymbolResolver.pickerLabel(for: "XRPX"), "XRPX", "unknown falls back to the symbol")
+        XCTAssertEqual(tickers.count, MarketSymbolResolver.cryptoIDs.count + MarketSymbolResolver.fiatISOs.count + 1)
+        for ticker in tickers {
+            XCTAssertNotNil(ticker.kind, "\(ticker.symbol) must resolve to a kind")
+            XCTAssertFalse(ticker.name.isEmpty, "\(ticker.symbol) must have a display name")
+        }
+        XCTAssertEqual(tickers.first(where: { $0.symbol == "GOLD" })?.kind, .gold)
+        XCTAssertEqual(tickers.first(where: { $0.symbol == "USD" })?.kind, .fiat)
     }
 
     func testSymbolsAreCaseInsensitive() {

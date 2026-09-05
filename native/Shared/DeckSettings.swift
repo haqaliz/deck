@@ -1090,13 +1090,6 @@ struct MarketBoxSettings: Codable, Equatable {
     /// capped at 43 coins.
     var tickerList = MarketTickerMigration.defaults
 
-    /// Bridge for the twelve-slot settings UI, which still speaks symbols.
-    /// **Delete with that UI** (phase 6 of `marketbox-coin-lookup`); it is
-    /// computed, so it is never encoded.
-    var tickers: [String] {
-        get { tickerList.map(\.symbol) }
-        set { tickerList = Self.normalized(MarketTickerMigration.tickers(fromSymbols: newValue)) }
-    }
     /// The one display currency every row is priced in.
     var displayCurrency = MarketCurrency.usd
     /// Rows on the large face (1...12). Medium shows at most 4, small at most
@@ -1177,19 +1170,6 @@ struct MarketBoxSettings: Codable, Equatable {
             if kept.count == maxCount { break }
         }
         return kept
-    }
-
-    /// Uppercased, deduped, capped at `maxCount`, empty symbols dropped.
-    static func normalized(_ symbols: [String]) -> [String] {
-        var seen: [String] = []
-        for symbol in symbols {
-            let s = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-            if !s.isEmpty, !seen.contains(s) {
-                seen.append(s)
-            }
-            if seen.count == maxCount { break }
-        }
-        return seen
     }
 
     private enum CodingKeys: String, CodingKey {

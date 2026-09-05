@@ -172,3 +172,80 @@ final class MarketTickerTests: XCTestCase {
         XCTAssertNil(object["symbols"])
     }
 }
+
+/// Phase 6. The add/remove list replaces twelve numbered slots, which gave
+/// display order for free — so ordering, the cap and the duplicate rule all
+/// become explicit operations. Pure, so the view stays layout only.
+final class MarketTickerListTests: XCTestCase {
+    private func ticker(_ symbol: String, _ coinID: String = "") -> MarketTicker {
+        MarketTicker(symbol: symbol, name: symbol, coinID: coinID)
+    }
+
+    // MARK: - Adding
+
+    func testAddingAppendsToTheEnd() {
+        let result = MarketTickerList.adding(ticker("SUI", "sui"), to: [ticker("BTC", "bitcoin")])
+        XCTAssertEqual(result, .added([ticker("BTC", "bitcoin"), ticker("SUI", "sui")]))
+    }
+
+    /// One symbol, one row — the face draws `Text(row.symbol)` alone, so two
+    /// PEPEs would be indistinguishable. Refused out loud, never dropped
+    /// silently the way the old `normalized` would have.
+    func testASecondCoinWithTheSameSymbolIsRefusedByName() {
+        let existing = [MarketTicker(symbol: "PEPE", name: "Pepe", coinID: "pepe")]
+        let other = MarketTicker(symbol: "PEPE", name: "PepeCoin", coinID: "pepecoin-2")
+        XCTAssertEqual(MarketTickerList.adding(other, to: existing), .duplicate("PEPE"))
+    }
+
+    func testTheDuplicateCheckIgnoresCase() {
+        let existing = [ticker("BTC", "bitcoin")]
+        let lower = MarketTicker(symbol: "btc", name: "Bitcoin", coinID: "bitcoin")
+        XCTAssertEqual(MarketTickerList.adding(lower, to: existing), .duplicate("BTC"))
+    }
+
+    func testAddingAtTheCapIsRefused() {
+        let full = (1...MarketBoxSettings.maxCount).map { ticker("C\($0)", "c\($0)") }
+        XCTAssertEqual(MarketTickerList.adding(ticker("SUI", "sui"), to: full), .full)
+    }
+
+    // MARK: - Ordering (order is display order)
+
+    func testMovingUpSwapsWithThePreviousRow() {
+        let list = [ticker("A"), ticker("B"), ticker("C")]
+        XCTAssertEqual(MarketTickerList.moved(list, at: 2, by: -1).map(\.symbol), ["A", "C", "B"])
+    }
+
+    func testMovingDownSwapsWithTheNextRow() {
+        let list = [ticker("A"), ticker("B"), ticker("C")]
+        XCTAssertEqual(MarketTickerList.moved(list, at: 0, by: 1).map(\.symbol), ["B", "A", "C"])
+    }
+
+    func testMovingOffEitherEndIsANoOp() {
+        let list = [ticker("A"), ticker("B")]
+        XCTAssertEqual(MarketTickerList.moved(list, at: 0, by: -1).map(\.symbol), ["A", "B"])
+        XCTAssertEqual(MarketTickerList.moved(list, at: 1, by: 1).map(\.symbol), ["A", "B"])
+    }
+
+    func testMovingAnOutOfRangeIndexIsANoOp() {
+        let list = [ticker("A")]
+        XCTAssertEqual(MarketTickerList.moved(list, at: 7, by: -1).map(\.symbol), ["A"])
+    }
+
+    // MARK: - Removing
+
+    func testRemovingTakesTheRowOut() {
+        let list = [ticker("A"), ticker("B")]
+        XCTAssertEqual(MarketTickerList.removing(at: 0, from: list).map(\.symbol), ["B"])
+    }
+
+    /// Emptying the list is allowed — the loader throws `notConfigured` for it,
+    /// which is the honest "nothing is set up" state, not a crash.
+    func testTheListCanBeEmptied() {
+        XCTAssertTrue(MarketTickerList.removing(at: 0, from: [ticker("A")]).isEmpty)
+    }
+
+    func testRemovingAnOutOfRangeIndexIsANoOp() {
+        let list = [ticker("A")]
+        XCTAssertEqual(MarketTickerList.removing(at: 9, from: list).map(\.symbol), ["A"])
+    }
+}

@@ -10,9 +10,10 @@ import Foundation
 // MARK: - Symbol resolution
 
 enum MarketSymbolResolver {
-    /// Curated crypto symbol → CoinGecko id. A symbol outside the map is
-    /// surfaced as "Unknown", never silently dropped. This map is also the
-    /// settings picker's source, so the two can never disagree.
+    /// Curated crypto symbol → CoinGecko id. Since `marketbox-coin-lookup`
+    /// this is no longer the catalogue: it is the migration table for files
+    /// written before ids were stored, and the picker's offline "Popular"
+    /// list. Nothing consults it at fetch time.
     static let cryptoIDs: [String: String] = [
         "BTC": "bitcoin",
         "ETH": "ethereum",
@@ -94,26 +95,6 @@ enum MarketSymbolResolver {
 
     /// `GOLD` means 1 gram of gold (spot per troy ounce ÷ 31.1035).
     static let goldSymbol = "GOLD"
-
-    /// Every symbol the settings picker offers, in display order: crypto,
-    /// then GOLD, then the fiat codes.
-    static var allPickableSymbols: [String] {
-        Array(cryptoIDs.keys).sorted() + [goldSymbol] + Array(fiatISOs).sorted()
-    }
-
-    /// "BTC → Bitcoin", "USD → US Dollar", "GOLD → Gold"; falls back to the
-    /// symbol itself when there is no name.
-    static func pickerLabel(for symbol: String) -> String {
-        let s = symbol.uppercased()
-        let name: String
-        switch kind(for: s) {
-        case .crypto: name = cryptoNames[s] ?? ""
-        case .fiat: name = fiatNames[s] ?? ""
-        case .gold: name = "Gold"
-        case nil: name = ""
-        }
-        return name.isEmpty ? s : "\(s) — \(name)"
-    }
 
     static func cryptoID(for symbol: String) -> String? {
         cryptoIDs[symbol.uppercased()]
@@ -202,6 +183,48 @@ struct MarketTicker: Codable, Equatable {
     }
 }
 
+/// The add/remove list's operations, kept pure so the settings view stays
+/// layout only. These replace what twelve numbered slots did implicitly:
+/// ordering, the cap, and what happens when a symbol is already taken.
+enum MarketTickerList {
+    enum AddResult: Equatable {
+        case added([MarketTicker])
+        /// The symbol already in the list. Refused **out loud** — the old
+        /// slot UI deduped silently, so clicking Add appeared to do nothing.
+        case duplicate(String)
+        case full
+    }
+
+    static func adding(_ ticker: MarketTicker, to list: [MarketTicker]) -> AddResult {
+        let symbol = ticker.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if let existing = list.first(where: { $0.symbol.uppercased() == symbol }) {
+            return .duplicate(existing.symbol)
+        }
+        guard list.count < MarketBoxSettings.maxCount else { return .full }
+        var next = list
+        var added = ticker
+        added.symbol = symbol
+        next.append(added)
+        return .added(next)
+    }
+
+    /// Order *is* display order, so this is the whole reordering affordance.
+    static func moved(_ list: [MarketTicker], at index: Int, by offset: Int) -> [MarketTicker] {
+        let target = index + offset
+        guard list.indices.contains(index), list.indices.contains(target) else { return list }
+        var next = list
+        next.swapAt(index, target)
+        return next
+    }
+
+    static func removing(at index: Int, from list: [MarketTicker]) -> [MarketTicker] {
+        guard list.indices.contains(index) else { return list }
+        var next = list
+        next.remove(at: index)
+        return next
+    }
+}
+
 /// The curated map's remaining job: turning the symbols older files stored into
 /// tickers. It is no longer consulted at fetch time.
 enum MarketTickerMigration {
@@ -217,7 +240,7 @@ enum MarketTickerMigration {
                 symbol: symbol,
                 name: MarketSymbolResolver.cryptoNames[symbol]
                     ?? MarketSymbolResolver.name(for: symbol),
-                coinID: MarketSymbolResolver.cryptoIDs[symbol] ?? ""
+                coinID: MarketSymbolResolver.cryptoID(for: symbol) ?? ""
             )
         }
     }
