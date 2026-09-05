@@ -278,17 +278,45 @@ struct MarketBuild: Equatable {
     var rows: [MarketRow]
     var unresolved: [String]
     var omitted: [String]
+    /// Tickers the source answered about by saying nothing: the fetch
+    /// succeeded and the id was not in the response. Measured 2026-09-05 —
+    /// CoinGecko drops unknown ids silently with a 200, so this is the only
+    /// evidence there is. Distinct from `omitted`, because "the source is
+    /// down" and "this coin has no data" have different fixes.
+    var noData: [String] = []
 
     var isEmpty: Bool { rows.isEmpty }
 
-    /// "Unknown: XRPX · Gold unavailable · Crypto unavailable"; nil when fine.
+    /// "Unknown: XRPX · No data: DEAD · Gold unavailable"; nil when fine.
     var note: String? {
         var parts: [String] = []
         if !unresolved.isEmpty {
             parts.append("Unknown: " + unresolved.joined(separator: ", "))
         }
+        if !noData.isEmpty {
+            parts.append("No data: " + noData.joined(separator: ", "))
+        }
         parts.append(contentsOf: omitted.map { $0 + " unavailable" })
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+}
+
+/// What the loader will ask the network for, decided purely.
+enum MarketFetchPlan {
+    /// The CoinGecko ids to price, deduped, in order, blanks dropped.
+    ///
+    /// **Never build a request from an empty list.** Measured 2026-09-05:
+    /// `coins/markets?ids=` with no ids answers 200 with the top 100 coins
+    /// (83.6 KB), which would render as though it were the user's list.
+    static func cryptoIDs(for tickers: [MarketTicker]) -> [String] {
+        var kept: [String] = []
+        var seen: Set<String> = []
+        for ticker in tickers {
+            let id = ticker.coinID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !id.isEmpty, seen.insert(id).inserted else { continue }
+            kept.append(id)
+        }
+        return kept
     }
 }
 
@@ -300,10 +328,14 @@ enum MarketBuilder {
     /// that could be built are still returned — the widget renders a partial
     /// list with a note rather than blanking. `isEmpty` tells the caller
     /// whether to record a failure instead.
+    /// `quotesByID` has three states, and conflating two of them tells a user
+    /// who owns only USD and GOLD that crypto is unavailable:
+    /// `[:]` = no crypto tickers, nothing was asked · `nil` = the fetch was
+    /// attempted and failed · populated = the fetch succeeded.
     static func build(
         display: MarketCurrency,
-        symbols: [String],
-        quotesByID: [String: CryptoQuote],
+        tickers: [MarketTicker],
+        quotesByID: [String: CryptoQuote]?,
         tmn: Double?,
         goldUSDPerGram: Double?,
         fx: [String: Double]?
@@ -311,13 +343,23 @@ enum MarketBuilder {
         var rows: [MarketRow] = []
         var unresolved: [String] = []
         var omitted: [String] = []
+        var noData: [String] = []
 
-        for symbol in symbols {
-            switch MarketSymbolResolver.kind(for: symbol) {
+        for ticker in tickers {
+            let symbol = ticker.symbol
+            switch ticker.kind {
             case .crypto:
+                guard let quotesByID else {
+                    // The fetch failed outright.
+                    omitted.append(symbol)
+                    continue
+                }
+                guard let quote = quotesByID[ticker.coinID] else {
+                    // It succeeded and said nothing about this id.
+                    noData.append(symbol)
+                    continue
+                }
                 guard
-                    let id = MarketSymbolResolver.cryptoID(for: symbol),
-                    let quote = quotesByID[id],
                     let priceUSD = quote.priceUSD,
                     let price = MarketConverter.perUSD(priceUSD, display: display, tmn: tmn, fx: fx)
                 else {
@@ -372,19 +414,26 @@ enum MarketBuilder {
             }
         }
 
-        collapse(omitted: &omitted, rows: rows, symbols: symbols)
+        collapse(omitted: &omitted, rows: rows, symbols: tickers.map(\.symbol), kinds: tickers.map(\.kind))
 
-        return MarketBuild(rows: rows, unresolved: unresolved, omitted: omitted)
+        return MarketBuild(rows: rows, unresolved: unresolved, omitted: omitted, noData: noData)
     }
 
     /// When every configured symbol of a kind failed, name the kind once
     /// ("Crypto", "Rates", "Gold") instead of listing each symbol.
-    private static func collapse(omitted: inout [String], rows: [MarketRow], symbols: [String]) {
-        let crypto = symbols.filter { MarketSymbolResolver.kind(for: $0) == .crypto }
-        let fiat = symbols.filter { MarketSymbolResolver.kind(for: $0) == .fiat }
-        let gold = symbols.contains { MarketSymbolResolver.kind(for: $0) == .gold }
+    private static func collapse(omitted: inout [String], rows: [MarketRow], symbols: [String], kinds: [MarketKind?]) {
+        let pairs = zip(symbols, kinds)
+        let crypto = pairs.filter { $0.1 == .crypto }.map(\.0)
+        let fiat = pairs.filter { $0.1 == .fiat }.map(\.0)
+        let gold = kinds.contains { $0 == .gold }
 
-        if !crypto.isEmpty, !rows.contains(where: { $0.kind == .crypto }) {
+        // Guarded on there actually being an omitted crypto symbol: a crypto
+        // ticker can now fail into `noData` instead, and collapsing on
+        // "no crypto rows" alone would claim the source was unavailable when
+        // it answered fine and simply had nothing for that coin.
+        if !crypto.isEmpty,
+           !rows.contains(where: { $0.kind == .crypto }),
+           omitted.contains(where: { crypto.contains($0) }) {
             omitted.removeAll { crypto.contains($0) }
             omitted.append("Crypto")
         }
