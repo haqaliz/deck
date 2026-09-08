@@ -1,85 +1,112 @@
-# Understanding — prbox-review-state
-
-**Date:** 2026-09-02 · **Branch:** `feat/prbox-review-state/aliz` · **PRD:** pending
+# Understanding: MarketBox stocks/indices
 
 ## What the work is really asking
 
-PRBox rows currently carry `role` (authored / reviewing), `isDraft`, creation
-date and a link — but **nothing about the PR's review progress**. The queue
-can't be prioritized at a glance: an approved PR and a blocked one look alike.
-The work adds a provider-agnostic **review state** per row so the queue is
-prioritizable (approved / changes requested / no one has voted), closing the
-recorded follow-up (`ROADMAP.md:193`, `docs/planning/prbox/prd.md:255`).
+Extend MarketBox so the user can add stocks and indices to the same priced list
+as crypto/fiat/gold, in the same display currency. Not a new widget — a fourth
+kind inside the existing one. The face, the partial-failure policy, the snapshot
+and the currency conversion are unchanged; what changes is (a) a fourth kind
+with its own provider, (b) a way to pick stock/index instruments, and (c) the
+day-change row on the face that today is crypto-only.
 
-## The two providers are not symmetric — this shapes everything
+## The live probe (run 2026-09-09, before this note)
 
-| | GitHub | Azure DevOps |
-|---|---|---|
-| Review data location | Separate endpoint `GET /repos/{o}/{r}/pulls/{n}/reviews` — **one request per PR** | `reviewers[]` with `vote` is **already in the PR payload** the loader parses today (`AzureDevOpsLoader.swift:640`) — zero extra calls |
-| Vote semantics | `state` per review: APPROVED / CHANGES_REQUESTED / COMMENTED / DISMISSED / PENDING; latest review per reviewer counts; CHANGES_REQUESTED outranks APPROVED | `vote` per reviewer: -10 rejected, -5 waiting for author, 0 no vote, +5 approved w/ suggestions, +10 approved; only my row's vote is filtered today (`isAwaitingVote`, `AzureDevOpsLoader.swift:639`) |
-| My own review | You drop off `review-requested` once you review, so queue rows never carry my review; self-approval is impossible, so authored rows don't either | Same by construction: the `.reviewing` filter keeps only `vote == 0` rows; my vote on my own PR is irrelevant to others' state |
+The brief demanded the provider be settled by a live probe before any PRD.
+Result: **Yahoo Finance's unofficial chart API is the working keyless source**;
+Stooq is a dead end.
 
-So the state shown is **other reviewers' aggregate**, never my own — which is
-exactly the prioritization signal. The row's own role dot stays as-is; the new
-glyph is a second, orthogonal signal.
+- **Yahoo `query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1d`**
+  — keyless, one request, rich payload:
+  - AAPL: `meta.regularMarketPrice: 316.22`, `regularMarketChangePercent: -1.172`,
+    `longName: "Apple Inc."`, `currency: "USD"`, `exchangeName: "NMS"`.
+  - `^GSPC` (S&P 500): same shape, `instrumentType: "INDEX"`,
+    `shortName: "S&P 500"`, `regularMarketPrice: 7673.52`,
+    `regularMarketChangePercent: -0.584`. Indices are the same payload.
+  - Unknown symbol (`ZZZZNOTREAL99`): HTTP 200 with
+    `chart.result: null`, `chart.error.code: "Not Found"` — a clean, distinct
+    "no data" signal (maps to MarketBox's existing `noData` wording, not
+    "source unavailable").
+  - **Rate limit is the caveat, and it is exactly the documented one.** Bursts
+    answered `Edge: Too Many Requests`; the same request succeeded after a ~20s
+    cooldown. Controls (open.er-api, gold-api) were fine throughout, so it is
+    Yahoo-specific, not the network. One request per 60s tick is comfortably
+    under the burst threshold; the *picker* must not search per keystroke.
+- **Stooq** (`q/l` CSV, `q/d/l`) — "page does not exist" / a JS browser-verification
+  challenge, the same class of block priceto.day had (error 1015). Do not re-litigate.
+- No other keyless equity source was probed because none is worth it: Twelve Data,
+  Alpha Vantage, Finnhub, Marketstack, financialmodelingprep all demand an API key,
+  which the shell forbids ("keyless providers only" is a MarketBox invariant).
 
-## Files that change
+## What changes in the shell
 
-- `native/Shared/PRBoxSnapshot.swift` — `PullRequestItem` gains a review-state
-  field (tolerant decode, nil when absent — upgraded snapshots and providers
-  that didn't fetch it); `HostGitHubPRLoader.fetch` fans out per-PR review
-  fetches (new `withThrowingTaskGroup`, ShipBox precedent) capped to the rows
-  that will render; a pure parser for the reviews payload.
-- `native/Shared/AzureDevOpsLoader.swift` — `AzurePRParser.item(from:...)`
-  derives the state from the already-present `reviewers` (exclude me, fold
-  votes to a coarse state).
-- `native/Shared/DeckSettings.swift` — `PRBoxSettings` gains a show toggle +
-  colors if the face wants them (needs the settings tab too).
-- `native/DeckWidgets/PRBoxWidget.swift` — per-row status glyph (no Charts —
-  the widget-face Charts trap).
-- `native/DeckAgent/main.swift` + `native/DeckApp/DeckApp.swift` — both call
-  sites of `HostGitHubPRLoader.fetch` and `PRSnapshotBuilder.build` (signature
-  or behavior change, e.g. the GitHub cap).
-- Tests: new fixture for the GitHub reviews payload; extend
-  `PRBoxGitHubTests`, `PRBoxAzureTests`, `PRBoxSnapshotTests`.
-- `scripts/demo_data.py` (`demo-data.sh`) — sanitizes the PRBox snapshot;
-  check whether the new field needs a fake value.
+All touchpoints mapped. `MarketKind` gains a fourth case; everything below is
+exhaustive over it today.
 
-## Cost & rate-budget arithmetic (the PRD's recorded reason for cutting it)
+1. **`MarketKind`** (`MarketBoxSnapshot.swift:24`) — add `.stock`.
+2. **`MarketTicker`** (`MarketBoxCore.swift:139`) — identity. `coinID` is the
+   CoinGecko id and `kind` *derives* from it (`coinID` non-empty → `.crypto`).
+   Stocks cannot overload it or they'd price as crypto. Minimal migration-safe
+   shape: a new optional `stockSymbol` field; `kind` derives `.stock` from
+   `stockSymbol` non-empty (checked after `coinID`, so the two can never collide
+   in practice and the derived-kind invariant survives). Tolerant decode keeps
+   old files valid.
+3. **`MarketSymbolResolver`** (`MarketBoxCore.swift:103,112`) — `kind(for:)` and
+   `name(for:)` need the stock branch; plus a curated **stock catalog** (symbol →
+   name) for the picker, so nothing needs live search (rate limit).
+4. **`HostMarketLoader.fetch`** (`MarketBoxSnapshot.swift:193`) — a `needsStocks`
+   gate and a `fetchStocks` call. Serial like the other four (5×10s worst case
+   is borderline against the 60s tick; CLAUDE.md's fan-out lesson is a real
+   consideration — interview decision).
+5. **`MarketBuilder.build`** (`MarketBoxCore.swift:346`) — `.stock` case: price =
+   `regularMarketPrice`, converted via `MarketConverter.perUSD` (USD-nominated
+   catalog only, v1), `dayChangePct` = `regularMarketChangePercent`. And
+   `collapse` needs the stock source named ("Stocks unavailable").
+6. **`YahooChartParser`** (new) — pure, unit-tested against the captured
+   payloads; three states like CoinGecko (row / noData on `error.Not Found` /
+   nil on parse failure).
+7. **Face** (`MarketBoxWidget.swift:219`) — `changeLabel` gates on
+   `.crypto`; extend to `.stock` so a stock row shows its day change on
+   medium/large.
+8. **Picker** (`DeckApp.swift:2585` AddTickerSheet) — a "Stocks & Indices"
+   section from the curated catalog, zero network (fiatAndGold precedent at
+   `:2642`). No Yahoo search in v1 (rate limit + the CoinGecko picker already
+   proves the pattern for a future live search).
+9. **Tests** — `MarketBoxCoreTests`, `MarketBoxParsersTests`, `MarketTickerTests`
+   get the new case; snapshot decode of old files must still pass (no `.stock`
+   rows in old snapshots).
 
-- GitHub: 2 search calls + up to `prCount` review calls per tick, every 60s.
-  `prCount` default 6 → 8 calls/min ≈ 480/hr, well inside the 5000/hr core
-  budget. The 30/min search budget is untouched (reviews are not search).
-- The real risk is **tick duration**: serial N×RTT; concurrent fan-out (~1 RTT)
-  is the established fix (ShipBox: 9.4s serial → 2.1s concurrent).
-- **Row cap policy:** fetch review state only for the provider's own rows that
-  can render (newest `prCount` of that provider's list, pre-merge) — the merge
-  happens after, so per-provider cap is the honest bound.
+## Ambiguities / open questions for the interview
 
-## Ambiguities to resolve in the PRD interview
+- **Curated catalog vs live search.** Curated-only in v1 (matches "picked, never
+  typed" + avoids Yahoo's rate limit). What's in it: major US stocks + the main
+  US indices (^GSPC, ^IXIC, ^DJI, ^RUT?). Non-US instruments are USD-nominated
+  only, so conversion stays one path.
+- **Day change scope.** Yahoo gives it free. Show it on stock rows (medium/large,
+  same as crypto) or keep stocks price-only in v1?
+- **Serial vs concurrent fetch.** Keep the 4-source serial loader + a 5th, or
+  fan out (first `withThrowingTaskGroup` in MarketBox)? The tick lesson in
+  CLAUDE.md says fan-out is the safe default past a handful of sources.
+- **Symbol display.** `^GSPC` reads oddly on a 36pt-wide row; the catalog could
+  carry a display symbol ("SPX") while the fetch uses `^GSPC`. Separate
+  `symbol` (display) and `stockSymbol` (fetch) — worth confirming.
+- **The 12-row cap and tickerCount** already cover stocks (they're just more
+  rows in the same list).
 
-1. **State granularity:** a coarse three-state glyph (approved / changes
-   requested / none), counts ("2✓ / 1✗"), or both? Small face has no rows — is
-   this medium/large only?
-2. **Fail-open semantics:** a per-PR review fetch failing — row shows no glyph
-   (fail-open, don't blank the queue) vs. provider-level note. Precedent says
-   fail-open + MarketBox-style partial note.
-3. **Settings surface:** show toggle (default on/off?), colors, or none
-   (glyph fixed, colored by role colors)?
-4. **Azure vote folding:** is +5/+10 both "approved" and -5/-10 both "changes
-   requested"? Is a PR with approvals *and* rejections "changes requested"?
-5. **DISMISSED / PENDING** on GitHub: excluded, presumably — confirm.
-6. **Probe before PRD?** PRBox's own lesson: live-probe the reviews endpoint
-   shape and real per-PR latency before freezing the design; Azure confirmed
-   free from the existing payload (fixtures already carry `reviewers`).
+## Affected files
 
-## Shell invariants this must respect
+`native/Shared/MarketBoxCore.swift`, `MarketBoxSnapshot.swift`, `CoinSearch.swift`
+(no — catalog lives in Core), `native/DeckWidgets/MarketBoxWidget.swift`,
+`native/DeckApp/DeckApp.swift`, `native/DeckAgent/main.swift` (no change — it
+calls `HostMarketLoader.fetch`), `native/SharedTests/*`, `README.md`,
+`ROADMAP.md`, `scripts/demo-data.sh` (sanitize a stock row), version bump in
+`project.yml` (CFBundleShortVersionString/CFBundleVersion).
 
-- Snapshot is data, not instruction: new field tolerant, never changes the
-  fallback behavior; provider half failing never blanks the other half.
-- No Swift Charts in the widget face.
-- Pure parsing + cap policy unit-pinned in `DeckSharedTests` (XCTest, fixtures).
-- Both fetch call sites (agent + app) stay line-for-line.
-- `xcodegen generate` after adding any new test file.
-- No keychain/credentials changes — this rides the existing `.prboxGitHub` /
-  `.prboxAzure` FetchSource keys and gates.
+## Shell invariants checked (CLAUDE.md)
+
+- No Swift Charts in the face — unchanged (stocks are rows, no chart). ✓
+- One widget, agent-pumped, 60s, settings in app only, snapshot renders. ✓
+- Keyless providers only — Yahoo is keyless; picker never on the agent path. ✓
+- Tickers picked, never typed — curated stock catalog. ✓
+- No `serverURL`/`.enabled` reads inside the extension. ✓
+- Tolerant decode everywhere a new field lands. ✓
+- Version bump required for the extension to pick up the new kind. ✓
