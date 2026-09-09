@@ -380,6 +380,42 @@ final class MarketBuilderTests: XCTestCase {
     }
 }
 
+/// Phase 4: the pure decisions behind the stock fetch — which Yahoo symbols
+/// the loader asks for, and the spacing that keeps it under Yahoo's burst
+/// rate limit (measured: ~6 requests in ~10s trip "Edge: Too Many Requests",
+/// recovery ~20s; see `docs/planning/marketbox-stocks/probe.md`).
+final class MarketStockFetchPlanTests: XCTestCase {
+    func testStockSymbolsComeFromStockTickersOnly() {
+        let tickers = [
+            MarketTicker(symbol: "BTC", name: "Bitcoin", coinID: "bitcoin"),
+            MarketTicker(symbol: "SPX", name: "S&P 500", coinID: "", stockSymbol: "^GSPC"),
+            MarketTicker(symbol: "AAPL", name: "Apple", coinID: "", stockSymbol: "AAPL"),
+        ]
+        XCTAssertEqual(MarketFetchPlan.stockSymbols(for: tickers), ["^GSPC", "AAPL"])
+    }
+
+    func testStockSymbolsAreDeduplicatedAndBlanksDropped() {
+        let tickers = [
+            MarketTicker(symbol: "A", name: "A", coinID: "", stockSymbol: "^GSPC"),
+            MarketTicker(symbol: "B", name: "B", coinID: "", stockSymbol: "^GSPC"),
+            MarketTicker(symbol: "C", name: "C", coinID: "", stockSymbol: "   "),
+        ]
+        XCTAssertEqual(MarketFetchPlan.stockSymbols(for: tickers), ["^GSPC"])
+    }
+
+    func testStockSymbolsIsEmptyWithNoStockTickers() {
+        let tickers = MarketTickerMigration.tickers(fromSymbols: ["BTC", "USD", "GOLD"])
+        XCTAssertTrue(MarketFetchPlan.stockSymbols(for: tickers).isEmpty)
+    }
+
+    /// A knob, not a magic sleep: pinned so the number is a decision, and so a
+    /// later "fix" cannot silently zero the spacing and re-create the burst.
+    func testStockSpacingIsAPositiveDecision() {
+        XCTAssertGreaterThan(MarketFetchPlan.stockSpacing, 0)
+        XCTAssertLessThan(MarketFetchPlan.stockSpacing, 2, "too wide and a full list outgrows the tick")
+    }
+}
+
 final class MarketPriceFormatterTests: XCTestCase {
     func testUsdPricesGetDollarPrefixAndTiers() {
         XCTAssertEqual(MarketPriceFormatter.price(77_850, currency: .usd), "$77,850")

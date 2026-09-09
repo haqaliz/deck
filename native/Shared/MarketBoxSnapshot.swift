@@ -276,6 +276,8 @@ enum HostMarketLoader {
         let needsCrypto = !cryptoIDs.isEmpty
         let needsGold = tickers.contains { $0.kind == .gold }
         let needsFiat = tickers.contains { $0.kind == .fiat }
+        let stockSymbols = MarketFetchPlan.stockSymbols(for: tickers)
+        let needsStocks = !stockSymbols.isEmpty
         // IRT/IRR need the free-market Toman anchor; CAD/EUR/AED displays need
         // the open.er-api rate set (as do fiat tickers).
         let needsToman = display == .irt || display == .irr
@@ -318,13 +320,20 @@ enum HostMarketLoader {
             catch { fx = nil; firstError = firstError ?? error }
         } else { fx = nil }
 
+        let stockResult: StockFetchResult?
+        if needsStocks {
+            do { stockResult = try await fetchStocks(symbols: stockSymbols) }
+            catch { stockResult = nil; firstError = firstError ?? error }
+        } else { stockResult = nil }
+
         let build = MarketBuilder.build(
             display: display,
             tickers: tickers,
             quotesByID: quotesByID,
             tmn: toman,
             goldUSDPerGram: goldUSDPerOunce.map(MarketConverter.goldPerGram),
-            fx: fx
+            fx: fx,
+            stockResult: stockResult
         )
 
         guard !build.isEmpty else {
@@ -379,6 +388,40 @@ enum HostMarketLoader {
             throw MarketLoaderError.invalidPayload
         }
         return rates
+    }
+
+    /// One spaced v8 chart call per Yahoo symbol, aborting on the first
+    /// non-"Not Found" failure.
+    ///
+    /// The abort is deliberate and per the PRD: Yahoo rate-limits bursts
+    /// (measured: "Edge: Too Many Requests" after ~6 calls in ~10s, recovery
+    /// ~20s), so a rate-limited or dead call means the rest of the pass is
+    /// doomed too — the tick is not spent on them, no stock row renders this
+    /// tick, and the next tick retries. "Not Found" is per-symbol data (that
+    /// instrument has no quote), so it never aborts the pass.
+    ///
+    /// **Do not fan this out.** A `withThrowingTaskGroup` over Yahoo's symbols
+    /// recreates the exact burst this spacing exists to avoid.
+    private static func fetchStocks(symbols: [String]) async throws -> StockFetchResult {
+        var result = StockFetchResult()
+        for (index, symbol) in symbols.enumerated() {
+            if index > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(MarketFetchPlan.stockSpacing * 1_000_000_000))
+            }
+            // `^GSPC` must be percent-encoded (`^` is not a path character).
+            let encoded = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? symbol
+            let url = URL(string: "https://query1.finance.yahoo.com/v8/finance/chart/\(encoded)?interval=1d&range=1d")!
+            let data = try await get(url)
+            switch YahooChartParser.parse(data) {
+            case .quote(let quote):
+                result.quotes[quote.symbol] = quote
+            case .noData:
+                result.noData.append(symbol)
+            case .malformed:
+                throw MarketLoaderError.invalidPayload
+            }
+        }
+        return result
     }
 
     private static func get(_ url: URL) async throws -> Data {

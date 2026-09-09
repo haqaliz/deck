@@ -385,6 +385,26 @@ enum MarketFetchPlan {
         }
         return kept
     }
+
+    /// The Yahoo symbols to price, deduped, in order, blanks dropped. Only
+    /// stock tickers contribute — the `stockSymbol`, not the display `symbol`.
+    static func stockSymbols(for tickers: [MarketTicker]) -> [String] {
+        var kept: [String] = []
+        var seen: Set<String> = []
+        for ticker in tickers {
+            let symbol = ticker.stockSymbol.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !symbol.isEmpty, seen.insert(symbol).inserted else { continue }
+            kept.append(symbol)
+        }
+        return kept
+    }
+
+    /// Seconds between two stock fetches. Yahoo's v8 chart API rate-limits
+    /// bursts (measured 2026-09-09: ~6 requests in ~10s answer
+    /// "Edge: Too Many Requests", recovery ~20s), and there is no batch
+    /// endpoint (the batched `v7/quote` is now `Unauthorized`). One spaced
+    /// pass per 60s tick is comfortably under the threshold.
+    static let stockSpacing: TimeInterval = 0.75
 }
 
 enum MarketBuilder {
