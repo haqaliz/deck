@@ -1,0 +1,22 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "currency": "USD",
+          "symbol": "^GSPC",
+          "exchangeName": "SNP",
+          "fullExchangeName": "S&P 500",
+          "instrumentType": "INDEX",
+          "regularMarketTime": 1788897601,
+          "regularMarketPrice": 7673.52,
+          "regularMarketChangePercent": -0.584,
+          "longName": "S&P 500",
+          "shortName": "S&P 500",
+          "chartPreviousClose": 7718.6
+        }
+      }
+    ],
+    "error": null
+  }
+}
