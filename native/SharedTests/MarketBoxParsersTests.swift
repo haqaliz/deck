@@ -12,6 +12,9 @@ private final class MarketBoxFixtures {
     static let wallexMarkets = data("wallexMarkets")
     static let goldXau = data("goldXau")
     static let erApiLatest = data("erApiLatest")
+    static let yahooAAPL = data("yahoo_chart_aapl")
+    static let yahooGSPC = data("yahoo_chart_gspc")
+    static let yahooUnknown = data("yahoo_chart_unknown")
 }
 
 final class CoinGeckoMarketsParserTests: XCTestCase {
@@ -101,5 +104,62 @@ final class FXRatesParserTests: XCTestCase {
     func testGarbageReturnsNil() {
         XCTAssertNil(FXRatesParser.parse(Data("not json".utf8)))
         XCTAssertNil(FXRatesParser.parse(Data(#"{"rates":{}}"#.utf8)), "empty rates is no data")
+    }
+}
+
+/// Phase 2 of `marketbox-stocks`: the Yahoo v8 chart parser. The payload has
+/// three honest states — priced / `Not Found` (a real symbol that has no data)
+/// / malformed — because "this symbol is unknown" and "the source is broken"
+/// need different words on the face.
+final class YahooChartParserTests: XCTestCase {
+    func testParsesTheAAPLFixture() {
+        guard case .quote(let quote) = YahooChartParser.parse(MarketBoxFixtures.yahooAAPL) else {
+            return XCTFail("expected a quote")
+        }
+        XCTAssertEqual(quote.symbol, "AAPL")
+        XCTAssertEqual(quote.name, "Apple Inc.")
+        XCTAssertEqual(quote.priceUSD ?? 0, 316.22, accuracy: 0.001)
+        XCTAssertEqual(quote.changePct ?? 0, -1.172, accuracy: 0.001)
+    }
+
+    func testParsesTheIndexFixture() {
+        guard case .quote(let quote) = YahooChartParser.parse(MarketBoxFixtures.yahooGSPC) else {
+            return XCTFail("expected a quote")
+        }
+        XCTAssertEqual(quote.symbol, "^GSPC")
+        XCTAssertEqual(quote.name, "S&P 500")
+        XCTAssertEqual(quote.priceUSD ?? 0, 7673.52, accuracy: 0.001)
+        XCTAssertEqual(quote.changePct ?? 0, -0.584, accuracy: 0.001)
+    }
+
+    func testUnknownSymbolIsNoDataNotMalformed() {
+        XCTAssertEqual(YahooChartParser.parse(MarketBoxFixtures.yahooUnknown), .noData)
+    }
+
+    func testGarbageIsMalformed() {
+        XCTAssertEqual(YahooChartParser.parse(Data("not json".utf8)), .malformed)
+        XCTAssertEqual(YahooChartParser.parse(Data(#"{"a":1}"#.utf8)), .malformed)
+    }
+
+    func testAChartErrorThatIsNotNotFoundIsMalformed() {
+        let json = #"{"chart":{"result":null,"error":{"code":"Unauthorized","description":"x"}}}"#
+        XCTAssertEqual(YahooChartParser.parse(json.data(using: .utf8)!), .malformed)
+    }
+
+    func testMissingPriceStillParsesAsAQuoteWithNilPrice() {
+        let json = #"{"chart":{"result":[{"meta":{"symbol":"AAPL","longName":"Apple Inc."}}],"error":null}}"#
+        guard case .quote(let quote) = YahooChartParser.parse(json.data(using: .utf8)!) else {
+            return XCTFail("expected a quote")
+        }
+        XCTAssertNil(quote.priceUSD)
+        XCTAssertNil(quote.changePct)
+    }
+
+    func testLongNameIsPreferredOverShortName() {
+        let json = #"{"chart":{"result":[{"meta":{"symbol":"X","longName":"The Long Name","shortName":"X"}}],"error":null}}"#
+        guard case .quote(let quote) = YahooChartParser.parse(json.data(using: .utf8)!) else {
+            return XCTFail("expected a quote")
+        }
+        XCTAssertEqual(quote.name, "The Long Name")
     }
 }

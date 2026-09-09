@@ -170,6 +170,66 @@ enum FXRatesParser {
     }
 }
 
+// MARK: - Yahoo chart (stocks/indices)
+
+/// A parsed Yahoo v8 chart quote, in USD.
+///
+/// Contract notes (verified against live payloads on 2026-09-09):
+/// - `meta.regularMarketPrice` and `meta.regularMarketChangePercent` are JSON
+///   numbers; either can be absent (a halted symbol still has a meta block).
+/// - `meta.longName` and `meta.shortName` both exist for most symbols; prefer
+///   `longName`, fall back to `shortName`.
+/// - An unknown or delisted symbol is HTTP 200 with
+///   `chart.result: null`, `chart.error.code: "Not Found"` — the `.noData`
+///   signal, distinct from `.malformed`, so the face can say "No data: X"
+///   rather than "source unavailable".
+struct StockQuote: Equatable {
+    /// The Yahoo symbol as fetched ("^GSPC") — not the display symbol.
+    var symbol: String
+    /// `longName` or `shortName`, whichever the payload carried first.
+    var name: String
+    /// USD price; nil when the payload lacks it.
+    var priceUSD: Double?
+    /// Day change vs previous close; nil when absent.
+    var changePct: Double?
+}
+
+enum YahooChartParseResult: Equatable {
+    case quote(StockQuote)
+    /// The chart answered "Not Found" — a real request, no data for that symbol.
+    case noData
+    /// Not a chart payload (or an error other than "Not Found").
+    case malformed
+}
+
+enum YahooChartParser {
+    static func parse(_ data: Data) -> YahooChartParseResult {
+        guard
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let chart = object["chart"] as? [String: Any]
+        else { return .malformed }
+
+        if let error = chart["error"] as? [String: Any] {
+            // The one documented error shape: "Not Found" means the symbol has
+            // no data. Any other error is the source misbehaving.
+            if (error["code"] as? String) == "Not Found" { return .noData }
+            return .malformed
+        }
+
+        guard
+            let results = chart["result"] as? [[String: Any]],
+            let meta = results.first?["meta"] as? [String: Any],
+            let symbol = meta["symbol"] as? String,
+            !symbol.isEmpty
+        else { return .malformed }
+
+        let name = (meta["longName"] as? String) ?? (meta["shortName"] as? String) ?? ""
+        let price = (meta["regularMarketPrice"] as? NSNumber)?.doubleValue
+        let change = (meta["regularMarketChangePercent"] as? NSNumber)?.doubleValue
+        return .quote(StockQuote(symbol: symbol, name: name, priceUSD: price, changePct: change))
+    }
+}
+
 // MARK: - MarketBox fetch (host/agent only — unsandboxed)
 
 enum MarketLoaderError: Error {
