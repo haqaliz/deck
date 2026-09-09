@@ -230,6 +230,20 @@ enum YahooChartParser {
     }
 }
 
+/// What the stock pass of a fetch produced: the quotes it priced (by Yahoo
+/// symbol) and the symbols Yahoo answered "Not Found" about. `nil` at the build
+/// call site means the stock source produced nothing this tick (not asked, or
+/// the pass failed).
+struct StockFetchResult: Equatable {
+    var quotes: [String: StockQuote] = [:]
+    var noData: [String] = []
+
+    init(quotes: [String: StockQuote] = [:], noData: [String] = []) {
+        self.quotes = quotes
+        self.noData = noData
+    }
+}
+
 // MARK: - MarketBox fetch (host/agent only — unsandboxed)
 
 enum MarketLoaderError: Error {

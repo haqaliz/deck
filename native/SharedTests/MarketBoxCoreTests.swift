@@ -275,6 +275,109 @@ final class MarketBuilderTests: XCTestCase {
         XCTAssertTrue(build.isEmpty)
         XCTAssertEqual(build.omitted, ["Crypto"])
     }
+
+    // MARK: - Stocks (phase 3)
+
+    private func stockQuote(_ yahoo: String, price: Double? = 7673.52, change: Double? = -0.584, name: String = "S&P 500") -> StockQuote {
+        StockQuote(symbol: yahoo, name: name, priceUSD: price, changePct: change)
+    }
+
+    private func stockTicker(_ display: String, _ yahoo: String) -> MarketTicker {
+        MarketTicker(symbol: display, name: display, coinID: "", stockSymbol: yahoo)
+    }
+
+    func testBuildsAStockRowInUsd() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [stockTicker("SPX", "^GSPC")],
+            quotesByID: [:],
+            tmn: nil,
+            goldUSDPerGram: nil,
+            fx: nil,
+            stockResult: StockFetchResult(quotes: ["^GSPC": stockQuote("^GSPC")], noData: [])
+        )
+        XCTAssertEqual(build.rows.count, 1)
+        XCTAssertEqual(build.rows[0].symbol, "SPX")
+        XCTAssertEqual(build.rows[0].kind, .stock)
+        XCTAssertEqual(build.rows[0].price, 7673.52, accuracy: 0.001)
+        XCTAssertEqual(build.rows[0].dayChangePct ?? 0, -0.584, accuracy: 0.001)
+        XCTAssertEqual(build.rows[0].name, "S&P 500")
+        XCTAssertTrue(build.omitted.isEmpty)
+        XCTAssertNil(build.note)
+    }
+
+    func testBuildsAStockRowInIrt() {
+        let build = MarketBuilder.build(
+            display: .irt,
+            tickers: [stockTicker("SPX", "^GSPC")],
+            quotesByID: [:],
+            tmn: tmn,
+            goldUSDPerGram: nil,
+            fx: nil,
+            stockResult: StockFetchResult(quotes: ["^GSPC": stockQuote("^GSPC")], noData: [])
+        )
+        XCTAssertEqual(build.rows[0].price, 7673.52 * tmn, accuracy: 0.001)
+    }
+
+    func testAStockYahooAnswersNotFoundAboutIsNoData() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [stockTicker("SPX", "^GSPC")],
+            quotesByID: [:],
+            tmn: nil,
+            goldUSDPerGram: nil,
+            fx: nil,
+            stockResult: StockFetchResult(quotes: [:], noData: ["^GSPC"])
+        )
+        XCTAssertTrue(build.rows.isEmpty)
+        XCTAssertEqual(build.noData, ["SPX"])
+        XCTAssertEqual(build.note, "No data: SPX")
+    }
+
+    func testAStockFetchFailureCollapsesToStocks() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [stockTicker("SPX", "^GSPC"), stockTicker("AAPL", "AAPL")],
+            quotesByID: [:],
+            tmn: nil,
+            goldUSDPerGram: nil,
+            fx: nil,
+            stockResult: nil
+        )
+        XCTAssertTrue(build.isEmpty)
+        XCTAssertEqual(build.omitted, ["Stocks"])
+        XCTAssertEqual(build.note, "Stocks unavailable")
+    }
+
+    func testStockFailureLeavesCryptoRowsRendering() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [MarketTicker(symbol: "BTC", name: "Bitcoin", coinID: "bitcoin"), stockTicker("SPX", "^GSPC")],
+            quotesByID: ["bitcoin": quotes["bitcoin"]!],
+            tmn: nil,
+            goldUSDPerGram: nil,
+            fx: nil,
+            stockResult: nil
+        )
+        XCTAssertEqual(build.rows.map(\.symbol), ["BTC"])
+        XCTAssertEqual(build.omitted, ["Stocks"])
+        XCTAssertEqual(build.note, "Stocks unavailable")
+        XCTAssertFalse(build.isEmpty)
+    }
+
+    func testAStockWithNilPriceIsOmittedAndCollapses() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: [stockTicker("SPX", "^GSPC")],
+            quotesByID: [:],
+            tmn: nil,
+            goldUSDPerGram: nil,
+            fx: nil,
+            stockResult: StockFetchResult(quotes: ["^GSPC": stockQuote("^GSPC", price: nil)], noData: [])
+        )
+        XCTAssertTrue(build.rows.isEmpty)
+        XCTAssertEqual(build.omitted, ["Stocks"])
+    }
 }
 
 final class MarketPriceFormatterTests: XCTestCase {

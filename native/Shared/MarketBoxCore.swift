@@ -405,7 +405,8 @@ enum MarketBuilder {
         quotesByID: [String: CryptoQuote]?,
         tmn: Double?,
         goldUSDPerGram: Double?,
-        fx: [String: Double]?
+        fx: [String: Double]?,
+        stockResult: StockFetchResult? = nil
     ) -> MarketBuild {
         var rows: [MarketRow] = []
         var unresolved: [String] = []
@@ -477,10 +478,40 @@ enum MarketBuilder {
                 ))
 
             case .stock:
-                // P1: the model carries stocks, but no quote source exists yet —
-                // priced in Phase 3. Until then an omitted stock is the honest
-                // answer (nothing could be fetched for it).
-                omitted.append(symbol)
+                // A stock's quote is keyed by the Yahoo symbol, not the display
+                // symbol the face draws.
+                guard let stockResult else {
+                    // No stock source result this tick — every stock row omits.
+                    omitted.append(symbol)
+                    continue
+                }
+                guard let quote = stockResult.quotes[ticker.stockSymbol] else {
+                    if stockResult.noData.contains(ticker.stockSymbol) {
+                        // The fetch succeeded and Yahoo said this symbol has no
+                        // data — a fact about the instrument, not the source.
+                        noData.append(symbol)
+                    } else {
+                        // Absent without a "Not Found": the pass aborted before
+                        // reaching this symbol.
+                        omitted.append(symbol)
+                    }
+                    continue
+                }
+                guard
+                    let priceUSD = quote.priceUSD,
+                    let price = MarketConverter.perUSD(priceUSD, display: display, tmn: tmn, fx: fx)
+                else {
+                    omitted.append(symbol)
+                    continue
+                }
+                rows.append(MarketRow(
+                    symbol: symbol,
+                    name: quote.name,
+                    kind: .stock,
+                    price: price,
+                    dayChangePct: quote.changePct,
+                    sparkline: nil
+                ))
 
             case nil:
                 unresolved.append(symbol)
@@ -498,6 +529,7 @@ enum MarketBuilder {
         let pairs = zip(symbols, kinds)
         let crypto = pairs.filter { $0.1 == .crypto }.map(\.0)
         let fiat = pairs.filter { $0.1 == .fiat }.map(\.0)
+        let stock = pairs.filter { $0.1 == .stock }.map(\.0)
         let gold = kinds.contains { $0 == .gold }
 
         // Guarded on there actually being an omitted crypto symbol: a crypto
@@ -513,6 +545,15 @@ enum MarketBuilder {
         if !fiat.isEmpty, !rows.contains(where: { $0.kind == .fiat }) {
             omitted.removeAll { fiat.contains($0) }
             omitted.append("Rates")
+        }
+        // Same guard as crypto: a stock can fail into `noData` (Yahoo said the
+        // symbol has no data), and collapsing on "no stock rows" alone would
+        // claim the source was unavailable when it answered fine.
+        if !stock.isEmpty,
+           !rows.contains(where: { $0.kind == .stock }),
+           omitted.contains(where: { stock.contains($0) }) {
+            omitted.removeAll { stock.contains($0) }
+            omitted.append("Stocks")
         }
         if gold, !rows.contains(where: { $0.kind == .gold }) {
             omitted.removeAll { $0 == MarketSymbolResolver.goldSymbol }
