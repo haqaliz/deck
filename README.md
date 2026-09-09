@@ -60,7 +60,7 @@ native colors, corners and materials, at three sizes each.
 | **TaskBox** | Azure DevOps work items assigned to you across up to five projects (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
 | **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps (up to five projects) in one queue: counts, provider-tagged rows, drafts marked, per-row review state (approved / changes requested), click a row to open the PR; a failed fetch names the provider |
-| **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, and gold per gram — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
+| **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, gold per gram, and a curated set of US stocks and indices (with day change) — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
 
 All fourteen come in **small / medium / large** sizes.
 
@@ -179,16 +179,20 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   display order), and **Add Ticker…** opens a search over CoinGecko's whole
   catalogue. Results carry the market-cap rank, which is what tells rank-56
   `PEPE` from the twenty other coins using that symbol. With the search box
-  empty the sheet shows a popular list plus the fiat codes and `GOLD` (1 gram
-  of gold), all offline — it makes no network call until you type. Prices are
+  empty the sheet shows a popular list plus the fiat codes, `GOLD` (1 gram of
+  gold) and a curated set of **US stocks and indices** (`SPX` S&P 500, `IXIC`,
+  `DJI`, `RUT`, `VIX`, and sixteen stocks) — all offline, no network until you
+  type. Prices are
   priced in one display currency, picked from a list: **USD**, **IRR**
   (Iranian Rial), **IRT** (Toman — the free-market rate, IRT = IRR ÷ 10),
   **CAD**, **EUR** or **AED** (live FX rate). The small widget shows up to
   4 rows price-only; medium shows up to 5 with the 24h change; large shows up
-  to 12. Crypto rows carry the change; fiat and gold rows are price-only. No
+  to 12. Crypto and stock rows carry the change; fiat and gold rows are
+  price-only. No
   API key is needed anywhere; prices come from
-  CoinGecko (crypto), gold-api (gold), Wallex (free-market Toman) and
-  open.er-api (fiat cross-rates), fetched by the agent every 60s. A symbol
+  CoinGecko (crypto), gold-api (gold), Wallex (free-market Toman),
+  open.er-api (fiat cross-rates) and Yahoo Finance (stocks and indices),
+  fetched by the agent every 60s. A symbol
   outside the curated list is shown, not dropped: `Unknown: XRPX`.
 - **TaskBox** needs an Azure DevOps organization, at least one project and a
   personal access token in settings — without all three nothing is fetched (the
@@ -289,7 +293,7 @@ Deck reads personal data, so here is exactly what happens to it.
 | ShipBox | your GitHub token, and the repos you watch (or, in Automatic mode, your repo list) | `api.github.com` |
 | TaskBox | your Azure DevOps PAT, org and projects | `dev.azure.com` |
 | OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
-| MarketBox | the coins you picked (e.g. `bitcoin`), and what you type in the ticker search | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com` |
+| MarketBox | the coins you picked (e.g. `bitcoin`) and the stocks/indices you picked (e.g. `^GSPC`), plus what you type in the ticker search | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com`, `query1.finance.yahoo.com` |
 
 MarketBox sends only the coins you picked — no tokens, no identity, and it never
 sends anything on behalf of a row's price. The ticker search sends what you type

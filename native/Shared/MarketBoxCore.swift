@@ -9,6 +9,15 @@ import Foundation
 
 // MARK: - Symbol resolution
 
+/// One curated stock/index entry: the display symbol the face draws, the
+/// friendly name the picker shows, and the Yahoo symbol the loader fetches.
+/// `BRK.B` is the display, `BRK-B` is what Yahoo's chart API answers for.
+struct StockCatalogEntry: Equatable {
+    var displaySymbol: String
+    var name: String
+    var yahooSymbol: String
+}
+
 enum MarketSymbolResolver {
     /// Curated crypto symbol → CoinGecko id. Since `marketbox-coin-lookup`
     /// this is no longer the catalogue: it is the migration table for files
@@ -96,6 +105,34 @@ enum MarketSymbolResolver {
     /// `GOLD` means 1 gram of gold (spot per troy ounce ÷ 31.1035).
     static let goldSymbol = "GOLD"
 
+    /// The curated stock/index catalogue — display symbol, friendly name and
+    /// the Yahoo symbol the loader fetches. Picked, never typed: a blind-typed
+    /// symbol is unknowable to the user, and a live search against Yahoo would
+    /// re-introduce the burst rate limit the loader is shaped around.
+    static let stockCatalog: [StockCatalogEntry] = [
+        StockCatalogEntry(displaySymbol: "AAPL", name: "Apple", yahooSymbol: "AAPL"),
+        StockCatalogEntry(displaySymbol: "MSFT", name: "Microsoft", yahooSymbol: "MSFT"),
+        StockCatalogEntry(displaySymbol: "GOOGL", name: "Alphabet", yahooSymbol: "GOOGL"),
+        StockCatalogEntry(displaySymbol: "AMZN", name: "Amazon", yahooSymbol: "AMZN"),
+        StockCatalogEntry(displaySymbol: "NVDA", name: "NVIDIA", yahooSymbol: "NVDA"),
+        StockCatalogEntry(displaySymbol: "META", name: "Meta", yahooSymbol: "META"),
+        StockCatalogEntry(displaySymbol: "TSLA", name: "Tesla", yahooSymbol: "TSLA"),
+        StockCatalogEntry(displaySymbol: "NFLX", name: "Netflix", yahooSymbol: "NFLX"),
+        StockCatalogEntry(displaySymbol: "AMD", name: "AMD", yahooSymbol: "AMD"),
+        StockCatalogEntry(displaySymbol: "INTC", name: "Intel", yahooSymbol: "INTC"),
+        StockCatalogEntry(displaySymbol: "JPM", name: "JPMorgan", yahooSymbol: "JPM"),
+        StockCatalogEntry(displaySymbol: "V", name: "Visa", yahooSymbol: "V"),
+        StockCatalogEntry(displaySymbol: "BRK.B", name: "Berkshire Hathaway", yahooSymbol: "BRK-B"),
+        StockCatalogEntry(displaySymbol: "DIS", name: "Disney", yahooSymbol: "DIS"),
+        StockCatalogEntry(displaySymbol: "COST", name: "Costco", yahooSymbol: "COST"),
+        StockCatalogEntry(displaySymbol: "WMT", name: "Walmart", yahooSymbol: "WMT"),
+        StockCatalogEntry(displaySymbol: "SPX", name: "S&P 500", yahooSymbol: "^GSPC"),
+        StockCatalogEntry(displaySymbol: "IXIC", name: "Nasdaq Composite", yahooSymbol: "^IXIC"),
+        StockCatalogEntry(displaySymbol: "DJI", name: "Dow Jones", yahooSymbol: "^DJI"),
+        StockCatalogEntry(displaySymbol: "RUT", name: "Russell 2000", yahooSymbol: "^RUT"),
+        StockCatalogEntry(displaySymbol: "VIX", name: "CBOE Volatility Index", yahooSymbol: "^VIX"),
+    ]
+
     static func cryptoID(for symbol: String) -> String? {
         cryptoIDs[symbol.uppercased()]
     }
@@ -113,7 +150,7 @@ enum MarketSymbolResolver {
         switch kind(for: symbol) {
         case .gold: return "Gold"
         case .fiat: return fiatNames[symbol.uppercased()] ?? ""
-        case .crypto, nil: return ""
+        case .crypto, .stock, nil: return ""
         }
     }
 
@@ -141,22 +178,27 @@ struct MarketTicker: Codable, Equatable {
     var symbol: String
     /// "Bitcoin" — cached at pick time for offline display.
     var name: String
-    /// The CoinGecko id ("bitcoin"). Empty for fiat and gold, which are not
-    /// CoinGecko rows at all.
+    /// The CoinGecko id ("bitcoin"). Empty for fiat, gold and stocks, which
+    /// are not CoinGecko rows at all.
     var coinID: String
+    /// The Yahoo symbol ("^GSPC") for a stock row. Empty for every other kind.
+    /// Distinct from `symbol` (the display, "SPX"), because the face draws one
+    /// and the loader fetches the other.
+    var stockSymbol: String
     /// `market_cap_rank` at pick time. Kept because it records what was
     /// chosen; not rendered in the list, because a stored rank goes stale.
     var rank: Int?
 
-    init(symbol: String, name: String, coinID: String, rank: Int? = nil) {
+    init(symbol: String, name: String, coinID: String, stockSymbol: String = "", rank: Int? = nil) {
         self.symbol = symbol
         self.name = name
         self.coinID = coinID
+        self.stockSymbol = stockSymbol
         self.rank = rank
     }
 
     private enum CodingKeys: String, CodingKey {
-        case symbol, name, coinID, rank
+        case symbol, name, coinID, stockSymbol, rank
     }
 
     /// Tolerant on purpose: a throw in here reaches
@@ -169,6 +211,7 @@ struct MarketTicker: Codable, Equatable {
         symbol = try c.decodeIfPresent(String.self, forKey: .symbol) ?? ""
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
         coinID = try c.decodeIfPresent(String.self, forKey: .coinID) ?? ""
+        stockSymbol = try c.decodeIfPresent(String.self, forKey: .stockSymbol) ?? ""
         rank = try c.decodeIfPresent(Int.self, forKey: .rank)
     }
 
@@ -176,6 +219,7 @@ struct MarketTicker: Codable, Equatable {
     /// whole point — a coin outside it must still price.
     var kind: MarketKind? {
         if !coinID.isEmpty { return .crypto }
+        if !stockSymbol.isEmpty { return .stock }
         let s = symbol.uppercased()
         if s == MarketSymbolResolver.goldSymbol { return .gold }
         if MarketSymbolResolver.fiatISOs.contains(s) { return .fiat }
@@ -341,6 +385,26 @@ enum MarketFetchPlan {
         }
         return kept
     }
+
+    /// The Yahoo symbols to price, deduped, in order, blanks dropped. Only
+    /// stock tickers contribute — the `stockSymbol`, not the display `symbol`.
+    static func stockSymbols(for tickers: [MarketTicker]) -> [String] {
+        var kept: [String] = []
+        var seen: Set<String> = []
+        for ticker in tickers {
+            let symbol = ticker.stockSymbol.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !symbol.isEmpty, seen.insert(symbol).inserted else { continue }
+            kept.append(symbol)
+        }
+        return kept
+    }
+
+    /// Seconds between two stock fetches. Yahoo's v8 chart API rate-limits
+    /// bursts (measured 2026-09-09: ~6 requests in ~10s answer
+    /// "Edge: Too Many Requests", recovery ~20s), and there is no batch
+    /// endpoint (the batched `v7/quote` is now `Unauthorized`). One spaced
+    /// pass per 60s tick is comfortably under the threshold.
+    static let stockSpacing: TimeInterval = 0.75
 }
 
 enum MarketBuilder {
@@ -361,7 +425,8 @@ enum MarketBuilder {
         quotesByID: [String: CryptoQuote]?,
         tmn: Double?,
         goldUSDPerGram: Double?,
-        fx: [String: Double]?
+        fx: [String: Double]?,
+        stockResult: StockFetchResult? = nil
     ) -> MarketBuild {
         var rows: [MarketRow] = []
         var unresolved: [String] = []
@@ -432,6 +497,42 @@ enum MarketBuilder {
                     sparkline: nil
                 ))
 
+            case .stock:
+                // A stock's quote is keyed by the Yahoo symbol, not the display
+                // symbol the face draws.
+                guard let stockResult else {
+                    // No stock source result this tick — every stock row omits.
+                    omitted.append(symbol)
+                    continue
+                }
+                guard let quote = stockResult.quotes[ticker.stockSymbol] else {
+                    if stockResult.noData.contains(ticker.stockSymbol) {
+                        // The fetch succeeded and Yahoo said this symbol has no
+                        // data — a fact about the instrument, not the source.
+                        noData.append(symbol)
+                    } else {
+                        // Absent without a "Not Found": the pass aborted before
+                        // reaching this symbol.
+                        omitted.append(symbol)
+                    }
+                    continue
+                }
+                guard
+                    let priceUSD = quote.priceUSD,
+                    let price = MarketConverter.perUSD(priceUSD, display: display, tmn: tmn, fx: fx)
+                else {
+                    omitted.append(symbol)
+                    continue
+                }
+                rows.append(MarketRow(
+                    symbol: symbol,
+                    name: quote.name,
+                    kind: .stock,
+                    price: price,
+                    dayChangePct: quote.changePct,
+                    sparkline: nil
+                ))
+
             case nil:
                 unresolved.append(symbol)
             }
@@ -448,6 +549,7 @@ enum MarketBuilder {
         let pairs = zip(symbols, kinds)
         let crypto = pairs.filter { $0.1 == .crypto }.map(\.0)
         let fiat = pairs.filter { $0.1 == .fiat }.map(\.0)
+        let stock = pairs.filter { $0.1 == .stock }.map(\.0)
         let gold = kinds.contains { $0 == .gold }
 
         // Guarded on there actually being an omitted crypto symbol: a crypto
@@ -463,6 +565,15 @@ enum MarketBuilder {
         if !fiat.isEmpty, !rows.contains(where: { $0.kind == .fiat }) {
             omitted.removeAll { fiat.contains($0) }
             omitted.append("Rates")
+        }
+        // Same guard as crypto: a stock can fail into `noData` (Yahoo said the
+        // symbol has no data), and collapsing on "no stock rows" alone would
+        // claim the source was unavailable when it answered fine.
+        if !stock.isEmpty,
+           !rows.contains(where: { $0.kind == .stock }),
+           omitted.contains(where: { stock.contains($0) }) {
+            omitted.removeAll { stock.contains($0) }
+            omitted.append("Stocks")
         }
         if gold, !rows.contains(where: { $0.kind == .gold }) {
             omitted.removeAll { $0 == MarketSymbolResolver.goldSymbol }

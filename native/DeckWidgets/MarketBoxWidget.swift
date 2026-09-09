@@ -105,7 +105,7 @@ struct MarketBoxWidget: Widget {
             MarketBoxWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("MarketBox")
-        .description("Live prices for your tickers — crypto, fiat and gold — in USD, Rial or Toman.")
+        .description("Live prices for your tickers — crypto, fiat, gold and stocks — in USD, Rial or Toman.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -216,7 +216,9 @@ struct MarketBoxWidgetEntryView: View {
 
     @ViewBuilder
     private func changeLabel(_ row: MarketRow, showChange: Bool) -> some View {
-        if showChange, entry.settings.showDayChange, row.kind == .crypto, let pct = row.dayChangePct {
+        // Crypto and stock rows carry a real day change; fiat and gold are
+        // price-only (no keyless history source), so they render "–".
+        if showChange, entry.settings.showDayChange, row.kind == .crypto || row.kind == .stock, let pct = row.dayChangePct {
             Text(MarketPriceFormatter.change(pct) ?? "–")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()

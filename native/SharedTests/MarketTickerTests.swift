@@ -173,6 +173,90 @@ final class MarketTickerTests: XCTestCase {
     }
 }
 
+/// Phase 1 of `marketbox-stocks`: a ticker can be a stock. Identity is the
+/// Yahoo symbol (`^GSPC`); the display symbol (`SPX`) is what the face draws;
+/// `kind` derives `.stock` from the Yahoo symbol, never stored.
+final class MarketStockTickerTests: XCTestCase {
+
+    // MARK: - The model
+
+    func testStockKindDerivesFromTheStockSymbol() {
+        let ticker = MarketTicker(symbol: "SPX", name: "S&P 500", coinID: "", stockSymbol: "^GSPC")
+        XCTAssertEqual(ticker.kind, .stock)
+    }
+
+    func testCoinIDWinsOverStockSymbol() {
+        // Defensive: a row carrying both must price as a coin, never as a
+        // stock — one symbol, one row.
+        let ticker = MarketTicker(symbol: "SOL", name: "Solana", coinID: "solana", stockSymbol: "SOL")
+        XCTAssertEqual(ticker.kind, .crypto)
+    }
+
+    func testDisplaySymbolAndFetchSymbolAreSeparate() {
+        let ticker = MarketTicker(symbol: "SPX", name: "S&P 500", coinID: "", stockSymbol: "^GSPC")
+        XCTAssertEqual(ticker.symbol, "SPX")
+        XCTAssertEqual(ticker.stockSymbol, "^GSPC")
+    }
+
+    func testACryptoTickerWithoutStockSymbolIsUnchanged() {
+        XCTAssertEqual(MarketTicker(symbol: "BTC", name: "Bitcoin", coinID: "bitcoin").stockSymbol, "")
+        XCTAssertEqual(MarketTicker(symbol: "BTC", name: "Bitcoin", coinID: "bitcoin").kind, .crypto)
+    }
+
+    // MARK: - Catalog
+
+    func testStockCatalogHasNoDuplicateDisplaySymbols() {
+        let symbols = MarketSymbolResolver.stockCatalog.map(\.displaySymbol)
+        XCTAssertEqual(Set(symbols).count, symbols.count, "one display symbol, one row — a duplicate would be refused out loud at add time")
+    }
+
+    func testStockCatalogHasNoDuplicateYahooSymbols() {
+        let symbols = MarketSymbolResolver.stockCatalog.map(\.yahooSymbol)
+        XCTAssertEqual(Set(symbols).count, symbols.count)
+    }
+
+    func testStockCatalogDisplaySymbolsDoNotCollideWithCryptoMigrationTable() {
+        // A stock whose display symbol collides with a coin would be refused
+        // out loud by `MarketTickerList.adding` — correct behaviour, but the
+        // catalog should not invite the confusion.
+        let coins = Set(MarketSymbolResolver.cryptoIDs.keys)
+        let stocks = MarketSymbolResolver.stockCatalog.map(\.displaySymbol)
+        XCTAssertTrue(Set(stocks).isDisjoint(with: coins))
+    }
+
+    func testStockCatalogHasTheExpectedIndices() {
+        let spx = MarketSymbolResolver.stockCatalog.first { $0.displaySymbol == "SPX" }
+        XCTAssertEqual(spx?.yahooSymbol, "^GSPC")
+        XCTAssertEqual(spx?.name, "S&P 500")
+        let vix = MarketSymbolResolver.stockCatalog.first { $0.displaySymbol == "VIX" }
+        XCTAssertEqual(vix?.yahooSymbol, "^VIX")
+    }
+
+    func testStockCatalogIsNonEmpty() {
+        XCTAssertGreaterThan(MarketSymbolResolver.stockCatalog.count, 10)
+    }
+
+    // MARK: - Decode & encode
+
+    func testStockSymbolSurvivesARoundTrip() throws {
+        var settings = MarketBoxSettings()
+        settings.tickerList = [MarketTicker(symbol: "SPX", name: "S&P 500", coinID: "", stockSymbol: "^GSPC")]
+
+        let data = try JSONEncoder().encode(settings)
+        let back = try JSONDecoder().decode(MarketBoxSettings.self, from: data)
+
+        XCTAssertEqual(back.tickerList, settings.tickerList)
+        XCTAssertEqual(back.tickerList.first?.stockSymbol, "^GSPC")
+    }
+
+    func testAStockDecodesWhenTheKeyIsAbsent() throws {
+        // A file written by an older Deck has no `stockSymbol`; it must decode
+        // to an empty string, not throw (a throw resets every setting).
+        let s = try JSONDecoder().decode(MarketBoxSettings.self, from: Data(#"{"tickerList":[{"symbol":"SPX","name":"S&P 500","coinID":""}]}"#.utf8))
+        XCTAssertEqual(s.tickerList.first?.stockSymbol, "")
+    }
+}
+
 /// Phase 6. The add/remove list replaces twelve numbered slots, which gave
 /// display order for free — so ordering, the cap and the duplicate rule all
 /// become explicit operations. Pure, so the view stays layout only.

@@ -19,10 +19,10 @@ enum MarketCurrency: String, Codable, CaseIterable, Equatable {
     var label: String { rawValue.uppercased() }
 }
 
-/// How a configured symbol is sourced. Crypto rows carry a day change and a
-/// sparkline; fiat and gold rows are price-only in v1.
+/// How a configured symbol is sourced. Crypto and stock rows carry a day
+/// change; fiat and gold rows are price-only in v1.
 enum MarketKind: String, Codable, Equatable {
-    case crypto, fiat, gold
+    case crypto, fiat, gold, stock
 }
 
 /// One priced row on the face, in the configured display currency.
@@ -170,6 +170,80 @@ enum FXRatesParser {
     }
 }
 
+// MARK: - Yahoo chart (stocks/indices)
+
+/// A parsed Yahoo v8 chart quote, in USD.
+///
+/// Contract notes (verified against live payloads on 2026-09-09):
+/// - `meta.regularMarketPrice` and `meta.regularMarketChangePercent` are JSON
+///   numbers; either can be absent (a halted symbol still has a meta block).
+/// - `meta.longName` and `meta.shortName` both exist for most symbols; prefer
+///   `longName`, fall back to `shortName`.
+/// - An unknown or delisted symbol is HTTP 200 with
+///   `chart.result: null`, `chart.error.code: "Not Found"` — the `.noData`
+///   signal, distinct from `.malformed`, so the face can say "No data: X"
+///   rather than "source unavailable".
+struct StockQuote: Equatable {
+    /// The Yahoo symbol as fetched ("^GSPC") — not the display symbol.
+    var symbol: String
+    /// `longName` or `shortName`, whichever the payload carried first.
+    var name: String
+    /// USD price; nil when the payload lacks it.
+    var priceUSD: Double?
+    /// Day change vs previous close; nil when absent.
+    var changePct: Double?
+}
+
+enum YahooChartParseResult: Equatable {
+    case quote(StockQuote)
+    /// The chart answered "Not Found" — a real request, no data for that symbol.
+    case noData
+    /// Not a chart payload (or an error other than "Not Found").
+    case malformed
+}
+
+enum YahooChartParser {
+    static func parse(_ data: Data) -> YahooChartParseResult {
+        guard
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let chart = object["chart"] as? [String: Any]
+        else { return .malformed }
+
+        if let error = chart["error"] as? [String: Any] {
+            // The one documented error shape: "Not Found" means the symbol has
+            // no data. Any other error is the source misbehaving.
+            if (error["code"] as? String) == "Not Found" { return .noData }
+            return .malformed
+        }
+
+        guard
+            let results = chart["result"] as? [[String: Any]],
+            let meta = results.first?["meta"] as? [String: Any],
+            let symbol = meta["symbol"] as? String,
+            !symbol.isEmpty
+        else { return .malformed }
+
+        let name = (meta["longName"] as? String) ?? (meta["shortName"] as? String) ?? ""
+        let price = (meta["regularMarketPrice"] as? NSNumber)?.doubleValue
+        let change = (meta["regularMarketChangePercent"] as? NSNumber)?.doubleValue
+        return .quote(StockQuote(symbol: symbol, name: name, priceUSD: price, changePct: change))
+    }
+}
+
+/// What the stock pass of a fetch produced: the quotes it priced (by Yahoo
+/// symbol) and the symbols Yahoo answered "Not Found" about. `nil` at the build
+/// call site means the stock source produced nothing this tick (not asked, or
+/// the pass failed).
+struct StockFetchResult: Equatable {
+    var quotes: [String: StockQuote] = [:]
+    var noData: [String] = []
+
+    init(quotes: [String: StockQuote] = [:], noData: [String] = []) {
+        self.quotes = quotes
+        self.noData = noData
+    }
+}
+
 // MARK: - MarketBox fetch (host/agent only — unsandboxed)
 
 enum MarketLoaderError: Error {
@@ -202,6 +276,8 @@ enum HostMarketLoader {
         let needsCrypto = !cryptoIDs.isEmpty
         let needsGold = tickers.contains { $0.kind == .gold }
         let needsFiat = tickers.contains { $0.kind == .fiat }
+        let stockSymbols = MarketFetchPlan.stockSymbols(for: tickers)
+        let needsStocks = !stockSymbols.isEmpty
         // IRT/IRR need the free-market Toman anchor; CAD/EUR/AED displays need
         // the open.er-api rate set (as do fiat tickers).
         let needsToman = display == .irt || display == .irr
@@ -244,13 +320,20 @@ enum HostMarketLoader {
             catch { fx = nil; firstError = firstError ?? error }
         } else { fx = nil }
 
+        let stockResult: StockFetchResult?
+        if needsStocks {
+            do { stockResult = try await fetchStocks(symbols: stockSymbols) }
+            catch { stockResult = nil; firstError = firstError ?? error }
+        } else { stockResult = nil }
+
         let build = MarketBuilder.build(
             display: display,
             tickers: tickers,
             quotesByID: quotesByID,
             tmn: toman,
             goldUSDPerGram: goldUSDPerOunce.map(MarketConverter.goldPerGram),
-            fx: fx
+            fx: fx,
+            stockResult: stockResult
         )
 
         guard !build.isEmpty else {
@@ -305,6 +388,40 @@ enum HostMarketLoader {
             throw MarketLoaderError.invalidPayload
         }
         return rates
+    }
+
+    /// One spaced v8 chart call per Yahoo symbol, aborting on the first
+    /// non-"Not Found" failure.
+    ///
+    /// The abort is deliberate and per the PRD: Yahoo rate-limits bursts
+    /// (measured: "Edge: Too Many Requests" after ~6 calls in ~10s, recovery
+    /// ~20s), so a rate-limited or dead call means the rest of the pass is
+    /// doomed too — the tick is not spent on them, no stock row renders this
+    /// tick, and the next tick retries. "Not Found" is per-symbol data (that
+    /// instrument has no quote), so it never aborts the pass.
+    ///
+    /// **Do not fan this out.** A `withThrowingTaskGroup` over Yahoo's symbols
+    /// recreates the exact burst this spacing exists to avoid.
+    private static func fetchStocks(symbols: [String]) async throws -> StockFetchResult {
+        var result = StockFetchResult()
+        for (index, symbol) in symbols.enumerated() {
+            if index > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(MarketFetchPlan.stockSpacing * 1_000_000_000))
+            }
+            // `^GSPC` must be percent-encoded (`^` is not a path character).
+            let encoded = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? symbol
+            let url = URL(string: "https://query1.finance.yahoo.com/v8/finance/chart/\(encoded)?interval=1d&range=1d")!
+            let data = try await get(url)
+            switch YahooChartParser.parse(data) {
+            case .quote(let quote):
+                result.quotes[quote.symbol] = quote
+            case .noData:
+                result.noData.append(symbol)
+            case .malformed:
+                throw MarketLoaderError.invalidPayload
+            }
+        }
+        return result
     }
 
     private static func get(_ url: URL) async throws -> Data {
