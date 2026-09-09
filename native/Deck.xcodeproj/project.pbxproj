@@ -71,6 +71,7 @@
 		3AA9C73435EBD0321C2BC3A3 /* CredentialAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812063688CE39D11189608C8 /* CredentialAccount.swift */; };
 		3B5B4D3223749E809A021C84 /* ClockBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */; };
 		3BCA007992ED90A3706DAF97 /* CredentialsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */; };
+		3C7E54B6327A16A878BE85A4 /* yahoo_chart_gspc.json in Resources */ = {isa = PBXBuildFile; fileRef = DA30E2EBBF22779F78EA3E3D /* yahoo_chart_gspc.json */; };
 		3D2D11CA3FAADA3275D66E63 /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
 		3D3C97CD45D9FC5B6AF3C06D /* SystemMetricsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */; };
 		3E2F3CD69BD386D45D214D04 /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F291A6BF3E8077A4206A68E9 /* AgentService.swift */; };
@@ -122,6 +123,7 @@
 		6551819CA5506A4D266E0D79 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
 		66B10E484885189925757346 /* DeckBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B96F825FC76E1267D5ACCC /* DeckBundle.swift */; };
 		6993ADF4472F602F7B97C449 /* LiveBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */; };
+		69A410AA643B0243A7ED6F82 /* yahoo_chart_aapl.json in Resources */ = {isa = PBXBuildFile; fileRef = 584C732D7197A9020BC1AEF4 /* yahoo_chart_aapl.json */; };
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6C7827BCFC076B798D66F5A7 /* MarketBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */; };
 		6CF20BD1883D65E7F8EEE3B8 /* CredentialsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */; };
@@ -199,6 +201,7 @@
 		BD8A7273480E5B5E14C8BB51 /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
 		BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */; };
 		BEE3B5436518E052E5427E4B /* CredentialAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812063688CE39D11189608C8 /* CredentialAccount.swift */; };
+		BF72C58D5B2A95639111CF13 /* yahoo_chart_unknown.json in Resources */ = {isa = PBXBuildFile; fileRef = D63E4A6605648A901BE67985 /* yahoo_chart_unknown.json */; };
 		BFA88F4BF6B1007CC6725C4B /* provider-azure-dark.pdf in Resources */ = {isa = PBXBuildFile; fileRef = CE8FC52B15143ACCE8231B27 /* provider-azure-dark.pdf */; };
 		BFD1028CDBFBB49E951CB781 /* DeckSettingsSecretsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A30EA93126D172F0FB1035 /* DeckSettingsSecretsTests.swift */; };
 		C1880C6DD5759D69ACFFE48B /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
@@ -369,6 +372,7 @@
 		54C2D4337B99014556B02507 /* MarketBoxParsersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxParsersTests.swift; sourceTree = "<group>"; };
 		561AB4E0A1AD6FABCE740F12 /* WeatherSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherSnapshotTests.swift; sourceTree = "<group>"; };
 		580B023DC10E49885E273424 /* AgentLivenessCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentLivenessCopy.swift; sourceTree = "<group>"; };
+		584C732D7197A9020BC1AEF4 /* yahoo_chart_aapl.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = yahoo_chart_aapl.json; sourceTree = "<group>"; };
 		5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeAggregatorTests.swift; sourceTree = "<group>"; };
 		61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThermalCore.swift; sourceTree = "<group>"; };
 		633ED2890AE2D2C0B501102A /* CredentialAccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialAccountTests.swift; sourceTree = "<group>"; };
@@ -450,9 +454,11 @@
 		D280CAAAC227082564309914 /* OpenCodeReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeReader.swift; sourceTree = "<group>"; };
 		D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wallexMarkets.json; sourceTree = "<group>"; };
 		D4A81DDCB64140958465D2A8 /* CredentialVerificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialVerificationTests.swift; sourceTree = "<group>"; };
+		D63E4A6605648A901BE67985 /* yahoo_chart_unknown.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = yahoo_chart_unknown.json; sourceTree = "<group>"; };
 		D6C015468901E17452BF6132 /* ShipBoxDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxDiscoveryTests.swift; sourceTree = "<group>"; };
 		D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThresholdTests.swift; sourceTree = "<group>"; };
 		D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshotTests.swift; sourceTree = "<group>"; };
+		DA30E2EBBF22779F78EA3E3D /* yahoo_chart_gspc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = yahoo_chart_gspc.json; sourceTree = "<group>"; };
 		DC563B15EBF100D1CB4139C2 /* ShipBoxMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxMergeTests.swift; sourceTree = "<group>"; };
 		E0E922A862E405B58537BA49 /* DeckLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLinkTests.swift; sourceTree = "<group>"; };
 		E34D57F6804ADB7CB6777F6D /* com.deck.agent.processes.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.deck.agent.processes.plist; sourceTree = "<group>"; };
@@ -679,6 +685,9 @@
 				AB6827E74F3CB5B26EA2537F /* github_user.json */,
 				B989CFB8753F5CA071EEBD93 /* goldXau.json */,
 				D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */,
+				584C732D7197A9020BC1AEF4 /* yahoo_chart_aapl.json */,
+				DA30E2EBBF22779F78EA3E3D /* yahoo_chart_gspc.json */,
+				D63E4A6605648A901BE67985 /* yahoo_chart_unknown.json */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -885,6 +894,9 @@
 				C4364123C8EC5694D890C272 /* github_user.json in Resources */,
 				83AC35040D0FE70CEDF28EDF /* goldXau.json in Resources */,
 				F8D0B9E76E31D7928A486CAA /* wallexMarkets.json in Resources */,
+				69A410AA643B0243A7ED6F82 /* yahoo_chart_aapl.json in Resources */,
+				3C7E54B6327A16A878BE85A4 /* yahoo_chart_gspc.json in Resources */,
+				BF72C58D5B2A95639111CF13 /* yahoo_chart_unknown.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
