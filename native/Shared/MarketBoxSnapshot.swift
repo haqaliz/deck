@@ -19,10 +19,10 @@ enum MarketCurrency: String, Codable, CaseIterable, Equatable {
     var label: String { rawValue.uppercased() }
 }
 
-/// How a configured symbol is sourced. Crypto rows carry a day change and a
-/// sparkline; fiat and gold rows are price-only in v1.
+/// How a configured symbol is sourced. Crypto and stock rows carry a day
+/// change; fiat and gold rows are price-only in v1.
 enum MarketKind: String, Codable, Equatable {
-    case crypto, fiat, gold
+    case crypto, fiat, gold, stock
 }
 
 /// One priced row on the face, in the configured display currency.
