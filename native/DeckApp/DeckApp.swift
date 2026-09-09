@@ -2509,7 +2509,7 @@ private struct MarketBoxSettingsView: View {
                         Text(listMessage).font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                Text("Crypto is searched live from CoinGecko; fiat codes and GOLD (1 gram) come from a fixed list. Fiat and gold show price only.")
+                Text("Crypto is searched live from CoinGecko; fiat codes, GOLD (1 gram) and a curated set of US stocks and indices come from fixed lists. Fiat and gold show price only; stocks show the day change on medium and large.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 FetchStatusCaption(source: .marketbox, clearOn: clearKey)
@@ -2646,6 +2646,13 @@ private struct AddTickerSheet: View {
                             }
                         }
                     }
+                    Section("Stocks & Indices") {
+                        ForEach(stocks, id: \.symbol) { ticker in
+                            row(symbol: ticker.symbol, name: ticker.name, rank: nil) {
+                                onPick(ticker)
+                            }
+                        }
+                    }
                 }
             }
             .frame(minHeight: 280)
@@ -2666,6 +2673,14 @@ private struct AddTickerSheet: View {
     private var fiatAndGold: [MarketTicker] {
         MarketTickerMigration.tickers(
             fromSymbols: [MarketSymbolResolver.goldSymbol] + MarketSymbolResolver.fiatISOs.sorted())
+    }
+
+    /// The curated US stock/index catalogue. Offline by construction — a live
+    /// search against Yahoo would share its burst rate limit with the loader.
+    private var stocks: [MarketTicker] {
+        MarketSymbolResolver.stockCatalog.map {
+            MarketTicker(symbol: $0.displaySymbol, name: $0.name, coinID: "", stockSymbol: $0.yahooSymbol)
+        }
     }
 
     private func row(symbol: String, name: String, rank: Int?, pick: @escaping () -> Void) -> some View {
