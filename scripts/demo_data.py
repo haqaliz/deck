@@ -156,6 +156,10 @@ DEMO_MARKET_ROWS = [
      "dayChangePct": None, "sparkline": None},
     {"symbol": "GOLD", "name": "Gold", "kind": "gold", "price": 149.8,
      "dayChangePct": None, "sparkline": None},
+    {"symbol": "SPX", "name": "S&P 500", "kind": "stock", "price": 7673.5,
+     "dayChangePct": 0.5, "sparkline": None},
+    {"symbol": "AAPL", "name": "Apple", "kind": "stock", "price": 316.2,
+     "dayChangePct": -1.2, "sparkline": None},
 ]
 
 

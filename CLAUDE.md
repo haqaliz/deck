@@ -296,6 +296,21 @@ Do not delete the container; see the trap below.
   `ids=` returns the top 100 coins** (200, 83.6 KB) rather than an error or an
   empty list — so a request with no ids must never be built, or the widget
   renders a stranger's portfolio as the user's own.
+- **Yahoo's stock API rate-limits bursts and has no batch endpoint — the
+  MarketBox stock loader is shaped around both.** Found building MarketBox
+  stocks/indices (2026-09-09, `docs/planning/marketbox-stocks/probe.md`).
+  `v8/finance/chart/{symbol}` is the one keyless equity source that works:
+  `meta.regularMarketPrice` + `regularMarketChangePercent`, and a clean
+  `chart.error.code: "Not Found"` for unknown symbols. But **~6 requests in
+  ~10s answer `Edge: Too Many Requests`** (recovery ~20s) while the batched
+  `v7/finance/quote` now answers `Unauthorized` — so the loader fetches
+  **serially, one call per symbol, 0.75s apart** (`MarketFetchPlan.stockSpacing`),
+  aborting on the first non-"Not Found" failure. **Do not "optimize" this with
+  `withThrowingTaskGroup`** — fanning out the symbols recreates the exact burst
+  the spacing exists to avoid. Stooq (`q/l` CSV, `q/d/l`) is a dead end: page
+  gone / JS browser-verification challenge. And the picker must stay curated:
+  a live Yahoo search would share the loader's burst quota from the settings
+  window, the same shape as the CoinGecko picker trap.
 - **Fan out concurrently or miss the tick.** `URLSession.timeoutInterval` is
   per *request*, so N serial fetches can stall for N×10s against a 60s agent
   cadence. Five repos measured **9.4s serially, 2.1s concurrently**. ShipBox's

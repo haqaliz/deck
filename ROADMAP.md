@@ -290,8 +290,29 @@ the next slate. Ordered by priority, not by cost.
       list — rendered as `$0.0000` in v1.39**, and a 50% move looked identical
       to no move. Sub-cent prices now use significant digits.
       **Open follow-ups:** fiat/gold 24h % + sparklines (needs a history
-      source), stocks/indices, the Toman rate's own 24h change on the USD row
+      source), the Toman rate's own 24h change on the USD row
       (Wallex `24h_ch`, already parsed).
+      **Stocks/indices shipped 2026-09-09** (`docs/planning/marketbox-stocks/`):
+      a fourth kind inside MarketBox — curated US stocks + indices
+      (`SPX`/`IXIC`/`DJI`/`RUT`/`VIX` plus 16 stocks), priced in the display
+      currency with the day change on medium/large like crypto. Probed live
+      first, and the probe decided everything:
+      - **Yahoo's unofficial v8 chart API is the source.** Keyless, one small
+        payload per symbol (`meta.regularMarketPrice`,
+        `meta.regularMarketChangePercent`), and a clean `chart.error.code:
+        "Not Found"` for unknown symbols (→ `No data: X`, not "source down").
+      - **It rate-limits bursts, and there is no batch endpoint.** ~6 requests
+        in ~10s answer `Edge: Too Many Requests` (recovery ~20s), and the
+        batched `v7/quote` now answers `Unauthorized`. So the loader fetches
+        **serially, one call per symbol, 0.75s apart**, aborting on the first
+        non-"Not Found" failure — and must never be fanned out with
+        `withThrowingTaskGroup` (that would recreate the burst).
+      - **Stooq is a dead end** (`q/l` gone, `q/d/l` JS-challenged); every keyed
+        provider is out by the keyless invariant.
+      - **The picker is curated, not searched** — a live Yahoo search would
+        share the loader's burst quota; the "picked, never typed" rule holds
+        via a fixed Stocks & Indices section (offline, instant). A live search
+        is the CoinSearchPolicy-style follow-up.
 - [x] **BlueBox** — peripheral battery (AirPods, Magic Mouse/Keyboard).
       **Already shipped inside BatBox** (`542c893`,
       `docs/planning/batbox-accessories/`) and ticked in M3; this entry was
