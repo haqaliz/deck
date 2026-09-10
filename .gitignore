@@ -5,3 +5,5 @@ native/build.noindex/
 .DS_Store
 CalBoxCore/.build/
 graphify-out/
+
+.serena/
