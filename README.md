@@ -187,8 +187,9 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   (Iranian Rial), **IRT** (Toman — the free-market rate, IRT = IRR ÷ 10),
   **CAD**, **EUR** or **AED** (live FX rate). The small widget shows up to
   4 rows price-only; medium shows up to 5 with the 24h change; large shows up
-  to 12. Crypto and stock rows carry the change; fiat and gold rows are
-  price-only. No
+to 12. Crypto and stock rows carry the change — and so does the USD row in
+   an IRR/IRT display, where it is the free-market Toman rate itself; other
+   fiat and gold rows are price-only. No
   API key is needed anywhere; prices come from
   CoinGecko (crypto), gold-api (gold), Wallex (free-market Toman),
   open.er-api (fiat cross-rates) and Yahoo Finance (stocks and indices),

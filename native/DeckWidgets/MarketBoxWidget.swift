@@ -38,7 +38,7 @@ struct MarketBoxProvider: TimelineProvider {
             displayCurrency: .irt,
             rows: [
                 MarketRow(symbol: "BTC", name: "Bitcoin", kind: .crypto, price: 15_600_000_000, dayChangePct: 0.9, sparkline: nil),
-                MarketRow(symbol: "USD", name: "US Dollar", kind: .fiat, price: 201_352, dayChangePct: nil, sparkline: nil),
+                MarketRow(symbol: "USD", name: "US Dollar", kind: .fiat, price: 201_352, dayChangePct: 1.9, sparkline: nil),
                 MarketRow(symbol: "GOLD", name: "Gold", kind: .gold, price: 6_475, dayChangePct: nil, sparkline: nil),
             ],
             note: nil,
@@ -216,9 +216,10 @@ struct MarketBoxWidgetEntryView: View {
 
     @ViewBuilder
     private func changeLabel(_ row: MarketRow, showChange: Bool) -> some View {
-        // Crypto and stock rows carry a real day change; fiat and gold are
-        // price-only (no keyless history source), so they render "–".
-        if showChange, entry.settings.showDayChange, row.kind == .crypto || row.kind == .stock, let pct = row.dayChangePct {
+        // Data-driven, not kind-based: the snapshot decides which rows carry a
+        // day change (crypto, stocks, and — in IRT/IRR displays — the USD row,
+        // which is the Toman anchor). A row with none renders "–".
+        if showChange, entry.settings.showDayChange, let pct = row.dayChangePct {
             Text(MarketPriceFormatter.change(pct) ?? "–")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
