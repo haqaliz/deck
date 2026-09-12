@@ -290,8 +290,8 @@ the next slate. Ordered by priority, not by cost.
       list — rendered as `$0.0000` in v1.39**, and a 50% move looked identical
       to no move. Sub-cent prices now use significant digits.
       **Open follow-ups:** fiat/gold 24h % + sparklines (needs a history
-      source), the Toman rate's own 24h change on the USD row
-      (Wallex `24h_ch`, already parsed).
+      source). The Toman rate's own 24h change on the USD row shipped
+      2026-09-13 (M8).
       **Stocks/indices shipped 2026-09-09** (`docs/planning/marketbox-stocks/`):
       a fourth kind inside MarketBox — curated US stocks + indices
       (`SPX`/`IXIC`/`DJI`/`RUT`/`VIX` plus 16 stocks), priced in the display
@@ -439,12 +439,11 @@ Deferred behind the new widgets by decision on 2026-08-22.
 ### M7 — Launch readiness (distribution, not features)
 
 Deck is feature-complete for a public launch; what is missing is everything
-around the binary. Ordered by what blocks what.
-
-**Everything gated on the paid Apple Developer Program has a step-by-step
-runbook: [`docs/planning/notarization/runbook.md`](docs/planning/notarization/runbook.md)** —
-enrollment choice, certificate, project settings, the two-pass notarize/staple
-in CI, the verification gates, and what the identity change resets.
+around the binary. Ordered by what blocks what. The items gated on the paid
+Apple Developer Program — notarization, the expiry cliff, the bundle-
+identifier flip, Sparkle — were deferred to the final milestone, **M9 —
+Developer ID release** below (2026-09-12, deck-next); the un-gated items
+remain here.
 
 - [x] **DMG releases.** `Deck-<tag>.dmg` (app + `/Applications` symlink) with
       `SHA256SUMS.txt` and install instructions, replacing `Deck-macos.zip`.
@@ -477,14 +476,6 @@ in CI, the verification gates, and what the identity change resets.
       distribution path: that `pluginkit` registers a development-signed
       extension on a machine outside the signing team. Test before announcing
       anywhere.
-- [ ] **Notarization** — needs the paid Apple Developer Program. Developer ID
-      Application certificate, `notarytool submit --wait` + `stapler staple` in
-      the release job, drop `-allowProvisioningDeviceRegistration`. This also
-      removes the hard expiry below. Full runbook:
-      [`docs/planning/notarization/runbook.md`](docs/planning/notarization/runbook.md).
-      **Hardened runtime is no longer part of this** — it shipped in v1.41 under
-      the existing identity (see below), so the paid day changes the certificate
-      and only the certificate.
 - [x] **Hardened runtime, landed early** — shipped v1.41, 2026-09-06
       (`docs/planning/hardened-runtime-preflight/`). `ENABLE_HARDENED_RUNTIME`
       was `NO` on DeckApp and DeckWidgets and **absent entirely on DeckAgent**,
@@ -523,55 +514,6 @@ in CI, the verification gates, and what the identity change resets.
       hardens all three targets under automatic Apple Development signing with
       no change to the provisioning flags, so the release job needs nothing
       further before the identity switch.
-- [ ] **The expiry cliff.** Xcode signs development builds with no secure
-      timestamp (`Signed Time=`, not `Timestamp=`), so signature validity is
-      tied to the certificate: **2027-08-09**, after which every copy of Deck
-      in the world stops launching. A Developer ID signature is timestamped and
-      survives. This is the real reason to buy the program, more than the
-      notarization ticket itself.
-- [ ] **Bundle identifier.** `com.deck.app` / `com.deck.agent` is reverse-DNS
-      for a domain nobody owns. Changing it after launch forces every user to
-      re-add their widgets and re-grant TCC, so it has to happen before.
-      **Prepared but deliberately not applied** (2026-08-29,
-      `docs/planning/bundle-identifier/`). The new prefix is
-      `io.github.haqaliz.deck` — backed by the account that already hosts the
-      repo and the tap, so it is a namespace actually controlled. By decision it
-      rides the **notarization** release rather than shipping alone, because
-      that already forces the same re-grant (notarization runbook, Step 6); the
-      one-line flip and its gate are
-      [`flip-runbook.md`](docs/planning/bundle-identifier/flip-runbook.md).
-      What shipped now is everything that can ship dormant: `DeckBundle` as the
-      single Swift source (pinned by tests against `project.yml`, the generated
-      `DeckAgent/Info.plist`, both LaunchAgent plist names and Labels, and
-      `scripts/lib/ids.sh` — drift fails the suite), every call site routed
-      through it, and `ContainerMigration`, which carries `settings.json` into
-      the new container and is inert while the ids match.
-      **Probed live on a real renamed build, and three of the plan's own
-      predictions were wrong:**
-      - **The container needs no help.** containermanagerd provisions the new
-        one — full skeleton, metadata plist, home symlinks — at `lsregister`
-        time, *before* the app is installed, let alone launched. The migration
-        writes into it directly; the feared hand-made-skeleton case cannot
-        arise.
-      - **The old agent does not run the new binary.** The launchd job records
-        the parent bundle *identity* (`parent bundle identifier`,
-        `parent bundle version`), not just a path, so replacing the bundle makes
-        it fail `78: EX_CONFIG` rather than executing whatever now sits there.
-        The default-settings snapshot corruption the plan was designed around
-        cannot happen. The migration still runs from both entry points, because
-        the agent is registered at login and the app is not.
-      - **The orphaned agent records cannot be deleted, only disabled.** The old
-        app record is *replaced* and its two agent records are *re-parented to
-        the new app*, so Login Items shows four DeckAgent rows, two unrunnable.
-        `launchctl bootout` fails (`No such process`) and the new bundle has no
-        handle on them, so the flip ships the old-named plists for one release
-        purely to `unregister()` them — which flips them to
-        `[disabled, allowed]` rather than removing them. Only `sfltool resetbtm`
-        removes them, and it wipes every login item on the machine.
-      Also measured: **rollback is not symmetric.** Reinstalling the old bundle
-      over the new leaves two BTM app records claiming one URL and launchd
-      refuses both jobs; the in-app toggle, `kickstart` and restarting `smd` all
-      fail, and only a logout/login repairs it.
 - [x] **Agent liveness check** — shipped 2026-08-30
       (`docs/planning/agent-liveness/`). Was the **prerequisite for the bundle
       rename**, and a standing bug found while probing it. `SMAppService.status` answers "is
@@ -873,9 +815,114 @@ in CI, the verification gates, and what the identity change resets.
       One trap found while testing it: **replacing the app bundle resets the
       veto to `[enabled, allowed]`**, so a disable/reinstall/relaunch sequence
       tests nothing. Install first, then disable, then relaunch.
+- [ ] **Landing page** for the launch URL.
+
+### M8 — Follow-on improvements (after M7)
+
+No pending widgets remain and launch readiness is gated on M9, so this slate
+is the open follow-ups recorded in the shipped entries above — every one
+already named, unblocked and with its data path proven. Ordered by leverage;
+pick the next item with `deck-next`.
+
+- [x] **MarketBox: the Toman rate's own 24h change on the USD row** — the open
+      follow-up in the MarketBox entry. Wallex's `24h_ch` is already parsed
+      into `WallexRate.change24h` (`MarketBoxSnapshot.swift:139-141`), so this
+      is a face/policy slice with zero new fetch cost — the free-market Toman
+      anchor is the point of the display-currency story, and its daily move is
+      the row those users watch most. Shipped 2026-09-13
+      (`docs/planning/marketbox-toman-change/`): the loader now carries
+      `WallexRate` through to `MarketBuilder.build(tmnChange:)`, which attaches
+      the change to exactly the row it describes — the fiat USD row in IRT/IRR
+      displays (its price *is* the anchor); every other fiat row and gold stay
+      price-only. The face's change label became data-driven
+      (`dayChangePct != nil`), so the snapshot is the authority and the face
+      cannot drift from the builder; the existing `showDayChange` toggle gates
+      it as before. No schema or settings change; a Wallex tick without
+      `24h_ch` renders "–".
+- [ ] **MarketBox stocks: live search** — the CoinSearchPolicy-style follow-up
+      from the stocks entry. A Yahoo search would share the loader's burst
+      quota, so it needs the same debounce / floor / per-query cache /
+      host-app-only shape, and must degrade the sheet rather than the tick.
+- [ ] **ShipBox: inventory pagination + caching** — paginate the repo
+      inventory past 100 repos and cache the discovered set across ticks
+      (~16 MB/hr instead of ~22), the two open follow-ups from the multi-repo
+      entry.
+- [ ] **Azure: raise the five-project cap** — one constant; this org has six
+      projects (multi-project entry).
+- [ ] **TaskBox: custom WIQL** — the open follow-up from the TaskBox entry.
+- [ ] **Keychain: exercise the locked-keychain path** on a scratch account —
+      the one designed-and-unit-tested error path never exercised against a
+      genuinely locked keychain.
+- [ ] **Credentials: remove the legacy per-slot fallback** — the one-release
+      courtesy from the credentials entry, overdue since v1.30 shipped.
+
+### M9 — Developer ID release (the last milestone)
+
+Deferred from M7 by decision on 2026-09-12: everything gated on the paid
+Apple Developer Program, shipped as one release. It has a step-by-step
+runbook: [`docs/planning/notarization/runbook.md`](docs/planning/notarization/runbook.md) —
+enrollment choice, certificate, project settings, the two-pass notarize/staple
+in CI, the verification gates, and what the identity change resets.
+
+- [ ] **Notarization** — needs the paid Apple Developer Program. Developer ID
+      Application certificate, `notarytool submit --wait` + `stapler staple` in
+      the release job, drop `-allowProvisioningDeviceRegistration`. This also
+      removes the hard expiry below. Full runbook:
+      [`docs/planning/notarization/runbook.md`](docs/planning/notarization/runbook.md).
+      **Hardened runtime is no longer part of this** — it shipped in v1.41 under
+      the existing identity (M7), so the paid day changes the certificate
+      and only the certificate.
+- [ ] **The expiry cliff.** Xcode signs development builds with no secure
+      timestamp (`Signed Time=`, not `Timestamp=`), so signature validity is
+      tied to the certificate: **2027-08-09**, after which every copy of Deck
+      in the world stops launching. A Developer ID signature is timestamped and
+      survives. This is the real reason to buy the program, more than the
+      notarization ticket itself.
+- [ ] **Bundle identifier.** `com.deck.app` / `com.deck.agent` is reverse-DNS
+      for a domain nobody owns. Changing it after launch forces every user to
+      re-add their widgets and re-grant TCC, so it has to happen before.
+      **Prepared but deliberately not applied** (2026-08-29,
+      `docs/planning/bundle-identifier/`). The new prefix is
+      `io.github.haqaliz.deck` — backed by the account that already hosts the
+      repo and the tap, so it is a namespace actually controlled. By decision it
+      rides the **notarization** release rather than shipping alone, because
+      that already forces the same re-grant (notarization runbook, Step 6); the
+      one-line flip and its gate are
+      [`flip-runbook.md`](docs/planning/bundle-identifier/flip-runbook.md).
+      What shipped now is everything that can ship dormant: `DeckBundle` as the
+      single Swift source (pinned by tests against `project.yml`, the generated
+      `DeckAgent/Info.plist`, both LaunchAgent plist names and Labels, and
+      `scripts/lib/ids.sh` — drift fails the suite), every call site routed
+      through it, and `ContainerMigration`, which carries `settings.json` into
+      the new container and is inert while the ids match.
+      **Probed live on a real renamed build, and three of the plan's own
+      predictions were wrong:**
+      - **The container needs no help.** containermanagerd provisions the new
+        one — full skeleton, metadata plist, home symlinks — at `lsregister`
+        time, *before* the app is installed, let alone launched. The migration
+        writes into it directly; the feared hand-made-skeleton case cannot
+        arise.
+      - **The old agent does not run the new binary.** The launchd job records
+        the parent bundle *identity* (`parent bundle identifier`,
+        `parent bundle version`), not just a path, so replacing the bundle makes
+        it fail `78: EX_CONFIG` rather than executing whatever now sits there.
+        The default-settings snapshot corruption the plan was designed around
+        cannot happen. The migration still runs from both entry points, because
+        the agent is registered at login and the app is not.
+      - **The orphaned agent records cannot be deleted, only disabled.** The old
+        app record is *replaced* and its two agent records are *re-parented to
+        the new app*, so Login Items shows four DeckAgent rows, two unrunnable.
+        `launchctl bootout` fails (`No such process`) and the new bundle has no
+        handle on them, so the flip ships the old-named plists for one release
+        purely to `unregister()` them — which flips them to
+        `[disabled, allowed]` rather than removing them. Only `sfltool resetbtm`
+        removes them, and it wipes every login item on the machine.
+      Also measured: **rollback is not symmetric.** Reinstalling the old bundle
+      over the new leaves two BTM app records claiming one URL and launchd
+      refuses both jobs; the in-app toggle, `kickstart` and restarting `smd` all
+      fail, and only a logout/login repairs it.
 - [ ] **Sparkle auto-update.** Pointless before notarization (the update would
       be Gatekeeper-blocked too), necessary immediately after.
-- [ ] **Landing page** for the launch URL.
 
 **Not the Mac App Store.** Deck cannot ship there as architected: MAS requires
 every bundled executable to be sandboxed, and DeckAgent exists precisely
