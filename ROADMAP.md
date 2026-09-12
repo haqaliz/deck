@@ -290,8 +290,8 @@ the next slate. Ordered by priority, not by cost.
       list — rendered as `$0.0000` in v1.39**, and a 50% move looked identical
       to no move. Sub-cent prices now use significant digits.
       **Open follow-ups:** fiat/gold 24h % + sparklines (needs a history
-      source), the Toman rate's own 24h change on the USD row
-      (Wallex `24h_ch`, already parsed).
+      source). The Toman rate's own 24h change on the USD row shipped
+      2026-09-13 (M8).
       **Stocks/indices shipped 2026-09-09** (`docs/planning/marketbox-stocks/`):
       a fourth kind inside MarketBox — curated US stocks + indices
       (`SPX`/`IXIC`/`DJI`/`RUT`/`VIX` plus 16 stocks), priced in the display
