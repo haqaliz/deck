@@ -133,6 +133,7 @@ final class MarketBuilderTests: XCTestCase {
             tickers: MarketTickerMigration.tickers(fromSymbols: ["BTC", "USD", "CAD", "GOLD"]),
             quotesByID: quotes,
             tmn: tmn,
+            tmnChange: 2.02,
             goldUSDPerGram: 149.3,
             fx: ["USD": 1.0, "CAD": 1.378517]
         )
@@ -142,9 +143,10 @@ final class MarketBuilderTests: XCTestCase {
         XCTAssertEqual(build.rows[0].dayChangePct, 0.85)
         XCTAssertEqual(build.rows[1].symbol, "USD")
         XCTAssertEqual(build.rows[1].price, tmn)
-        XCTAssertNil(build.rows[1].dayChangePct, "fiat rows are price-only")
+        XCTAssertEqual(build.rows[1].dayChangePct ?? 0, 2.02, accuracy: 0.001, "the USD row in IRT is the Toman anchor — it carries the anchor's own 24h change")
         XCTAssertEqual(build.rows[2].symbol, "CAD")
         XCTAssertEqual(build.rows[2].price, tmn / 1.378517, accuracy: 0.001)
+        XCTAssertNil(build.rows[2].dayChangePct, "a CAD row is a cross rate, not the anchor")
         XCTAssertEqual(build.rows[3].symbol, "GOLD")
         XCTAssertEqual(build.rows[3].price, 149.3 * tmn, accuracy: 0.001)
         XCTAssertEqual(build.rows[3].name, "Gold")
@@ -152,6 +154,63 @@ final class MarketBuilderTests: XCTestCase {
         XCTAssertTrue(build.omitted.isEmpty)
         XCTAssertNil(build.note)
         XCTAssertFalse(build.isEmpty)
+    }
+
+    func testUSDRowInIrrCarriesTheSameChange() {
+        let build = MarketBuilder.build(
+            display: .irr,
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["USD"]),
+            quotesByID: [:],
+            tmn: tmn,
+            tmnChange: -1.35,
+            goldUSDPerGram: nil,
+            fx: ["USD": 1.0]
+        )
+        XCTAssertEqual(build.rows.count, 1)
+        XCTAssertEqual(build.rows[0].price, tmn * 10, accuracy: 0.001)
+        XCTAssertEqual(build.rows[0].dayChangePct ?? 0, -1.35, accuracy: 0.001, "IRR is the same anchor at a constant ×10 scale — same percent")
+    }
+
+    func testUSDRowInUsdDisplayIsNil() {
+        let build = MarketBuilder.build(
+            display: .usd,
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["USD"]),
+            quotesByID: [:],
+            tmn: tmn,
+            tmnChange: 2.02,
+            goldUSDPerGram: nil,
+            fx: ["USD": 1.0]
+        )
+        XCTAssertEqual(build.rows[0].price, 1.0, accuracy: 0.0001)
+        XCTAssertNil(build.rows[0].dayChangePct, "in a USD display the row is 1.00, not the Toman anchor")
+    }
+
+    func testCadRowInIrtStaysPriceOnly() {
+        let build = MarketBuilder.build(
+            display: .irt,
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["USD", "CAD"]),
+            quotesByID: [:],
+            tmn: tmn,
+            tmnChange: 2.02,
+            goldUSDPerGram: nil,
+            fx: ["USD": 1.0, "CAD": 1.378517]
+        )
+        XCTAssertEqual(build.rows[0].dayChangePct ?? 0, 2.02, accuracy: 0.001)
+        XCTAssertNil(build.rows[1].dayChangePct, "only the row priced by the anchor carries its change")
+    }
+
+    func testMissingTomanChangeIsNil() {
+        let build = MarketBuilder.build(
+            display: .irt,
+            tickers: MarketTickerMigration.tickers(fromSymbols: ["USD"]),
+            quotesByID: [:],
+            tmn: tmn,
+            tmnChange: nil,
+            goldUSDPerGram: nil,
+            fx: ["USD": 1.0]
+        )
+        XCTAssertEqual(build.rows.count, 1, "a rate without 24h_ch is still a valid tick")
+        XCTAssertNil(build.rows[0].dayChangePct, "no change, not a failure")
     }
 
     func testBuildsInCadDisplayWithoutToman() {

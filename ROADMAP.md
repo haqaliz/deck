@@ -290,8 +290,8 @@ the next slate. Ordered by priority, not by cost.
       list — rendered as `$0.0000` in v1.39**, and a 50% move looked identical
       to no move. Sub-cent prices now use significant digits.
       **Open follow-ups:** fiat/gold 24h % + sparklines (needs a history
-      source), the Toman rate's own 24h change on the USD row
-      (Wallex `24h_ch`, already parsed).
+      source). The Toman rate's own 24h change on the USD row shipped
+      2026-09-13 (M8).
       **Stocks/indices shipped 2026-09-09** (`docs/planning/marketbox-stocks/`):
       a fourth kind inside MarketBox — curated US stocks + indices
       (`SPX`/`IXIC`/`DJI`/`RUT`/`VIX` plus 16 stocks), priced in the display
@@ -824,12 +824,21 @@ is the open follow-ups recorded in the shipped entries above — every one
 already named, unblocked and with its data path proven. Ordered by leverage;
 pick the next item with `deck-next`.
 
-- [ ] **MarketBox: the Toman rate's own 24h change on the USD row** — the open
+- [x] **MarketBox: the Toman rate's own 24h change on the USD row** — the open
       follow-up in the MarketBox entry. Wallex's `24h_ch` is already parsed
       into `WallexRate.change24h` (`MarketBoxSnapshot.swift:139-141`), so this
       is a face/policy slice with zero new fetch cost — the free-market Toman
       anchor is the point of the display-currency story, and its daily move is
-      the row those users watch most.
+      the row those users watch most. Shipped 2026-09-13
+      (`docs/planning/marketbox-toman-change/`): the loader now carries
+      `WallexRate` through to `MarketBuilder.build(tmnChange:)`, which attaches
+      the change to exactly the row it describes — the fiat USD row in IRT/IRR
+      displays (its price *is* the anchor); every other fiat row and gold stay
+      price-only. The face's change label became data-driven
+      (`dayChangePct != nil`), so the snapshot is the authority and the face
+      cannot drift from the builder; the existing `showDayChange` toggle gates
+      it as before. No schema or settings change; a Wallex tick without
+      `24h_ch` renders "–".
 - [ ] **MarketBox stocks: live search** — the CoinSearchPolicy-style follow-up
       from the stocks entry. A Yahoo search would share the loader's burst
       quota, so it needs the same debounce / floor / per-query cache /

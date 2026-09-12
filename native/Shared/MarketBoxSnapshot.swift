@@ -19,8 +19,8 @@ enum MarketCurrency: String, Codable, CaseIterable, Equatable {
     var label: String { rawValue.uppercased() }
 }
 
-/// How a configured symbol is sourced. Crypto and stock rows carry a day
-/// change; fiat and gold rows are price-only in v1.
+/// How a configured symbol is sourced. Crypto, stock and the IRT/IRR USD row
+/// carry a day change; every other fiat row and gold are price-only in v1.
 enum MarketKind: String, Codable, Equatable {
     case crypto, fiat, gold, stock
 }
@@ -34,7 +34,8 @@ struct MarketRow: Codable, Equatable {
     var kind: MarketKind
     /// Price in `MarketSnapshot.displayCurrency`.
     var price: Double
-    /// 24h percent change — crypto only; nil for fiat/gold.
+    /// 24h percent change — crypto, stock, and the IRT/IRR USD row (which is
+    /// the Toman anchor) carry one; nil for every other fiat row and gold.
     var dayChangePct: Double?
     /// 7-day sparkline — crypto only; nil when the source lacks it or the
     /// display size does not show it.
@@ -94,7 +95,7 @@ struct CryptoQuote: Equatable {
 struct WallexRate: Equatable {
     /// Toman per USDT (≈ Toman per USD, peg error is small).
     var tomanPerUSDT: Double?
-    /// 24h percent change of that rate (nice-to-have, unused in v1).
+    /// 24h percent change of that rate; the IRT/IRR USD row's day change.
     var change24h: Double?
 }
 
@@ -308,11 +309,11 @@ enum HostMarketLoader {
             catch { goldUSDPerOunce = nil; firstError = firstError ?? error }
         } else { goldUSDPerOunce = nil }
 
-        let toman: Double?
+        let wallex: WallexRate?
         if needsToman {
-            do { toman = try await fetchToman() }
-            catch { toman = nil; firstError = firstError ?? error }
-        } else { toman = nil }
+            do { wallex = try await fetchToman() }
+            catch { wallex = nil; firstError = firstError ?? error }
+        } else { wallex = nil }
 
         let fx: [String: Double]?
         if needsFiat {
@@ -330,7 +331,8 @@ enum HostMarketLoader {
             display: display,
             tickers: tickers,
             quotesByID: quotesByID,
-            tmn: toman,
+            tmn: wallex?.tomanPerUSDT,
+            tmnChange: wallex?.change24h,
             goldUSDPerGram: goldUSDPerOunce.map(MarketConverter.goldPerGram),
             fx: fx,
             stockResult: stockResult
@@ -372,13 +374,13 @@ enum HostMarketLoader {
         return price
     }
 
-    private static func fetchToman() async throws -> Double {
+    private static func fetchToman() async throws -> WallexRate {
         let url = URL(string: "https://api.wallex.ir/v1/markets")!
         let data = try await get(url)
-        guard let rate = WallexParser.parse(data), let toman = rate.tomanPerUSDT else {
+        guard let rate = WallexParser.parse(data), let _ = rate.tomanPerUSDT else {
             throw MarketLoaderError.invalidPayload
         }
-        return toman
+        return rate
     }
 
     private static func fetchFX() async throws -> [String: Double] {
