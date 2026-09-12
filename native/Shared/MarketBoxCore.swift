@@ -424,6 +424,7 @@ enum MarketBuilder {
         tickers: [MarketTicker],
         quotesByID: [String: CryptoQuote]?,
         tmn: Double?,
+        tmnChange: Double? = nil,
         goldUSDPerGram: Double?,
         fx: [String: Double]?,
         stockResult: StockFetchResult? = nil
@@ -476,7 +477,11 @@ enum MarketBuilder {
                     name: MarketSymbolResolver.name(for: symbol),
                     kind: .fiat,
                     price: price,
-                    dayChangePct: nil,
+                    // The USD row in an IRT/IRR display *is* the free-market
+                    // Toman anchor (1 USD priced in Toman), so it carries the
+                    // anchor's own 24h change from Wallex. Every other fiat
+                    // row is a cross rate or a plain 1.00 and stays price-only.
+                    dayChangePct: (symbol == "USD" && (display == .irt || display == .irr)) ? tmnChange : nil,
                     sparkline: nil
                 ))
 
