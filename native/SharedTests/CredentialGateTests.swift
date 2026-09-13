@@ -33,14 +33,17 @@ final class CredentialGateTests: XCTestCase {
     func testAHealthySlotFetches() {
         let s = settings(kind: .github, on: .shipbox)
 
-        XCTAssertEqual(s.gate(.shipbox, unavailable: []), .fetch(ResolvedCredential(token: "tok")))
+        XCTAssertEqual(
+            s.gate(.shipbox, unavailable: []),
+            .fetch(ResolvedCredential(id: "a1", token: "tok"))
+        )
     }
 
     func testAzureNeedsItsOrganizationAndProject() {
         let complete = settings(kind: .azure, organization: "acme", project: "Manifold", on: .taskbox)
         XCTAssertEqual(
             complete.gate(.taskbox, unavailable: []),
-            .fetch(ResolvedCredential(token: "tok", organization: "acme", projects: ["Manifold"]))
+            .fetch(ResolvedCredential(id: "a1", token: "tok", organization: "acme", projects: ["Manifold"]))
         )
 
         let noProject = settings(kind: .azure, organization: "acme", on: .taskbox)
@@ -61,7 +64,7 @@ final class CredentialGateTests: XCTestCase {
 
         XCTAssertEqual(
             s.gate(.taskbox, unavailable: []),
-            .fetch(ResolvedCredential(token: "tok", organization: "acme", projects: ["Manifold"]))
+            .fetch(ResolvedCredential(id: "a1", token: "tok", organization: "acme", projects: ["Manifold"]))
         )
     }
 
@@ -84,7 +87,10 @@ final class CredentialGateTests: XCTestCase {
     func testAnotherAccountsFailureIsNotThisSlotsProblem() {
         let s = settings(kind: .github, on: .shipbox)
 
-        XCTAssertEqual(s.gate(.shipbox, unavailable: ["somebody-else"]), .fetch(ResolvedCredential(token: "tok")))
+        XCTAssertEqual(
+            s.gate(.shipbox, unavailable: ["somebody-else"]),
+            .fetch(ResolvedCredential(id: "a1", token: "tok"))
+        )
     }
 
     // MARK: - Off vs not configured
@@ -149,7 +155,7 @@ final class CredentialGateTests: XCTestCase {
 
         XCTAssertEqual(
             s.gate(.shipbox, unavailableAccounts: [], unavailableLegacySecrets: [.shipboxToken]),
-            .fetch(ResolvedCredential(token: "tok"))
+            .fetch(ResolvedCredential(id: "a1", token: "tok"))
         )
     }
 
@@ -175,6 +181,7 @@ final class CredentialGateTests: XCTestCase {
         XCTAssertEqual(
             s.gate(.taskbox, unavailable: []),
             .fetch(ResolvedCredential(
+                id: "a1",
                 token: "tok", organization: "acme",
                 projects: ["ForesightManifold", "Manifold Ops"]
             ))
@@ -201,6 +208,7 @@ final class CredentialGateTests: XCTestCase {
         XCTAssertEqual(
             s.gate(.prboxAzure, unavailable: []),
             .fetch(ResolvedCredential(
+                id: "a1",
                 token: "tok", organization: "acme",
                 projects: ["Manifold Ops", "p3", "p4", "p5", "p6"]
             ))
