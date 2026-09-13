@@ -119,3 +119,100 @@ final class InventoryPaginatorTests: XCTestCase {
         }
     }
 }
+
+// MARK: - The cross-tick cache (PRD §3.2)
+
+final class InventoryCachePolicyTests: XCTestCase {
+    private func decision(age: TimeInterval, accountMatches: Bool = true, affiliationMatches: Bool = true) -> InventoryCachePolicy.Decision {
+        InventoryCachePolicy.decision(
+            age: age,
+            accountMatches: accountMatches,
+            affiliationMatches: affiliationMatches
+        )
+    }
+
+    func testAFreshMatchingCacheIsUsed() {
+        XCTAssertEqual(decision(age: 0), .useCache)
+        XCTAssertEqual(decision(age: 599), .useCache)
+    }
+
+    /// The interview decision: the inventory refreshes at most every 10
+    /// minutes, the multi-repo PRD's "every ~10 ticks".
+    func testTheRefreshBoundaryIsTenMinutes() {
+        XCTAssertEqual(decision(age: 600), .refresh)
+    }
+
+    func testAnOlderCacheRefreshes() {
+        XCTAssertEqual(decision(age: 601), .refresh)
+        XCTAssertEqual(decision(age: 3600), .refresh)
+    }
+
+    /// A fetchedAt in the future (clock change) must not freeze the cache
+    /// fresh forever (PRD C4).
+    func testAFutureFetchedAtReadsAsStale() {
+        XCTAssertEqual(decision(age: -1), .refresh)
+    }
+
+    /// The inventory is per-token: account B must never be served account A's
+    /// repo list, even for one tick.
+    func testAnotherAccountsCacheReadsAsMissing() {
+        XCTAssertEqual(decision(age: 5, accountMatches: false), .refresh)
+    }
+
+    /// Dynamic discovery asks `affiliation=owner` while the picker asks the
+    /// default; a picker-warmed record must never feed owner-only discovery
+    /// (PRD C4).
+    func testAnotherAffiliationsCacheReadsAsMissing() {
+        XCTAssertEqual(decision(age: 5, affiliationMatches: false), .refresh)
+    }
+}
+
+final class InventoryCacheStoreTests: XCTestCase {
+    private var dir: URL!
+
+    override func setUpWithError() throws {
+        dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("InventoryCacheStoreTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: dir)
+    }
+
+    private func record(version: Int = ShipBoxInventoryCache.currentVersion) -> ShipBoxInventoryCache {
+        ShipBoxInventoryCache(
+            version: version,
+            accountID: "account-1",
+            affiliation: "owner",
+            fetchedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            repos: ["haqaliz/deck", "haqaliz/belay"]
+        )
+    }
+
+    func testSaveThenLoadReturnsTheRecord() throws {
+        let url = dir.appendingPathComponent("shipbox-inventory.json")
+        InventoryCacheStore.save(record(), to: url)
+        XCTAssertEqual(InventoryCacheStore.load(from: url), record())
+    }
+
+    func testLoadIsNilForAMissingFile() {
+        XCTAssertNil(InventoryCacheStore.load(from: dir.appendingPathComponent("nope.json")))
+    }
+
+    func testLoadIsNilForCorruptJSON() throws {
+        let url = dir.appendingPathComponent("corrupt.json")
+        try Data("not json".utf8).write(to: url)
+        XCTAssertNil(InventoryCacheStore.load(from: url))
+    }
+
+    /// A future schema version reads as absent, so the loader self-heals with
+    /// a live fetch rather than trusting a shape it cannot vouch for (the
+    /// `OpenCodeSyncStore` precedent).
+    func testLoadIsNilForAFutureVersion() throws {
+        let url = dir.appendingPathComponent("future.json")
+        let data = try JSONEncoder().encode(record(version: ShipBoxInventoryCache.currentVersion + 1))
+        try data.write(to: url)
+        XCTAssertNil(InventoryCacheStore.load(from: url))
+    }
+}

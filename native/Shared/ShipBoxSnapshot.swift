@@ -511,6 +511,74 @@ enum InventoryPaginator {
     }
 }
 
+// MARK: - Inventory cache (cross-tick state)
+
+/// The discovered repo list persisted between ticks, so dynamic mode stops
+/// re-downloading the full inventory every 60s (PRD §3.2: 22 → ~16 MB/hr).
+///
+/// The `opencode-cursor.json` sidecar is the precedent: the agent is a
+/// short-lived CLI, so any cross-tick state must live on disk. The record
+/// carries its own identity — version, account and affiliation — and anything
+/// that does not match reads as "no cache".
+struct ShipBoxInventoryCache: Codable, Equatable {
+    static let currentVersion = 1
+
+    var version: Int
+    /// The resolved credential account this inventory belongs to; a user
+    /// switching GitHub accounts must never be served the previous account's
+    /// repo list (PRD §4).
+    var accountID: String
+    /// The `affiliation` the list was fetched with. Dynamic discovery asks
+    /// `owner`; the picker asks the default. The two scopes never mix (PRD
+    /// C4), or a picker-warmed cache could hand dynamic mode a collaborator's
+    /// repo — the Q1 decision multi-repo made.
+    var affiliation: String
+    var fetchedAt: Date
+    var repos: [String]
+}
+
+/// When to trust the cached inventory versus fetching it live.
+enum InventoryCachePolicy {
+    /// The interview decision: refresh at most every 10 minutes — the
+    /// multi-repo PRD's "every ~10 ticks". A repo that gains Actions surfaces
+    /// within this window; recency is a good proxy for CI (probe P3), so the
+    /// window is rarely the binding constraint.
+    static let refreshInterval: TimeInterval = 600
+
+    enum Decision: Equatable {
+        case useCache
+        case refresh
+    }
+
+    static func decision(age: TimeInterval, accountMatches: Bool, affiliationMatches: Bool) -> Decision {
+        guard accountMatches, affiliationMatches, age >= 0, age < refreshInterval else {
+            return .refresh
+        }
+        return .useCache
+    }
+}
+
+/// Persists `ShipBoxInventoryCache` beside the snapshots.
+enum InventoryCacheStore {
+    static var fileURL: URL {
+        DeckSettings.containerDirectory.appendingPathComponent("shipbox-inventory.json")
+    }
+
+    static func load(from url: URL = fileURL) -> ShipBoxInventoryCache? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        guard let cache = try? JSONDecoder().decode(ShipBoxInventoryCache.self, from: data) else {
+            return nil
+        }
+        // A future schema version reads as absent (self-healing live fetch).
+        return cache.version == ShipBoxInventoryCache.currentVersion ? cache : nil
+    }
+
+    static func save(_ cache: ShipBoxInventoryCache, to url: URL = fileURL) {
+        guard let data = try? JSONEncoder().encode(cache) else { return }
+        _ = AtomicFile.write(data, to: url)
+    }
+}
+
 /// Reads `/user/repos`. The API is asked for `sort=pushed`, so its order is
 /// the answer and the parser imposes none of its own.
 enum RepoInventoryParser {
