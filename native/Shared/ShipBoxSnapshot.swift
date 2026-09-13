@@ -461,6 +461,56 @@ enum HostGitHubLoader {
 
 // MARK: - Repo inventory (dynamic mode)
 
+/// Reads the `rel="next"` link out of a GitHub `Link` response header.
+///
+/// The header is data from the network and the request carries the user's
+/// token, so a next link pointing anywhere but `api.github.com` stops the
+/// walk rather than being followed (the `DeckURLForwarding` host-filter
+/// precedent). A header without `rel="next"` is the normal stop signal for a
+/// single-page account — this one has 31 repos and no `Link` header at all.
+enum LinkHeaderParser {
+    static func next(from header: String?) -> URL? {
+        guard let header else { return nil }
+        for segment in header.split(separator: ",") {
+            let parts = segment.split(separator: ";").map {
+                $0.trimmingCharacters(in: .whitespaces)
+            }
+            guard let target = parts.first, target.hasPrefix("<"), target.hasSuffix(">") else {
+                continue
+            }
+            guard parts.dropFirst().contains(where: { $0 == #"rel="next""# }) else { continue }
+            let raw = String(target.dropFirst().dropLast())
+            guard let url = URL(string: raw), url.host == "api.github.com" else { return nil }
+            return url
+        }
+        return nil
+    }
+}
+
+/// Walks a paginated inventory serially — you cannot know the next URL before
+/// the current response, so pages are sequential by definition.
+///
+/// `maxPages` is a safety bound for giant accounts, not a product limit: the
+/// walk stops with what it has rather than stalling the settings window.
+enum InventoryPaginator {
+    static func allPages(
+        startingAt url: URL,
+        maxPages: Int,
+        fetchPage: (URL) async throws -> (repos: [String], next: URL?)
+    ) async throws -> [String] {
+        var repos: [String] = []
+        var current: URL? = url
+        var pages = 0
+        while let pageURL = current, pages < maxPages {
+            let page = try await fetchPage(pageURL)
+            repos.append(contentsOf: page.repos)
+            current = page.next
+            pages += 1
+        }
+        return repos
+    }
+}
+
 /// Reads `/user/repos`. The API is asked for `sort=pushed`, so its order is
 /// the answer and the parser imposes none of its own.
 enum RepoInventoryParser {
