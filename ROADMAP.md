@@ -843,10 +843,38 @@ pick the next item with `deck-next`.
       from the stocks entry. A Yahoo search would share the loader's burst
       quota, so it needs the same debounce / floor / per-query cache /
       host-app-only shape, and must degrade the sheet rather than the tick.
-- [ ] **ShipBox: inventory pagination + caching** — paginate the repo
+- [x] **ShipBox: inventory pagination + caching** — paginate the repo
       inventory past 100 repos and cache the discovered set across ticks
       (~16 MB/hr instead of ~22), the two open follow-ups from the multi-repo
-      entry.
+      entry. Shipped 2026-09-13 (`docs/planning/shipbox-inventory-pagination/`).
+      Two waves of the loader now become two-plus-a-sidecar: dynamic discovery
+      reads an account-keyed, versioned inventory cache
+      (`shipbox-inventory.json` beside the snapshots — the
+      `opencode-cursor.json` sidecar precedent) and refreshes it live at most
+      every 10 minutes; the settings picker walks `Link`-header pages
+      (capped at 5) and warms the cache with its default-affiliation scope.
+      Four findings worth keeping:
+      - **Dynamic discovery needs only page 1.** The candidates are the front
+        of the pushed-sorted list (`min(maxRepoCount+3, 8)`), so deeper pages
+        can never win a slot — pagination matters only for the picker, which
+        is why the cache stores page 1 and the picker walks all pages.
+      - **A fresh cache turns a revoked token into "not configured" — the C1
+        mistake, reintroduced by the cache.** Today a dead token fails the
+        inventory call (401 → `.authOrTarget`); with a fresh cache every probe
+        fails, the winner list is empty, and `fetch`'s empty-repos guard
+        classified the tick `.notConfigured` — "go add a repo" for a dead
+        token. `DynamicRepoSelector.allProbesFailed` now throws the first
+        probe error when every probe failed (unit-pinned before the loader
+        changed).
+      - **The picker's cache write could feed dynamic mode a collaborator's
+        repo.** The picker asks the default affiliation, dynamic asks
+        `affiliation=owner`; the cache record carries the affiliation and the
+        policy refuses a mismatch (the multi-repo Q1 decision, defended).
+      - **`ResolvedCredential` gained the account id** — the cache is keyed
+        per credential; the legacy per-slot fallback keys on the empty string.
+      Pagination is unit-test-only on this machine: 31 repos, no `Link`
+      header (probe P2), so the live check observes the absence of extra
+      requests rather than the walk itself.
 - [ ] **Azure: raise the five-project cap** — one constant; this org has six
       projects (multi-project entry).
 - [ ] **TaskBox: custom WIQL** — the open follow-up from the TaskBox entry.
