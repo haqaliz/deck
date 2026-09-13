@@ -89,3 +89,34 @@ final class DynamicRepoSelectorTests: XCTestCase {
         XCTAssertEqual(DynamicRepoSelector.select(probed: [("a/1", false)], maxCount: 3), [])
     }
 }
+
+/// PRD §3.3 (C1): with a fresh cache, a revoked token fails every probe —
+/// and "no winners" from that must never read as `.notConfigured` ("go add a
+/// repo") for what is really a dead token. Discovery therefore throws the
+/// first probe error when *all* probes failed.
+final class DynamicRepoSelectorAllProbesFailedTests: XCTestCase {
+    func testAllFailedProbesMeanTheCauseIsAnError() {
+        let results: [Result<[String], Error>] = [
+            .failure(HostGitHubLoader.GitHubError.serverError(401)),
+            .failure(HostGitHubLoader.GitHubError.serverError(401)),
+        ]
+        XCTAssertTrue(DynamicRepoSelector.allProbesFailed(results))
+    }
+
+    /// A probe that succeeded — even with zero runs — is evidence the token
+    /// works; an empty winner list is then a real "no CI" answer.
+    func testASuccessfulProbeMeansNotAllFailed() {
+        let results: [Result<[String], Error>] = [
+            .failure(HostGitHubLoader.GitHubError.serverError(401)),
+            .success([]),
+        ]
+        XCTAssertFalse(DynamicRepoSelector.allProbesFailed(results))
+    }
+
+    /// No candidates is a different state ("account has no repos") and must
+    /// keep its own path — it is not an all-failed probe verdict.
+    func testAnEmptyProbeListIsNotAllFailed() {
+        let results: [Result<[String], Error>] = []
+        XCTAssertFalse(DynamicRepoSelector.allProbesFailed(results))
+    }
+}

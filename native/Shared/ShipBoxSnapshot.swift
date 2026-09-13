@@ -299,7 +299,7 @@ enum HostGitHubLoader {
     /// user with CI they haven't run yet, not a broken widget.
     /// The token arrives resolved from the selected account rather than off
     /// `settings`, which no longer carries one.
-    static func fetch(settings: ShipBoxSettings, token: String) async throws -> ShipBoxSnapshot {
+    static func fetch(settings: ShipBoxSettings, token: String, accountID: String) async throws -> ShipBoxSnapshot {
         guard !token.isEmpty else { throw GitHubError.notConfigured }
 
         let repos: [String]
@@ -310,7 +310,7 @@ enum HostGitHubLoader {
             // An inventory failure is *its own* error, never "not configured":
             // telling someone to add a repo when their token was revoked sends
             // them to the wrong field entirely (PRD C1).
-            repos = try await discover(maxCount: settings.maxRepoCount, token: token)
+            repos = try await discover(maxCount: settings.maxRepoCount, token: token, accountID: accountID)
         }
         guard !repos.isEmpty else { throw GitHubError.notConfigured }
 
@@ -355,12 +355,23 @@ enum HostGitHubLoader {
     /// purely to learn whether it has CI, wave 2 fetches in full only the
     /// winners. Fetching every candidate in full would cost roughly twice the
     /// bandwidth for the same eight rows.
-    private static func discover(maxCount: Int, token: String) async throws -> [String] {
-        let inventory = try await inventory(token: token)
+    /// The inventory itself is cached across ticks (PRD §3.2): a fresh
+    /// matching cache costs zero requests; a stale, absent or mismatched one
+    /// is fetched live and re-warms the cache. A refresh failure throws —
+    /// today's behavior, so the fetch-status note names the real cause.
+    private static func discover(maxCount: Int, token: String, accountID: String) async throws -> [String] {
+        let inventory = try await inventory(token: token, accountID: accountID)
         let candidates = DynamicRepoSelector.candidates(inventory: inventory, maxCount: maxCount)
         guard !candidates.isEmpty else { return [] }
         let probes = try await inParallel(candidates) { repo in
             try await runs(repo: repo, token: token, perPage: 1)
+        }
+        // C1: all probes failed is a dead token or a dead network — never
+        // "no CI". Throwing here classifies the tick by the real cause; an
+        // empty winner list would fall into `fetch`'s empty-repos guard and
+        // read as ".notConfigured" (PRD §3.3).
+        if DynamicRepoSelector.allProbesFailed(probes) {
+            if case .failure(let firstError)? = probes.first { throw firstError }
         }
         let probed = zip(candidates, probes).map { repo, result in
             (repo: repo, hasRuns: !((try? result.get()) ?? []).isEmpty)
@@ -370,26 +381,62 @@ enum HostGitHubLoader {
 
     /// The repos the token can see, for the settings picker. Uses the default
     /// affiliation rather than dynamic mode's `owner`, so a repo you only
-    /// collaborate on can still be picked deliberately.
-    static func repoInventory(token: String) async throws -> [String] {
+    /// collaborate on can still be picked deliberately. Paginated past 100
+    /// repos (PRD §3.1); the result warms the inventory cache for dynamic
+    /// mode (PRD §5).
+    static func repoInventory(token: String, accountID: String) async throws -> [String] {
         guard !token.isEmpty else { throw GitHubError.notConfigured }
-        guard let url = URL(string: "https://api.github.com/user/repos?sort=pushed&per_page=100") else {
+        guard let first = URL(string: "https://api.github.com/user/repos?sort=pushed&per_page=100") else {
             throw GitHubError.invalidRepo
         }
-        guard let parsed = RepoInventoryParser.parse(try await get(url, token: token)) else {
-            throw GitHubError.invalidPayload
+        let repos = try await InventoryPaginator.allPages(startingAt: first, maxPages: 5) { url in
+            try await page(url, token: token)
         }
-        return parsed
+        InventoryCacheStore.save(ShipBoxInventoryCache(
+            version: ShipBoxInventoryCache.currentVersion,
+            accountID: accountID,
+            affiliation: ShipBoxInventoryCache.defaultAffiliation,
+            fetchedAt: Date(),
+            repos: repos
+        ))
+        return repos
     }
 
-    private static func inventory(token: String) async throws -> [String] {
+    /// The cached-or-live repo list for dynamic discovery. The candidates are
+    /// the front of the pushed-sorted list, so page 1 always contains them —
+    /// the refresh is one request and the cache stores page 1.
+    private static func inventory(token: String, accountID: String) async throws -> [String] {
+        let cache = InventoryCacheStore.load()
+        let age = cache.map { Date().timeIntervalSince($0.fetchedAt) } ?? .greatestFiniteMagnitude
+        let decision = InventoryCachePolicy.decision(
+            age: age,
+            accountMatches: cache?.accountID == accountID,
+            affiliationMatches: cache?.affiliation == ShipBoxInventoryCache.ownerAffiliation
+        )
+        if decision == .useCache, let cache { return cache.repos }
         guard let url = URL(string: "https://api.github.com/user/repos?sort=pushed&per_page=100&affiliation=owner") else {
             throw GitHubError.invalidRepo
         }
-        guard let parsed = RepoInventoryParser.parse(try await get(url, token: token)) else {
+        let repos = try await page(url, token: token).repos
+        InventoryCacheStore.save(ShipBoxInventoryCache(
+            version: ShipBoxInventoryCache.currentVersion,
+            accountID: accountID,
+            affiliation: ShipBoxInventoryCache.ownerAffiliation,
+            fetchedAt: Date(),
+            repos: repos
+        ))
+        return repos
+    }
+
+    /// One inventory page: request + parse + the next-page link. The `Link`
+    /// header is how the walker knows the walk continues; a single-page
+    /// account (this one — 31 repos) simply has none.
+    private static func page(_ url: URL, token: String) async throws -> (repos: [String], next: URL?) {
+        let (data, response) = try await getResponse(url, token: token)
+        guard let parsed = RepoInventoryParser.parse(data) else {
             throw GitHubError.invalidPayload
         }
-        return parsed
+        return (parsed, LinkHeaderParser.next(from: response.value(forHTTPHeaderField: "Link")))
     }
 
     private static func runs(repo: String, token: String, perPage: Int) async throws -> [ShipRun] {
@@ -426,6 +473,13 @@ enum HostGitHubLoader {
     }
 
     private static func get(_ url: URL, token: String) async throws -> Data {
+        let (data, _) = try await getResponse(url, token: token)
+        return data
+    }
+
+    /// The response-headers variant of `get`: the inventory's `Link` header
+    /// lives in the headers, which `get` discards.
+    private static func getResponse(_ url: URL, token: String) async throws -> (Data, HTTPURLResponse) {
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -445,7 +499,7 @@ enum HostGitHubLoader {
         guard http.statusCode == 200 else {
             throw GitHubError.serverError(http.statusCode)
         }
-        return data
+        return (data, http)
     }
 
     private static func makeURL(repo: String, perPage: Int) throws -> URL {
@@ -522,6 +576,10 @@ enum InventoryPaginator {
 /// that does not match reads as "no cache".
 struct ShipBoxInventoryCache: Codable, Equatable {
     static let currentVersion = 1
+    /// Dynamic discovery's scope. The picker's scope is the default
+    /// affiliation; the two never mix (PRD C4).
+    static let ownerAffiliation = "owner"
+    static let defaultAffiliation = "default"
 
     var version: Int
     /// The resolved credential account this inventory belongs to; a user
@@ -615,6 +673,15 @@ enum DynamicRepoSelector {
     /// failed probe gets another chance on the next one.
     static func select(probed: [(repo: String, hasRuns: Bool)], maxCount: Int) -> [String] {
         probed.filter(\.hasRuns).prefix(maxCount).map(\.repo)
+    }
+
+    /// PRD §3.3 (C1): every probe failed is a dead token or a dead network —
+    /// never "no CI". Discovery throws the first probe error when this is
+    /// true; without it, an all-failed tick would come back with no winners
+    /// and `fetch`'s empty-repos guard would classify it `.notConfigured` —
+    /// telling someone with a revoked token to go add a repo.
+    static func allProbesFailed<T>(_ results: [Result<T, Error>]) -> Bool {
+        !results.isEmpty && results.allSatisfy { if case .failure = $0 { return true } else { return false } }
     }
 }
 
