@@ -170,6 +170,9 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   the repos your token can see. A repo that fails while the others succeed
   doesn't blank the widget — its runs are simply absent and a note names it.
   Runs refresh via the agent every 60s, and clicking a row opens that run.
+  Automatic mode re-checks the repo list at most every ten minutes (the runs
+  themselves still refresh every 60s), so a repo that just gained CI appears
+  within that window.
   **Fair share across repos** (on by default) interleaves the merge
   round-robin so each repo's newest run appears before any repo repeats — a
   busy repo's history can't hide a quiet repo's red CI. Turn it off for a

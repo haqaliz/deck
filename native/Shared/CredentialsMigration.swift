@@ -4,6 +4,10 @@ import Foundation
 /// resolved. Loaders take this instead of reading a token off their own
 /// settings struct.
 struct ResolvedCredential: Equatable {
+    /// The owning account, for state keyed per credential (e.g. ShipBox's
+    /// inventory cache — account B must never read account A's list). Empty
+    /// for the legacy fallback, which has no account.
+    var id: String = ""
     var token: String
     var organization: String = ""
     /// Azure DevOps only, and plural: one account covers up to
@@ -25,6 +29,7 @@ extension DeckSettings {
         if let account = account(for: slot) {
             guard !account.token.isEmpty else { return nil }
             return ResolvedCredential(
+                id: account.id,
                 token: account.token,
                 organization: account.organization,
                 projects: account.projects,
@@ -121,6 +126,7 @@ extension DeckSettings {
         guard !organization.isEmpty, !projects.isEmpty else { return .notConfigured }
 
         return .fetch(ResolvedCredential(
+            id: credential.id,
             token: credential.token,
             organization: organization,
             projects: projects,

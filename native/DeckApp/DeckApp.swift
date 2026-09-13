@@ -407,7 +407,7 @@ struct ContentView: View {
         }
         let snapshot: ShipBoxSnapshot
         do {
-            snapshot = try await HostGitHubLoader.fetch(settings: shipbox, token: credential.token)
+            snapshot = try await HostGitHubLoader.fetch(settings: shipbox, token: credential.token, accountID: credential.id)
         } catch {
             FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .shipbox)
             WidgetCenter.shared.reloadAllTimelines()
@@ -2288,7 +2288,7 @@ private struct ShipBoxSettingsView: View {
         }
         inventoryState = .loading
         do {
-            inventory = try await HostGitHubLoader.repoInventory(token: token)
+            inventory = try await HostGitHubLoader.repoInventory(token: token, accountID: accountID ?? "")
             inventoryState = .loaded
         } catch {
             inventory = []

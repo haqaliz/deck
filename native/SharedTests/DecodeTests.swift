@@ -773,7 +773,7 @@ final class PRBoxSettingsTests: XCTestCase {
 
         github.token = "t"
         s.credentials.accounts = [github]
-        XCTAssertEqual(s.gate(.prboxGitHub, unavailable: []), .fetch(ResolvedCredential(token: "t")))
+        XCTAssertEqual(s.gate(.prboxGitHub, unavailable: []), .fetch(ResolvedCredential(id: "gh", token: "t")))
 
         var azure = CredentialAccount(id: "az", kind: .azure, label: "acme")
         azure.token = "t"
@@ -787,7 +787,7 @@ final class PRBoxSettingsTests: XCTestCase {
         s.credentials.accounts[1] = azure
         XCTAssertEqual(
             s.gate(.prboxAzure, unavailable: []),
-            .fetch(ResolvedCredential(token: "t", organization: "org", projects: ["proj"]))
+            .fetch(ResolvedCredential(id: "az", token: "t", organization: "org", projects: ["proj"]))
         )
     }
 }

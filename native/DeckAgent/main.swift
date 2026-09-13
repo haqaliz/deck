@@ -202,7 +202,7 @@ Task {
             // Always written: writtenAt drives the staleness windows. A repo
             // that failed while others succeeded rides in the snapshot's note
             // rather than failing the whole fetch.
-            let snapshot = try await HostGitHubLoader.fetch(settings: shipbox, token: credential.token)
+            let snapshot = try await HostGitHubLoader.fetch(settings: shipbox, token: credential.token, accountID: credential.id)
             ShipBoxSnapshotStore.save(snapshot)
             FetchStatusStore.record(.ok, for: .shipbox)
             // Counts only, never repo names: a private repo's name is exactly
