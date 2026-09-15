@@ -83,6 +83,14 @@ enum CoinSearchOutcome: Equatable {
     /// The one failure the user can fix by waiting — worth its own wording.
     case rateLimited
     case serverError(Int)
+    /// Not a rate limit and not an offline/parse failure — the catch-all the
+    /// sheet's two-source merge needs so one side's bad answer can be folded
+    /// into the shared status line. `classify` never returns it.
+    case failed
+    /// Transport-level failure — the sheet's merge needs it as an outcome so
+    /// a dead connection reads as `.offline` even when the other source
+    /// answered. `classify` never returns it.
+    case offline
 }
 
 enum CoinSearchFailure: Error, Equatable {
@@ -129,7 +137,7 @@ enum HostCoinSearchLoader {
         guard let http = response as? HTTPURLResponse else { throw CoinSearchFailure.badResponse }
         switch classify(status: http.statusCode) {
         case .rateLimited: throw CoinSearchFailure.rateLimited
-        case .serverError: throw CoinSearchFailure.badResponse
+        case .serverError, .failed, .offline: throw CoinSearchFailure.badResponse
         case .ok: break
         }
         guard let hits = CoinSearchParser.parse(data) else { throw CoinSearchFailure.badResponse }
