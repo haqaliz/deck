@@ -1,20 +1,18 @@
-# Inline brief: shipbox-inventory-pagination
+# Brief — marketbox-stock-search
 
-Pagination + caching for ShipBox's automatic repo discovery: page the GitHub
-inventory past 100 repos (`per_page=100`, cursor until empty) and cache the
-discovered set across ticks so full inventory fetches stop happening every 60s
-(~16 MB/hr instead of ~22).
+Add live symbol search to MarketBox's Add Ticker sheet, replacing the fixed
+Stocks & Indices catalog as the primary picker while keeping it as the offline
+empty state.
 
-Design the refresh rule carefully — a stale cache must not hide a repo that
-just gained Actions, and a failed refresh must fall back to today's behavior,
-both unit-pinned. Data path is proven (GitHub core API, 5000/hr budget); the
-work is pure loader + pure policy, no shell, no face, no settings changes.
+Reuse the `CoinSearchPolicy` shape exactly: debounce, request floor, per-query
+cache, host-app-only execution, and a 429 that degrades the sheet rather than
+any agent tick.
 
-Measured numbers are in `docs/planning/shipbox-multi-repo/`.
+Probe Yahoo's search endpoint before writing the PRD — the chart API on the
+same host bursts 429 at ~6 requests in 10s
+(`docs/planning/marketbox-stocks/probe.md`), so the search must share the
+loader's budget defensively and never be fanned out.
 
-## Source
+No face changes; settings only.
 
-`deck-next` handoff, 2026-09-13. ROADMAP M8 follow-up entry:
-"ShipBox: inventory pagination + caching — paginate the repo inventory past 100
-repos and cache the discovered set across ticks (~16 MB/hr instead of ~22), the
-two open follow-ups from the multi-repo entry."
+Source: deck-next pick (2026-09-15), from ROADMAP.md M8.
