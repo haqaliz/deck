@@ -61,3 +61,66 @@ enum StockSearchParser {
         }
     }
 }
+
+/// Host-app only. **Never** call this from `DeckAgent` or the widget
+/// extension: it exists to serve a settings picker on user interaction, and
+/// putting it on any refresh path would spend Yahoo's rate-limit budget on
+/// the chart loader that prices stock rows (the `HostCoinSearchLoader` rule,
+/// and the probe's host-wide-ban worst case).
+enum HostStockSearchLoader {
+    /// Rows per query. The probe used 3–8; 8 keeps the sheet useful without
+    /// padding the payload.
+    static let quotesCount = 8
+
+    static func url(for query: String) -> URL? {
+        var components = URLComponents(string: "https://query1.finance.yahoo.com/v1/finance/search")
+        components?.queryItems = [
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "quotesCount", value: String(quotesCount)),
+            // The payload is ~2.5 KB with the news list suppressed; without
+            // these the response bundles news rows nobody renders.
+            URLQueryItem(name: "newsCount", value: "0"),
+            URLQueryItem(name: "listsCount", value: "0"),
+        ]
+        return components?.url
+    }
+
+    /// Built separately so the no-User-Agent rule is testable: a browser UA
+    /// earns the host-wide 429 ban the probe measured, `URLSession`'s default
+    /// sails through. Never "helpfully" add one here.
+    static func request(for query: String) -> URLRequest? {
+        guard let url = url(for: query) else { return nil }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        return request
+    }
+
+    static func classify(status: Int) -> CoinSearchOutcome {
+        switch status {
+        case 200: return .ok
+        case 429: return .rateLimited
+        default: return .serverError(status)
+        }
+    }
+
+    /// One `GET /search`. The caller owns the debounce, the floor and the
+    /// cache (`CoinSearchPolicy`); this just performs the request.
+    static func search(query: String) async throws -> [StockSearchHit] {
+        guard let request = request(for: query) else { throw CoinSearchFailure.badResponse }
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw CoinSearchFailure.offline
+        }
+        guard let http = response as? HTTPURLResponse else { throw CoinSearchFailure.badResponse }
+        switch classify(status: http.statusCode) {
+        case .rateLimited: throw CoinSearchFailure.rateLimited
+        case .serverError: throw CoinSearchFailure.badResponse
+        case .ok: break
+        }
+        guard let hits = StockSearchParser.parse(data) else { throw CoinSearchFailure.badResponse }
+        return hits
+    }
+}

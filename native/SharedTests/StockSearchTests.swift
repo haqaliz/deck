@@ -111,3 +111,45 @@ final class StockSearchParserTests: XCTestCase {
         XCTAssertEqual(ticker.kind, .stock)
     }
 }
+
+/// Phase 2. The loader itself is thin — the parser and policy carry the
+/// behaviour — but three of its decisions are worth pinning.
+final class HostStockSearchLoaderTests: XCTestCase {
+
+    func testTheURLIsBuiltWithTheSearchParameters() throws {
+        let url = try XCTUnwrap(HostStockSearchLoader.url(for: "apple"))
+        XCTAssertEqual(
+            url.absoluteString,
+            "https://query1.finance.yahoo.com/v1/finance/search?q=apple&quotesCount=8&newsCount=0&listsCount=0")
+    }
+
+    func testTheQueryIsPercentEncoded() throws {
+        let url = try XCTUnwrap(HostStockSearchLoader.url(for: "purple pepe"))
+        XCTAssertEqual(url.absoluteString, "https://query1.finance.yahoo.com/v1/finance/search?q=purple%20pepe&quotesCount=8&newsCount=0&listsCount=0")
+    }
+
+    func testAnAmpersandCannotInjectAQueryParameter() throws {
+        let url = try XCTUnwrap(HostStockSearchLoader.url(for: "a&b=c"))
+        XCTAssertFalse(url.absoluteString.contains("&b=c"))
+    }
+
+    /// The probe's load-bearing rule: a browser UA earns a host-wide,
+    /// minutes-long 429 ban (the chart loader on the same host included),
+    /// while `URLSession`'s default UA sails through — and the stock loader
+    /// already ships that default. Pinning the absence, not the value, so a
+    /// future "helpful" header change fails here.
+    func testTheRequestSetsNoUserAgent() throws {
+        let request = HostStockSearchLoader.request(for: "apple")
+        XCTAssertNil(request?.value(forHTTPHeaderField: "User-Agent"))
+    }
+
+    /// 429 is its own outcome, not a server error: it is the one failure the
+    /// user can fix by waiting, and the picker says so instead of looking
+    /// broken (the `HostCoinSearchLoader` rule).
+    func testRateLimitingIsItsOwnOutcome() {
+        XCTAssertEqual(HostStockSearchLoader.classify(status: 429), .rateLimited)
+        XCTAssertEqual(HostStockSearchLoader.classify(status: 200), .ok)
+        XCTAssertEqual(HostStockSearchLoader.classify(status: 500), .serverError(500))
+        XCTAssertEqual(HostStockSearchLoader.classify(status: 404), .serverError(404))
+    }
+}
