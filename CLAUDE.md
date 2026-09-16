@@ -308,9 +308,19 @@ Do not delete the container; see the trap below.
   aborting on the first non-"Not Found" failure. **Do not "optimize" this with
   `withThrowingTaskGroup`** — fanning out the symbols recreates the exact burst
   the spacing exists to avoid. Stooq (`q/l` CSV, `q/d/l`) is a dead end: page
-  gone / JS browser-verification challenge. And the picker must stay curated:
-  a live Yahoo search would share the loader's burst quota from the settings
-  window, the same shape as the CoinGecko picker trap.
+  gone / JS browser-verification challenge.
+  **The picker's live search shipped 2026-09-15**
+  (`docs/planning/marketbox-stock-search/`), and the probe that unlocked it
+  found the rate limiting is **UA-scoped, not IP-scoped**: a browser UA
+  earned a host-wide 429 ban within three requests (8+ minutes, the chart API
+  on the same host included — recovered instantly by switching UA), while an
+  app-like UA survived 15 requests in ~8s with no 429 at all. So the search
+  loader must **never set a User-Agent** (the `URLSession` default is the safe
+  one, and the chart loader already ships it — that is why stock rows price
+  every tick), the search keeps the `CoinSearchPolicy` shape (debounce,
+  per-source floor, per-query cache, host-app-only, 429 degrades the sheet
+  only), and `HostStockSearchLoader` is the second host-app-only loader the
+  phase-5 grep check covers.
 - **Fan out concurrently or miss the tick.** `URLSession.timeoutInterval` is
   per *request*, so N serial fetches can stall for N×10s against a 60s agent
   cadence. Five repos measured **9.4s serially, 2.1s concurrently**. ShipBox's

@@ -839,10 +839,23 @@ pick the next item with `deck-next`.
       cannot drift from the builder; the existing `showDayChange` toggle gates
       it as before. No schema or settings change; a Wallex tick without
       `24h_ch` renders "–".
-- [ ] **MarketBox stocks: live search** — the CoinSearchPolicy-style follow-up
-      from the stocks entry. A Yahoo search would share the loader's burst
-      quota, so it needs the same debounce / floor / per-query cache /
-      host-app-only shape, and must degrade the sheet rather than the tick.
+- [x] **MarketBox stocks: live search** — the CoinSearchPolicy-style follow-up
+      from the stocks entry. Shipped 2026-09-15 (`docs/planning/marketbox-stock-search/`).
+      The Add Ticker sheet now searches coins **and** stocks at once, grouped
+      into Coins and Stocks & ETFs: equities, US indices and ETFs from Yahoo's
+      keyless search endpoint, with FUTURE noise filtered and each row carrying
+      its exchange + type (the interview's "filter noise, label the rest").
+      The curated 21-entry catalogue stays as the sheet's offline empty state.
+      Probed live first, and the probe settled the load-bearing question:
+      **Yahoo's rate limiting is UA-scoped, not IP-scoped** — a browser UA
+      earned a host-wide 429 ban (8+ minutes, chart API included), while an
+      app-like UA survived 15 requests in ~8s with no 429 at all. The loader
+      therefore must never set a User-Agent (pinned by a test), and the
+      search keeps the CoinSearchPolicy shape — debounce, per-source floor,
+      per-query cache, host-app-only, 429 degrades the sheet — because the
+      worst case measured is host-wide. Same-policy note: the M5 marketbox
+      entry's "the picker must stay curated" is superseded for stocks; the
+      chart loader's serial 0.75s-spaced fetch rule stands unchanged.
 - [x] **ShipBox: inventory pagination + caching** — paginate the repo
       inventory past 100 repos and cache the discovered set across ticks
       (~16 MB/hr instead of ~22), the two open follow-ups from the multi-repo
