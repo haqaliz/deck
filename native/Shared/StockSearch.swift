@@ -117,7 +117,7 @@ enum HostStockSearchLoader {
         guard let http = response as? HTTPURLResponse else { throw CoinSearchFailure.badResponse }
         switch classify(status: http.statusCode) {
         case .rateLimited: throw CoinSearchFailure.rateLimited
-        case .serverError: throw CoinSearchFailure.badResponse
+        case .serverError, .failed, .offline: throw CoinSearchFailure.badResponse
         case .ok: break
         }
         guard let hits = StockSearchParser.parse(data) else { throw CoinSearchFailure.badResponse }
