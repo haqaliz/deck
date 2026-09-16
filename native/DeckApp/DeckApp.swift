@@ -2574,22 +2574,28 @@ private struct MarketBoxSettingsView: View {
     }
 }
 
-/// The coin picker. Crypto is searched live; fiat and gold stay curated,
-/// because they are not CoinGecko rows at all.
+/// The ticker picker. Coins and stocks are searched live (CoinGecko + Yahoo);
+/// fiat and gold stay curated, because they are not rows of either source.
 ///
-/// The search shares one public IP budget with `DeckAgent`, which spends up to
-/// four calls per 60s tick — six requests in ~2 minutes returned 429 during
-/// the probe. Hence: nothing on a keystroke, a debounce, a floor between
-/// requests, a per-query cache, and a 429 that degrades **this sheet** and
-/// never the widget's data.
+/// Both searches share the settings window's rate-limit budget — the agent's
+/// four CoinGecko calls per tick and the Yahoo stock loader on the same host
+/// are the collateral (a Yahoo 429 is host-wide; see
+/// `docs/planning/marketbox-stock-search/probe.md`). Hence: nothing on a
+/// keystroke, a debounce, a floor between requests, a per-query cache, and a
+/// 429 that degrades **this sheet** and never the widget's data.
 private struct AddTickerSheet: View {
     let onPick: (MarketTicker) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var query = ""
-    @State private var hits: [CoinSearchHit] = []
-    @State private var cache: [String: [CoinSearchHit]] = [:]
-    @State private var lastRequest: Date?
+    @State private var coinHits: [CoinSearchHit] = []
+    @State private var stockHits: [StockSearchHit] = []
+    @State private var coinCache: [String: [CoinSearchHit]] = [:]
+    @State private var stockCache: [String: [StockSearchHit]] = [:]
+    @State private var coinLastRequest: Date?
+    @State private var stockLastRequest: Date?
+    @State private var coinOutcome: CoinSearchOutcome?
+    @State private var stockOutcome: CoinSearchOutcome?
     @State private var status: Status = .idle
 
     private enum Status: Equatable {
@@ -2599,7 +2605,7 @@ private struct AddTickerSheet: View {
             switch self {
             case .idle: return nil
             case .searching: return "Searching…"
-            case .noResults: return "No coins match that."
+            case .noResults: return "No coins or stocks match that."
             case .busy: return "Search is busy — try again in a moment."
             case .offline: return "Search needs a connection."
             case .failed: return "Search failed."
@@ -2614,7 +2620,7 @@ private struct AddTickerSheet: View {
                 Spacer()
                 Button("Done") { dismiss() }
             }
-            TextField("Search coins", text: $query)
+            TextField("Search coins & stocks", text: $query)
                 .textFieldStyle(.roundedBorder)
 
             if let message = status.message {
@@ -2623,9 +2629,20 @@ private struct AddTickerSheet: View {
 
             List {
                 if isSearching {
-                    ForEach(hits, id: \.coinID) { hit in
-                        row(symbol: hit.symbol, name: hit.name, rank: hit.rank) {
-                            onPick(hit.ticker)
+                    if !coinHits.isEmpty {
+                        Section("Coins") {
+                            ForEach(coinHits, id: \.coinID) { hit in
+                                row(symbol: hit.symbol, name: hit.name, rank: hit.rank) {
+                                    onPick(hit.ticker)
+                                }
+                            }
+                        }
+                    }
+                    if !stockHits.isEmpty {
+                        Section("Stocks & ETFs") {
+                            ForEach(stockHits, id: \.symbol) { hit in
+                                stockRow(hit)
+                            }
                         }
                     }
                 } else {
@@ -2675,8 +2692,9 @@ private struct AddTickerSheet: View {
             fromSymbols: [MarketSymbolResolver.goldSymbol] + MarketSymbolResolver.fiatISOs.sorted())
     }
 
-    /// The curated US stock/index catalogue. Offline by construction — a live
-    /// search against Yahoo would share its burst rate limit with the loader.
+    /// The curated US stock/index catalogue — the sheet's offline empty
+    /// state. Search supersedes it for anything 2+ characters, but an empty
+    /// field opens instantly with zero network and works offline.
     private var stocks: [MarketTicker] {
         MarketSymbolResolver.stockCatalog.map {
             MarketTicker(symbol: $0.displaySymbol, name: $0.name, coinID: "", stockSymbol: $0.yahooSymbol)
@@ -2704,41 +2722,143 @@ private struct AddTickerSheet: View {
         .buttonStyle(.plain)
     }
 
+    /// A stock hit row. The leading slot shows the exchange where a coin
+    /// shows its rank — `AAPL` and `AAPL.TO` are the same company on
+    /// different markets, and the type label ("Equity", "ETF", "Index") is
+    /// what keeps `AAPL` and `AAPX` distinct. Yahoo's own results mix types
+    /// and exchanges; the parser already dropped the FUTURE noise.
+    private func stockRow(_ hit: StockSearchHit) -> some View {
+        Button {
+            onPick(hit.ticker)
+        } label: {
+            HStack(spacing: 8) {
+                Text(hit.exchange)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 52, alignment: .leading)
+                    .lineLimit(1)
+                Text(hit.symbol)
+                    .font(.system(.body, design: .rounded))
+                    .frame(minWidth: 72, alignment: .leading)
+                Text(hit.name).foregroundStyle(.secondary).lineLimit(1)
+                Spacer()
+                Text(hit.type)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private func search() async {
         let key = CoinSearchPolicy.cacheKey(for: query)
         guard key.count >= CoinSearchPolicy.minimumLength else {
-            hits = []
+            coinHits = []
+            stockHits = []
+            coinOutcome = nil
+            stockOutcome = nil
             status = .idle
-            return
-        }
-        if let cached = cache[key] {
-            hits = cached
-            status = cached.isEmpty ? .noResults : .idle
             return
         }
 
         // A new keystroke cancels this task, so the sleep *is* the debounce.
+        // Both sources share it; each keeps its own floor and cache.
         do { try await Task.sleep(nanoseconds: UInt64(CoinSearchPolicy.debounce * 1_000_000_000)) }
         catch { return }
 
-        // Then wait out the floor rather than firing early.
-        while !CoinSearchPolicy.shouldSearch(query: query, lastRequest: lastRequest, now: Date()) {
+        coinOutcome = nil
+        stockOutcome = nil
+        status = .searching
+
+        // Concurrent, not sequential: one slow source must not hold the other
+        // hostage. Each guard-owns its own slice, so a stale source can never
+        // clobber a fresh one.
+        async let coins: Void = searchCoins(key: key)
+        async let stocks: Void = searchStocks(key: key)
+        _ = await (coins, stocks)
+    }
+
+    private func searchCoins(key: String) async {
+        if let cached = coinCache[key] {
+            coinHits = cached
+            coinOutcome = .ok
+            mergeStatus()
+            return
+        }
+
+        // Wait out the floor rather than firing early.
+        while !CoinSearchPolicy.shouldSearch(query: query, lastRequest: coinLastRequest, now: Date()) {
             do { try await Task.sleep(nanoseconds: 200_000_000) } catch { return }
         }
 
-        status = .searching
-        lastRequest = Date()
+        coinLastRequest = Date()
         do {
             let found = try await HostCoinSearchLoader.search(query: query)
             guard !Task.isCancelled else { return }
-            cache[key] = found
-            hits = found
-            status = found.isEmpty ? .noResults : .idle
+            coinCache[key] = found
+            coinHits = found
+            coinOutcome = .ok
         } catch CoinSearchFailure.rateLimited {
-            status = .busy
+            guard !Task.isCancelled else { return }
+            coinOutcome = .rateLimited
         } catch CoinSearchFailure.offline {
-            status = .offline
+            guard !Task.isCancelled else { return }
+            coinOutcome = .offline
         } catch {
+            guard !Task.isCancelled else { return }
+            coinOutcome = .failed
+        }
+        mergeStatus()
+    }
+
+    private func searchStocks(key: String) async {
+        if let cached = stockCache[key] {
+            stockHits = cached
+            stockOutcome = .ok
+            mergeStatus()
+            return
+        }
+
+        while !CoinSearchPolicy.shouldSearch(query: query, lastRequest: stockLastRequest, now: Date()) {
+            do { try await Task.sleep(nanoseconds: 200_000_000) } catch { return }
+        }
+
+        stockLastRequest = Date()
+        do {
+            let found = try await HostStockSearchLoader.search(query: query)
+            guard !Task.isCancelled else { return }
+            stockCache[key] = found
+            stockHits = found
+            stockOutcome = .ok
+        } catch CoinSearchFailure.rateLimited {
+            guard !Task.isCancelled else { return }
+            stockOutcome = .rateLimited
+        } catch CoinSearchFailure.offline {
+            guard !Task.isCancelled else { return }
+            stockOutcome = .offline
+        } catch {
+            guard !Task.isCancelled else { return }
+            stockOutcome = .failed
+        }
+        mergeStatus()
+    }
+
+    /// The sheet's one status line is a merge of two independent sources:
+    /// it only speaks once **both** have an answer, and a failure on one side
+    /// never wipes the other side's results. `.busy` (a 429) outranks the
+    /// rest — it is the one failure the user can fix by waiting — and the
+    /// next keystroke, never a timer, is the retry.
+    private func mergeStatus() {
+        guard let coin = coinOutcome, let stock = stockOutcome else { return }
+        switch (coin, stock) {
+        case (.ok, .ok):
+            status = (coinHits.isEmpty && stockHits.isEmpty) ? .noResults : .idle
+        case (.rateLimited, _), (_, .rateLimited):
+            status = .busy
+        case (.offline, _), (_, .offline):
+            status = .offline
+        default:
             status = .failed
         }
     }

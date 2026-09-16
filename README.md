@@ -60,7 +60,7 @@ native colors, corners and materials, at three sizes each.
 | **TaskBox** | Azure DevOps work items assigned to you across up to five projects (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
 | **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps (up to five projects) in one queue: counts, provider-tagged rows, drafts marked, per-row review state (approved / changes requested), click a row to open the PR; a failed fetch names the provider |
-| **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, gold per gram, and a curated set of US stocks and indices (with day change) — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
+| **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, gold per gram, and US stocks and indices (with day change), searchable live in the picker — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
 
 All fourteen come in **small / medium / large** sizes.
 
@@ -179,11 +179,15 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   strictly newest-first list.
 - **MarketBox** tickers are picked, never typed blind: the MarketBox tab holds
   your list (up to twelve rows, drag order with the arrows — list order is
-  display order), and **Add Ticker…** opens a search over CoinGecko's whole
-  catalogue. Results carry the market-cap rank, which is what tells rank-56
-  `PEPE` from the twenty other coins using that symbol. With the search box
-  empty the sheet shows a popular list plus the fiat codes, `GOLD` (1 gram of
-  gold) and a curated set of **US stocks and indices** (`SPX` S&P 500, `IXIC`,
+  display order), and **Add Ticker…** opens a live search over CoinGecko's
+  whole catalogue **and** Yahoo Finance's equities, US indices and ETFs at
+  once, grouped into Coins and Stocks & ETFs. Coin results carry the
+  market-cap rank — what tells rank-56 `PEPE` from the twenty other coins
+  using that symbol — and stock results carry the exchange and type
+  (`NASDAQ · Equity`), so `AAPL` and `AAPL.TO` stay distinguishable; futures
+  and other noise are filtered out. With the search box empty the sheet shows
+  a popular list plus the fiat codes, `GOLD` (1 gram of
+  gold) and the curated **US stocks and indices** (`SPX` S&P 500, `IXIC`,
   `DJI`, `RUT`, `VIX`, and sixteen stocks) — all offline, no network until you
   type. Prices are
   priced in one display currency, picked from a list: **USD**, **IRR**
@@ -301,8 +305,8 @@ Deck reads personal data, so here is exactly what happens to it.
 
 MarketBox sends only the coins you picked — no tokens, no identity, and it never
 sends anything on behalf of a row's price. The ticker search sends what you type
-to CoinGecko while the picker is open, and only then: it runs in the Deck app,
-never in the widget or the background agent.
+to CoinGecko and to Yahoo Finance while the picker is open, and only then: it
+runs in the Deck app, never in the widget or the background agent.
 
 Nothing else makes a network request. There is no analytics, no telemetry, no
 crash reporting, and no Deck server — the project has no backend at all. The
