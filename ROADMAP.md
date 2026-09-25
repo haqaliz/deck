@@ -432,7 +432,7 @@ Deferred behind the new widgets by decision on 2026-08-22.
       with exactly one project, since a current sprint is per project and team.
       **Open follow-ups:** multi-org (needs a slot that binds several accounts,
       interviewed and deliberately not chosen), review state / approval counts,
-      custom WIQL, raising the five-project cap (one constant — this org has
+      raising the five-project cap (one constant — this org has
       six).
 - [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic
       (`docs/planning/devbox/prd.md:106`).
