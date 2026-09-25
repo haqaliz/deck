@@ -1,18 +1,20 @@
-# Brief — marketbox-stock-search
+# Brief — taskbox-custom-wiql
 
-Add live symbol search to MarketBox's Add Ticker sheet, replacing the fixed
-Stocks & Indices catalog as the primary picker while keeping it as the offline
-empty state.
+Let TaskBox run a user-supplied WIQL filter instead of the fixed
+`[System.AssignedTo] = @Me` query. This is the open follow-up from the TaskBox and
+azure-multi-project entries (ROADMAP M8). Only the query builder, the settings
+tab and the parser should change. Board lanes, the widget face and the
+multi-project fan-out stay as they are.
 
-Reuse the `CoinSearchPolicy` shape exactly: debounce, request floor, per-query
-cache, host-app-only execution, and a 429 that degrades the sheet rather than
-any agent tick.
+Caveats to design around:
+- A project-scoped WIQL URL does not filter by project. `[System.TeamProject] =
+  @project` must always be enforced regardless of what the user types, or rows
+  leak across projects.
+- Tree/one-hop queries answer `workItemRelations`, not `workItems`. Reject them
+  clearly or parse them.
+- Cap the returned ids before `workitemsbatch`.
+- A malformed query gets its own fetch outcome, not "auth or target".
 
-Probe Yahoo's search endpoint before writing the PRD — the chart API on the
-same host bursts 429 at ~6 requests in 10s
-(`docs/planning/marketbox-stocks/probe.md`), so the search must share the
-loader's budget defensively and never be fanned out.
+Probe a few real queries against the live org before writing the PRD.
 
-No face changes; settings only.
-
-Source: deck-next pick (2026-09-15), from ROADMAP.md M8.
+Source: deck-next pick (2026-09-25), from ROADMAP.md M8.

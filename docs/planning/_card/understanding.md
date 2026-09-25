@@ -1,87 +1,69 @@
-# Understanding: MarketBox — the Toman rate's own 24h change
+# Understanding — taskbox-custom-wiql
 
 ## What the work is really asking
 
-The free-market Toman anchor is the whole point of the IRR/IRT display mode:
-every row in those displays is priced through the Wallex `USDTTMN` order book.
-When the user also has a **USD fiat row configured** (it is a default ticker),
-that row's price *is* the anchor — 1 USD priced in Toman
-(`MarketConverter.fiatPrice("USD", …)` → `perUSD(1, tmn:)`, IRT = ×tmn,
-IRR = ×tmn×10).
+Let the user replace the fixed filter (`AssignedTo = @Me AND State NOT IN
+('Closed','Removed','Done')`) with their own WIQL condition. Examples: "my team's bugs",
+"everything in the current sprint", "items I created in the last 30 days". Everything
+downstream of the WIQL id list stays the same: the org-scoped batch, lanes,
+sorting, the face and the multi-project fan-out.
 
-Wallex reports the anchor's own 24-hour change (`24h_ch`), and `WallexParser`
-already parses it (`WallexRate.change24h`, MarketBoxSnapshot.swift:139-141, with
-a fixture and a parser test) — but the loader **throws it away**:
-`fetchToman()` returns only the `Double` rate (MarketBoxSnapshot.swift:375-382),
-and `MarketBuilder` gives every fiat row `dayChangePct: nil`
-(MarketBoxCore.swift:479). So the row an IRT/IRR user watches most renders "–"
-while crypto and stock rows render "+2.0%". The ROADMAP follow-up names exactly
-this: *"the Toman rate's own 24h change on the USD row (Wallex `24h_ch`,
-already parsed)"* (ROADMAP.md, MarketBox entry, open follow-ups).
+## The prior decision this reverses
 
-## What changes
-
-The change is carried from the parser to the row that describes it. No schema
-change, no new setting, no new fetch, no new provider.
-
-1. **`MarketBoxSnapshot.swift`** — `fetchToman()` returns `WallexRate` instead
-   of `Double` (rate is still required — `invalidPayload` when absent; the
-   change stays optional, it is a nice-to-have per the existing comment).
-   `HostMarketLoader.fetch` passes the change through to `build` as a new
-   `tmnChange: Double?` parameter.
-2. **`MarketBoxCore.swift`** — `MarketBuilder.build` gains `tmnChange: Double?`.
-   In the `.fiat` case, only for symbol `"USD"` and only when `display == .irt
-   || display == .irr` (only then is the row priced by the anchor): attach
-   `dayChangePct = tmnChange`. Every other fiat row, and USD in any other
-   display, stays price-only. Update the stale `MarketRow.dayChangePct` doc
-   ("crypto only" — stocks already carry it) and the `WallexRate.change24h`
-   comment ("unused in v1" is now false).
-3. **`MarketBoxWidget.swift`** — the change label's kind gate
-   (`row.kind == .crypto || row.kind == .stock`, line 221) must let the USD
-   fiat row render its change. Cleanest: gate on `row.dayChangePct != nil`
-   (data-driven — the snapshot decides what a row carries, the face cannot
-   drift from the builder) with the existing "–" fallback. The
-   `showDayChange` toggle already gates all of this.
-4. **Tests** — `MarketBuilderTests`: update `testBuildsAllKindsInIrt`
-   ("fiat rows are price-only" becomes "the USD row in IRT carries the anchor's
-   change"); new cases: USD-in-IRT carries `tmnChange`, USD-in-IRR carries it
-   (same percent — ×10 is a constant), USD-in-USD display stays nil, CAD-in-IRT
-   stays nil (its price is a cross, not the anchor), missing `tmnChange` → nil.
-   `WallexParserTests` already covers the parse.
-5. **Docs** — ROADMAP.md M8 entry ticked on ship.
-
-## Ambiguities / open questions for the interview
-
-- **Which rows may carry the anchor's change?** Only the fiat USD row in
-  IRT/IRR displays, because only then is the row's price the anchor. A CAD row
-  in IRT is USD→CAD→Toman — its day change is not the anchor's. A USD row in
-  CAD display would need open.er-api's own 24h change, which is not fetched
-  (fiat stays price-only). IRT and IRR both qualify (same anchor, constant
-  scale → same percent).
-- **Face gate: data-driven vs kind allowlist.** Data-driven
-  (`dayChangePct != nil`) cannot drift from the builder; the kind check exists
-  only because fiat/gold never had changes. Gold stays nil forever, so the
-  data-driven gate is strictly correct.
-- **Placeholder.** The gallery placeholder draws a USD row at 201,352 Toman
-  with `dayChangePct: nil` — give it a sample change so the preview shows the
-  feature.
-- **Backward compatibility.** `MarketRow.dayChangePct` is already in the
-  schema: old snapshots decode in the new app (nil → "–"), and a new snapshot
-  with a change decodes in an old app (its face ignores it — kind gate).
-  Snapshot round-trip tests already exist and must stay green.
+`docs/planning/taskbox/prd.md:295` rejected a custom WIQL field: "a bad query is a
+silently empty widget, and the error copy can't distinguish 'your query matched
+nothing' from 'your query is wrong'. Revisit once one provider is proven." The
+same reasoning is in code at `AzureDevOpsLoader.swift:393-395`. The provider is
+now proven, and the probe (`../taskbox-custom-wiql/probe.md`) shows the premise is
+half true. Syntax and unknown-field errors are a **400 with a readable message**
+(P2, P3, P12). Only a valid-but-wrong clause (P4, a typo'd state value) is
+silently empty. So the design needs (a) the server's message surfaced as its own
+outcome, and (b) a settings-side test that shows the match count, so "0 matches"
+is seen while typing, not discovered on the desktop.
 
 ## Affected files
 
-`native/Shared/MarketBoxSnapshot.swift`, `native/Shared/MarketBoxCore.swift`,
-`native/DeckWidgets/MarketBoxWidget.swift`, `native/SharedTests/MarketBoxCoreTests.swift`,
-`ROADMAP.md` (M8 tick), possibly `README.md`.
+- `native/Shared/AzureDevOpsLoader.swift`: `wiqlQuery` becomes built from a
+  clause; `workItemIDs` sends `$top`; `WiqlIdParser` learns the cap; a 400
+  error body is parsed into a message; `HostAzureDevOpsLoader.fetch` takes the
+  clause.
+- New pure type (e.g. `WiqlClause`): validates and composes the user's clause:
+  balanced parens outside `'…'` literals with `''` escapes, no `ORDER BY` /
+  `ASOF` / `MODE`, blank → built-in default.
+- `native/Shared/DeckSettings.swift`: `TaskBoxSettings` gains a tolerant-decoded
+  query field (empty = built-in).
+- `native/Shared/FetchStatus.swift`: a new outcome for a rejected query (or an
+  Azure-specific mapping of 400), plus copy per `FetchStatusCopy`.
+- `native/Shared/TaskBoxSnapshot.swift`: `totalCount` can be a lower bound
+  (`isCapped`), and `totalLine` renders "200+ open".
+- `native/DeckApp/DeckApp.swift`: `TaskBoxSettingsView` gets a query section
+  (field, Test button, result line). `refreshTaskBox` passes the clause.
+- `native/DeckAgent/main.swift:232`: passes the clause.
+- `native/DeckWidgets/TaskBoxWidget.swift`: "Nothing assigned" and the
+  gallery description are only true for the default query.
+- Tests: `AzureDevOpsParserTests`, a new `WiqlClauseTests`, `TaskBoxSnapshotTests`,
+  and settings decode.
 
-## Shell invariants checked (CLAUDE.md)
+## CLAUDE.md traps that apply
 
-- No Swift Charts in the face. ✓ (unchanged)
-- No new fetch, no new provider — the 60s tick and the keyless rule are
-  untouched; a missing `24h_ch` degrades to "–", never a failed tick. ✓
-- Snapshot stores converted prices; the change rides the same row. ✓
-- Tolerant decode: no schema change at all. ✓
-- Widget face reads nothing new from settings (`showDayChange` is existing).
-  ✓
+- **Anything the extension reads must be answerable from `settings.json`
+  without a token.** The widget needs only "is a custom query set" to pick its
+  empty-state copy. That's a non-secret field, so it's fine.
+- **`DeckSettings` and some settings structs have hand-written coding.** A new
+  field must be added to `init(from:)` (tolerant) and checked for a hand-written
+  `encode(to:)`.
+- **The settings window and the agent share rate limits.** Azure has no
+  keyless-quota problem like CoinGecko, but "Test" must still be
+  user-initiated, host-app-only and one request per click, never as-you-type.
+- **A new source file needs `xcodegen generate`**, or the test is silently not
+  compiled.
+- **Editing `settings.json` by hand while Deck runs tests nothing.** Quit Deck
+  and drive `DeckAgent` directly for the live check.
+
+## Load-bearing findings from the probe
+
+- P9: wrapping the clause in `AND ( … )` does **not** contain it. An unbalanced
+  `)` escapes and the query spans the whole org (7559 items). Validation before
+  sending is required, not optional.
+- Broad clauses cost 577 KB and 4.5–17.8s uncapped (the timeout is 10s); `$top=201`
+  costs 25 KB and ~1s. The cap goes on the WIQL call, not after it.
