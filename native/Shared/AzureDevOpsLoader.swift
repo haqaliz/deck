@@ -288,6 +288,70 @@ enum WiqlResponse {
     }
 }
 
+// MARK: - Settings Test (pure summary)
+
+/// One project's answer to the settings window's Test button.
+struct WiqlTestResult: Equatable {
+    enum Outcome: Equatable {
+        case matched(count: Int, capped: Bool)
+        /// The server's reason, when the 400 carried one.
+        case rejected(String?)
+        case failed(FetchOutcome)
+
+        init(error: Error) {
+            if case AzureDevOpsError.queryRejected(let message) = error {
+                self = .rejected(message)
+            } else {
+                self = .failed(FetchClassifier.outcome(for: error))
+            }
+        }
+    }
+
+    var project: String
+    var outcome: Outcome
+}
+
+/// The line under the Test button. A rejection wins over counts, because it is
+/// the thing to fix; a zero is printed plainly, because a valid-but-wrong
+/// condition (a misspelt state) answers 200 with no rows and this line is the
+/// only place that can be seen before it reaches the desktop.
+enum WiqlTestSummary {
+    struct Line: Equatable {
+        var text: String
+        var isProblem: Bool
+    }
+
+    static func line(_ results: [WiqlTestResult]) -> Line {
+        guard !results.isEmpty else { return Line(text: "No projects to test.", isProblem: false) }
+        let several = results.count > 1
+        func named(_ project: String, _ text: String) -> String {
+            several ? "\(project): \(text)" : text
+        }
+
+        for result in results {
+            if case .rejected(let message) = result.outcome {
+                return Line(text: named(result.project, message ?? "Azure DevOps rejected the query."), isProblem: true)
+            }
+        }
+        for result in results {
+            if case .failed(let outcome) = result.outcome {
+                let hint = FetchStatusCopy.hint(source: .taskbox, outcome: outcome) ?? "The test failed."
+                return Line(text: named(result.project, hint), isProblem: true)
+            }
+        }
+
+        let counts = results.compactMap { result -> (String, String, Int)? in
+            guard case .matched(let count, let capped) = result.outcome else { return nil }
+            return (result.project, "\(count)\(capped ? "+" : "")", count)
+        }
+        if several {
+            return Line(text: counts.map { "\($0.0) \($0.1)" }.joined(separator: " · "), isProblem: false)
+        }
+        let only = counts[0]
+        return Line(text: "\(only.1) \(only.2 == 1 && !only.1.hasSuffix("+") ? "match" : "matches")", isProblem: false)
+    }
+}
+
 // MARK: - Current sprint parser (pure)
 
 enum CurrentSprintParser {
@@ -446,6 +510,35 @@ enum HostAzureDevOpsLoader {
             totalIsLowerBound: lowerBound,
             isCustomQuery: isCustomQuery
         )
+    }
+
+    /// The settings window's Test button: the WIQL call alone, per project, no
+    /// batch and no snapshot. Host-app only and one click at a time — never as
+    /// you type. A locally invalid condition sends nothing.
+    static func test(
+        organization: String, projects: [String], token: String, condition: String
+    ) async -> [WiqlTestResult] {
+        guard let targets = try? AzureTargets.normalise(organization: organization, projects: projects) else {
+            return [WiqlTestResult(project: organization, outcome: .failed(.authOrTarget))]
+        }
+        if let problem = WiqlClause.validate(condition) {
+            // The caption already says this; the button is disabled. Kept
+            // total rather than trusting the caller.
+            return [WiqlTestResult(project: targets[0].projectName, outcome: .rejected(problem.message))]
+        }
+        let auth = "Basic " + Data(":\(token)".utf8).base64EncodedString()
+        let query = WiqlClause.query(for: condition)
+        guard let answers = try? await inParallel(targets, { target in
+            try await workItemIDs(target: target, query: query, auth: auth)
+        }) else { return [] }
+        return zip(targets, answers).map { target, answer in
+            switch answer {
+            case .success(let wiql):
+                WiqlTestResult(project: target.projectName, outcome: .matched(count: wiql.total, capped: wiql.capped))
+            case .failure(let error):
+                WiqlTestResult(project: target.projectName, outcome: .init(error: error))
+            }
+        }
     }
 
     /// The ShipBox fan-out, which is the codebase's one concurrent loader.

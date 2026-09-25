@@ -106,3 +106,72 @@ final class WiqlResponseTests: XCTestCase {
         )
     }
 }
+
+/// The settings Test result line. The one place a valid-but-wrong condition
+/// (probe P4: a misspelt state, 200 with zero rows) can be caught, so a zero is
+/// printed plainly rather than smoothed over.
+final class WiqlTestSummaryTests: XCTestCase {
+    private func matched(_ project: String, _ count: Int, capped: Bool = false) -> WiqlTestResult {
+        WiqlTestResult(project: project, outcome: .matched(count: count, capped: capped))
+    }
+
+    func testOneProjectCountsMatches() {
+        XCTAssertEqual(WiqlTestSummary.line([matched("P", 11)]).text, "11 matches")
+        XCTAssertEqual(WiqlTestSummary.line([matched("P", 1)]).text, "1 match")
+        XCTAssertEqual(WiqlTestSummary.line([matched("P", 200, capped: true)]).text, "200+ matches")
+    }
+
+    func testZeroIsSaidPlainlyButIsNotAProblem() {
+        let line = WiqlTestSummary.line([matched("P", 0)])
+        XCTAssertEqual(line.text, "0 matches")
+        XCTAssertFalse(line.isProblem)
+    }
+
+    func testSeveralProjectsAreNamed() {
+        XCTAssertEqual(
+            WiqlTestSummary.line([matched("Manifold", 11), matched("Ops", 0), matched("Big", 200, capped: true)]).text,
+            "Manifold 11 · Ops 0 · Big 200+"
+        )
+    }
+
+    func testTheServersReasonIsShownVerbatim() {
+        let line = WiqlTestSummary.line([
+            WiqlTestResult(project: "P", outcome: .rejected("TF51005: The query references a field that does not exist.")),
+        ])
+        XCTAssertEqual(line.text, "TF51005: The query references a field that does not exist.")
+        XCTAssertTrue(line.isProblem)
+    }
+
+    func testARejectionWithoutAReasonStillSaysSo() {
+        let line = WiqlTestSummary.line([WiqlTestResult(project: "P", outcome: .rejected(nil))])
+        XCTAssertEqual(line.text, "Azure DevOps rejected the query.")
+    }
+
+    /// A field that exists in one project's process and not another's fails
+    /// in only some of them — say which.
+    func testARejectionAmongSeveralNamesItsProjectAndWins() {
+        let line = WiqlTestSummary.line([
+            matched("Manifold", 11),
+            WiqlTestResult(project: "Ops", outcome: .rejected("TF51005: nope")),
+        ])
+        XCTAssertEqual(line.text, "Ops: TF51005: nope")
+        XCTAssertTrue(line.isProblem)
+    }
+
+    func testAnyOtherFailureUsesTheSettingsHint() {
+        let line = WiqlTestSummary.line([WiqlTestResult(project: "P", outcome: .failed(.unreachable))])
+        XCTAssertEqual(line.text, FetchStatusCopy.hint(source: .taskbox, outcome: .unreachable))
+        XCTAssertTrue(line.isProblem)
+    }
+
+    func testNoResultsSaysNothingWasTested() {
+        XCTAssertEqual(WiqlTestSummary.line([]).text, "No projects to test.")
+    }
+
+    /// Classifying an error into a result reuses the loader's own mapping.
+    func testErrorsClassifyIntoResults() {
+        XCTAssertEqual(WiqlTestResult.Outcome(error: AzureDevOpsError.queryRejected("x")), .rejected("x"))
+        XCTAssertEqual(WiqlTestResult.Outcome(error: AzureDevOpsError.serverError(401)), .failed(.authOrTarget))
+        XCTAssertEqual(WiqlTestResult.Outcome(error: AzureDevOpsError.transport("offline")), .failed(.unreachable))
+    }
+}
