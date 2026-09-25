@@ -88,10 +88,20 @@ struct TaskBoxSnapshot: Codable, Equatable {
     /// nil when everything worked — a fetch that reaches none of its projects
     /// throws instead, so the last good snapshot stands.
     var note: String?
+    /// At least one project matched more than the WIQL cap, so `totalCount`
+    /// means "at least". The call is sent with `$top`, and Azure reports no
+    /// total alongside it.
+    var totalIsLowerBound = false
+    /// Written from the user's own condition rather than the built-in filter.
+    /// The face words itself from this, not from settings, so the wording
+    /// always describes the data it sits over — an edit doesn't relabel the
+    /// old rows before the next tick replaces them.
+    var isCustomQuery = false
 
     init(
         writtenAt: Date, scope: String, totalCount: Int, sprint: String?,
-        tasks: [TaskItem], note: String? = nil
+        tasks: [TaskItem], note: String? = nil,
+        totalIsLowerBound: Bool = false, isCustomQuery: Bool = false
     ) {
         self.writtenAt = writtenAt
         self.scope = scope
@@ -99,6 +109,8 @@ struct TaskBoxSnapshot: Codable, Equatable {
         self.sprint = sprint
         self.tasks = tasks
         self.note = note
+        self.totalIsLowerBound = totalIsLowerBound
+        self.isCustomQuery = isCustomQuery
     }
 
     init(from decoder: Decoder) throws {
@@ -109,6 +121,8 @@ struct TaskBoxSnapshot: Codable, Equatable {
         sprint = try c.decodeIfPresent(String.self, forKey: .sprint)
         tasks = try c.decodeIfPresent([TaskItem].self, forKey: .tasks) ?? []
         note = try c.decodeIfPresent(String.self, forKey: .note)
+        totalIsLowerBound = try c.decodeIfPresent(Bool.self, forKey: .totalIsLowerBound) ?? false
+        isCustomQuery = try c.decodeIfPresent(Bool.self, forKey: .isCustomQuery) ?? false
     }
 }
 
@@ -250,6 +264,18 @@ enum TaskFormatting {
 
     /// Header, left: how much is on your plate.
     static func totalLine(totalCount: Int) -> String {
-        "\(totalCount) open"
+        totalLine(totalCount: totalCount, lowerBound: false, custom: false)
+    }
+
+    /// "open" is only true of the built-in filter — a custom condition can
+    /// match closed items — so a custom query counts "items".
+    static func totalLine(totalCount: Int, lowerBound: Bool, custom: Bool) -> String {
+        "\(totalCount)\(lowerBound ? "+" : "") \(custom ? "items" : "open")"
+    }
+
+    /// The fetch worked and matched nothing. "Nothing assigned" is only true of
+    /// the built-in filter.
+    static func emptyLine(custom: Bool) -> String {
+        custom ? "No matches" : "Nothing assigned"
     }
 }

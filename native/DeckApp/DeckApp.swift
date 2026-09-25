@@ -438,7 +438,8 @@ struct ContentView: View {
             snapshot = try await HostAzureDevOpsLoader.fetch(
                 organization: credential.organization,
                 projects: credential.projects,
-                token: credential.token
+                token: credential.token,
+                condition: settings.taskbox.query
             )
         } catch {
             FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .taskbox)

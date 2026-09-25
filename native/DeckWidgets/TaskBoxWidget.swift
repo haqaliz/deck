@@ -11,8 +11,13 @@ struct TaskBoxEntry: TimelineEntry {
     /// One line explaining the last fetch attempt, or nil when all is well.
     let chip: String?
     let scope: String
-    /// Every open item assigned to the user — may exceed `tasks.count`.
+    /// Every match — may exceed `tasks.count`, and is only "at least" when
+    /// `totalIsLowerBound`.
     let totalCount: Int
+    var totalIsLowerBound = false
+    /// Worded from the snapshot, never from settings — see
+    /// `TaskBoxSnapshot.isCustomQuery`.
+    var isCustomQuery = false
     let sprint: String?
     /// Which projects could not be read, when the others could.
     let note: String?
@@ -96,6 +101,8 @@ struct TaskBoxProvider: TimelineProvider {
             chip: chip,
             scope: snapshot.scope,
             totalCount: snapshot.totalCount,
+            totalIsLowerBound: snapshot.totalIsLowerBound,
+            isCustomQuery: snapshot.isCustomQuery,
             sprint: snapshot.sprint,
             note: snapshot.note,
             tasks: snapshot.tasks,
@@ -170,7 +177,7 @@ struct TaskBoxWidgetEntryView: View {
     private var emptyView: some View {
         VStack(alignment: .leading, spacing: 6) {
             headerLine
-            Text("Nothing assigned")
+            Text(TaskFormatting.emptyLine(custom: entry.isCustomQuery))
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
             Spacer(minLength: 0)
         }
@@ -207,7 +214,11 @@ struct TaskBoxWidgetEntryView: View {
     /// Left: how much is on your plate. Right: the sprint you are in.
     private var headerLine: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text(TaskFormatting.totalLine(totalCount: entry.totalCount))
+            Text(TaskFormatting.totalLine(
+                totalCount: entry.totalCount,
+                lowerBound: entry.totalIsLowerBound,
+                custom: entry.isCustomQuery
+            ))
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)

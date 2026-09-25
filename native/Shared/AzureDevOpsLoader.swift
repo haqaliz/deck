@@ -3,7 +3,8 @@ import Foundation
 // MARK: - Azure DevOps work items (host/agent only — unsandboxed)
 //
 // Three calls per refresh:
-//   1. WIQL      → the ids assigned to the PAT's owner
+//   1. WIQL      → the ids matching the condition (by default: assigned to the
+//                  PAT's owner), capped with `$top`
 //   2. batch     → the fields for those ids
 //   3. iterations→ the sprint calendar, for the due-date fallback (best effort)
 //
@@ -16,6 +17,11 @@ enum AzureDevOpsError: Error, Equatable {
     case serverError(Int)
     case transport(String)
     case invalidPayload
+    /// The TaskBox condition failed local validation, so nothing was sent.
+    case invalidQuery(WiqlClause.Problem)
+    /// The WIQL endpoint answered 400. Carries the server's own reason when
+    /// the body had one — for the settings window, never for a log.
+    case queryRejected(String?)
 }
 
 // MARK: - Target normalisation (pure)
@@ -198,11 +204,14 @@ enum AzureDate {
 // MARK: - WIQL id parser (pure)
 
 struct ParsedWiql: Equatable {
-    /// Every match, before the batch cap — this is what the header counts.
+    /// Matches, up to the cap — this is what the header counts.
     var total: Int
     /// The ids actually fetched, capped, in WIQL order (most recently changed
     /// first).
     var ids: [Int]
+    /// More matched than the cap, so `total` is only a lower bound. The WIQL
+    /// call is sent with `$top`, and Azure reports no total alongside it.
+    var capped: Bool = false
 }
 
 enum WiqlIdParser {
@@ -210,6 +219,18 @@ enum WiqlIdParser {
     /// rows, but the lane counts describe everything fetched, so the cap is set
     /// as high as the API allows rather than as low as the list needs.
     static let idLimit = 200
+
+    /// Sent as `$top`: one past the cap, so a full answer is recognisable
+    /// (the `AzurePRCap` idea). Required rather than tidy — a broad condition
+    /// measured 577 KB and up to 17.8s uncapped, against a 10s timeout, and
+    /// 25 KB / ~1s capped.
+    static let requestTop = idLimit + 1
+
+    /// Several projects' answers as one header count. One capped project makes
+    /// the whole count a lower bound.
+    static func combined(_ parts: [ParsedWiql]) -> (total: Int, lowerBound: Bool) {
+        (parts.reduce(0) { $0 + $1.total }, parts.contains { $0.capped })
+    }
 
     /// `nil` means the payload could not be read. An empty `ids` means the
     /// query ran and matched nothing — "nothing assigned" is a success.
@@ -219,7 +240,51 @@ enum WiqlIdParser {
             let items = json["workItems"] as? [[String: Any]]
         else { return nil }
         let ids = items.compactMap { ($0["id"] as? NSNumber)?.intValue }
-        return ParsedWiql(total: ids.count, ids: Array(ids.prefix(idLimit)))
+        return ParsedWiql(
+            total: min(ids.count, idLimit),
+            ids: Array(ids.prefix(idLimit)),
+            capped: ids.count > idLimit
+        )
+    }
+}
+
+/// A 400 from the WIQL endpoint names what it didn't like — "TF51005: The
+/// query references a field that does not exist. The error is caused by
+/// «[Custom.Nope]»." — which is what the settings Test shows.
+enum WiqlErrorParser {
+    static func message(_ data: Data) -> String? {
+        guard
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let raw = json["message"] as? String
+        else { return nil }
+        let line = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: "\n", maxSplits: 1).first
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) } ?? ""
+        return line.isEmpty ? nil : line
+    }
+}
+
+/// The WIQL call's request URL and its reading of the answer, kept pure so the
+/// 400 path is pinned without a network.
+enum WiqlResponse {
+    static func url(target: AzureTarget) -> URL? {
+        URL(string: "\(target.projectBase)/_apis/wit/wiql?api-version=7.1&$top=\(WiqlIdParser.requestTop)")
+    }
+
+    /// Only this call turns a 400 into a rejected query: it is the one request
+    /// whose body the user wrote. A 400 anywhere else keeps its old meaning,
+    /// and the 203 sign-in page a bad PAT gets stays `serverError` so the
+    /// classifier still sends the user to the token.
+    static func interpret(status: Int, body: Data) throws -> ParsedWiql {
+        switch status {
+        case 200:
+            guard let parsed = WiqlIdParser.parse(body) else { throw AzureDevOpsError.invalidPayload }
+            return parsed
+        case 400:
+            throw AzureDevOpsError.queryRejected(WiqlErrorParser.message(body))
+        default:
+            throw AzureDevOpsError.serverError(status)
+        }
     }
 }
 
@@ -298,17 +363,24 @@ enum WorkItemParser {
 // MARK: - Fetch (host/agent only — unsandboxed)
 
 enum HostAzureDevOpsLoader {
-    /// Open work items assigned to the PAT's owner in the configured project,
-    /// most recently changed first, plus the team's current sprint.
+    /// Work items matching `condition` — or, when it is blank, open items
+    /// assigned to the PAT's owner — in every configured project, most
+    /// recently changed first, plus the team's current sprint.
     ///
     /// `@Me` resolves to whoever owns the PAT — not to whoever is signed in to
     /// the `az` CLI or the browser.
     static func fetch(
         organization: String,
         projects: [String],
-        token: String
+        token: String,
+        condition: String = ""
     ) async throws -> TaskBoxSnapshot {
         let targets = try AzureTargets.normalise(organization: organization, projects: projects)
+        // Before any request: an unvalidated condition can escape its
+        // parentheses and the project clause with them.
+        if let problem = WiqlClause.validate(condition) { throw AzureDevOpsError.invalidQuery(problem) }
+        let query = WiqlClause.query(for: condition)
+        let isCustomQuery = WiqlClause.isCustom(condition)
         let auth = "Basic " + Data(":\(token)".utf8).base64EncodedString()
         let scope = TaskBoxScope.scope(organization: organization, targets: targets)
 
@@ -317,18 +389,18 @@ enum HostAzureDevOpsLoader {
         // waiting. Five sources measured 9.4s serially against 2.1s in
         // parallel.
         let queried = try await inParallel(targets) { target in
-            try await workItemIDs(target: target, auth: auth)
+            try await workItemIDs(target: target, query: query, auth: auth)
         }
 
         var idLists: [[Int]] = []
-        var total = 0
+        var answers: [ParsedWiql] = []
         var failures: [AzureProjectNote.Failure] = []
         var firstError: Error?
         for (target, result) in zip(targets, queried) {
             switch result {
             case .success(let wiql):
                 idLists.append(wiql.ids)
-                total += wiql.total
+                answers.append(wiql)
             case .failure(let error):
                 failures.append(.init(
                     project: target.projectName, outcome: FetchClassifier.outcome(for: error)
@@ -350,12 +422,14 @@ enum HostAzureDevOpsLoader {
             : nil
 
         let ids = AzureIDMerge.interleave(idLists, limit: WiqlIdParser.idLimit)
+        let (total, lowerBound) = WiqlIdParser.combined(answers)
 
-        // Nothing assigned is a real answer, and it skips the batch entirely.
+        // Nothing matched is a real answer, and it skips the batch entirely.
         guard !ids.isEmpty else {
             return TaskBoxSnapshot(
                 writtenAt: Date(), scope: scope,
-                totalCount: total, sprint: sprint, tasks: [], note: note
+                totalCount: total, sprint: sprint, tasks: [], note: note,
+                totalIsLowerBound: lowerBound, isCustomQuery: isCustomQuery
             )
         }
 
@@ -368,7 +442,9 @@ enum HostAzureDevOpsLoader {
             totalCount: total,
             sprint: sprint,
             tasks: TaskFormatting.sorted(tasks),
-            note: note
+            note: note,
+            totalIsLowerBound: lowerBound,
+            isCustomQuery: isCustomQuery
         )
     }
 
@@ -390,30 +466,15 @@ enum HostAzureDevOpsLoader {
         }
     }
 
-    /// Fixed in code rather than user-editable: a hand-written WIQL that
-    /// matches nothing is indistinguishable from one that is wrong, and the
-    /// failure copy could not tell the user which.
-    ///
-    /// `[System.TeamProject] = @project` is load-bearing. The project in the
-    /// request URL only sets the macro context; without this clause the query
-    /// spans every project the PAT can read, which on the dev org returned 67
-    /// items across three projects instead of the 25 actually in the
-    /// configured one.
-    private static let wiqlQuery = """
-    SELECT [System.Id] FROM WorkItems \
-    WHERE [System.TeamProject] = @project \
-    AND [System.AssignedTo] = @Me \
-    AND [System.State] NOT IN ('Closed', 'Removed', 'Done') \
-    ORDER BY [System.ChangedDate] DESC
-    """
-
-    private static func workItemIDs(target: AzureTarget, auth: String) async throws -> ParsedWiql {
-        guard let url = URL(string: "\(target.projectBase)/_apis/wit/wiql?api-version=7.1") else {
-            throw AzureDevOpsError.invalidTarget
-        }
-        let data = try await send(url: url, auth: auth, body: ["query": wiqlQuery])
-        guard let parsed = WiqlIdParser.parse(data) else { throw AzureDevOpsError.invalidPayload }
-        return parsed
+    /// The query itself is `WiqlClause.query(for:)`. The request goes through
+    /// `WiqlResponse`, because unlike every other call here the body is the
+    /// user's and a 400 means "your condition", not "our request".
+    private static func workItemIDs(
+        target: AzureTarget, query: String, auth: String
+    ) async throws -> ParsedWiql {
+        guard let url = WiqlResponse.url(target: target) else { throw AzureDevOpsError.invalidTarget }
+        let (status, body) = try await exchange(url: url, auth: auth, body: ["query": query])
+        return try WiqlResponse.interpret(status: status, body: body)
     }
 
     private static func workItems(
@@ -459,6 +520,18 @@ enum HostAzureDevOpsLoader {
 
     /// `body == nil` sends a GET; otherwise a JSON POST.
     private static func send(url: URL, auth: String, body: [String: Any]?) async throws -> Data {
+        let (status, data) = try await exchange(url: url, auth: auth, body: body)
+        // Anything but a clean 200 is an error, including the 203 sign-in page
+        // Azure DevOps serves for a bad PAT — the classifier reads the code.
+        guard status == 200 else { throw AzureDevOpsError.serverError(status) }
+        return data
+    }
+
+    /// The status and body, whatever the status — for the one caller that
+    /// reads an error body.
+    private static func exchange(
+        url: URL, auth: String, body: [String: Any]?
+    ) async throws -> (status: Int, body: Data) {
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         request.setValue(auth, forHTTPHeaderField: "Authorization")
@@ -482,12 +555,7 @@ enum HostAzureDevOpsLoader {
         guard let http = response as? HTTPURLResponse else {
             throw AzureDevOpsError.transport("Not an HTTP response")
         }
-        // Anything but a clean 200 is an error, including the 203 sign-in page
-        // Azure DevOps serves for a bad PAT — the classifier reads the code.
-        guard http.statusCode == 200 else {
-            throw AzureDevOpsError.serverError(http.statusCode)
-        }
-        return data
+        return (http.statusCode, data)
     }
 }
 
