@@ -34,8 +34,9 @@ widget.
   repos, merged newest-first (fetched by the agent with the user's token).
   Repos are either picked by hand or discovered automatically; the only widget
   that fetches concurrently — see the trap below.
-- **TaskBox** — tasks: Azure DevOps work items assigned to you, with open
-  count, current sprint and board lanes (PAT, fetched by the agent).
+- **TaskBox** — tasks: Azure DevOps work items assigned to you (or matching
+  your own WIQL condition), with open count, current sprint and board lanes
+  (PAT, fetched by the agent).
 - **CalBox** — calendar: TODAY and TOMORROW sections, each with its own
   show/hide and row count (EventKit, read by the agent; covers whatever macOS
   syncs).
@@ -321,6 +322,22 @@ Do not delete the container; see the trap below.
   per-source floor, per-query cache, host-app-only, 429 degrades the sheet
   only), and `HostStockSearchLoader` is the second host-app-only loader the
   phase-5 grep check covers.
+- **A WIQL condition wrapped in parentheses is not contained by them.** Found
+  building TaskBox custom WIQL (2026-09-25,
+  `docs/planning/taskbox-custom-wiql/probe.md`). User text
+  `[System.State] = 'Active') OR ([System.Id] > 0` inside
+  `… = @project AND ( … )` closes the wrapper early, the project clause stops
+  applying, and the live org returned **7559 items from every project** with a
+  200. `WiqlClause.validate` runs before any request, on both the agent and the
+  settings path: paren depth never below zero outside `'…'` literals (`''`
+  escapes) and `[…]` fields, no `ORDER BY`/`ASOF`/`MODE`/`SELECT`/`FROM`. Two
+  more from the same probe: **every WIQL call needs `$top`**, because a broad
+  condition uncapped was 577 KB and up to 17.8s against the 10s request timeout
+  (`$top=201`: 25 KB, ~1s), and Azure then reports no total, so a full answer
+  is "at least". And **a 400 from WIQL carries a readable `message`**
+  ("TF51005: … «[Custom.Nope]»"), which is why a bad condition is
+  `queryRejected` and not `badResponse`. Only a valid-but-wrong one (a misspelt
+  state) is silently empty, so the settings Test prints its 0.
 - **Fan out concurrently or miss the tick.** `URLSession.timeoutInterval` is
   per *request*, so N serial fetches can stall for N×10s against a 60s agent
   cadence. Five repos measured **9.4s serially, 2.1s concurrently**. ShipBox's

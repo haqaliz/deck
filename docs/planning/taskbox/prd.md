@@ -292,7 +292,9 @@ but its own snapshot.
 - **No OAuth / Entra ID.** PAT only. (Deferred with CalBox's route 3.)
 - **No second provider.** `TaskProvider` has one case in slice 1. The shape is
   the deliverable; the second provider is not.
-- **No custom WIQL field.** Considered and rejected: a bad query is a silently
+- **No custom WIQL field.** *(Reversed 2026-09-25: see
+  `../taskbox-custom-wiql/`. A 400 names the fault, and Test shows the count.)*
+  Considered and rejected: a bad query is a silently
   empty widget, and the error copy can't distinguish "your query matched
   nothing" from "your query is wrong". Revisit once one provider is proven.
 - **No multi-org / multi-project.** One org, one project — the same single-target

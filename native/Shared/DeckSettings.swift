@@ -853,6 +853,10 @@ struct TaskBoxSettings: Codable, Equatable {
     /// Which raw Azure DevOps states feed which lane. Editable because process
     /// templates get customised and board columns get renamed.
     var stateMapping = TaskStateMapping()
+    /// The WIQL condition, or empty for the built-in filter (open items
+    /// assigned to the PAT's owner). Only the settings window's Apply writes
+    /// it, so the agent never runs a half-typed condition.
+    var query = ""
     var todoColor = RGBA.systemBlue
     var inProgressColor = RGBA.systemOrange
     var testingColor = RGBA.systemPurple
@@ -872,6 +876,7 @@ struct TaskBoxSettings: Codable, Equatable {
         showProject = try c.decodeIfPresent(Bool.self, forKey: .showProject) ?? false
         taskCount = try c.decodeIfPresent(Int.self, forKey: .taskCount) ?? 5
         stateMapping = try c.decodeIfPresent(TaskStateMapping.self, forKey: .stateMapping) ?? TaskStateMapping()
+        query = try c.decodeIfPresent(String.self, forKey: .query) ?? ""
         todoColor = try c.decodeIfPresent(RGBA.self, forKey: .todoColor) ?? RGBA.systemBlue
         inProgressColor = try c.decodeIfPresent(RGBA.self, forKey: .inProgressColor) ?? RGBA.systemOrange
         testingColor = try c.decodeIfPresent(RGBA.self, forKey: .testingColor) ?? RGBA.systemPurple

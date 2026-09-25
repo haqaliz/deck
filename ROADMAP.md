@@ -162,7 +162,8 @@ the next slate. Ordered by priority, not by cost.
         team using those words really does receive finished items. TaskBox
         gives them a `done` lane (checked before the open lanes) and renders
         them struck through rather than letting them read as outstanding.
-      **Open follow-ups:** multi-org, custom WIQL, a second provider.
+      **Open follow-ups:** multi-org, a second provider. (Custom WIQL shipped
+      2026-09-25, see M8.)
       (Multi-project shipped 2026-08-28, see M6; Keychain shipped 2026-08-26.)
 - [x] **PRBox** — review queue: your open PRs + PRs awaiting your review,
       **mixed from GitHub and Azure DevOps Git** in one list (the original
@@ -890,7 +891,37 @@ pick the next item with `deck-next`.
       requests rather than the walk itself.
 - [ ] **Azure: raise the five-project cap** — one constant; this org has six
       projects (multi-project entry).
-- [ ] **TaskBox: custom WIQL** — the open follow-up from the TaskBox entry.
+- [x] **TaskBox: custom WIQL** — the open follow-up from the TaskBox entry.
+      Shipped 2026-09-25 (`docs/planning/taskbox-custom-wiql/`). The user writes
+      only the WHERE condition. Deck owns `SELECT`, `FROM WorkItems`, the
+      project clause and `ORDER BY`, so link queries and a user sort are
+      impossible by construction. The **Query** section edits a draft, and only
+      **Apply** saves it. **Test** runs one WIQL call per project on click.
+      **This reverses a recorded non-goal** (`taskbox/prd.md:295`: "a bad query
+      is a silently empty widget"). A 15-query live probe showed that's only
+      half true:
+      - **Syntax and unknown fields answer 400 with a readable message**
+        ("TF51005: … «[Custom.Nope]»"), now `FetchOutcome.queryRejected`
+        ("Check the query"), with the message shown verbatim under Test. Only
+        a valid-but-wrong condition (a misspelt state) is silently empty, and
+        Test prints its 0.
+      - **Parentheses don't contain the condition.** `'Active') OR
+        ([System.Id] > 0` inside `AND ( … )` returned **7559 items from the
+        whole org**. `WiqlClause.validate` rejects it before anything is sent:
+        depth never below zero outside `'…'`/`[…]`, no reserved words, 4000
+        chars.
+      - **An uncapped broad condition misses the timeout.** 577 KB and
+        4.5–17.8s against the 10s request timeout, versus 25 KB / ~1s with
+        `$top=201`. Every WIQL call is now capped, and a full answer is a lower
+        bound ("211+"), since Azure reports no total alongside `$top`.
+      Verified on the installed build by driving `DeckAgent` directly: the
+      default still matches the old fixed query exactly (12 = 12), a custom
+      condition returned 82 rows all from the configured project, a 400 and
+      a local rejection both left the snapshot mtime **unchanged**, and
+      `[System.Id] > 0` came back 200-capped in a normal tick.
+      **Open follow-ups:** presets (assigned / created / current sprint), a team
+      segment for `@CurrentIteration` (it resolves against each project's
+      default team today).
 - [ ] **Keychain: exercise the locked-keychain path** on a scratch account —
       the one designed-and-unit-tested error path never exercised against a
       genuinely locked keychain.

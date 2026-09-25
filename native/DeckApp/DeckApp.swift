@@ -185,7 +185,12 @@ struct ContentView: View {
                 settings: $settings.taskbox,
                 accountID: $settings.taskbox.accountID,
                 accounts: settings.credentials.accounts,
-                onManage: { selection = .credentials }
+                onManage: { selection = .credentials },
+                credential: {
+                    guard case .fetch(let credential) = gate(.taskbox) else { return nil }
+                    return credential
+                },
+                onApply: { Task { await refreshTaskBox() } }
             )
             case .calbox: CalBoxSettingsView(settings: $settings.calbox)
             case .prbox: PRBoxSettingsView(
@@ -438,7 +443,8 @@ struct ContentView: View {
             snapshot = try await HostAzureDevOpsLoader.fetch(
                 organization: credential.organization,
                 projects: credential.projects,
-                token: credential.token
+                token: credential.token,
+                condition: settings.taskbox.query
             )
         } catch {
             FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .taskbox)
@@ -2302,6 +2308,24 @@ private struct TaskBoxSettingsView: View {
     @Binding var accountID: String?
     let accounts: [CredentialAccount]
     var onManage: () -> Void = {}
+    /// The resolved account, for Test. The view never reads the keychain.
+    var credential: () -> ResolvedCredential? = { nil }
+    /// After Apply: one host refresh, so the widget follows the new condition
+    /// without waiting for the agent's next tick.
+    var onApply: () -> Void = {}
+
+    /// The field edits a draft; only Apply writes `settings.query`. Bound
+    /// directly, the host's 60s timer and the agent would each run whatever
+    /// half-typed condition happened to be in the file.
+    @State private var draft = ""
+    @State private var testing = false
+    @State private var testLine: WiqlTestSummary.Line?
+
+    private var problem: WiqlClause.Problem? { WiqlClause.validate(draft) }
+    private var isDirty: Bool {
+        draft.trimmingCharacters(in: .whitespacesAndNewlines)
+            != settings.query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     var body: some View {
         Form {
@@ -2315,6 +2339,56 @@ private struct TaskBoxSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 FetchStatusCaption(source: .taskbox, clearOn: accountID ?? "")
+            }
+            Section("Query") {
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $draft)
+                        .font(.system(.body, design: .monospaced))
+                        .frame(minHeight: 64, maxHeight: 110)
+                        .scrollContentBackground(.hidden)
+                    if draft.isEmpty {
+                        // The built-in filter, as the placeholder: empty runs it.
+                        Text(WiqlClause.builtInCondition)
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                            .padding(.leading, 5)
+                            .allowsHitTesting(false)
+                    }
+                }
+                if let problem {
+                    Text(problem.message)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+                HStack {
+                    Button("Apply") {
+                        settings.query = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+                        onApply()
+                    }
+                    .disabled(problem != nil || !isDirty)
+                    Button(testing ? "Testing\u{2026}" : "Test") { runTest() }
+                        .disabled(problem != nil || testing || credential() == nil)
+                    Button("Start from default") { draft = WiqlClause.builtInCondition }
+                        .disabled(draft == WiqlClause.builtInCondition)
+                    Spacer()
+                    if isDirty {
+                        Text("Unsaved changes")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if let testLine {
+                    Text(testLine.text)
+                        .font(.caption)
+                        .foregroundStyle(testLine.isProblem ? .red : .secondary)
+                        .textSelection(.enabled)
+                }
+                Text("Write only the WHERE condition \u{2014} no SELECT, FROM or ORDER BY. Deck limits it to each of the account's projects and sorts by last change. Empty uses the built-in filter: open items assigned to the PAT's owner.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("A condition that matches nothing is not an error to Azure DevOps. Test shows the count before you apply it, so a misspelt state name shows up as 0 here rather than as an empty widget.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Tasks") {
                 Toggle("Show lane legend", isOn: $settings.showLegend)
@@ -2347,6 +2421,32 @@ private struct TaskBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+        .onAppear { draft = settings.query }
+        // A result describes the text and the account it ran against.
+        .onChange(of: draft) { testLine = nil }
+        .onChange(of: accountID) { testLine = nil }
+    }
+
+    /// One click, one WIQL call per project. Held in memory only: the result
+    /// can echo the condition, which may name people.
+    private func runTest() {
+        guard let credential = credential() else { return }
+        testing = true
+        testLine = nil
+        let condition = draft
+        Task {
+            let results = await HostAzureDevOpsLoader.test(
+                organization: credential.organization,
+                projects: credential.projects,
+                token: credential.token,
+                condition: condition
+            )
+            await MainActor.run {
+                // Stale if the draft moved on while the request was out.
+                if draft == condition { testLine = WiqlTestSummary.line(results) }
+                testing = false
+            }
+        }
     }
 }
 

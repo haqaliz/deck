@@ -207,6 +207,15 @@ to 12. Crypto and stock rows carry the change — and so does the USD row in
   token goes only to dev.azure.com over TLS, and a read-only *Work Items (Read)*
   scope is enough). It shows open work items assigned to whoever owns the PAT,
   not whoever is signed in to the browser.
+- **TaskBox can run your own WIQL condition** instead of "assigned to me". In
+  the tab's *Query* section, write only the part after `WHERE` (for example
+  `[System.CreatedBy] = @Me AND [System.ChangedDate] >= @Today - 30`). Deck adds
+  the `SELECT`, the per-project filter and the sort. **Test** shows how many
+  items match before you **Apply**. Azure DevOps doesn't treat a condition that
+  matches nothing as an error, so a misspelt state name shows up there as 0. A
+  condition Azure rejects shows its own reason under Test and "Check the query"
+  on the widget, and a custom query's header reads "N items" instead of "N open".
+  Each project returns at most 200 items, and past that the count reads "200+".
 - **One account can cover up to five projects.** The account editor lists the
   projects your token can see and gives you five slots to pick from; if the
   token is too narrowly scoped to list them, type the names instead. Every

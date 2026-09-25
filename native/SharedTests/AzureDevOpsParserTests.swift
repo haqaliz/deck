@@ -5,6 +5,35 @@ import XCTest
 // item titles, iteration paths and the PAT owner's name from a private org and
 // must not enter this repo (PRD §9 R1).
 
+// MARK: - WIQL error body
+
+/// A 400 from the WIQL endpoint carries a readable reason. These bodies are the
+/// shape Azure DevOps answered in the probe (P2, P3); the messages are its own
+/// generic parser text, with no org data in them.
+final class WiqlErrorParserTests: XCTestCase {
+    func testReadsTheMessage() {
+        let body = #"{"$id":"1","innerException":null,"message":"TF51005: The query references a field that does not exist. The error is caused by «[Custom.Nope]».","typeName":"Microsoft.TeamFoundation.WorkItemTracking.Server.Common.VssPropertyValidationException","typeKey":"VssPropertyValidationException","errorCode":0,"eventId":3000}"#
+        XCTAssertEqual(
+            WiqlErrorParser.message(Data(body.utf8)),
+            "TF51005: The query references a field that does not exist. The error is caused by «[Custom.Nope]»."
+        )
+    }
+
+    func testTrimsAndKeepsTheFirstLine() {
+        let body = #"{"message":"  Expecting field name or expression. The error is caused by «)».\nat line 1"}"#
+        XCTAssertEqual(
+            WiqlErrorParser.message(Data(body.utf8)),
+            "Expecting field name or expression. The error is caused by «)»."
+        )
+    }
+
+    func testNoReadableMessageIsNil() {
+        XCTAssertNil(WiqlErrorParser.message(Data("<html>sign in</html>".utf8)))
+        XCTAssertNil(WiqlErrorParser.message(Data(#"{"message":"   "}"#.utf8)))
+        XCTAssertNil(WiqlErrorParser.message(Data(#"{"other":1}"#.utf8)))
+    }
+}
+
 // MARK: - Target normalisation
 
 final class AzureTargetTests: XCTestCase {
@@ -101,12 +130,28 @@ final class WiqlIdParserTests: XCTestCase {
         XCTAssertEqual(parsed?.ids.last, WiqlIdParser.idLimit)
     }
 
-    /// The header count must describe everything assigned to you, not just the
-    /// rows that survived the batch cap.
-    func testTotalCountsEveryMatchNotJustTheCappedIds() {
-        let entries = (1...260).map { #"{"id":\#($0),"url":"x"}"# }.joined(separator: ",")
+    /// The WIQL call asks for one more than the cap (`$top = idLimit + 1`), so
+    /// a full answer says "at least this many" rather than an exact count —
+    /// Azure reports no total alongside `$top`. Measured: a broad condition
+    /// uncapped is 577 KB and up to 17.8s against a 10s timeout.
+    func testAnAnswerPastTheCapIsALowerBound() {
+        let entries = (1...WiqlIdParser.requestTop).map { #"{"id":\#($0),"url":"x"}"# }.joined(separator: ",")
         let json = "{\"workItems\":[\(entries)]}".data(using: .utf8)!
-        XCTAssertEqual(WiqlIdParser.parse(json)?.total, 260)
+        let parsed = WiqlIdParser.parse(json)
+        XCTAssertEqual(parsed?.total, WiqlIdParser.idLimit)
+        XCTAssertEqual(parsed?.capped, true)
+    }
+
+    func testAnAnswerAtTheCapIsExact() {
+        let entries = (1...WiqlIdParser.idLimit).map { #"{"id":\#($0),"url":"x"}"# }.joined(separator: ",")
+        let json = "{\"workItems\":[\(entries)]}".data(using: .utf8)!
+        let parsed = WiqlIdParser.parse(json)
+        XCTAssertEqual(parsed?.total, WiqlIdParser.idLimit)
+        XCTAssertEqual(parsed?.capped, false)
+    }
+
+    func testTheRequestAsksForOneMoreThanTheCap() {
+        XCTAssertEqual(WiqlIdParser.requestTop, WiqlIdParser.idLimit + 1)
     }
 
     func testMalformedJSONIsNil() {
@@ -115,6 +160,17 @@ final class WiqlIdParserTests: XCTestCase {
 
     func testMissingWorkItemsKeyIsNil() {
         XCTAssertNil(WiqlIdParser.parse(Data(#"{"queryType":"flat"}"#.utf8)))
+    }
+
+    /// Several projects: the totals add up, and one capped project makes the
+    /// whole count a lower bound (200 + 11 reads "211+").
+    func testCombinedTotalsAddAndAnyCapMakesALowerBound() {
+        let capped = ParsedWiql(total: 200, ids: [], capped: true)
+        let small = ParsedWiql(total: 11, ids: [], capped: false)
+        XCTAssertEqual(WiqlIdParser.combined([capped, small]).total, 211)
+        XCTAssertEqual(WiqlIdParser.combined([capped, small]).lowerBound, true)
+        XCTAssertEqual(WiqlIdParser.combined([small, small]).lowerBound, false)
+        XCTAssertEqual(WiqlIdParser.combined([]).total, 0)
     }
 }
 

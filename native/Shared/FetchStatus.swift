@@ -43,6 +43,10 @@ enum FetchOutcome: String, Codable {
     /// the user has already pasted the token, and telling them to paste it
     /// again sends them to a field that is not the problem.
     case credentialsUnavailable
+    /// TaskBox only: the custom condition was refused — locally before
+    /// sending, or by the WIQL endpoint's 400. Not `authOrTarget` (the
+    /// credential works) and not `badResponse` (the server said exactly why).
+    case queryRejected
 }
 
 extension DeckSecret {
@@ -132,6 +136,7 @@ enum FetchClassifier {
                 return outcome(forStatusCode: code)
             case .transport: return .unreachable
             case .invalidPayload: return .badResponse
+            case .invalidQuery, .queryRejected: return .queryRejected
             }
         case let error as HostCalendarLoader.CalendarError:
             switch error {
@@ -216,6 +221,10 @@ enum FetchStatusCopy {
             case .calbox: return "Couldn't read the calendar"
             case .marketbox: return "Unexpected market response"
             }
+        case .queryRejected:
+            // Only TaskBox takes a query. Checked before the credential,
+            // because the credential is fine.
+            return source == .taskbox ? "Check the query" : nil
         case .credentialsUnavailable:
             switch source {
             case .shipbox, .taskbox, .opencodeRemote:
@@ -288,6 +297,10 @@ enum FetchStatusCopy {
             case .calbox: return "Reached the calendar store but couldn't read it. Retrying every minute."
             case .marketbox: return "Reached the price sources, but the response couldn't be read. Retrying every minute."
             }
+        case .queryRejected:
+            return source == .taskbox
+                ? "Azure DevOps rejected the TaskBox query. Press Test to see its reason."
+                : nil
         case .credentialsUnavailable:
             switch source {
             case .shipbox, .taskbox, .opencodeRemote, .prboxGitHub, .prboxAzure:

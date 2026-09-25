@@ -389,6 +389,19 @@ final class TaskBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.stateMapping, TaskStateMapping(), "the mapping defaults when absent")
     }
 
+    /// Settings from before custom queries run the built-in filter.
+    func testAnAbsentQueryIsTheBuiltInFilter() throws {
+        let s = try decode(#"{"organization":"C"}"#, as: TaskBoxSettings.self)
+        XCTAssertEqual(s.query, "")
+    }
+
+    func testTheQueryRoundTrips() throws {
+        var settings = TaskBoxSettings()
+        settings.query = "[System.State] = 'Active'"
+        let data = try JSONEncoder().encode(settings)
+        XCTAssertEqual(try JSONDecoder().decode(TaskBoxSettings.self, from: data).query, settings.query)
+    }
+
     /// A settings file written by a newer build must not cost the user their
     /// whole TaskBox configuration.
     func testUnknownFutureFieldIsIgnored() throws {

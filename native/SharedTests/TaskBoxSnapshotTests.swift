@@ -68,6 +68,24 @@ final class TaskBoxSnapshotDecodeTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(TaskBoxSnapshot.self, from: data).totalCount, 210)
     }
 
+    /// A snapshot from before custom queries reads as the default query with an
+    /// exact count — which is what it was.
+    func testAnOlderSnapshotIsExactAndNotCustom() throws {
+        let json = #"{"writtenAt":0,"scope":"P","totalCount":3,"tasks":[]}"#
+        let decoded = try JSONDecoder().decode(TaskBoxSnapshot.self, from: Data(json.utf8))
+        XCTAssertFalse(decoded.totalIsLowerBound)
+        XCTAssertFalse(decoded.isCustomQuery)
+    }
+
+    func testTheQueryFlagsRoundTrip() throws {
+        let snapshot = TaskBoxSnapshot(
+            writtenAt: Date(timeIntervalSince1970: 0), scope: "P", totalCount: 211,
+            sprint: nil, tasks: [], totalIsLowerBound: true, isCustomQuery: true
+        )
+        let data = try JSONEncoder().encode(snapshot)
+        XCTAssertEqual(try JSONDecoder().decode(TaskBoxSnapshot.self, from: data), snapshot)
+    }
+
     func testAbsentSprintDecodesAsNil() throws {
         let json = #"{"writtenAt":0,"scope":"P","totalCount":0,"tasks":[]}"#
         XCTAssertNil(try JSONDecoder().decode(TaskBoxSnapshot.self, from: Data(json.utf8)).sprint)
@@ -275,5 +293,26 @@ final class TaskHeaderTests: XCTestCase {
 
     func testTotalLineForNothingAssigned() {
         XCTAssertEqual(TaskFormatting.totalLine(totalCount: 0), "0 open")
+    }
+
+    /// "open" is only true of the built-in filter. A custom condition can
+    /// match closed items, so it counts "items".
+    func testACustomQueryCountsItems() {
+        XCTAssertEqual(TaskFormatting.totalLine(totalCount: 11, lowerBound: false, custom: true), "11 items")
+    }
+
+    /// Past the cap, Azure reports no total: say "at least".
+    func testACappedCountIsALowerBound() {
+        XCTAssertEqual(TaskFormatting.totalLine(totalCount: 211, lowerBound: true, custom: false), "211+ open")
+        XCTAssertEqual(TaskFormatting.totalLine(totalCount: 211, lowerBound: true, custom: true), "211+ items")
+    }
+
+    func testTheDefaultQueryKeepsTodaysWording() {
+        XCTAssertEqual(TaskFormatting.totalLine(totalCount: 11, lowerBound: false, custom: false), "11 open")
+    }
+
+    func testTheEmptyLineFollowsTheQuery() {
+        XCTAssertEqual(TaskFormatting.emptyLine(custom: false), "Nothing assigned")
+        XCTAssertEqual(TaskFormatting.emptyLine(custom: true), "No matches")
     }
 }
