@@ -169,6 +169,7 @@
 		96B73870192265B41638143C /* NetBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */; };
 		96DEBAC4E560B48A25B64DE0 /* CredentialKindSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9ED1410532D72412810AE4 /* CredentialKindSearchTests.swift */; };
 		97918506ABC4C75EC3F7F5D2 /* AzureAccountProjectsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1025AA738F2EC2637AA2C /* AzureAccountProjectsTests.swift */; };
+		97A4B82046694420FB236D6F /* WiqlClause.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE170E54FD1094990464C7C7 /* WiqlClause.swift */; };
 		99C485D084282BAF9BDD5AA3 /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
 		A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5089372A785C079676513337 /* TaskBoxSnapshot.swift */; };
 		A2EE3F352DA2E30CB3F4E017 /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
@@ -193,6 +194,8 @@
 		AF37865EFBC4BAF79B768D19 /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		AF427E1E2B40CE7467D6F1AC /* CalBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8F7E47D5B1EFC7E9E91DF3 /* CalBoxWidget.swift */; };
 		AF7FE0721F8D203C29B1D8D1 /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
+		B2529940E2F167F2F085DE5A /* WiqlClause.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE170E54FD1094990464C7C7 /* WiqlClause.swift */; };
+		B352A17F328999896B9B8A34 /* WiqlClauseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74158E8A2AC2596E3B4A8B49 /* WiqlClauseTests.swift */; };
 		B39BCEAECB55132F7A420A9E /* yahoo_search_apple.json in Resources */ = {isa = PBXBuildFile; fileRef = 5D680778E4768CF095D285F7 /* yahoo_search_apple.json */; };
 		B5EFA65564B8F1A28F9C4832 /* AgentHeartbeatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8EAAB7C3768527CFC875754 /* AgentHeartbeatTests.swift */; };
 		B6109B4ED969BBFCF04F7C1A /* CredentialVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */; };
@@ -200,6 +203,7 @@
 		B681F466B7C74C88A4C39B4A /* StockSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6665B8B08E0F39C775A55C /* StockSearch.swift */; };
 		B78D28F3EFB86CEA57C9803E /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
 		B8D2216F560466E6AB864171 /* AzureDevOpsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */; };
+		BA1A8E2D2BBB42AB8EFF6311 /* WiqlClause.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE170E54FD1094990464C7C7 /* WiqlClause.swift */; };
 		BB0DA9CFEFB09DB47DCA109F /* LiveBoxDiskCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */; };
 		BCA6649CD9EB7F67D4A64B79 /* DeckBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B96F825FC76E1267D5ACCC /* DeckBundle.swift */; };
 		BD8A7273480E5B5E14C8BB51 /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
@@ -280,6 +284,7 @@
 		F4AB6B9FEEF6A118BD4F284B /* ProcessSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */; };
 		F54A57E18318AB833DE8AF5A /* PRBoxChipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77088C4EE6AAF5F06DCA7953 /* PRBoxChipTests.swift */; };
 		F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
+		F590D0D4A257F4DEAA61E213 /* WiqlClause.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE170E54FD1094990464C7C7 /* WiqlClause.swift */; };
 		F65612E2B49A3D789B301107 /* CredentialsCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB175501853DAE0EDDFA4477 /* CredentialsCopy.swift */; };
 		F72468714B382D9CADB24DC3 /* DeckSecretsMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66AF2CBFD42DE18E87E2455 /* DeckSecretsMigrationTests.swift */; };
 		F73AFC91E65EE97F20CB23AB /* RGBAPaletteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DFA928EDB1DBDEF8503D55 /* RGBAPaletteTests.swift */; };
@@ -394,6 +399,7 @@
 		72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdTierTests.swift; sourceTree = "<group>"; };
 		734F3EA73D9BBCC09CE2D9BF /* github_repos.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = github_repos.json; sourceTree = "<group>"; };
 		73F96E7BFEC173880798A099 /* provider-opencode-dark.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "provider-opencode-dark.pdf"; sourceTree = "<group>"; };
+		74158E8A2AC2596E3B4A8B49 /* WiqlClauseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlClauseTests.swift; sourceTree = "<group>"; };
 		7416BC1BF6361C4AA3485A19 /* azure_prs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = azure_prs.json; sourceTree = "<group>"; };
 		755EF26D530D5F4869C635EC /* MarketBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxWidget.swift; sourceTree = "<group>"; };
 		77088C4EE6AAF5F06DCA7953 /* PRBoxChipTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxChipTests.swift; sourceTree = "<group>"; };
@@ -459,6 +465,7 @@
 		CCED7DB3FECDD4E23935642E /* WeatherBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherBoxWidget.swift; sourceTree = "<group>"; };
 		CD5EFA4031BC633B2E191C16 /* AgentLivenessCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentLivenessCopyTests.swift; sourceTree = "<group>"; };
 		CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSQLTests.swift; sourceTree = "<group>"; };
+		CE170E54FD1094990464C7C7 /* WiqlClause.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlClause.swift; sourceTree = "<group>"; };
 		CE8FC52B15143ACCE8231B27 /* provider-azure-dark.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "provider-azure-dark.pdf"; sourceTree = "<group>"; };
 		CF554B40AD43EFE339212234 /* erApiLatest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = erApiLatest.json; sourceTree = "<group>"; };
 		D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeckWidgets.entitlements; sourceTree = "<group>"; };
@@ -563,6 +570,7 @@
 				C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */,
 				5089372A785C079676513337 /* TaskBoxSnapshot.swift */,
 				4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */,
+				CE170E54FD1094990464C7C7 /* WiqlClause.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -639,6 +647,7 @@
 				72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */,
 				AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */,
 				561AB4E0A1AD6FABCE740F12 /* WeatherSnapshotTests.swift */,
+				74158E8A2AC2596E3B4A8B49 /* WiqlClauseTests.swift */,
 				A5980FC9D35C1224E66C0DF7 /* Fixtures */,
 			);
 			path = SharedTests;
@@ -1028,6 +1037,7 @@
 				55D9104F71906E66209EB1B6 /* TaskBoxWidget.swift in Sources */,
 				35493BC168CD39B744DDCB28 /* WeatherBoxWidget.swift in Sources */,
 				BD8A7273480E5B5E14C8BB51 /* WeatherSnapshot.swift in Sources */,
+				BA1A8E2D2BBB42AB8EFF6311 /* WiqlClause.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1145,6 +1155,8 @@
 				0D92FA03A401FBF07703028E /* ToolCountTests.swift in Sources */,
 				E1EBE95E84F8F791E5B3D34A /* WeatherSnapshot.swift in Sources */,
 				D3B023BE033BD1965A89C5B6 /* WeatherSnapshotTests.swift in Sources */,
+				B2529940E2F167F2F085DE5A /* WiqlClause.swift in Sources */,
+				B352A17F328999896B9B8A34 /* WiqlClauseTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1195,6 +1207,7 @@
 				92F9D56CB31571F8F4BDB6CC /* SystemMetricsCore.swift in Sources */,
 				A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */,
 				590B4D6F5F70FC9062131040 /* WeatherSnapshot.swift in Sources */,
+				F590D0D4A257F4DEAA61E213 /* WiqlClause.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1243,6 +1256,7 @@
 				5310A1B92B3CCF57C291D6F4 /* SystemMetricsCore.swift in Sources */,
 				61AE78535BCAC51B5785634B /* TaskBoxSnapshot.swift in Sources */,
 				2A95575107BE1619EF3BB4D9 /* WeatherSnapshot.swift in Sources */,
+				97A4B82046694420FB236D6F /* WiqlClause.swift in Sources */,
 				87E936C049D826980DD8F8C7 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
