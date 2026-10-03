@@ -21,7 +21,7 @@ extension CredentialAccount {
     /// A rename must not invalidate a verification; a new token, a new
     /// organization or a new server must.
     var credentialFingerprint: String {
-        // The project list is order-independent: the five slots are a UI
+        // The project list is order-independent: the project slots are a UI
         // arrangement, and re-ordering them changes nothing the verification
         // depended on. Adding or removing one does.
         let projectKey = AzureAccountProjects.normalise(projects)
@@ -138,8 +138,8 @@ enum CredentialVerifier {
     private static func azure(_ account: CredentialAccount) async throws -> CredentialIdentity {
         // Verify stays organization-level: the probe below hits the
         // org-scoped `connectionData`, so the project is only here to satisfy
-        // `normalise`. Checking that all five projects exist would cost five
-        // more calls in the settings window and would fail a whole account over
+        // `normalise`. Checking that every project exists would cost one
+        // more call each in the settings window and would fail a whole account over
         // one mistyped slot; an unreachable project surfaces as a per-project
         // note on the face instead.
         let target = try AzureTarget.normalise(

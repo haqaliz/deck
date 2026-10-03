@@ -153,7 +153,7 @@ final class AzureAccountProjectsTests: XCTestCase {
     }
 
     func testReorderingTheSlotsDoesNotInvalidateAVerification() {
-        // The five slots are a UI arrangement. Shuffling them changes nothing
+        // The project slots are a UI arrangement. Shuffling them changes nothing
         // the verification depended on, and invalidating there would make a
         // good badge flicker for no reason.
         XCTAssertEqual(
@@ -171,7 +171,7 @@ final class AzureAccountProjectsTests: XCTestCase {
         XCTAssertEqual(one.credentialFingerprint, two.credentialFingerprint)
     }
 
-    // MARK: - Editing one of the five slots
+    // MARK: - Editing one of the slots
 
     func testTypingASpaceSurvives() {
         // Normalising on every keystroke trims the trailing space, which makes

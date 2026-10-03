@@ -1541,7 +1541,7 @@ private struct CredentialsSettingsView: View {
         }
     }
 
-    /// Five project slots: pickers once discovery has answered, plain text
+    /// The project slots: pickers once discovery has answered, plain text
     /// fields until then.
     ///
     /// The fallback is not a nicety — a PAT scoped to Work Items (Read) may not
@@ -1596,7 +1596,7 @@ private struct CredentialsSettingsView: View {
         }
     }
 
-    /// One of the five project slots, as a plain string binding.
+    /// One of the project slots, as a plain string binding.
     ///
     /// The value is stored exactly as typed — see `setSlot` for why
     /// normalising here would make a two-word project name untypeable.
@@ -2332,7 +2332,7 @@ private struct TaskBoxSettingsView: View {
             Section("Azure DevOps") {
                 AccountPicker(kind: .azure, accounts: accounts,
                               accountID: $accountID, onManage: onManage)
-                Text("The account carries the organization, up to five projects and the PAT. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
+                Text("The account carries the organization, up to eight projects and the PAT. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text("Shows open work items assigned to whoever owns the PAT \u{2014} not whoever is signed in to the browser or the az CLI \u{2014} across every project the account lists.")
