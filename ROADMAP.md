@@ -433,7 +433,7 @@ Deferred behind the new widgets by decision on 2026-08-22.
       **Open follow-ups:** multi-org (needs a slot that binds several accounts,
       interviewed and deliberately not chosen), review state / approval counts,
       raising the five-project cap (one constant — this org has
-      six). *(Cap raised to eight 2026-10-03, see M8.)*
+      six). *(Cap raised to eight 2026-10-04, see M8.)*
 - [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic
       (`docs/planning/devbox/prd.md:106`).
 
@@ -891,7 +891,7 @@ pick the next item with `deck-next`.
       requests rather than the walk itself.
 - [x] **Azure: raise the five-project cap** — `AzureAccountProjects.maxProjects`
       5 → **8**, so one account covers this org's six projects with room to
-      spare, for TaskBox and PRBox. Shipped 2026-10-03
+      spare, for TaskBox and PRBox. Shipped 2026-10-04 as v1.47
       (`docs/planning/azure-project-cap/`). Numbered slots kept — the cap was
       always a slot-count UI choice (`probe.md` F3 in the multi-project
       planning), not a budget, and an add/remove list would be a larger change
