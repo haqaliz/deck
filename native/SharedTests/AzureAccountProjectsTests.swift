@@ -32,12 +32,29 @@ final class AzureAccountProjectsTests: XCTestCase {
         )
     }
 
-    func testCapsAtFive() {
+    func testCapsAtEight() {
         let normalised = AzureAccountProjects.normalise(
-            ["p1", "p2", "p3", "p4", "p5", "p6", "p7"]
+            ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9"]
         )
-        XCTAssertEqual(normalised, ["p1", "p2", "p3", "p4", "p5"])
-        XCTAssertEqual(AzureAccountProjects.maxProjects, 5)
+        XCTAssertEqual(normalised, ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"])
+        XCTAssertEqual(AzureAccountProjects.maxProjects, 8)
+    }
+
+    func testASixProjectAccountSurvivesNormaliseAndARoundTrip() throws {
+        // The shape of the live org: six projects, one of them with a space.
+        // Under the old cap of five the sixth was dropped on decode.
+        let six = [
+            "ForesightManifold", "ForesightDevops", "Manifold Ops",
+            "Platform", "Data", "Sandbox",
+        ]
+        XCTAssertEqual(AzureAccountProjects.normalise(six), six)
+
+        var account = CredentialAccount(id: "a1", kind: .azure, label: "Azure")
+        account.organization = "ForesightAnalytics"
+        account.projects = six
+        let data = try JSONEncoder().encode(account)
+        let decoded = try JSONDecoder().decode(CredentialAccount.self, from: data)
+        XCTAssertEqual(decoded.projects, six)
     }
 
     func testEmptyInputYieldsEmptyList() {
@@ -136,7 +153,7 @@ final class AzureAccountProjectsTests: XCTestCase {
     }
 
     func testReorderingTheSlotsDoesNotInvalidateAVerification() {
-        // The five slots are a UI arrangement. Shuffling them changes nothing
+        // The project slots are a UI arrangement. Shuffling them changes nothing
         // the verification depended on, and invalidating there would make a
         // good badge flicker for no reason.
         XCTAssertEqual(
@@ -154,7 +171,7 @@ final class AzureAccountProjectsTests: XCTestCase {
         XCTAssertEqual(one.credentialFingerprint, two.credentialFingerprint)
     }
 
-    // MARK: - Editing one of the five slots
+    // MARK: - Editing one of the slots
 
     func testTypingASpaceSurvives() {
         // Normalising on every keystroke trims the trailing space, which makes
@@ -184,8 +201,16 @@ final class AzureAccountProjectsTests: XCTestCase {
         XCTAssertEqual(AzureAccountProjects.setSlot(0, in: ["A"], to: ""), [])
     }
 
+    func testTheLastSlotIsReachable() {
+        let seven = ["1", "2", "3", "4", "5", "6", "7"]
+        XCTAssertEqual(
+            AzureAccountProjects.setSlot(7, in: seven, to: "8"),
+            seven + ["8"]
+        )
+    }
+
     func testASlotBeyondTheCapIsIgnored() {
-        let five = ["1", "2", "3", "4", "5"]
-        XCTAssertEqual(AzureAccountProjects.setSlot(5, in: five, to: "6"), five)
+        let eight = ["1", "2", "3", "4", "5", "6", "7", "8"]
+        XCTAssertEqual(AzureAccountProjects.setSlot(8, in: eight, to: "9"), eight)
     }
 }

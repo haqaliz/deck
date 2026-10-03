@@ -433,7 +433,7 @@ Deferred behind the new widgets by decision on 2026-08-22.
       **Open follow-ups:** multi-org (needs a slot that binds several accounts,
       interviewed and deliberately not chosen), review state / approval counts,
       raising the five-project cap (one constant — this org has
-      six).
+      six). *(Cap raised to eight 2026-10-04, see M8.)*
 - [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic
       (`docs/planning/devbox/prd.md:106`).
 
@@ -889,8 +889,25 @@ pick the next item with `deck-next`.
       Pagination is unit-test-only on this machine: 31 repos, no `Link`
       header (probe P2), so the live check observes the absence of extra
       requests rather than the walk itself.
-- [ ] **Azure: raise the five-project cap** — one constant; this org has six
-      projects (multi-project entry).
+- [x] **Azure: raise the five-project cap** — `AzureAccountProjects.maxProjects`
+      5 → **8**, so one account covers this org's six projects with room to
+      spare, for TaskBox and PRBox. Shipped 2026-10-04 as v1.47
+      (`docs/planning/azure-project-cap/`). Numbered slots kept — the cap was
+      always a slot-count UI choice (`probe.md` F3 in the multi-project
+      planning), not a budget, and an add/remove list would be a larger change
+      than this follow-up needs. Every reader already funnelled through
+      `normalise`, so the change is the constant, the slot list that iterates
+      it, and the copy that named "five".
+      **Not measured, and said so on purpose:** no live probe was run. Request
+      count, wall-clock and snapshot size at 6 or 8 projects are arithmetic
+      only — TaskBox N+1 requests per tick (9 at N=8), PRBox 2N+1 (17 at N=8,
+      in an unbounded `withThrowingTaskGroup`). Nothing is known about Azure
+      throttling that burst; the multi-project work measured N<=5.
+      **Also not observed:** the eight slots on the rendered account page. The
+      slot list is `ForEach(0..<maxProjects)` and the unit tests cover the cap,
+      `setSlot` and a six-project round trip, but no UI check was run.
+      **Downgrade is lossy:** an older build `normalise`s a 6-8 project list to
+      five on decode and rewrites it.
 - [x] **TaskBox: custom WIQL** — the open follow-up from the TaskBox entry.
       Shipped 2026-09-25 (`docs/planning/taskbox-custom-wiql/`). The user writes
       only the WHERE condition. Deck owns `SELECT`, `FROM WorkItems`, the

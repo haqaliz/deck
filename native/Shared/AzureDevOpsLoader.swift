@@ -654,7 +654,7 @@ enum HostAzureDevOpsLoader {
 
 // MARK: - Project discovery (settings window only)
 
-/// The projects a PAT can see, for the account editor's five slots.
+/// The projects a PAT can see, for the account editor's project slots.
 enum AzureProjectsParser {
     /// nil means "couldn't read the answer"; an empty array means "this PAT
     /// sees no project", which the editor words differently.

@@ -1,20 +1,19 @@
-# Brief — taskbox-custom-wiql
+# Card: azure-project-cap (feat)
 
-Let TaskBox run a user-supplied WIQL filter instead of the fixed
-`[System.AssignedTo] = @Me` query. This is the open follow-up from the TaskBox and
-azure-multi-project entries (ROADMAP M8). Only the query builder, the settings
-tab and the parser should change. Board lanes, the widget face and the
-multi-project fan-out stay as they are.
+Inline brief (from `deck-next`, 2026-10-03; no GitHub issue).
 
-Caveats to design around:
-- A project-scoped WIQL URL does not filter by project. `[System.TeamProject] =
-  @project` must always be enforced regardless of what the user types, or rows
-  leak across projects.
-- Tree/one-hop queries answer `workItemRelations`, not `workItems`. Reject them
-  clearly or parse them.
-- Cap the returned ids before `workitemsbatch`.
-- A malformed query gets its own fetch outcome, not "auth or target".
+Raise `AzureAccountProjects.maxProjects` (`native/Shared/CredentialAccount.swift:100`,
+currently 5) so one Azure account covers the user's six-project org, for both
+TaskBox and PRBox. The account editor's slot list already iterates `maxProjects`
+(`DeckApp.swift:1553`), so confirm it grows cleanly and that migration and
+normalisation (`CredentialsMigration`, `CredentialAccount.swift:113-134`) still hold.
 
-Probe a few real queries against the live org before writing the PRD.
+Probe live first: measure request count, wall-clock and snapshot size at N=6 and
+at the candidate ceiling, since PRBox costs 2N+1 calls per 60s tick against a 10s
+request timeout, then choose the cap from the numbers.
 
-Source: deck-next pick (2026-09-25), from ROADMAP.md M8.
+Caveat: this is a cost-vs-ceiling decision, not just a constant. Update the
+pinned test (`AzureAccountProjectsTests.swift:40`), and tick ROADMAP M8 plus README.
+
+Source: ROADMAP.md M8 "Azure: raise the five-project cap" (line 892); multi-project
+entry open follow-up (ROADMAP.md:433-436).

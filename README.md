@@ -57,9 +57,9 @@ native colors, corners and materials, at three sizes each.
 | **WeatherBox** | weather for your location (conditions + 3-day forecast); a failed fetch says why |
 | **ClockBox** | world clocks for up to six cities (3 on medium, 6 on large): time, relative day, offset from your own zone |
 | **ShipBox** | GitHub Actions runs across up to five repos, newest first: status dots, durations, totals; clickable rows; a failed fetch says why |
-| **TaskBox** | Azure DevOps work items assigned to you, or matching your own WIQL condition, across up to five projects (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
+| **TaskBox** | Azure DevOps work items assigned to you, or matching your own WIQL condition, across up to eight projects (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
-| **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps (up to five projects) in one queue: counts, provider-tagged rows, drafts marked, per-row review state (approved / changes requested), click a row to open the PR; a failed fetch names the provider |
+| **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps (up to eight projects) in one queue: counts, provider-tagged rows, drafts marked, per-row review state (approved / changes requested), click a row to open the PR; a failed fetch names the provider |
 | **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, gold per gram, and US stocks and indices (with day change), searchable live in the picker — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
 
 All fourteen come in **small / medium / large** sizes.
@@ -216,15 +216,15 @@ to 12. Crypto and stock rows carry the change — and so does the USD row in
   condition Azure rejects shows its own reason under Test and "Check the query"
   on the widget, and a custom query's header reads "N items" instead of "N open".
   Each project returns at most 200 items, and past that the count reads "200+".
-- **One account can cover up to five projects.** The account editor lists the
-  projects your token can see and gives you five slots to pick from; if the
+- **One account can cover up to eight projects.** The account editor lists the
+  projects your token can see and gives you eight slots to pick from; if the
   token is too narrowly scoped to list them, type the names instead. Every
   project is queried and the results are merged into one list. With a single
   project the header reads `org / project` and shows your current sprint; with
   several it reads the organization and drops the sprint, because a current
   sprint belongs to one project and one team. Turn on *Show project on rows* to
   tag each row with where it came from. If one project can't be read the others
-  still render, with a line naming the one that failed. The same five slots
+  still render, with a line naming the one that failed. The same eight slots
   serve PRBox, where the project also prefixes the repository name — a repo
   name is only unique within its project.
 - **PRBox review state** marks each row `✓` (green — someone else has

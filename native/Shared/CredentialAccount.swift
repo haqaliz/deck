@@ -94,12 +94,15 @@ enum CredentialKind: String, Codable, CaseIterable {
 /// settings pickers — funnels through here, so a duplicate, a stray space or a
 /// sixth project cannot reach a loader from any direction.
 enum AzureAccountProjects {
-    /// Five slots, matching ShipBox's five repos. Cost is not what bounds this
-    /// (the org probed on 2026-08-28 has six projects, and querying all six
-    /// would be six WIQL calls and one batch) — it is how many pickers fit.
-    static let maxProjects = 5
+    /// Eight slots. Cost is not what bounds this — it is how many pickers fit
+    /// on the account page. It was five, which left the org probed on
+    /// 2026-08-28 (six projects) one short; eight covers it with room to spare.
+    /// Per tick that is N WIQL calls and one batch for TaskBox, and an identity
+    /// call plus 2N queries for PRBox. Those counts are arithmetic: nothing has
+    /// been measured above five projects (`docs/planning/azure-project-cap/`).
+    static let maxProjects = 8
 
-    /// Writes one slot of the five, leaving the value exactly as typed.
+    /// Writes one slot of the project list, leaving the value exactly as typed.
     ///
     /// Deliberately **not** normalised: doing that per keystroke trims the
     /// space out of "Manifold Ops" as the user types it, making a two-word
