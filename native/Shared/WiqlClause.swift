@@ -46,11 +46,16 @@ enum WiqlClause {
     /// Far inside WIQL's own 32K limit, and far past any hand-written condition.
     static let maxLength = 4000
 
+    /// The open-state exclusion shared by the built-in filter and the presets.
+    /// One string, so a preset and the built-in can never drift apart.
+    static let openStates =
+        "[System.State] NOT IN ('Closed', 'Removed', 'Done')"
+
     /// Today's filter, unchanged: open items assigned to whoever owns the PAT.
     /// `@Me` is the PAT's owner — not whoever is signed in to the browser or the
     /// az CLI.
     static let builtInCondition =
-        "[System.AssignedTo] = @Me AND [System.State] NOT IN ('Closed', 'Removed', 'Done')"
+        "[System.AssignedTo] = @Me AND " + openStates
 
     /// Checked in this order and whole-word, case-insensitive, outside literals
     /// and field names — so `CONTAINS 'order by'` and `[Custom.FromDate]` pass.

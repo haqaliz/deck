@@ -79,6 +79,7 @@
 		3E2F3CD69BD386D45D214D04 /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F291A6BF3E8077A4206A68E9 /* AgentService.swift */; };
 		3EE3E1576DE689983493F8DA /* provider-opencode-light.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 2A226CF3C44DC0410557BFFB /* provider-opencode-light.pdf */; };
 		3F9D2C27AE013737B357EA4D /* ProcessSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */; };
+		40482A521AFB8F5BF69F9B7F /* WiqlPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */; };
 		41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
 		43222AFDC10A1829EE888C3E /* NetBoxCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */; };
 		43C94E87B1444FE3968131A8 /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
@@ -111,6 +112,7 @@
 		590B4D6F5F70FC9062131040 /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
 		596256D947FA628D3158EA89 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
 		5C0FC13FD9210AD4499E5B6E /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
+		5C66BC767CDD4C5D197BE30F /* WiqlPresetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD561BD148534E3EA9F6D063 /* WiqlPresetTests.swift */; };
 		5CE30F9D3500ACC02D8D8BF4 /* AgentLivenessCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5EFA4031BC633B2E191C16 /* AgentLivenessCopyTests.swift */; };
 		5DAADD8D5F4E17021759CBE1 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		5DC6BA12A3C8B551D4965197 /* AgentLivenessCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B023DC10E49885E273424 /* AgentLivenessCopy.swift */; };
@@ -124,6 +126,7 @@
 		63CAFAA1018EA45415E903FE /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		6551819CA5506A4D266E0D79 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
 		66B10E484885189925757346 /* DeckBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B96F825FC76E1267D5ACCC /* DeckBundle.swift */; };
+		6859FF716F2A08F81EA0F19E /* WiqlPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */; };
 		6993ADF4472F602F7B97C449 /* LiveBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */; };
 		69A410AA643B0243A7ED6F82 /* yahoo_chart_aapl.json in Resources */ = {isa = PBXBuildFile; fileRef = 584C732D7197A9020BC1AEF4 /* yahoo_chart_aapl.json */; };
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -250,6 +253,7 @@
 		D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		D74629484729CBEAE1664FFD /* GitBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */; };
 		D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */; };
+		D7FF95249D9845C32AE38FB6 /* WiqlPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */; };
 		D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		D8DE1BC7D47C480B185987C0 /* ShipBoxSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF045F6211C715FF81858003 /* ShipBoxSettingsTests.swift */; };
 		D969837142F67BF5F92D6160 /* DeckBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B96F825FC76E1267D5ACCC /* DeckBundle.swift */; };
@@ -293,6 +297,7 @@
 		F7D714F5EC3F20D7242F6E85 /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
 		F7F3E55580FB2E9464402615 /* provider-github-dark.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 36B787FA6039451942D992E8 /* provider-github-dark.pdf */; };
 		F8D0B9E76E31D7928A486CAA /* wallexMarkets.json in Resources */ = {isa = PBXBuildFile; fileRef = D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */; };
+		FA798EC3517F9FDFD10FB9FC /* WiqlPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */; };
 		FBD849BD3B656D44706F28F6 /* DeckLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E922A862E405B58537BA49 /* DeckLinkTests.swift */; };
 		FC125295397F417AA47379E3 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		FC5D26AEE58F54EA84894285 /* AgentLivenessCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B023DC10E49885E273424 /* AgentLivenessCopy.swift */; };
@@ -379,6 +384,7 @@
 		45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxWidget.swift; sourceTree = "<group>"; };
 		46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetrics.swift; sourceTree = "<group>"; };
 		4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryCoreTests.swift; sourceTree = "<group>"; };
+		4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlPreset.swift; sourceTree = "<group>"; };
 		5089372A785C079676513337 /* TaskBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBoxSnapshot.swift; sourceTree = "<group>"; };
 		50A8922BFDCE56FEEAFDE601 /* coinGeckoMarkets.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = coinGeckoMarkets.json; sourceTree = "<group>"; };
 		50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatBoxWidget.swift; sourceTree = "<group>"; };
@@ -465,6 +471,7 @@
 		CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLink.swift; sourceTree = "<group>"; };
 		CBC89EF1D34611CB2B244F15 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		CCED7DB3FECDD4E23935642E /* WeatherBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherBoxWidget.swift; sourceTree = "<group>"; };
+		CD561BD148534E3EA9F6D063 /* WiqlPresetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlPresetTests.swift; sourceTree = "<group>"; };
 		CD5EFA4031BC633B2E191C16 /* AgentLivenessCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentLivenessCopyTests.swift; sourceTree = "<group>"; };
 		CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSQLTests.swift; sourceTree = "<group>"; };
 		CE170E54FD1094990464C7C7 /* WiqlClause.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlClause.swift; sourceTree = "<group>"; };
@@ -573,6 +580,7 @@
 				5089372A785C079676513337 /* TaskBoxSnapshot.swift */,
 				4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */,
 				CE170E54FD1094990464C7C7 /* WiqlClause.swift */,
+				4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -651,6 +659,7 @@
 				AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */,
 				561AB4E0A1AD6FABCE740F12 /* WeatherSnapshotTests.swift */,
 				74158E8A2AC2596E3B4A8B49 /* WiqlClauseTests.swift */,
+				CD561BD148534E3EA9F6D063 /* WiqlPresetTests.swift */,
 				A5980FC9D35C1224E66C0DF7 /* Fixtures */,
 			);
 			path = SharedTests;
@@ -1041,6 +1050,7 @@
 				35493BC168CD39B744DDCB28 /* WeatherBoxWidget.swift in Sources */,
 				BD8A7273480E5B5E14C8BB51 /* WeatherSnapshot.swift in Sources */,
 				BA1A8E2D2BBB42AB8EFF6311 /* WiqlClause.swift in Sources */,
+				FA798EC3517F9FDFD10FB9FC /* WiqlPreset.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1161,6 +1171,8 @@
 				D3B023BE033BD1965A89C5B6 /* WeatherSnapshotTests.swift in Sources */,
 				B2529940E2F167F2F085DE5A /* WiqlClause.swift in Sources */,
 				B352A17F328999896B9B8A34 /* WiqlClauseTests.swift in Sources */,
+				6859FF716F2A08F81EA0F19E /* WiqlPreset.swift in Sources */,
+				5C66BC767CDD4C5D197BE30F /* WiqlPresetTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1212,6 +1224,7 @@
 				A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */,
 				590B4D6F5F70FC9062131040 /* WeatherSnapshot.swift in Sources */,
 				F590D0D4A257F4DEAA61E213 /* WiqlClause.swift in Sources */,
+				40482A521AFB8F5BF69F9B7F /* WiqlPreset.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1261,6 +1274,7 @@
 				61AE78535BCAC51B5785634B /* TaskBoxSnapshot.swift in Sources */,
 				2A95575107BE1619EF3BB4D9 /* WeatherSnapshot.swift in Sources */,
 				97A4B82046694420FB236D6F /* WiqlClause.swift in Sources */,
+				D7FF95249D9845C32AE38FB6 /* WiqlPreset.swift in Sources */,
 				87E936C049D826980DD8F8C7 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
