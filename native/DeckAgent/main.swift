@@ -233,7 +233,8 @@ Task {
                 organization: credential.organization,
                 projects: credential.projects,
                 token: credential.token,
-                condition: settings.taskbox.query
+                condition: settings.taskbox.query,
+                team: settings.taskbox.team
             )
             TaskBoxSnapshotStore.save(taskbox)
             FetchStatusStore.record(.ok, for: .taskbox)

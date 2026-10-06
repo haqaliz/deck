@@ -444,7 +444,8 @@ struct ContentView: View {
                 organization: credential.organization,
                 projects: credential.projects,
                 token: credential.token,
-                condition: settings.taskbox.query
+                condition: settings.taskbox.query,
+                team: settings.taskbox.team
             )
         } catch {
             FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .taskbox)
@@ -2320,6 +2321,9 @@ private struct TaskBoxSettingsView: View {
     @State private var draft = ""
     @State private var testing = false
     @State private var testLine: WiqlTestSummary.Line?
+    /// The project's teams, loaded once per account selection, host-side.
+    @State private var teams: [String] = []
+    @State private var teamsProblem: String?
 
     private var problem: WiqlClause.Problem? { WiqlClause.validate(draft) }
     private var isDirty: Bool {
@@ -2328,6 +2332,10 @@ private struct TaskBoxSettingsView: View {
     }
 
     var body: some View {
+        // One keychain resolution per render: the Test button and the Team row
+        // both read it.
+        let resolved = credential()
+
         Form {
             Section("Azure DevOps") {
                 AccountPicker(kind: .azure, accounts: accounts,
@@ -2367,9 +2375,13 @@ private struct TaskBoxSettingsView: View {
                     }
                     .disabled(problem != nil || !isDirty)
                     Button(testing ? "Testing\u{2026}" : "Test") { runTest() }
-                        .disabled(problem != nil || testing || credential() == nil)
-                    Button("Start from default") { draft = WiqlClause.builtInCondition }
-                        .disabled(draft == WiqlClause.builtInCondition)
+                        .disabled(problem != nil || testing || resolved == nil)
+                    Menu("Presets") {
+                        ForEach(WiqlPreset.allCases, id: \.self) { preset in
+                            Button(preset.title) { draft = preset.condition(team: teamContext) }
+                        }
+                    }
+                    .fixedSize()
                     Spacer()
                     if isDirty {
                         Text("Unsaved changes")
@@ -2382,6 +2394,18 @@ private struct TaskBoxSettingsView: View {
                         .font(.caption)
                         .foregroundStyle(testLine.isProblem ? .red : .secondary)
                         .textSelection(.enabled)
+                }
+                if resolved?.projects.count == 1 {
+                    Picker("Team", selection: $settings.team) {
+                        Text("Default team").tag("")
+                        ForEach(teamOptions, id: \.self) { name in
+                            Text(name).tag(name)
+                        }
+                    }
+                    .onChange(of: settings.team) { onApply() }
+                    Text(teamsProblem ?? "Used by the Current sprint preset and the sprint chip. A team belongs to one project, so it is offered only with a single project; the preset names the account's project and team.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 Text("Write only the WHERE condition \u{2014} no SELECT, FROM or ORDER BY. Deck limits it to each of the account's projects and sorts by last change. Empty uses the built-in filter: open items assigned to the PAT's owner.")
                     .font(.caption)
@@ -2422,6 +2446,9 @@ private struct TaskBoxSettingsView: View {
         .formStyle(.grouped)
         .padding(.top, 4)
         .onAppear { draft = settings.query }
+        // One host call per account selection — never on the agent tick, never
+        // per keystroke (the MarketBox rate-budget lesson).
+        .task(id: accountID) { await loadTeams() }
         // A result describes the text and the account it ran against.
         .onChange(of: draft) { testLine = nil }
         .onChange(of: accountID) { testLine = nil }
@@ -2446,6 +2473,48 @@ private struct TaskBoxSettingsView: View {
                 if draft == condition { testLine = WiqlTestSummary.line(results) }
                 testing = false
             }
+        }
+    }
+
+    /// The fetched teams plus the stored value when the listing did not carry
+    /// it, so a renamed or unlisted team stays selectable rather than silently
+    /// snapping to another entry.
+    private var teamOptions: [String] {
+        var options = teams
+        let stored = settings.team.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !stored.isEmpty, !options.contains(stored) {
+            options.insert(stored, at: 0)
+        }
+        return options
+    }
+
+    /// The context a Current-sprint preset names. Non-nil only when the
+    /// account has exactly one project and a team is chosen — the same gate
+    /// the fetch applies (probe P20: elsewhere a literal silently matches 0).
+    private var teamContext: WiqlTeamContext? {
+        guard let resolved = credential(),
+              resolved.projects.count == 1,
+              !settings.team.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return nil }
+        return WiqlTeamContext(project: resolved.projects[0], team: settings.team)
+    }
+
+    private func loadTeams() async {
+        teams = []
+        teamsProblem = nil
+        guard let resolved = credential(),
+              resolved.projects.count == 1,
+              !resolved.organization.isEmpty
+        else { return }
+        do {
+            teams = try await HostAzureTeamsLoader.list(
+                organization: resolved.organization,
+                token: resolved.token,
+                project: resolved.projects[0]
+            )
+        } catch {
+            // The stored value stays selectable; say the list could not load.
+            teamsProblem = "Couldn't list this project's teams. The stored team stays selectable."
         }
     }
 }

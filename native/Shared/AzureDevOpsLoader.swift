@@ -271,10 +271,14 @@ enum WiqlResponse {
         URL(string: "\(target.projectBase)/_apis/wit/wiql?api-version=7.1&$top=\(WiqlIdParser.requestTop)")
     }
 
-    /// Only this call turns a 400 into a rejected query: it is the one request
-    /// whose body the user wrote. A 400 anywhere else keeps its old meaning,
-    /// and the 203 sign-in page a bad PAT gets stays `serverError` so the
-    /// classifier still sends the user to the token.
+    /// Only this call turns a 400, or a 500 carrying a reason, into a rejected
+    /// query: it is the one request whose body the user wrote. Measured (probe
+    /// P18/P19): a bad `@CurrentIteration` team literal answers **500** with a
+    /// readable message, while a 400 is the ordinary syntax/unknown-field
+    /// rejection. A 500 *without* a message, and 502/503/504, stay server
+    /// errors — an outage must never be worded as "check the query". The 203
+    /// sign-in page a bad PAT gets stays `serverError` so the classifier still
+    /// sends the user to the token.
     static func interpret(status: Int, body: Data) throws -> ParsedWiql {
         switch status {
         case 200:
@@ -282,6 +286,11 @@ enum WiqlResponse {
             return parsed
         case 400:
             throw AzureDevOpsError.queryRejected(WiqlErrorParser.message(body))
+        case 500:
+            if let message = WiqlErrorParser.message(body) {
+                throw AzureDevOpsError.queryRejected(message)
+            }
+            throw AzureDevOpsError.serverError(status)
         default:
             throw AzureDevOpsError.serverError(status)
         }
@@ -424,6 +433,34 @@ enum WorkItemParser {
     }
 }
 
+// MARK: - Sprint route (pure)
+
+/// Decides what the sprint-chip call may ask for, and builds its URL.
+///
+/// A team literal only answers for its own project — probe P20: the same
+/// query against another project returns 200 with 0 items — so the segment is
+/// used only when there is exactly one project to be right about. The chip
+/// already shows only then (`fetch`'s `targets.count == 1`); this keeps the
+/// gate in one testable place, so the legacy single-project fallback cannot
+/// pick up a team segment by accident.
+enum AzureSprintRoute {
+    static func team(targetCount: Int, requested: String) -> String {
+        guard targetCount == 1 else { return "" }
+        return requested.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// A team of "" asks the project's default team — today's URL exactly.
+    static func currentIterationURL(_ target: AzureTarget, team: String) -> URL? {
+        let name = team.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = "\(target.projectBase)/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1"
+        guard !name.isEmpty else { return URL(string: base) }
+        guard let segment = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
+            return nil
+        }
+        return URL(string: "\(target.projectBase)/\(segment)/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1")
+    }
+}
+
 // MARK: - Fetch (host/agent only — unsandboxed)
 
 enum HostAzureDevOpsLoader {
@@ -437,7 +474,8 @@ enum HostAzureDevOpsLoader {
         organization: String,
         projects: [String],
         token: String,
-        condition: String = ""
+        condition: String = "",
+        team: String = ""
     ) async throws -> TaskBoxSnapshot {
         let targets = try AzureTargets.normalise(organization: organization, projects: projects)
         // Before any request: an unvalidated condition can escape its
@@ -481,8 +519,9 @@ enum HostAzureDevOpsLoader {
 
         // The sprint is per project *and* per team, so it can only be shown
         // when there is exactly one project to be wrong about.
+        let sprintTeam = AzureSprintRoute.team(targetCount: targets.count, requested: team)
         let sprint = targets.count == 1
-            ? await currentSprint(target: targets[0], auth: auth)
+            ? await currentSprint(target: targets[0], team: sprintTeam, auth: auth)
             : nil
 
         let ids = AzureIDMerge.interleave(idLists, limit: WiqlIdParser.idLimit)
@@ -603,10 +642,8 @@ enum HostAzureDevOpsLoader {
     /// Best-effort: any failure yields nil and the header simply omits the
     /// sprint. A missing iteration must never fail the tick or blank a working
     /// task list.
-    private static func currentSprint(target: AzureTarget, auth: String) async -> String? {
-        guard let url = URL(
-            string: "\(target.projectBase)/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1"
-        ) else { return nil }
+    private static func currentSprint(target: AzureTarget, team: String, auth: String) async -> String? {
+        guard let url = AzureSprintRoute.currentIterationURL(target, team: team) else { return nil }
         guard let data = try? await send(url: url, auth: auth, body: nil) else { return nil }
         return CurrentSprintParser.parse(data)
     }
@@ -711,6 +748,69 @@ enum HostAzureProjectsLoader {
         }
         guard http.statusCode == 200 else { throw AzureDevOpsError.serverError(http.statusCode) }
         guard let names = AzureProjectsParser.parse(data) else {
+            throw AzureDevOpsError.invalidPayload
+        }
+        return names
+    }
+}
+
+// MARK: - Team discovery (settings window only)
+
+/// The teams a project has, for the TaskBox team picker.
+enum AzureTeamsParser {
+    /// nil means "couldn't read the answer"; an empty array means "this
+    /// project has no team", which the picker words as default-only.
+    ///
+    /// Sorted by name for the same reason the project picker is: a picker
+    /// whose entries move between openings is worse than one that is merely
+    /// alphabetical.
+    static func parse(_ data: Data) -> [String]? {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let rows = root["value"] as? [[String: Any]]
+        else { return nil }
+
+        return rows
+            .compactMap { row -> String? in
+                guard let name = (row["name"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty
+                else { return nil }
+                return name
+            }
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+}
+
+/// Host-app only, one call, for the TaskBox team picker. A team is only
+/// offered when the account has exactly one project: probe P20 measured that
+/// a team literal is silently empty in any other project.
+enum HostAzureTeamsLoader {
+    static func list(organization: String, token: String, project: String) async throws -> [String] {
+        let target = try AzureTarget.normalise(organization: organization, project: project)
+        guard let url = URL(
+            string: "\(target.orgBase)/_apis/projects/\(target.projectSegment)/teams?api-version=7.1"
+        ) else { throw AzureDevOpsError.invalidTarget }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        request.setValue(
+            "Basic " + Data(":\(token)".utf8).base64EncodedString(),
+            forHTTPHeaderField: "Authorization"
+        )
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw AzureDevOpsError.transport(error.localizedDescription)
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw AzureDevOpsError.transport("Not an HTTP response")
+        }
+        guard http.statusCode == 200 else { throw AzureDevOpsError.serverError(http.statusCode) }
+        guard let names = AzureTeamsParser.parse(data) else {
             throw AzureDevOpsError.invalidPayload
         }
         return names

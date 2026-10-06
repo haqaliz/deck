@@ -857,6 +857,11 @@ struct TaskBoxSettings: Codable, Equatable {
     /// assigned to the PAT's owner). Only the settings window's Apply writes
     /// it, so the agent never runs a half-typed condition.
     var query = ""
+    /// The team the sprint chip asks about — empty means the project's default
+    /// team (the behavior before the picker). Used only when the account has
+    /// exactly one project: probe P20 measured a team literal silently
+    /// matching nothing in any other project.
+    var team = ""
     var todoColor = RGBA.systemBlue
     var inProgressColor = RGBA.systemOrange
     var testingColor = RGBA.systemPurple
@@ -877,6 +882,7 @@ struct TaskBoxSettings: Codable, Equatable {
         taskCount = try c.decodeIfPresent(Int.self, forKey: .taskCount) ?? 5
         stateMapping = try c.decodeIfPresent(TaskStateMapping.self, forKey: .stateMapping) ?? TaskStateMapping()
         query = try c.decodeIfPresent(String.self, forKey: .query) ?? ""
+        team = try c.decodeIfPresent(String.self, forKey: .team) ?? ""
         todoColor = try c.decodeIfPresent(RGBA.self, forKey: .todoColor) ?? RGBA.systemBlue
         inProgressColor = try c.decodeIfPresent(RGBA.self, forKey: .inProgressColor) ?? RGBA.systemOrange
         testingColor = try c.decodeIfPresent(RGBA.self, forKey: .testingColor) ?? RGBA.systemPurple

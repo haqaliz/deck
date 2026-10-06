@@ -938,7 +938,33 @@ pick the next item with `deck-next`.
       `[System.Id] > 0` came back 200-capped in a normal tick.
       **Open follow-ups:** presets (assigned / created / current sprint), a team
       segment for `@CurrentIteration` (it resolves against each project's
-      default team today).
+      default team today). *(Both shipped 2026-10-07 — see the entry below.)*
+- [x] **TaskBox: query presets + team context** — the follow-up above, from the
+      custom-WIQL entry. Shipped 2026-10-07
+      (`docs/planning/taskbox-query-presets/`). A **Presets** menu (Assigned to
+      me / Created by me / Current sprint) replaces the draft and never applies
+      it — Apply stays the only writer; "Start from default" folded into
+      "Assigned to me", pinned byte-identical to the built-in filter. A
+      single-project account gets a **Team** picker (host-side
+      `_apis/projects/{p}/teams`); the Current-sprint preset then emits
+      `@CurrentIteration('[Project]\Team')` and the sprint chip asks that team's
+      iteration instead of the project default.
+      **Probed live first, and the probe shaped the scope:** a team literal only
+      answers for its own project — run against another project it is **200 with
+      0 items** (silently empty) — so the picker exists only when there is one
+      project; per-project team mapping is a recorded follow-up. A bad or
+      malformed literal answers **500 with a readable reason** (VS402612), not
+      400, so `WiqlResponse.interpret` reads exactly a 500-with-message as
+      `queryRejected` too; a message-less 500 and 502/503/504 stay `unreachable`,
+      so an outage is never worded as "check the query".
+      **Honest caveat:** this org has one team per project, so the picker changes
+      nothing here today (P16 = P17, both sprint routes answer `Sprint 63`); it
+      is for orgs whose working team is not the default.
+      Verified on the installed copy (`verification.md`): preset → Apply →
+      snapshot `24 items` / `Sprint 63`; bogus literal → `queryRejected` with the
+      snapshot **mtime unchanged**; `[System.Id] > 0` → `200+`. Not observed and
+      said so: the Test button against a real 500, the two-project row hiding,
+      and a gallery re-add (no extension change).
 - [ ] **Keychain: exercise the locked-keychain path** on a scratch account —
       the one designed-and-unit-tested error path never exercised against a
       genuinely locked keychain.
