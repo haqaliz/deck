@@ -402,6 +402,19 @@ final class TaskBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(TaskBoxSettings.self, from: data).query, settings.query)
     }
 
+    /// Settings written before the team picker exist mean the default team.
+    func testAnAbsentTeamIsTheDefaultTeam() throws {
+        let s = try decode(#"{"organization":"C"}"#, as: TaskBoxSettings.self)
+        XCTAssertEqual(s.team, "")
+    }
+
+    func testTheTeamRoundTrips() throws {
+        var settings = TaskBoxSettings()
+        settings.team = "ForesightManifold Team"
+        let data = try JSONEncoder().encode(settings)
+        XCTAssertEqual(try JSONDecoder().decode(TaskBoxSettings.self, from: data).team, settings.team)
+    }
+
     /// A settings file written by a newer build must not cost the user their
     /// whole TaskBox configuration.
     func testUnknownFutureFieldIsIgnored() throws {
@@ -534,6 +547,7 @@ final class DeckSettingsRoundTripTests: XCTestCase {
         s.shipbox.runCount = 13
         s.taskbox.organization = "org"
         s.taskbox.project = "proj"
+        s.taskbox.team = "ForesightManifold Team"
         s.calbox.todayCount = 3
         s.calbox.showTomorrow = false
         s.calbox.accentColor = RGBA(red: 0.01, green: 0.02, blue: 0.03)

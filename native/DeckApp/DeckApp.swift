@@ -444,7 +444,8 @@ struct ContentView: View {
                 organization: credential.organization,
                 projects: credential.projects,
                 token: credential.token,
-                condition: settings.taskbox.query
+                condition: settings.taskbox.query,
+                team: settings.taskbox.team
             )
         } catch {
             FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .taskbox)

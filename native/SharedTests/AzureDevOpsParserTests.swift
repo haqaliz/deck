@@ -347,3 +347,45 @@ final class WorkItemParserTests: XCTestCase {
         XCTAssertEqual(items?.first?.itemType, "Product Backlog Item")
     }
 }
+
+// MARK: - Sprint route
+
+/// Which URL the sprint chip asks. A team literal is only valid for its own
+/// project — probe P20 measured 200 with 0 items across projects — so the
+/// segment is used only when there is exactly one project, the chip's own
+/// gate.
+final class AzureSprintRouteTests: XCTestCase {
+    func testATeamIsUsedOnlyForASingleProject() {
+        XCTAssertEqual(AzureSprintRoute.team(targetCount: 1, requested: "Team A"), "Team A")
+        XCTAssertEqual(AzureSprintRoute.team(targetCount: 2, requested: "Team A"), "")
+        XCTAssertEqual(AzureSprintRoute.team(targetCount: 3, requested: "Team A"), "")
+    }
+
+    func testTheTeamIsTrimmed() {
+        XCTAssertEqual(AzureSprintRoute.team(targetCount: 1, requested: "  Team A \n"), "Team A")
+    }
+
+    func testTheDefaultTeamURLIsTodaysURL() throws {
+        let target = try AzureTarget.normalise(organization: "org", project: "My Project")
+        XCTAssertEqual(
+            AzureSprintRoute.currentIterationURL(target, team: "")?.absoluteString,
+            "https://dev.azure.com/org/My%20Project/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1"
+        )
+    }
+
+    func testASpacedTeamNameIsPercentEncoded() throws {
+        let target = try AzureTarget.normalise(organization: "org", project: "My Project")
+        XCTAssertEqual(
+            AzureSprintRoute.currentIterationURL(target, team: "ForesightManifold Team")?.absoluteString,
+            "https://dev.azure.com/org/My%20Project/ForesightManifold%20Team/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1"
+        )
+    }
+
+    func testAWhitespaceTeamMeansTheDefaultTeam() throws {
+        let target = try AzureTarget.normalise(organization: "org", project: "P")
+        XCTAssertEqual(
+            AzureSprintRoute.currentIterationURL(target, team: "   ")?.absoluteString,
+            AzureSprintRoute.currentIterationURL(target, team: "")?.absoluteString
+        )
+    }
+}

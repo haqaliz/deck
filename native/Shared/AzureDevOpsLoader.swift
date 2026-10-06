@@ -433,6 +433,34 @@ enum WorkItemParser {
     }
 }
 
+// MARK: - Sprint route (pure)
+
+/// Decides what the sprint-chip call may ask for, and builds its URL.
+///
+/// A team literal only answers for its own project — probe P20: the same
+/// query against another project returns 200 with 0 items — so the segment is
+/// used only when there is exactly one project to be right about. The chip
+/// already shows only then (`fetch`'s `targets.count == 1`); this keeps the
+/// gate in one testable place, so the legacy single-project fallback cannot
+/// pick up a team segment by accident.
+enum AzureSprintRoute {
+    static func team(targetCount: Int, requested: String) -> String {
+        guard targetCount == 1 else { return "" }
+        return requested.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// A team of "" asks the project's default team — today's URL exactly.
+    static func currentIterationURL(_ target: AzureTarget, team: String) -> URL? {
+        let name = team.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = "\(target.projectBase)/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1"
+        guard !name.isEmpty else { return URL(string: base) }
+        guard let segment = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
+            return nil
+        }
+        return URL(string: "\(target.projectBase)/\(segment)/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1")
+    }
+}
+
 // MARK: - Fetch (host/agent only — unsandboxed)
 
 enum HostAzureDevOpsLoader {
@@ -446,7 +474,8 @@ enum HostAzureDevOpsLoader {
         organization: String,
         projects: [String],
         token: String,
-        condition: String = ""
+        condition: String = "",
+        team: String = ""
     ) async throws -> TaskBoxSnapshot {
         let targets = try AzureTargets.normalise(organization: organization, projects: projects)
         // Before any request: an unvalidated condition can escape its
@@ -490,8 +519,9 @@ enum HostAzureDevOpsLoader {
 
         // The sprint is per project *and* per team, so it can only be shown
         // when there is exactly one project to be wrong about.
+        let sprintTeam = AzureSprintRoute.team(targetCount: targets.count, requested: team)
         let sprint = targets.count == 1
-            ? await currentSprint(target: targets[0], auth: auth)
+            ? await currentSprint(target: targets[0], team: sprintTeam, auth: auth)
             : nil
 
         let ids = AzureIDMerge.interleave(idLists, limit: WiqlIdParser.idLimit)
@@ -612,10 +642,8 @@ enum HostAzureDevOpsLoader {
     /// Best-effort: any failure yields nil and the header simply omits the
     /// sprint. A missing iteration must never fail the tick or blank a working
     /// task list.
-    private static func currentSprint(target: AzureTarget, auth: String) async -> String? {
-        guard let url = URL(
-            string: "\(target.projectBase)/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1"
-        ) else { return nil }
+    private static func currentSprint(target: AzureTarget, team: String, auth: String) async -> String? {
+        guard let url = AzureSprintRoute.currentIterationURL(target, team: team) else { return nil }
         guard let data = try? await send(url: url, auth: auth, body: nil) else { return nil }
         return CurrentSprintParser.parse(data)
     }
