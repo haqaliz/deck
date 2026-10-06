@@ -166,11 +166,13 @@ project failed.
 
 ## 7. Non-goals
 
-- Presets menu (Q4 follow-up).
+- Presets menu (Q4 follow-up). *(Shipped 2026-10-07 — `../taskbox-query-presets/`.)*
 - Link/tree queries, user-controlled `ORDER BY` or columns.
 - Per-project queries: one condition applies to every project on the account.
 - Team context for `@CurrentIteration` / `@TeamAreas`. They resolve against
   each project's default team (P7). A team segment in the URL is a follow-up.
+  *(The `@CurrentIteration` half shipped 2026-10-07 — `../taskbox-query-presets/`;
+  `@TeamAreas` stays out.)*
 - Saved/shared Azure queries by id (`_apis/wit/wiql/{id}`).
 - Exact totals past 200.
 - Syntax highlighting / autocomplete of field names.

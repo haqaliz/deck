@@ -338,6 +338,16 @@ Do not delete the container; see the trap below.
   ("TF51005: … «[Custom.Nope]»"), which is why a bad condition is
   `queryRejected` and not `badResponse`. Only a valid-but-wrong one (a misspelt
   state) is silently empty, so the settings Test prints its 0.
+  Two related facts from the presets/team follow-up (2026-10-07): **a bad
+  `@CurrentIteration` team literal is a 500, not a 400, and carries a readable
+  reason** (VS402612; a malformed literal's message has no VS/TF prefix at all)
+  — `WiqlResponse.interpret` therefore reads exactly a 500-with-a-message as
+  `queryRejected`, while a message-less 500 and 502/503/504 stay `unreachable`,
+  so an outage is never worded as "check the query"; and **a team literal only
+  answers for its own project** — the same query against another project is 200
+  with 0 items (silently empty), which is why the team picker is offered only
+  for single-project accounts and the segment is gated in one place
+  (`AzureSprintRoute.team`).
 - **Fan out concurrently or miss the tick.** `URLSession.timeoutInterval` is
   per *request*, so N serial fetches can stall for N×10s against a 60s agent
   cadence. Five repos measured **9.4s serially, 2.1s concurrently**. ShipBox's
