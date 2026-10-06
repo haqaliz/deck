@@ -271,10 +271,14 @@ enum WiqlResponse {
         URL(string: "\(target.projectBase)/_apis/wit/wiql?api-version=7.1&$top=\(WiqlIdParser.requestTop)")
     }
 
-    /// Only this call turns a 400 into a rejected query: it is the one request
-    /// whose body the user wrote. A 400 anywhere else keeps its old meaning,
-    /// and the 203 sign-in page a bad PAT gets stays `serverError` so the
-    /// classifier still sends the user to the token.
+    /// Only this call turns a 400, or a 500 carrying a reason, into a rejected
+    /// query: it is the one request whose body the user wrote. Measured (probe
+    /// P18/P19): a bad `@CurrentIteration` team literal answers **500** with a
+    /// readable message, while a 400 is the ordinary syntax/unknown-field
+    /// rejection. A 500 *without* a message, and 502/503/504, stay server
+    /// errors — an outage must never be worded as "check the query". The 203
+    /// sign-in page a bad PAT gets stays `serverError` so the classifier still
+    /// sends the user to the token.
     static func interpret(status: Int, body: Data) throws -> ParsedWiql {
         switch status {
         case 200:
@@ -282,6 +286,11 @@ enum WiqlResponse {
             return parsed
         case 400:
             throw AzureDevOpsError.queryRejected(WiqlErrorParser.message(body))
+        case 500:
+            if let message = WiqlErrorParser.message(body) {
+                throw AzureDevOpsError.queryRejected(message)
+            }
+            throw AzureDevOpsError.serverError(status)
         default:
             throw AzureDevOpsError.serverError(status)
         }
@@ -711,6 +720,69 @@ enum HostAzureProjectsLoader {
         }
         guard http.statusCode == 200 else { throw AzureDevOpsError.serverError(http.statusCode) }
         guard let names = AzureProjectsParser.parse(data) else {
+            throw AzureDevOpsError.invalidPayload
+        }
+        return names
+    }
+}
+
+// MARK: - Team discovery (settings window only)
+
+/// The teams a project has, for the TaskBox team picker.
+enum AzureTeamsParser {
+    /// nil means "couldn't read the answer"; an empty array means "this
+    /// project has no team", which the picker words as default-only.
+    ///
+    /// Sorted by name for the same reason the project picker is: a picker
+    /// whose entries move between openings is worse than one that is merely
+    /// alphabetical.
+    static func parse(_ data: Data) -> [String]? {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let rows = root["value"] as? [[String: Any]]
+        else { return nil }
+
+        return rows
+            .compactMap { row -> String? in
+                guard let name = (row["name"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty
+                else { return nil }
+                return name
+            }
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+}
+
+/// Host-app only, one call, for the TaskBox team picker. A team is only
+/// offered when the account has exactly one project: probe P20 measured that
+/// a team literal is silently empty in any other project.
+enum HostAzureTeamsLoader {
+    static func list(organization: String, token: String, project: String) async throws -> [String] {
+        let target = try AzureTarget.normalise(organization: organization, project: project)
+        guard let url = URL(
+            string: "\(target.orgBase)/_apis/projects/\(target.projectSegment)/teams?api-version=7.1"
+        ) else { throw AzureDevOpsError.invalidTarget }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        request.setValue(
+            "Basic " + Data(":\(token)".utf8).base64EncodedString(),
+            forHTTPHeaderField: "Authorization"
+        )
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw AzureDevOpsError.transport(error.localizedDescription)
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw AzureDevOpsError.transport("Not an HTTP response")
+        }
+        guard http.statusCode == 200 else { throw AzureDevOpsError.serverError(http.statusCode) }
+        guard let names = AzureTeamsParser.parse(data) else {
             throw AzureDevOpsError.invalidPayload
         }
         return names

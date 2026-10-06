@@ -97,6 +97,48 @@ final class WiqlResponseTests: XCTestCase {
         }
     }
 
+    /// Probe P18/P19: a bad team literal answers 500 with a readable reason,
+    /// not a 400. Read the same way, so Test and the chip can say why.
+    func testA500WithAReadableReasonIsARejectedQuery() {
+        let body = Data(#"{"message":"VS402612: The macro '@CurrentIteration' is not supported without a team context."}"#.utf8)
+        XCTAssertThrowsError(try WiqlResponse.interpret(status: 500, body: body)) {
+            XCTAssertEqual(
+                $0 as? AzureDevOpsError,
+                .queryRejected("VS402612: The macro '@CurrentIteration' is not supported without a team context.")
+            )
+        }
+    }
+
+    func testAP19Style500IsAlsoARejectedQuery() {
+        // No VS/TF prefix (probe P19) — still the server explaining the macro.
+        let body = Data(
+            #"{"message":"'ForesightManifold\\ForesightManifold Team' is not of the form '[project]\\team'"}"#.utf8
+        )
+        XCTAssertThrowsError(try WiqlResponse.interpret(status: 500, body: body)) {
+            XCTAssertEqual(
+                $0 as? AzureDevOpsError,
+                .queryRejected("'ForesightManifold\\ForesightManifold Team' is not of the form '[project]\\team'")
+            )
+        }
+    }
+
+    func testA500WithoutAReadableBodyStaysAServerError() {
+        for body in [Data(), Data("<html>error</html>".utf8), Data(#"{"other":1}"#.utf8)] {
+            XCTAssertThrowsError(try WiqlResponse.interpret(status: 500, body: body)) {
+                XCTAssertEqual($0 as? AzureDevOpsError, .serverError(500))
+            }
+        }
+    }
+
+    /// Only exactly 500 is read for a reason; a 502 carrying one is an outage,
+    /// not the user's query.
+    func testOther5xxKeepTheirStatus() {
+        let body = Data(#"{"message":"Bad gateway"}"#.utf8)
+        XCTAssertThrowsError(try WiqlResponse.interpret(status: 502, body: body)) {
+            XCTAssertEqual($0 as? AzureDevOpsError, .serverError(502))
+        }
+    }
+
     /// The URL carries `$top`, so the cap is applied by the server.
     func testTheURLAsksForOneMoreThanTheCap() throws {
         let target = try AzureTarget.normalise(organization: "org", project: "My Project")

@@ -92,6 +92,7 @@
 		482E9A15C89DD93832340B3B /* CredentialsMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD5C85FCA16CC6CB16BA6D4 /* CredentialsMigrationTests.swift */; };
 		4908B2BE0C5A785B8F08F91D /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
 		4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
+		4F121926AB6ABBDED6AB4C45 /* AzureTeamsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 871E3F6BD19878F5B8C47B6B /* AzureTeamsParserTests.swift */; };
 		4FFB4889B6E7616A91A4712D /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
 		503A811FFA42B6C95C900C31 /* DecodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B881092482BA9425E3F5918 /* DecodeTests.swift */; };
 		50445D949C9BB54B2598D494 /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
@@ -423,6 +424,7 @@
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
 		84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerMigrationTests.swift; sourceTree = "<group>"; };
 		86472D68B091CE8C0F8CBFFC /* ShipBoxInventoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxInventoryTests.swift; sourceTree = "<group>"; };
+		871E3F6BD19878F5B8C47B6B /* AzureTeamsParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureTeamsParserTests.swift; sourceTree = "<group>"; };
 		873043B93448D9154A158983 /* MarketTickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketTickerTests.swift; sourceTree = "<group>"; };
 		87B96F825FC76E1267D5ACCC /* DeckBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckBundle.swift; sourceTree = "<group>"; };
 		8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialsWidgetReadsTests.swift; sourceTree = "<group>"; };
@@ -596,6 +598,7 @@
 				E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */,
 				52E64CEB52D9007544C51690 /* AzureMultiProjectTests.swift */,
 				6BDAAE2C8DB83E54F1D11C85 /* AzureProjectsParserTests.swift */,
+				871E3F6BD19878F5B8C47B6B /* AzureTeamsParserTests.swift */,
 				4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */,
 				79E814CE71C9E15746C2443A /* CalBoxTests.swift */,
 				F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */,
@@ -1071,6 +1074,7 @@
 				B8D2216F560466E6AB864171 /* AzureDevOpsParserTests.swift in Sources */,
 				F30F2267A3769A3B6B02554B /* AzureMultiProjectTests.swift in Sources */,
 				23EF43A1E8789309DDAE5D28 /* AzureProjectsParserTests.swift in Sources */,
+				4F121926AB6ABBDED6AB4C45 /* AzureTeamsParserTests.swift in Sources */,
 				6551819CA5506A4D266E0D79 /* BatteryCore.swift in Sources */,
 				A63FED1F6FABE8563FF1E242 /* BatteryCoreTests.swift in Sources */,
 				F7D714F5EC3F20D7242F6E85 /* CalBoxSnapshot.swift in Sources */,
