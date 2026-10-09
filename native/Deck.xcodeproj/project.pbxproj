@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		002E0EC3864755B908E7E4A6 /* SpotlightCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75DD62878DBB50EF44C4B91D /* SpotlightCoreTests.swift */; };
 		01BB25D086A5451976DCC54A /* azure_prs_votes.json in Resources */ = {isa = PBXBuildFile; fileRef = F52085AAB762F8008E810AAA /* azure_prs_votes.json */; };
 		040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F06724D8333A9A74C4156DB6 /* SmokeTests.swift */; };
@@ -152,6 +153,7 @@
 		7ADEE8BA9F19842AD86B99DC /* github_prs.json in Resources */ = {isa = PBXBuildFile; fileRef = 910A3754B71959068BBF2549 /* github_prs.json */; };
 		7B0649E3CEC354D446CBCD0D /* RemoteOpenCodeSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */; };
 		7BA588A2F45314DC0BFF6883 /* MarketBoxParsersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C2D4337B99014556B02507 /* MarketBoxParsersTests.swift */; };
+		7DE967CF80745F4E197DEBEE /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
 		822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */; };
 		82D525C8424FF0CFA882A47F /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		83175A52F813503DA160F4B2 /* CoinSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD46890DC73D8196846F990 /* CoinSearch.swift */; };
@@ -161,6 +163,7 @@
 		851A32795AEAE0AF38995456 /* CoinSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD46890DC73D8196846F990 /* CoinSearch.swift */; };
 		86444246D4788784A28FBA68 /* OpenBoxSessionCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */; };
 		87E936C049D826980DD8F8C7 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B05E2B90DFEDC2F8CC1804F /* main.swift */; };
+		8B0CA68FFC7E3EF359C7826F /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
 		8B0FBE40097EA3269310E7AA /* azure_prs.json in Resources */ = {isa = PBXBuildFile; fileRef = 7416BC1BF6361C4AA3485A19 /* azure_prs.json */; };
 		8DB85954851471484CB62D8C /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
 		90A811EBE7E73139D552827E /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
@@ -176,6 +179,8 @@
 		97918506ABC4C75EC3F7F5D2 /* AzureAccountProjectsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1025AA738F2EC2637AA2C /* AzureAccountProjectsTests.swift */; };
 		97A4B82046694420FB236D6F /* WiqlClause.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE170E54FD1094990464C7C7 /* WiqlClause.swift */; };
 		99C485D084282BAF9BDD5AA3 /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
+		9C8C825172CFF975DC780344 /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
+		9DBCB73513BAF9149ADC7DE9 /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
 		A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5089372A785C079676513337 /* TaskBoxSnapshot.swift */; };
 		A2EE3F352DA2E30CB3F4E017 /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
 		A3610AE8477308D69CE6301A /* ClockBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */; };
@@ -411,6 +416,7 @@
 		74158E8A2AC2596E3B4A8B49 /* WiqlClauseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlClauseTests.swift; sourceTree = "<group>"; };
 		7416BC1BF6361C4AA3485A19 /* azure_prs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = azure_prs.json; sourceTree = "<group>"; };
 		755EF26D530D5F4869C635EC /* MarketBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxWidget.swift; sourceTree = "<group>"; };
+		75DD62878DBB50EF44C4B91D /* SpotlightCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightCoreTests.swift; sourceTree = "<group>"; };
 		77088C4EE6AAF5F06DCA7953 /* PRBoxChipTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxChipTests.swift; sourceTree = "<group>"; };
 		772E2CD7B7548ED00950F6F7 /* amsterdam_j1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = amsterdam_j1.json; sourceTree = "<group>"; };
 		79E814CE71C9E15746C2443A /* CalBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalBoxTests.swift; sourceTree = "<group>"; };
@@ -472,6 +478,7 @@
 		CB348CAA59C48A66AEC08E61 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLink.swift; sourceTree = "<group>"; };
 		CBC89EF1D34611CB2B244F15 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightCore.swift; sourceTree = "<group>"; };
 		CCED7DB3FECDD4E23935642E /* WeatherBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherBoxWidget.swift; sourceTree = "<group>"; };
 		CD561BD148534E3EA9F6D063 /* WiqlPresetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlPresetTests.swift; sourceTree = "<group>"; };
 		CD5EFA4031BC633B2E191C16 /* AgentLivenessCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentLivenessCopyTests.swift; sourceTree = "<group>"; };
@@ -577,6 +584,7 @@
 				37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */,
 				2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */,
 				94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */,
+				CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */,
 				2A6665B8B08E0F39C775A55C /* StockSearch.swift */,
 				C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */,
 				5089372A785C079676513337 /* TaskBoxSnapshot.swift */,
@@ -654,6 +662,7 @@
 				BF045F6211C715FF81858003 /* ShipBoxSettingsTests.swift */,
 				2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */,
 				F06724D8333A9A74C4156DB6 /* SmokeTests.swift */,
+				75DD62878DBB50EF44C4B91D /* SpotlightCoreTests.swift */,
 				BDD0F69418099679B159BC4C /* StockSearchTests.swift */,
 				29738728E12DD5CDF3E8BB45 /* SystemMetricsCoreTests.swift */,
 				2DCCCC07040A9422EBEE1358 /* TaskBoxQueryOutcomeTests.swift */,
@@ -1045,6 +1054,7 @@
 				CE021C5C20C5DAD337EBA0BA /* RemoteOpenCodeSync.swift in Sources */,
 				611DC32A1889B095CAE4D132 /* ShipBoxSnapshot.swift in Sources */,
 				7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */,
+				8B0CA68FFC7E3EF359C7826F /* SpotlightCore.swift in Sources */,
 				A412528F9F4A6E67FB4F37D5 /* StockSearch.swift in Sources */,
 				D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */,
 				27E46B2CB6BF58E9D9DD72A3 /* SystemMetricsCore.swift in Sources */,
@@ -1162,6 +1172,8 @@
 				769F47CE66D9A10A5B348E02 /* ShipBoxSnapshot.swift in Sources */,
 				A5D6283DF0774FCB9F273152 /* ShipBoxSnapshotTests.swift in Sources */,
 				083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */,
+				9C8C825172CFF975DC780344 /* SpotlightCore.swift in Sources */,
+				002E0EC3864755B908E7E4A6 /* SpotlightCoreTests.swift in Sources */,
 				B681F466B7C74C88A4C39B4A /* StockSearch.swift in Sources */,
 				CB411251AD16DA48295DC7CD /* StockSearchTests.swift in Sources */,
 				3D3C97CD45D9FC5B6AF3C06D /* SystemMetricsCore.swift in Sources */,
@@ -1223,6 +1235,7 @@
 				4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */,
 				43C94E87B1444FE3968131A8 /* RemoteOpenCodeSync.swift in Sources */,
 				E2DE130621C6683B7AA69F2D /* ShipBoxSnapshot.swift in Sources */,
+				9DBCB73513BAF9149ADC7DE9 /* SpotlightCore.swift in Sources */,
 				EA007C7EFB10C5747846BBE8 /* StockSearch.swift in Sources */,
 				92F9D56CB31571F8F4BDB6CC /* SystemMetricsCore.swift in Sources */,
 				A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */,
@@ -1273,6 +1286,7 @@
 				D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */,
 				D446DBBC43FC3D34BE96103A /* RemoteOpenCodeSync.swift in Sources */,
 				FC125295397F417AA47379E3 /* ShipBoxSnapshot.swift in Sources */,
+				7DE967CF80745F4E197DEBEE /* SpotlightCore.swift in Sources */,
 				ECCBC5BF638E6D313E844B4B /* StockSearch.swift in Sources */,
 				5310A1B92B3CCF57C291D6F4 /* SystemMetricsCore.swift in Sources */,
 				61AE78535BCAC51B5785634B /* TaskBoxSnapshot.swift in Sources */,
