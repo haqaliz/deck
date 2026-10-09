@@ -36,6 +36,7 @@ struct DeckApp: App {
 /// So Deck forwards the URL and gets out of the way: if it was launched purely
 /// to carry that click, it opens the page and quits instead of leaving a
 /// window nobody asked for.
+@MainActor
 final class DeckAppDelegate: NSObject, NSApplicationDelegate {
     /// True when the process was started to deliver a URL rather than by
     /// someone opening Deck. `application(_:open:)` runs before
@@ -43,6 +44,16 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
     /// whether a window is wanted at all.
     private var launchedToOpenAURL = false
     private var finishedLaunching = false
+
+    // The resident half: tray, hotkey and search panel. They read settings and
+    // snapshots themselves and share nothing with `ContentView`, which only
+    // exists while the settings window does.
+    private let tray = TrayController()
+    private let spotlight = SpotlightController()
+    private let hotKey = SpotlightHotKey()
+    /// Set by the tray's Settings item so the next reopen event is allowed to
+    /// make a window; a Dock click with no window still does nothing.
+    private var reopenForSettings = false
 
     func application(_ application: NSApplication, open urls: [URL]) {
         let webURLs = DeckURLForwarding.webURLs(from: urls)
@@ -54,9 +65,9 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
         // quitting an app the user may have opened deliberately.
         guard !webURLs.isEmpty else { return }
 
-        if finishedLaunching {
-            // Already running with a window on screen: the user gets their
-            // page and keeps whatever they were doing.
+        // Already running (window or tray): the user gets their page and keeps
+        // whatever they were doing.
+        guard TrayLifecyclePolicy.quitsAfterForwardingURL(alreadyRunning: finishedLaunching) else {
             return
         }
         launchedToOpenAURL = true
@@ -64,18 +75,100 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         finishedLaunching = true
-        guard launchedToOpenAURL else { return }
-        // The page is already opening in the browser; a settings window would
-        // be pure noise.
-        NSApplication.shared.windows.forEach { $0.close() }
-        NSApplication.shared.terminate(nil)
+        if launchedToOpenAURL {
+            // The page is already opening in the browser; a settings window
+            // would be pure noise. Quit before any tray exists.
+            NSApplication.shared.windows.forEach { $0.close() }
+            NSApplication.shared.terminate(nil)
+            return
+        }
+        startResident()
     }
 
     /// Clicking the Dock icon of a running Deck should raise the window it
     /// already has, not manufacture another one.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        flag
+        if reopenForSettings {
+            reopenForSettings = false
+            return true
+        }
+        return flag
     }
+
+    /// Closing the window never quits Deck; the policy owns that answer so
+    /// tray-only mode and the normal mode cannot drift apart.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        TrayLifecyclePolicy.shouldTerminate(
+            reason: .lastWindowClosed,
+            keepInTrayOnly: DeckSettings.load().spotlight.keepInTrayOnly)
+    }
+
+    // MARK: Resident
+
+    private func startResident() {
+        tray.onSearch = { [weak self] in self?.spotlight.toggle() }
+        tray.onSettings = { [weak self] in self?.openSettings() }
+        tray.onQuit = { NSApp.terminate(nil) }
+        tray.install()
+        spotlight.startObservingSize()
+
+        let center = NotificationCenter.default
+        center.addObserver(forName: .deckSettingsDidSave, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.applySettings() }
+        }
+        center.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { [weak self] note in
+            MainActor.assumeIsolated { self?.applyDockPolicy(closing: note.object as? NSWindow) }
+        }
+        center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.applyDockPolicy() }
+        }
+        applySettings()
+    }
+
+    /// Re-reads what the settings window just saved and applies it: the
+    /// shortcut and the Dock icon.
+    private func applySettings() {
+        let s = DeckSettings.load().spotlight
+        hotKey.register(keyCode: s.shortcutKeyCode, modifiers: s.shortcutModifiers) { [weak self] in
+            self?.spotlight.toggle()
+        }
+        applyDockPolicy()
+    }
+
+    private func isSettingsWindow(_ window: NSWindow) -> Bool {
+        !(window is NSPanel) && window.styleMask.contains(.titled)
+    }
+
+    private func applyDockPolicy(closing: NSWindow? = nil) {
+        let open = NSApp.windows.contains {
+            $0 !== closing && $0.isVisible && isSettingsWindow($0)
+        }
+        let wanted = TrayLifecyclePolicy.activationPolicy(
+            trayReady: tray.isReady,
+            keepInTrayOnly: DeckSettings.load().spotlight.keepInTrayOnly,
+            settingsWindowOpen: open)
+        let policy: NSApplication.ActivationPolicy = wanted == .accessory ? .accessory : .regular
+        if NSApp.activationPolicy() != policy { NSApp.setActivationPolicy(policy) }
+    }
+
+    private func openSettings() {
+        // A Dock icon first: the window cannot be brought forward by an
+        // accessory app.
+        NSApp.setActivationPolicy(.regular)
+        if let window = NSApp.windows.first(where: isSettingsWindow) {
+            window.makeKeyAndOrderFront(nil)
+        } else {
+            reopenForSettings = true
+            NSWorkspace.shared.open(Bundle.main.bundleURL)
+        }
+        NSApp.activate()
+    }
+}
+
+extension Notification.Name {
+    /// Posted by `ContentView` after it writes `settings.json`, so the
+    /// resident parts can re-read it. They never share state with the view.
+    static let deckSettingsDidSave = Notification.Name("com.deck.settingsDidSave")
 }
 
 struct ContentView: View {
@@ -244,6 +337,7 @@ struct ContentView: View {
         .onChange(of: settings) { _ in
             settings.save()
             WidgetCenter.shared.reloadAllTimelines()
+            NotificationCenter.default.post(name: .deckSettingsDidSave, object: nil)
         }
         .onChange(of: settings.agentAtLogin) { _ in
             applyAgent()
