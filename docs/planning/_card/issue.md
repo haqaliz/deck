@@ -1,29 +1,29 @@
-# Card: taskbox-query-presets (feat)
+# Brief: spotlight-shell (ROADMAP M10, first item)
 
-Inline brief (from `deck-next`, 2026-10-07; no GitHub issue).
+Add a Spotlight-style search shell to Deck.
 
-Add a presets menu to TaskBox's Query settings section
-(`native/DeckApp/DeckApp.swift:2343`) — assigned to me, created by me, current
-sprint — that inserts the condition into the existing draft and never applies
-it (Apply stays the only writer, `docs/planning/taskbox-custom-wiql/prd.md` A1).
-Then close the recorded team-context follow-up: `@CurrentIteration` resolves
-against each project's default team today (probe P7), so add a team segment for
-non-default teams. Probe Azure's team-macro syntax and project teams endpoint
-live first — that is the one unproven part. Every preset must go through
-`WiqlClause.validate` and compose via `WiqlClause.query(for:)`, with unit tests
-in DeckSharedTests; no new fetch, no snapshot fields, and the widget extension
-must read nothing new.
+- Deck.app stays resident as an `NSStatusItem` tray icon with menu items
+  Search, Settings, Quit (not `MenuBarExtra`).
+- A global shortcut, set with a recorder, opens a floating non-activating
+  `NSPanel`.
+- A new settings item beside General holds the shortcut and a "keep Deck in
+  the tray only" toggle. With it on, closing the window or quitting from the
+  Dock leaves the tray running.
+- The panel fans out to local `SearchProvider`s and shows results grouped by
+  section, with prefix scoping (`clip `, etc.). Providers in this slice:
+  ClipBox (opt-in), DevBox, ClockBox, OpenBox sessions. No network code.
+- Anything a result opens goes through `DeckURLForwarding`.
 
-Sources:
+Caveats to design around:
+- Timers, refreshes and the settings `@State` live in `ContentView`, so a
+  window-less tray Deck needs its own settings read and loop.
+- `DeckAppDelegate` terminates after a widget-URL launch; that must not fire
+  for a resident Deck.
+- Keep the `LegacyAgentCleanup` guard.
+- Probe the hotkey API and the `NSStatusItem` + `NSPanel` combination under
+  hardened runtime before committing to a design.
 
-- ROADMAP.md M8 "TaskBox: custom WIQL" open follow-ups (ROADMAP.md:939-941):
-  presets (assigned / created / current sprint), a team segment for
-  `@CurrentIteration`.
-- `docs/planning/taskbox-custom-wiql/prd.md` Q4 (line 28, presets declined in
-  v1), §7 non-goals (lines 169-173), §9 open questions (line 196).
-- `docs/planning/taskbox-custom-wiql/probe.md` P7 (line 15): no-team
-  `@CurrentIteration` resolves against each project's default team.
-- deck-next handoff, 2026-10-07.
+Later M10 items (TaskBox, PRBox, GitBox/CalBox, ShipBox/MarketBox search) are
+out of scope here; they plug into this shell as providers.
 
-Caveat: `@CurrentIteration('[Project]\Team')` and the teams-list endpoint need
-a live probe before shipping; presets must insert into the draft only.
+Source: discussion on 2026-10-10, recorded in ROADMAP.md M10. No GitHub issue.
