@@ -33,7 +33,15 @@ Development identity (team K6X49DG8VF), **no entitlements file**.
 - `frontmostApplication` was read immediately after `makeKeyAndOrderFront`; it
   could lag, so re-read after a short delay in the manual run.
 
-## Verdict so far
-No entitlement, no TCC prompt text seen, registration works and conflicts are
-detectable. The red item is **not yet closed**: the three manual checks above
-(Finder launch with no prompt, full-screen/Space, typing) remain.
+## Manual checks (reported by the user, 2026-10-10)
+Probe launched from Finder (no terminal grant). Reported: no permission
+prompt; Option-Space showed the panel over a normal app and typing worked;
+the panel also appeared over a full-screen app and on another Space. These
+are the user's report of "everything works fine", not separately logged
+measurements, so per-check detail (e.g. Esc/click-away, Command-Space firing)
+was not itemised.
+
+## Verdict
+Gating probe passed. Carbon hotkey + non-activating key panel + status item
+work under hardened runtime with no entitlement and no prompt. Red item
+closed; proceed to Phase 1.
