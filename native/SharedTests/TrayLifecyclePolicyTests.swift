@@ -85,10 +85,17 @@ final class ShortcutRegistrationCopyTests: XCTestCase {
         XCTAssertNil(ShortcutRegistrationCopy.message(status: 0))
     }
 
-    /// -9878 is `eventHotKeyExistsErr`, measured in the phase 0 probe.
-    func testAConflictIsNamedAsOne() throws {
+    /// -9878 is `eventHotKeyExistsErr`: returned only for a duplicate inside
+    /// this process. The copy must not claim another app was found, because
+    /// another app holding the combination is never reported.
+    func testTheDuplicateCodeDoesNotBlameAnotherApp() throws {
         let text = try XCTUnwrap(ShortcutRegistrationCopy.message(status: -9878))
-        XCTAssertTrue(text.contains("already in use"))
+        XCTAssertFalse(text.lowercased().contains("another app"))
+        XCTAssertTrue(text.contains("couldn't claim"))
+    }
+
+    func testTheSilentConflictCaveatIsStatedHonestly() {
+        XCTAssertTrue(ShortcutRegistrationCopy.silentConflictNote.contains("doesn't report"))
     }
 
     func testAnyOtherFailureCarriesTheCode() throws {

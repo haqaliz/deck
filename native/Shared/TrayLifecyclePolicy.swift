@@ -69,11 +69,15 @@ enum TrayLifecyclePolicy {
 // MARK: - Shortcut registration copy
 
 /// The sentence the Spotlight settings tab shows when registering the global
-/// shortcut fails. A failure there is otherwise invisible: the shortcut just
-/// does nothing.
+/// shortcut fails.
+///
+/// What this can and cannot tell the user was measured in the phase 0/3 probes:
+/// `eventHotKeyExistsErr` (-9878) comes back only when the *same process*
+/// registers a combination twice. A second **process** registering a
+/// combination another app already holds gets status 0, so a conflict with
+/// Raycast, Alfred or another app is **not reported at all**. The copy
+/// therefore never claims to have found one.
 enum ShortcutRegistrationCopy {
-    /// `eventHotKeyExistsErr`, measured in the phase 0 probe by registering one
-    /// combination twice.
     private static let alreadyRegistered: Int32 = -9878
 
     /// `nil` on success (`noErr`).
@@ -82,9 +86,14 @@ enum ShortcutRegistrationCopy {
         case 0:
             return nil
         case alreadyRegistered:
-            return "That shortcut is already in use by another app. Choose a different one."
+            return "Deck couldn't claim that shortcut. Choose a different one."
         default:
             return "Couldn't register the shortcut (error \(status)). Try a different one."
         }
     }
+
+    /// Shown beside the recorder whether or not registration succeeded:
+    /// macOS does not say when another app holds the same combination.
+    static let silentConflictNote =
+        "If the shortcut does nothing, another app may be using it — macOS doesn't report that."
 }

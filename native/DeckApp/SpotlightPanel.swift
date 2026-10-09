@@ -8,9 +8,17 @@ import SwiftUI
 /// and other Spaces in the phase 0 probe.
 final class SpotlightKeyPanel: NSPanel {
     var onResignKey: () -> Void = {}
+    var onCancel: () -> Void = {}
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    /// Esc, whichever control has focus: the text field's own exit command only
+    /// fires while it is first responder, and an empty field is not guaranteed
+    /// to be.
+    override func cancelOperation(_ sender: Any?) {
+        onCancel()
+    }
 
     override func resignKey() {
         super.resignKey()
@@ -171,6 +179,7 @@ final class SpotlightController {
         panel.isReleasedWhenClosed = false
         panel.contentView = host
         panel.onResignKey = { [weak self] in self?.hide() }
+        panel.onCancel = { [weak self] in self?.hide() }
 
         model.onDismiss = { [weak self] in self?.hide() }
         model.onRun = { [weak self] result in self?.perform(result) }

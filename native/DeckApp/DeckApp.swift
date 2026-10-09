@@ -370,7 +370,10 @@ struct ContentView: View {
                 FetchStatusStore.record(.notConfigured, for: .opencodeRemote)
             }
         } else {
-            snapshot = OpenCodeReader.load()
+            // Off the main actor: this reads the whole opencode database, which
+            // is multiple GB on a heavy user's machine and froze the app (and
+            // now the tray and shortcut behind it) for ~10s at every launch.
+            snapshot = await Task.detached { OpenCodeReader.load() }.value
             // Local mode shows no chip, but a stale remote failure must not
             // outlive the mode that produced it.
             if snapshot != nil {
