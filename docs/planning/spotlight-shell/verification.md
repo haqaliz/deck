@@ -22,6 +22,7 @@ curated list.
 | Option-Space opens the panel | yes; the previous app stays frontmost |
 | Type "tokyo", Enter | pasteboard becomes Tokyo's local time (08:04), panel closes |
 | Esc | closes the panel, including with an empty field (fixed: `cancelOperation`) |
+| Tray icon | the Deck "D" mark (monochrome template cut from `docs/deck.svg`, 36px at 18pt); confirmed in a screenshot of the real menu bar, tinted like the system icons |
 | Tray menu | Search, Settings…, Quit Deck |
 | Tray Quit Deck | process exits |
 | Tray-only on, window closed | app becomes `UIElement` (no Dock icon), shortcut still works |

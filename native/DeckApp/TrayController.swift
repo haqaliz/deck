@@ -24,8 +24,19 @@ final class TrayController: NSObject {
             NSStatusBar.system.removeStatusItem(item)
             return
         }
-        button.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Deck")
-        button.image?.isTemplate = true
+        // The Deck "D" mark, cut from docs/deck.svg as a monochrome template so
+        // macOS tints it for light and dark menu bars. 36px drawn at 18pt, so it
+        // is sharp on Retina. If the resource is ever missing, say "Deck" rather
+        // than leave an invisible status item with no way back in.
+        if let url = Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            image.size = NSSize(width: 18, height: 18)
+            image.isTemplate = true
+            image.accessibilityDescription = "Deck"
+            button.image = image
+        } else {
+            button.title = "Deck"
+        }
 
         let menu = NSMenu()
         menu.addItem(withTitle: "Search", action: #selector(search), keyEquivalent: "").target = self

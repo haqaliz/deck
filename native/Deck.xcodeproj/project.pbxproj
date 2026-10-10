@@ -109,6 +109,7 @@
 		51C852BFFD446B7CD99A8BDA /* ShipBoxDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6C015468901E17452BF6132 /* ShipBoxDiscoveryTests.swift */; };
 		5310A1B92B3CCF57C291D6F4 /* SystemMetricsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */; };
 		53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
+		5401D5B23B3A53F8A2031284 /* MenuBarIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B2567F4523D6D35FD0252F9 /* MenuBarIcon.png */; };
 		548204C93BD21E6C4604C15D /* CredentialsCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3A345B4B584E4F2C596FABB /* CredentialsCopyTests.swift */; };
 		54B1F45AED650BAB57FF2A53 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
 		54D534F314A536D957EAE16F /* amsterdam_j1.json in Resources */ = {isa = PBXBuildFile; fileRef = 772E2CD7B7548ED00950F6F7 /* amsterdam_j1.json */; };
@@ -415,6 +416,7 @@
 		45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxWidget.swift; sourceTree = "<group>"; };
 		46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetrics.swift; sourceTree = "<group>"; };
 		4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryCoreTests.swift; sourceTree = "<group>"; };
+		4B2567F4523D6D35FD0252F9 /* MenuBarIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = MenuBarIcon.png; sourceTree = "<group>"; };
 		4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlPreset.swift; sourceTree = "<group>"; };
 		5089372A785C079676513337 /* TaskBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBoxSnapshot.swift; sourceTree = "<group>"; };
 		50A8922BFDCE56FEEAFDE601 /* coinGeckoMarkets.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = coinGeckoMarkets.json; sourceTree = "<group>"; };
@@ -555,6 +557,7 @@
 			isa = PBXGroup;
 			children = (
 				F44048FEBB8DD2831A60146B /* AppIcon.icns */,
+				4B2567F4523D6D35FD0252F9 /* MenuBarIcon.png */,
 				CE8FC52B15143ACCE8231B27 /* provider-azure-dark.pdf */,
 				23A385B73056048E69ABF509 /* provider-azure-light.pdf */,
 				36B787FA6039451942D992E8 /* provider-github-dark.pdf */,
@@ -957,6 +960,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				17266D39A2BF38493202D4A1 /* AppIcon.icns in Resources */,
+				5401D5B23B3A53F8A2031284 /* MenuBarIcon.png in Resources */,
 				46C2D6804C4116B30E078860 /* com.deck.agent.plist in Resources */,
 				E78150B6C51925B5F4A27D11 /* com.deck.agent.processes.plist in Resources */,
 				BFA88F4BF6B1007CC6725C4B /* provider-azure-dark.pdf in Resources */,
