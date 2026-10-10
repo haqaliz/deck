@@ -38,11 +38,14 @@ struct TaskItem: Codable, Equatable {
     /// nil for a row written before the list existed, and for a provider with
     /// no such concept.
     var project: String?
+    /// Azure's `System.Tags`, split. Only Spotlight search asks for them; the
+    /// widget never shows them. Empty for a row written before they existed.
+    var tags: [String]
 
     init(
         id: String, title: String, state: String, itemType: String,
         url: String, provider: TaskProvider, changedAt: Date?,
-        project: String? = nil
+        project: String? = nil, tags: [String] = []
     ) {
         self.id = id
         self.title = title
@@ -52,6 +55,7 @@ struct TaskItem: Codable, Equatable {
         self.provider = provider
         self.changedAt = changedAt
         self.project = project
+        self.tags = tags
     }
 
     /// Tolerant on `provider` only: an unknown one reads as `.unknown` so a
@@ -68,6 +72,7 @@ struct TaskItem: Codable, Equatable {
         provider = TaskProvider(rawValue: rawProvider) ?? .unknown
         changedAt = try c.decodeIfPresent(Date.self, forKey: .changedAt)
         project = try c.decodeIfPresent(String.self, forKey: .project)
+        tags = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
     }
 }
 
