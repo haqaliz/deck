@@ -80,15 +80,10 @@ struct SpotlightSettingsView: View {
             }
 
             Section("Search in") {
-                sourceRow(.clip, isOn: $settings.clipEnabled,
-                          note: "Off by default: copied text would appear in the search panel, which can be on screen while you share it. Needs ClipBox history.")
-                sourceRow(.port, isOn: $settings.portEnabled)
-                sourceRow(.time, isOn: $settings.timeEnabled)
-                sourceRow(.oc, isOn: $settings.ocEnabled,
-                          note: "Recent sessions only, not the full history.")
-                sourceRow(.task, isOn: $settings.taskEnabled,
-                          note: "Needs an account chosen in TaskBox. Searches every project on it, closed items included, and finds bugs, backlog items, epics, features and tasks.")
-                Text("With no prefix, every source above answers. A prefix searches just that one.")
+                ForEach(SearchProviderID.allCases) { provider in
+                    sourceRow(provider, isOn: binding(for: provider), note: Self.note(for: provider))
+                }
+                Text("Without a prefix, the local sources and work items answer. Pull requests, Commits and Markets only search when you start with their prefix: pr, commit or mkt.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -101,6 +96,45 @@ struct SpotlightSettingsView: View {
         .onDisappear { stopRecording() }
         .onReceive(NotificationCenter.default.publisher(for: .deckShortcutStatus)) { note in
             if let status = note.object as? Int32 { shortcutStatus = status }
+        }
+    }
+
+    private func binding(for provider: SearchProviderID) -> Binding<Bool> {
+        switch provider {
+        case .clip: $settings.clipEnabled
+        case .port: $settings.portEnabled
+        case .time: $settings.timeEnabled
+        case .oc: $settings.ocEnabled
+        case .run: $settings.runEnabled
+        case .task: $settings.taskEnabled
+        case .pr: $settings.prEnabled
+        case .commit: $settings.commitEnabled
+        case .event: $settings.eventEnabled
+        case .market: $settings.marketEnabled
+        }
+    }
+
+    /// The caveat under each source: what it needs, what it does not cover.
+    private static func note(for provider: SearchProviderID) -> String? {
+        switch provider {
+        case .clip:
+            "Off by default: copied text would appear in the search panel, which can be on screen while you share it. Needs ClipBox history."
+        case .oc:
+            "Recent sessions only, not the full history."
+        case .run:
+            "Recent builds only: the runs ShipBox already holds. Needs ShipBox set up."
+        case .task:
+            "Needs an account chosen in TaskBox. Searches every project on it, closed items included, and finds bugs, backlog items, epics, features and tasks."
+        case .pr:
+            "Needs an account chosen in PRBox. GitHub: pull requests you are involved in, or PRBox's scope if you set one. Azure DevOps: each project's 100 most recent. A number finds recent pull requests only."
+        case .commit:
+            "Searches the repositories GitBox scans; add some in the GitBox settings. Runs on this Mac."
+        case .event:
+            "Off by default: event titles would appear in the panel, which can be on screen while you share it. macOS asks for calendar access the first time. Reads the calendars CalBox uses."
+        case .market:
+            "Needs no account. Shares CoinGecko's and Yahoo's public limits with the MarketBox widget, so it only searches after the mkt prefix."
+        case .port, .time:
+            nil
         }
     }
 

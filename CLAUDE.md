@@ -693,6 +693,36 @@ Do not delete the container; see the trap below.
   and prove the helper first against a known-good receiver; the first one here
   activated itself and made a working panel look dead.
 
+- **Typed text must never become an argument of its own — measured with `git`.**
+  Spotlight commit search (`docs/planning/spotlight-more-sources/`) runs
+  `git -C <repo> log --all -i -F --all-match --grep=<word>… -n 8 --format=… --`.
+  There is no shell (the arguments are an array), but git still reads
+  `--output=<path>` as an option: with the `--grep=` wrapper deliberately
+  removed, a query of `--output=/tmp/…` **made git write that file** — the
+  mutation run left one behind. Every typed word is therefore one `--grep=`
+  argument, the repo path is the value of `-C`, and the list ends with `--`.
+  Two related traps: an empty token list must never be run (`git log` with no
+  `--grep` lists every commit), and a test repository must be built with
+  `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null` — a global
+  `commit.gpgsign` made each fixture commit ~0.7s and turned a 2s suite into 20s.
+  The same rule for GitHub search: every typed word is a quoted term after a
+  fixed `is:pr involves:@me`, so `org:evil` or `-involves:@me` is a phrase and
+  not a qualifier. Removing the quoting fails 16 assertions.
+- **Only a prefix may reach GitHub, CoinGecko, Yahoo or `git log` from the
+  panel.** An unprefixed query is sent to nothing but work items, which shipped
+  first and are the one deliberate exception. Pull requests spend the same
+  30/min GitHub search budget the PRBox agent uses; markets spend the
+  CoinGecko/Yahoo public-IP quota the widgets share and keep `CoinSearchPolicy`'s
+  0.6s/2s pacing (`SearchProviderID.timing`), and a CoinGecko 429 backs
+  CoinGecko off alone while Yahoo keeps answering. `grep -rn
+  "HostCoinSearchLoader\|HostStockSearchLoader\|HostGitHubPRLoader.search\|HostAzureDevOpsLoader.search\|HostGitCommitSearch\|HostEventSearch"
+  native/DeckAgent native/DeckWidgets` must stay empty.
+- **EventKit: write-only access cannot read events.** `EKAuthorizationStatus`
+  raw values are pinned by a test (notDetermined 0, restricted 1, denied 2,
+  fullAccess 3, writeOnly 4) and only `3` can search; `4` is reported as a
+  denial. Never pass an empty `calendars:` array to `predicateForEvents` — it
+  means "all calendars".
+
 ## Conventions
 
 - Metrics loaders return pure data; stores own timers; views own layout.

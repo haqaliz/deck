@@ -1100,19 +1100,30 @@ Order (each is its own slug, PRD → plan):
       local providers (ClipBox opt-in, DevBox, ClockBox, OpenBox recent
       sessions). Measurements and the checks still owed to a human:
       [`docs/planning/spotlight-shell/verification.md`](docs/planning/spotlight-shell/verification.md).
-- [ ] **TaskBox search** — WIQL `[System.Title]`/`[System.Tags] CONTAINS` and
+- [x] **TaskBox search** — WIQL `[System.Title]`/`[System.Tags] CONTAINS` and
       `[System.Id] =`, all states and ages, `$top` always, through
       `WiqlClause.validate`; a different query from the widget's
       "assigned to me" one. Per-account, project-aware identity.
-- [ ] **PRBox search** — GitHub `search/issues` with `is:pr … in:title,body`
+      **Built and fixture-tested; never run against a live Azure account** — see
+      `docs/planning/spotlight-remote-search/verification.md`. Search by type
+      (`bug`/`pbi`/`epic`/`feature`/`task`/`wi`) uses WIQL categories.
+- [x] **PRBox search** — GitHub `search/issues` with `is:pr … in:title,body`
       (30/min search quota); Azure by id and by title, where the list API has
       no text criteria — needs a probe first (`docs/planning/` probe.md).
-- [ ] **GitBox and CalBox any-age search** — `git log --grep` across scanned
+      **Built and fixture-tested; never run against GitHub or Azure.** Needs the
+      `pr ` prefix. A bare number finds recent pull requests only.
+- [x] **GitBox and CalBox any-age search** — `git log --grep` across scanned
       repos; an EventKit predicate over a wide window (the snapshot holds
       today and tomorrow only).
-- [ ] **ShipBox and MarketBox search** — runs by repo, workflow, branch and
+      Commits run `git log` for real (integration-tested against a temporary
+      repository); calendar search is off by default and unverified against a
+      live calendar. See `docs/planning/spotlight-more-sources/verification.md`.
+- [x] **ShipBox and MarketBox search** — runs by repo, workflow, branch and
       run number (~11 KB per run, so narrow and capped); coin and stock
       lookup reusing `CoinSearch`/`StockSearch` and their shared rate budget.
+      Builds search the snapshot ShipBox already holds ("recent runs"); a live
+      Actions query would cost ~11 KB per run. Markets reuse the picker loaders
+      and were checked live from the panel (`mkt bitcoin`).
 
 Not searchable, on purpose: NetBox, BatBox, LiveBox and WeatherBox have
 nothing meaningful to find.
