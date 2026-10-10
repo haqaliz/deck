@@ -34,8 +34,8 @@ final class SpotlightKeyPanel: NSPanel {
 final class SpotlightViewModel: ObservableObject {
     @Published var query = "" { didSet { if query != oldValue { refresh() } } }
     @Published private(set) var sections: [SearchSection] = []
-    /// The Tasks block: filled in by the network, after the local sections.
-    @Published private(set) var taskState: RemoteSearchState<[SearchResult]> = .idle
+    /// One block per deferred source, filled in after the local sections.
+    @Published private(set) var deferredStates: [SearchProviderID: RemoteSearchState<[SearchResult]>] = [:]
     @Published var selectedID: String?
 
     var settings = SpotlightSettings()
@@ -43,27 +43,34 @@ final class SpotlightViewModel: ObservableObject {
     var onRun: (SearchResult) -> Void = { _ in }
     var onCopy: (SearchResult) -> Void = { _ in }
     var onDismiss: () -> Void = {}
-    /// Told the text after any prefix, the work-item type, and whether work
-    /// items should be searched at all.
-    var onRemoteQuery: (_ text: String, _ kind: WorkItemKind?, _ enabled: Bool) -> Void = { _, _, _ in }
+    /// Told the parsed query so deferred sources can be updated. Local results
+    /// are synchronous and never wait on this.
+    var onDeferredQuery: (_ query: SpotlightQuery) -> Void = { _ in }
 
-    /// The Tasks rows, ranked and capped like a local section.
-    var taskResults: [SearchResult] {
-        guard case .results(let rows) = taskState else { return [] }
+    /// The sources currently showing something, in section order.
+    var deferredProviders: [SearchProviderID] {
+        SearchProviderID.deferredCases.filter { (deferredStates[$0] ?? .idle) != .idle }
+    }
+
+    /// Rows for one deferred source, ranked and capped like a local section.
+    func deferredRows(_ provider: SearchProviderID) -> [SearchResult] {
+        guard case .results(let rows)? = deferredStates[provider] else { return [] }
         let limit = SpotlightQuery.parse(query).scope == nil
             ? SpotlightEngine.perSectionLimit : SpotlightEngine.scopedLimit
         return Array(SpotlightRanking.sorted(rows).prefix(limit))
     }
 
-    /// Local rows first, then tasks: the order they are drawn in, so the arrow
-    /// keys move through what is on screen.
-    var flat: [SearchResult] { sections.flatMap(\.results) + taskResults }
+    /// Local rows first, then each deferred source: the order they are drawn
+    /// in, so the arrow keys move through what is on screen.
+    var flat: [SearchResult] {
+        sections.flatMap(\.results) + deferredProviders.flatMap { deferredRows($0) }
+    }
     var hasQuery: Bool { !SpotlightQuery.parse(query).isEmpty }
 
     func reset() {
         query = ""
         sections = []
-        taskState = .idle
+        deferredStates = [:]
         selectedID = nil
     }
 
@@ -74,13 +81,11 @@ final class SpotlightViewModel: ObservableObject {
         selectedID = flat.first?.id
 
         // Local results above are synchronous and never wait on this.
-        let parsed = SpotlightQuery.parse(query)
-        let wanted = settings.isEnabled(.task) && (parsed.scope == nil || parsed.scope == .task)
-        onRemoteQuery(parsed.text, parsed.workItemKind, wanted)
+        onDeferredQuery(SpotlightQuery.parse(query))
     }
 
-    func setTaskState(_ state: RemoteSearchState<[SearchResult]>) {
-        taskState = state
+    func setState(_ provider: SearchProviderID, _ state: RemoteSearchState<[SearchResult]>) {
+        deferredStates[provider] = state
         // Keep the user's selection if it is still on screen; otherwise land on
         // the first row.
         if !flat.contains(where: { $0.id == selectedID }) { selectedID = flat.first?.id }
@@ -129,7 +134,7 @@ struct SpotlightPanelView: View {
                 .onKeyPress(.downArrow) { model.move(1); return .handled }
                 .onKeyPress(.upArrow) { model.move(-1); return .handled }
 
-            if !model.sections.isEmpty || model.taskState != .idle {
+            if !model.sections.isEmpty || !model.deferredProviders.isEmpty {
                 Divider()
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -148,7 +153,7 @@ struct SpotlightPanelView: View {
                                         .onTapGesture { model.onRun(result) }
                                 }
                             }
-                            tasksBlock
+                            ForEach(model.deferredProviders, id: \.self) { deferredBlock($0) }
                         }
                         .padding(.bottom, 8)
                     }
@@ -171,29 +176,28 @@ struct SpotlightPanelView: View {
         .onAppear { focused = true }
     }
 
-    /// The network-backed section. It owns its own status line, so a slow or
-    /// failed search never blanks the local results above it.
-    @ViewBuilder private var tasksBlock: some View {
-        if model.taskState != .idle {
-            Text(SearchProviderID.task.sectionTitle.uppercased())
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .tracking(1)
+    /// A deferred section. It owns its own status line, so a slow or failed
+    /// source never blanks the local results above it or another source.
+    @ViewBuilder private func deferredBlock(_ provider: SearchProviderID) -> some View {
+        let state = model.deferredStates[provider] ?? .idle
+        Text(provider.sectionTitle.uppercased())
+            .font(.system(size: 10, weight: .semibold, design: .rounded))
+            .tracking(1)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 18)
+            .padding(.top, 10)
+            .padding(.bottom, 4)
+        if let line = state.line(noun: provider.noun) {
+            Text(line)
+                .font(.system(size: 12, design: .rounded))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 18)
-                .padding(.top, 10)
-                .padding(.bottom, 4)
-            if let line = model.taskState.line(noun: "work items") {
-                Text(line)
-                    .font(.system(size: 12, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 4)
-            }
-            ForEach(model.taskResults) { result in
-                row(result)
-                    .id(result.id)
-                    .onTapGesture { model.onRun(result) }
-            }
+                .padding(.vertical, 4)
+        }
+        ForEach(model.deferredRows(provider)) { result in
+            row(result)
+                .id(result.id)
+                .onTapGesture { model.onRun(result) }
         }
     }
 
@@ -228,7 +232,7 @@ struct SpotlightPanelView: View {
 @MainActor
 final class SpotlightController {
     private let model = SpotlightViewModel()
-    private let tasks = TaskSearchCoordinator()
+    private let deferred = AsyncSearchCoordinator()
     private let panel: SpotlightKeyPanel
     private let host: NSHostingView<SpotlightPanelView>
 
@@ -255,8 +259,16 @@ final class SpotlightController {
             self?.copyToPasteboard(result.action.copyText)
             self?.hide()
         }
-        tasks.onState = { [weak model] state in model?.setTaskState(state) }
-        model.onRemoteQuery = { [weak tasks] text, kind, enabled in tasks?.update(text: text, kind: kind, enabled: enabled) }
+        deferred.register(WorkItemSearchSource())
+        deferred.register(PullRequestSearchSource())
+        deferred.register(CommitSearchSource())
+        deferred.register(EventSearchSource())
+        deferred.register(MarketSearchSource())
+        deferred.onState = { [weak model] provider, state in model?.setState(provider, state) }
+        model.onDeferredQuery = { [weak self, weak model] query in
+            guard let self, let model else { return }
+            self.deferred.update(query: query, settings: model.settings)
+        }
     }
 
     var isVisible: Bool { panel.isVisible }
@@ -271,9 +283,10 @@ final class SpotlightController {
             clip: deck.spotlight.clipEnabled ? ClipBoxSnapshotStore.load() : nil,
             devbox: DevBoxSnapshotStore.load(),
             opencode: OpenCodeSnapshotStore.load(),
-            configuredClockIDs: deck.clockbox.cityIDs)
+            configuredClockIDs: deck.clockbox.cityIDs,
+            shipbox: ShipBoxSnapshotStore.load())
         model.reset()
-        tasks.beginSession()
+        deferred.beginSession()
 
         position()
         panel.makeKeyAndOrderFront(nil)
@@ -283,7 +296,7 @@ final class SpotlightController {
         guard panel.isVisible else { return }
         panel.orderOut(nil)
         // Anything still in flight is for a panel nobody is looking at.
-        tasks.cancel()
+        deferred.cancelAll()
         model.reset()
     }
 

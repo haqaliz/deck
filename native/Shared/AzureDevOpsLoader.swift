@@ -1115,6 +1115,56 @@ enum HostAzurePRLoader {
         return try await get(url: url, auth: auth)
     }
 
+    /// Pull request search for Spotlight: host-app only, on user interaction,
+    /// behind `RemoteSearchPolicy`. A bare number is looked up by id through the
+    /// organisation-level route (restricted to the configured projects); words
+    /// list each project's 100 most recent pull requests of any status and are
+    /// matched locally, because the list API has no text criteria.
+    /// N projects cost N requests (plus one by id for a number).
+    static func search(
+        organization: String, projects: [String], token: String, text: String
+    ) async throws -> [PRSearchHit] {
+        let tokens = GitHubPRSearch.tokens(for: text)
+        guard !tokens.isEmpty else { return [] }
+        let targets = try AzureTargets.normalise(organization: organization, projects: projects)
+        let auth = "Basic " + Data(":\(token)".utf8).base64EncodedString()
+        let org = targets[0].organizationName
+
+        async let byID: [PRSearchHit]? = {
+            guard let number = GitHubPRSearch.number(from: text),
+                  let url = AzurePRSearch.byIDURL(target: targets[0], id: number) else { return nil }
+            do {
+                let data = try await get(url: url, auth: auth)
+                guard let hit = AzurePRSearchParser.parseOne(data, organization: org) else { return [] }
+                return AzurePRSearch.restrict([hit], toProjects: projects)
+            } catch AzureDevOpsError.serverError(404) {
+                return []  // no such pull request: an answer, not a failure
+            }
+        }()
+
+        let lists = try await inParallel(targets) { target -> [PRSearchHit] in
+            guard let url = AzurePRSearch.listURL(target: target) else { throw AzureDevOpsError.invalidTarget }
+            let data = try await get(url: url, auth: auth)
+            guard let all = AzurePRSearchParser.parseList(data, organization: org) else {
+                throw AzureDevOpsError.invalidPayload
+            }
+            return AzurePRSearch.filter(all, tokens: tokens)
+        }
+
+        var hits: [PRSearchHit] = []
+        var firstError: Error?
+        var answered = false
+        for result in lists {
+            switch result {
+            case .success(let found): hits += found; answered = true
+            case .failure(let error): firstError = firstError ?? error
+            }
+        }
+        if let direct = try? await byID { hits += direct; answered = true }
+        if !answered, let firstError { throw firstError }
+        return hits
+    }
+
     private static func get(url: URL, auth: String) async throws -> Data {
         var request = URLRequest(url: url)
         request.timeoutInterval = 10

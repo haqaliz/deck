@@ -284,25 +284,38 @@ to 12. Crypto and stock rows carry the change — and so does the USD row in
 ## Spotlight search
 
 Press **⌥Space** (changeable in the **Spotlight** tab) for a floating search
-panel. It searches what Deck already has: ports and containers (DevBox), world
-clocks (ClockBox), recent OpenCode sessions, and — only if you switch it on —
-your ClipBox history. Enter copies the result; Esc closes the panel. Type a
-prefix to search one source: `port 3000`, `time tokyo`, `oc refactor`,
-`clip invoice`. Azure DevOps work items are searched by type: `bug login`,
-`pbi checkout` (a PBI, User Story or Requirement, whatever your process calls
-it), `epic payments`, `feature search`, `task 4521`, or `wi …` for every type.
-The Spotlight tab has a *More examples* page for each source.
+panel. Enter runs the top action (copy, or open in the browser); Cmd-Return
+copies a result's link; Esc closes it. Start a query with a prefix to search
+one source.
 
+| Prefix | Searches | Where it runs |
+|---|---|---|
+| *(none)* | local sources, builds and work items | — |
+| `clip` | ClipBox history (off by default) | this Mac |
+| `port` | listening ports, Docker containers | this Mac |
+| `time` | world clocks | this Mac |
+| `oc` | recent OpenCode sessions | this Mac |
+| `run` | recent GitHub Actions runs ShipBox holds | this Mac |
+| `bug` `pbi` `epic` `feature` `task` `wi` | Azure DevOps work items, any age, by type (`wi` = every type) | dev.azure.com |
+| `pr` | pull requests you are involved in: GitHub and Azure DevOps | api.github.com, dev.azure.com |
+| `commit` | commit messages of any age in the repositories GitBox scans | this Mac |
+| `cal` | calendar events a year back and ahead (off by default) | this Mac |
+| `mkt` | coins and stocks by name or symbol | CoinGecko, Yahoo Finance |
+
+- Pull requests, commits and markets **only search after their prefix**: an
+  unprefixed query would otherwise spend the PRBox agent's GitHub search budget,
+  the CoinGecko/Yahoo quota Deck's widgets share, and run `git log` everywhere.
+- Network searches wait for a pause in typing, never send under 2 characters,
+  cancel when you keep typing, and back off for a minute after a rate limit. A
+  failing source shows its own one-line reason without touching the others.
 - Deck sits in the menu bar (Search, Settings…, Quit Deck). The shortcut only
   works while Deck is running, so **General → Menu bar** has *Open Deck at
-  login* and *Keep Deck in the menu bar only* (hides the Dock icon while the
-  settings window is closed).
-- Clipboard search is **off by default**: copied text would otherwise appear in
-  a panel that can be on screen while you share it.
+  login* and *Keep Deck in the menu bar only*.
+- Clipboard and calendar search are **off by default**: their text would appear
+  in a panel that can be on screen while you share it.
 - If the shortcut does nothing, another app may hold the same combination;
   macOS does not report that.
-- Searching tasks, pull requests, builds and calendar events of any age is
-  planned (ROADMAP M10); this release covers the local sources above.
+- Each source has a **More examples** page under its toggle in the Spotlight tab.
 
 ## How it works
 
@@ -332,7 +345,9 @@ Deck reads personal data, so here is exactly what happens to it.
 | WeatherBox | your location (or nothing, and your IP geolocates) | `wttr.in` |
 | ShipBox | your GitHub token, and the repos you watch (or, in Automatic mode, your repo list) | `api.github.com` |
 | TaskBox | your Azure DevOps PAT, org and projects | `dev.azure.com` |
-| Spotlight → Tasks | the text you type after `task ` (or with no prefix, if Tasks is on), with your TaskBox account's PAT, org and projects; only once you have typed 2+ characters and paused | `dev.azure.com` |
+| Spotlight → Work items | the text you type after a type prefix (or with no prefix, if Work items is on), with your TaskBox account's PAT, org and projects; only after 2+ characters and a pause | `dev.azure.com` |
+| Spotlight → Pull requests | the text you type after `pr `, with your PRBox GitHub token and Azure PAT | `api.github.com`, `dev.azure.com` |
+| Spotlight → Markets | the text you type after `mkt ` (no token) | `api.coingecko.com`, `query1.finance.yahoo.com` |
 | OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
 | MarketBox | the coins you picked (e.g. `bitcoin`) and the stocks/indices you picked (e.g. `^GSPC`), plus what you type in the ticker search | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com`, `query1.finance.yahoo.com` |
 
