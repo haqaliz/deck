@@ -4,13 +4,14 @@ import XCTest
 // local source does.
 
 final class SpotlightRemoteModelTests: XCTestCase {
-    func testTaskIsAppendedAfterTheLocalSources() {
-        XCTAssertEqual(SearchProviderID.allCases, [.clip, .port, .time, .oc, .task])
+    func testSourceOrderIsInstantThenDeferred() {
+        XCTAssertEqual(SearchProviderID.allCases, [.clip, .port, .time, .oc, .run, .task, .pr, .commit, .event, .market])
     }
 
-    func testOnlyTaskIsRemote() {
-        XCTAssertEqual(SearchProviderID.allCases.filter(\.isRemote), [.task])
-        XCTAssertEqual(SearchProviderID.localCases, [.clip, .port, .time, .oc])
+    func testInstantAndDeferredSourcesPartitionTheCases() {
+        XCTAssertEqual(SearchProviderID.instantCases, [.clip, .port, .time, .oc, .run])
+        XCTAssertEqual(SearchProviderID.deferredCases, [.task, .pr, .commit, .event, .market])
+        XCTAssertEqual(SearchProviderID.instantCases + SearchProviderID.deferredCases, SearchProviderID.allCases)
     }
 
     func testTheTaskPrefixScopes() {

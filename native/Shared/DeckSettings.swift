@@ -714,6 +714,15 @@ struct SpotlightSettings: Codable, Equatable {
     /// On, but inert until TaskBox has an account. What is typed is sent to
     /// dev.azure.com, which the settings row says in plain words.
     var taskEnabled = true
+    var runEnabled = true
+    /// Typed text goes to GitHub and Azure DevOps, but only after the `pr `
+    /// prefix; inert until PRBox has an account.
+    var prEnabled = true
+    var commitEnabled = true
+    /// Off: event titles would show in a panel that can be on screen while
+    /// sharing, like the clipboard.
+    var eventEnabled = false
+    var marketEnabled = true
 
     init() {}
 
@@ -724,6 +733,11 @@ struct SpotlightSettings: Codable, Equatable {
         case .time: timeEnabled
         case .oc: ocEnabled
         case .task: taskEnabled
+        case .run: runEnabled
+        case .pr: prEnabled
+        case .commit: commitEnabled
+        case .event: eventEnabled
+        case .market: marketEnabled
         }
     }
 
@@ -746,11 +760,17 @@ struct SpotlightSettings: Codable, Equatable {
         timeEnabled = try c.decodeIfPresent(Bool.self, forKey: .timeEnabled) ?? true
         ocEnabled = try c.decodeIfPresent(Bool.self, forKey: .ocEnabled) ?? true
         taskEnabled = try c.decodeIfPresent(Bool.self, forKey: .taskEnabled) ?? true
+        runEnabled = try c.decodeIfPresent(Bool.self, forKey: .runEnabled) ?? true
+        prEnabled = try c.decodeIfPresent(Bool.self, forKey: .prEnabled) ?? true
+        commitEnabled = try c.decodeIfPresent(Bool.self, forKey: .commitEnabled) ?? true
+        eventEnabled = try c.decodeIfPresent(Bool.self, forKey: .eventEnabled) ?? false
+        marketEnabled = try c.decodeIfPresent(Bool.self, forKey: .marketEnabled) ?? true
     }
 
     enum CodingKeys: String, CodingKey {
         case shortcutKeyCode, shortcutModifiers, keepInTrayOnly, openAtLogin
         case clipEnabled, portEnabled, timeEnabled, ocEnabled, taskEnabled
+        case runEnabled, prEnabled, commitEnabled, eventEnabled, marketEnabled
     }
 }
 

@@ -132,6 +132,9 @@ struct SpotlightInputs {
     var devbox: DevBoxSnapshot?
     var opencode: OpenCodeSnapshot?
     var configuredClockIDs: [String]
+    /// ShipBox's snapshot, for build search. Optional and last so every existing
+    /// construction of `SpotlightInputs` is unchanged.
+    var shipbox: ShipBoxSnapshot? = nil
 }
 
 enum SpotlightEngine {
@@ -151,7 +154,7 @@ enum SpotlightEngine {
 
         // A disabled provider is never searched — not even when the user types
         // its prefix. The toggle is the privacy control for the clipboard.
-        let providers = SearchProviderID.localCases.filter { id in
+        let providers = SearchProviderID.instantCases.filter { id in
             settings.isEnabled(id) && (query.scope == nil || query.scope == id)
         }
 
@@ -165,7 +168,9 @@ enum SpotlightEngine {
                     query: query.text, configuredIDs: inputs.configuredClockIDs,
                     now: now, reference: reference)
             case .oc: results += OpenCodeSearch.results(query: query.text, snapshot: inputs.opencode)
-            case .task: break  // remote: answered by the host through RemoteSearchPolicy
+            case .run: break  // wired in the builds slice
+            case .task, .pr, .commit, .event, .market:
+                break  // deferred: answered by the host through RemoteSearchPolicy
             }
         }
         return SpotlightRanking.sections(
