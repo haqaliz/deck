@@ -204,3 +204,37 @@ final class WorkItemSearchSource: AsyncSearchSource {
         return resolved
     }
 }
+
+// MARK: - Commits
+
+/// `git log --grep` over the repositories GitBox scans. Local: nothing is sent
+/// anywhere.
+@MainActor
+final class CommitSearchSource: AsyncSearchSource {
+    let provider = SearchProviderID.commit
+    private var repos: [URL]?
+
+    func beginSession() { repos = nil }
+
+    func search(_ request: AsyncSearchRequest) async throws -> [SearchResult] {
+        let tokens = GitCommitSearch.tokens(for: request.text)
+        guard GitCommitSearch.canRun(tokens: tokens) else { return [] }
+
+        let repos = await discoverRepos()
+        guard !repos.isEmpty else { throw SearchSourceFailure(.noRepositories) }
+        let rows = await HostGitCommitSearch.search(repos: repos, tokens: tokens)
+        return GitCommitSearch.results(from: rows)
+    }
+
+    /// Reads the settings and walks the scan roots off the main actor, once per
+    /// panel session: a directory walk is cheap but not free.
+    private func discoverRepos() async -> [URL] {
+        if let repos { return repos }
+        let found = await Task.detached { () -> [URL] in
+            let settings = DeckSettings.load().gitbox
+            return HostGitBoxSampler.discoverRepos(paths: settings.repoPaths, depth: settings.scanDepth)
+        }.value
+        repos = found
+        return found
+    }
+}

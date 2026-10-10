@@ -260,6 +260,7 @@ final class SpotlightController {
             self?.hide()
         }
         deferred.register(WorkItemSearchSource())
+        deferred.register(CommitSearchSource())
         deferred.onState = { [weak model] provider, state in model?.setState(provider, state) }
         model.onDeferredQuery = { [weak self, weak model] query in
             guard let self, let model else { return }

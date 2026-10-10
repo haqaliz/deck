@@ -43,12 +43,14 @@
 		1C87D8AA7039304EE1047703 /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		201551751585A84F66EDF7E1 /* PRBoxAzureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46F38858426CA0E8C705B6F /* PRBoxAzureTests.swift */; };
 		214AF4E948209B3310353969 /* DeckBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B96F825FC76E1267D5ACCC /* DeckBundle.swift */; };
+		217F99A201410615C1162C54 /* CommitSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25274AA88948E709BC38423D /* CommitSearch.swift */; };
 		21F6F45C09E63559C20C6F2D /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
 		2204B91FEF36EF22F09364D4 /* LiveBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */; };
 		22290A5D67B8608E00C09A20 /* SpotlightProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9265A6E22517B1B6D20AC8FF /* SpotlightProviders.swift */; };
 		2266BFBB98C3E0FBA6312E69 /* CredentialsWiringTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 920FB174B8F493303CA61487 /* CredentialsWiringTests.swift */; };
 		234BBFEE49DDFBC2A6F9A084 /* ThresholdTierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */; };
 		23EF43A1E8789309DDAE5D28 /* AzureProjectsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BDAAE2C8DB83E54F1D11C85 /* AzureProjectsParserTests.swift */; };
+		248A928306BBEDD1CC940882 /* CommitSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F6A169F61494E1514F05783 /* CommitSearchTests.swift */; };
 		24D2B39CF2040FBDA001CDE7 /* MarketBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */; };
 		272BF418D178E587CB0AE675 /* RefreshPoliciesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C1482ECEE343A435002C514 /* RefreshPoliciesTests.swift */; };
 		27DC4BBF55405C8CFB193051 /* OpenBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */; };
@@ -87,6 +89,7 @@
 		3D3C97CD45D9FC5B6AF3C06D /* SystemMetricsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */; };
 		3E2F3CD69BD386D45D214D04 /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F291A6BF3E8077A4206A68E9 /* AgentService.swift */; };
 		3EE3E1576DE689983493F8DA /* provider-opencode-light.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 2A226CF3C44DC0410557BFFB /* provider-opencode-light.pdf */; };
+		3F956412B7D85DBD85D7AB51 /* CommitSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25274AA88948E709BC38423D /* CommitSearch.swift */; };
 		3F9D2C27AE013737B357EA4D /* ProcessSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */; };
 		3FDD64990B3C6288B15ACEEA /* TrayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33023F59AC01FA5D74ED0FD3 /* TrayController.swift */; };
 		40482A521AFB8F5BF69F9B7F /* WiqlPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */; };
@@ -316,6 +319,7 @@
 		E664FE89330E4F4FC2851875 /* CredentialsWidgetReadsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */; };
 		E78150B6C51925B5F4A27D11 /* com.deck.agent.processes.plist in Resources */ = {isa = PBXBuildFile; fileRef = E34D57F6804ADB7CB6777F6D /* com.deck.agent.processes.plist */; };
 		E8F963A7402C8695BFC89F71 /* FetchStatusCredentialsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */; };
+		E97789ED88F4683BFBC40A78 /* CommitSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25274AA88948E709BC38423D /* CommitSearch.swift */; };
 		E9C9897EA5B6B4BB0A42B780 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		EA007C7EFB10C5747846BBE8 /* StockSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6665B8B08E0F39C775A55C /* StockSearch.swift */; };
 		EA90CCDFFC5A2B29D6F7908F /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
@@ -327,6 +331,7 @@
 		EDD0527FA993CD1BBA58350A /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
 		EF03070D1C89BBB48D30B371 /* MarketBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */; };
 		F1F428C889E3145415BD9E40 /* LiveBoxThermalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C80445C9EC1F419FFAC0DB /* LiveBoxThermalTests.swift */; };
+		F28E0A96C9DCD13F76FECE27 /* CommitSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25274AA88948E709BC38423D /* CommitSearch.swift */; };
 		F30F2267A3769A3B6B02554B /* AzureMultiProjectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52E64CEB52D9007544C51690 /* AzureMultiProjectTests.swift */; };
 		F4968C6168797484C304D6B5 /* ClipBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */; };
 		F4AB6B9FEEF6A118BD4F284B /* ProcessSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */; };
@@ -403,6 +408,7 @@
 		23A385B73056048E69ABF509 /* provider-azure-light.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "provider-azure-light.pdf"; sourceTree = "<group>"; };
 		23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryCore.swift; sourceTree = "<group>"; };
 		246CB064D9531380A28D9673 /* ClockBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockBoxWidget.swift; sourceTree = "<group>"; };
+		25274AA88948E709BC38423D /* CommitSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitSearch.swift; sourceTree = "<group>"; };
 		26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshot.swift; sourceTree = "<group>"; };
 		26EFD7D064769F8C6855201B /* AsyncSearchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncSearchCoordinator.swift; sourceTree = "<group>"; };
 		277279067EB7808B71A4759B /* CredentialGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialGateTests.swift; sourceTree = "<group>"; };
@@ -501,6 +507,7 @@
 		9C0012EC0104AE63207281CC /* MainAppLoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainAppLoginItem.swift; sourceTree = "<group>"; };
 		9ED77CBAE2B1B436BC1E31BF /* DeckBundleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckBundleTests.swift; sourceTree = "<group>"; };
 		9F1A60E3DD45C0E9455E6109 /* com.deck.agent.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.deck.agent.plist; sourceTree = "<group>"; };
+		9F6A169F61494E1514F05783 /* CommitSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitSearchTests.swift; sourceTree = "<group>"; };
 		9F939C5C1255B0A85CA33D70 /* azure_connectiondata.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = azure_connectiondata.json; sourceTree = "<group>"; };
 		9FE2D7379A13510C5A7338BA /* RefreshPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshPolicies.swift; sourceTree = "<group>"; };
 		A7F059BC77B65DAFC1FC3A3A /* TaskBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBoxSnapshotTests.swift; sourceTree = "<group>"; };
@@ -623,6 +630,7 @@
 				7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */,
 				37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */,
 				1AD46890DC73D8196846F990 /* CoinSearch.swift */,
+				25274AA88948E709BC38423D /* CommitSearch.swift */,
 				E3FE592855DDE3084D207447 /* ContainerMigration.swift */,
 				812063688CE39D11189608C8 /* CredentialAccount.swift */,
 				AB175501853DAE0EDDFA4477 /* CredentialsCopy.swift */,
@@ -683,6 +691,7 @@
 				F78DF0427EB0B78A1CDB3EE8 /* ClipBoxSnapshotTests.swift */,
 				AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */,
 				B6C7045DAE585B9A15A88920 /* CoinSearchTests.swift */,
+				9F6A169F61494E1514F05783 /* CommitSearchTests.swift */,
 				84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */,
 				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
 				633ED2890AE2D2C0B501102A /* CredentialAccountTests.swift */,
@@ -1100,6 +1109,7 @@
 				15C7BB212EDB3631F9DE1647 /* ClockBoxCore.swift in Sources */,
 				E14CADB2CF950D781BA2F195 /* ClockBoxWidget.swift in Sources */,
 				9260DF3A98A0441C3A060579 /* CoinSearch.swift in Sources */,
+				3F956412B7D85DBD85D7AB51 /* CommitSearch.swift in Sources */,
 				C898F5671F325C95B7E63C85 /* ContainerMigration.swift in Sources */,
 				09092463B54E5E76973919A0 /* CredentialAccount.swift in Sources */,
 				14A001ACD9A00177E27056F6 /* CredentialVerification.swift in Sources */,
@@ -1182,6 +1192,8 @@
 				3B5B4D3223749E809A021C84 /* ClockBoxTests.swift in Sources */,
 				851A32795AEAE0AF38995456 /* CoinSearch.swift in Sources */,
 				AD601492EF514E27C6515765 /* CoinSearchTests.swift in Sources */,
+				E97789ED88F4683BFBC40A78 /* CommitSearch.swift in Sources */,
+				248A928306BBEDD1CC940882 /* CommitSearchTests.swift in Sources */,
 				E3474B20392275AF6E0E5F68 /* ContainerMigration.swift in Sources */,
 				9679FDE5EC8B876A8C611B2D /* ContainerMigrationTests.swift in Sources */,
 				AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */,
@@ -1310,6 +1322,7 @@
 				0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */,
 				A3610AE8477308D69CE6301A /* ClockBoxCore.swift in Sources */,
 				A65A85D740D6030608790DB3 /* CoinSearch.swift in Sources */,
+				F28E0A96C9DCD13F76FECE27 /* CommitSearch.swift in Sources */,
 				5120DA481AAF09E1AF7936B9 /* ContainerMigration.swift in Sources */,
 				BEE3B5436518E052E5427E4B /* CredentialAccount.swift in Sources */,
 				2C671351EA35B15FB9B3CD15 /* CredentialVerification.swift in Sources */,
@@ -1372,6 +1385,7 @@
 				90A811EBE7E73139D552827E /* ClipBoxSnapshot.swift in Sources */,
 				4679230BBFA043E0D068F18F /* ClockBoxCore.swift in Sources */,
 				83175A52F813503DA160F4B2 /* CoinSearch.swift in Sources */,
+				217F99A201410615C1162C54 /* CommitSearch.swift in Sources */,
 				748E15BDD892140C525F8E77 /* ContainerMigration.swift in Sources */,
 				3AA9C73435EBD0321C2BC3A3 /* CredentialAccount.swift in Sources */,
 				B6109B4ED969BBFCF04F7C1A /* CredentialVerification.swift in Sources */,
