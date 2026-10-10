@@ -36,7 +36,7 @@ enum TaskSearch {
     ///
     /// `CONTAINS` on a string field is Azure's own matching; exactly how it
     /// treats partial words is measured in the probe, not assumed here.
-    static func condition(for text: String) -> String? {
+    static func condition(for text: String, kind: WorkItemKind? = nil) -> String? {
         let clean = sanitise(text)
         guard RemoteSearchPolicy.shouldSearch(clean) else { return nil }
         let literal = "'" + clean.replacingOccurrences(of: "'", with: "''") + "'"
@@ -46,6 +46,12 @@ enum TaskSearch {
         // typed can reach this clause as anything but a number.
         if clean.count <= maxIdDigits, clean.allSatisfy({ $0.isASCII && $0.isNumber }) {
             condition += " OR [System.Id] = \(clean)"
+        }
+        // The text clauses are grouped before the type filter is ANDed on,
+        // or `OR [System.Id] = N` would escape it. The category is a fixed
+        // table entry, never typed text.
+        if let category = kind?.category {
+            condition = "(\(condition)) AND [System.WorkItemType] IN GROUP '\(category)'"
         }
         return condition
     }

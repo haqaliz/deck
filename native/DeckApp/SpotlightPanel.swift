@@ -43,8 +43,9 @@ final class SpotlightViewModel: ObservableObject {
     var onRun: (SearchResult) -> Void = { _ in }
     var onCopy: (SearchResult) -> Void = { _ in }
     var onDismiss: () -> Void = {}
-    /// Told the text after any prefix and whether tasks should be searched.
-    var onRemoteQuery: (_ text: String, _ enabled: Bool) -> Void = { _, _ in }
+    /// Told the text after any prefix, the work-item type, and whether work
+    /// items should be searched at all.
+    var onRemoteQuery: (_ text: String, _ kind: WorkItemKind?, _ enabled: Bool) -> Void = { _, _, _ in }
 
     /// The Tasks rows, ranked and capped like a local section.
     var taskResults: [SearchResult] {
@@ -75,7 +76,7 @@ final class SpotlightViewModel: ObservableObject {
         // Local results above are synchronous and never wait on this.
         let parsed = SpotlightQuery.parse(query)
         let wanted = settings.isEnabled(.task) && (parsed.scope == nil || parsed.scope == .task)
-        onRemoteQuery(parsed.text, wanted)
+        onRemoteQuery(parsed.text, parsed.workItemKind, wanted)
     }
 
     func setTaskState(_ state: RemoteSearchState<[SearchResult]>) {
@@ -181,7 +182,7 @@ struct SpotlightPanelView: View {
                 .padding(.horizontal, 18)
                 .padding(.top, 10)
                 .padding(.bottom, 4)
-            if let line = model.taskState.line(noun: "tasks") {
+            if let line = model.taskState.line(noun: "work items") {
                 Text(line)
                     .font(.system(size: 12, design: .rounded))
                     .foregroundStyle(.secondary)
@@ -255,7 +256,7 @@ final class SpotlightController {
             self?.hide()
         }
         tasks.onState = { [weak model] state in model?.setTaskState(state) }
-        model.onRemoteQuery = { [weak tasks] text, enabled in tasks?.update(text: text, enabled: enabled) }
+        model.onRemoteQuery = { [weak tasks] text, kind, enabled in tasks?.update(text: text, kind: kind, enabled: enabled) }
     }
 
     var isVisible: Bool { panel.isVisible }

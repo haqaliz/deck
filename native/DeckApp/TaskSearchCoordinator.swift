@@ -34,8 +34,11 @@ final class TaskSearchCoordinator {
         onState(.idle)
     }
 
-    /// Called on every query change with what follows the prefix.
-    func update(text: String, enabled: Bool) {
+    /// Called on every query change with what follows the prefix. Searches for
+    /// different types are different searches, so the type is part of the
+    /// cache key.
+    func update(text: String, kind: WorkItemKind?, enabled: Bool) {
+        let cacheKey = "\(source):\(kind?.rawValue ?? "any")"
         generation.cancel()
         inFlight?.cancel()
         inFlight = nil
@@ -46,7 +49,7 @@ final class TaskSearchCoordinator {
         }
 
         let now = Date()
-        if let cached = cache.get(source: source, query: text, at: now) {
+        if let cached = cache.get(source: cacheKey, query: text, at: now) {
             onState(cached.isEmpty ? .empty : .results(cached))
             return
         }
@@ -62,11 +65,11 @@ final class TaskSearchCoordinator {
 
         inFlight = Task { [weak self] in
             try? await Task.sleep(for: .seconds(max(0, sendAt.timeIntervalSinceNow)))
-            await self?.run(text: text, ticket: ticket)
+            await self?.run(text: text, kind: kind, cacheKey: cacheKey, ticket: ticket)
         }
     }
 
-    private func run(text: String, ticket: Int) async {
+    private func run(text: String, kind: WorkItemKind?, cacheKey: String, ticket: Int) async {
         guard !Task.isCancelled, generation.accepts(ticket) else { return }
 
         let gate = await resolveGate()
@@ -86,11 +89,12 @@ final class TaskSearchCoordinator {
                 organization: credential.organization,
                 projects: credential.projects,
                 token: credential.token,
-                text: text)
+                text: text,
+                kind: kind)
             // A late answer to an old query must never replace a newer one.
             guard !Task.isCancelled, generation.accepts(ticket) else { return }
             let results = TaskSearch.results(from: tasks, query: text)
-            cache.put(results, source: source, query: text, at: Date())
+            cache.put(results, source: cacheKey, query: text, at: Date())
             onState(results.isEmpty ? .empty : .results(results))
         } catch {
             guard !Task.isCancelled, generation.accepts(ticket), !Self.isCancellation(error) else { return }

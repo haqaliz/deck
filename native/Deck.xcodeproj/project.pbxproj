@@ -101,6 +101,7 @@
 		47A9B9675547988F1A1C1786 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		482E9A15C89DD93832340B3B /* CredentialsMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD5C85FCA16CC6CB16BA6D4 /* CredentialsMigrationTests.swift */; };
 		4908B2BE0C5A785B8F08F91D /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
+		4CB5AFE123CBED3941DE81FC /* SpotlightWorkItemTypeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165389F3D67AC6A1E8ECC639 /* SpotlightWorkItemTypeTests.swift */; };
 		4D3ECE8B7195BF07E707D11C /* SpotlightProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9265A6E22517B1B6D20AC8FF /* SpotlightProviders.swift */; };
 		4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		4F121926AB6ABBDED6AB4C45 /* AzureTeamsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 871E3F6BD19878F5B8C47B6B /* AzureTeamsParserTests.swift */; };
@@ -385,6 +386,7 @@
 		13A1025AA738F2EC2637AA2C /* AzureAccountProjectsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureAccountProjectsTests.swift; sourceTree = "<group>"; };
 		13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshot.swift; sourceTree = "<group>"; };
 		13DFA928EDB1DBDEF8503D55 /* RGBAPaletteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RGBAPaletteTests.swift; sourceTree = "<group>"; };
+		165389F3D67AC6A1E8ECC639 /* SpotlightWorkItemTypeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightWorkItemTypeTests.swift; sourceTree = "<group>"; };
 		16CB07AB687AD7FAEFF7529C /* SpotlightRemoteModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightRemoteModelTests.swift; sourceTree = "<group>"; };
 		16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxSessionCoreTests.swift; sourceTree = "<group>"; };
 		18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeSyncTests.swift; sourceTree = "<group>"; };
@@ -733,6 +735,7 @@
 				16CB07AB687AD7FAEFF7529C /* SpotlightRemoteModelTests.swift */,
 				BF1C18FF61C9DFAE06F926C5 /* SpotlightSettingsTests.swift */,
 				62EE74D383BD7763C746C21D /* SpotlightShortcutTests.swift */,
+				165389F3D67AC6A1E8ECC639 /* SpotlightWorkItemTypeTests.swift */,
 				BDD0F69418099679B159BC4C /* StockSearchTests.swift */,
 				29738728E12DD5CDF3E8BB45 /* SystemMetricsCoreTests.swift */,
 				2DCCCC07040A9422EBEE1358 /* TaskBoxQueryOutcomeTests.swift */,
@@ -1260,6 +1263,7 @@
 				158A333E465D5F405A61A4F7 /* SpotlightSettingsTests.swift in Sources */,
 				A3A7C456EF24595BEB4B2D6D /* SpotlightShortcut.swift in Sources */,
 				A294B651E89A3EFD457D2E9A /* SpotlightShortcutTests.swift in Sources */,
+				4CB5AFE123CBED3941DE81FC /* SpotlightWorkItemTypeTests.swift in Sources */,
 				B681F466B7C74C88A4C39B4A /* StockSearch.swift in Sources */,
 				CB411251AD16DA48295DC7CD /* StockSearchTests.swift in Sources */,
 				3D3C97CD45D9FC5B6AF3C06D /* SystemMetricsCore.swift in Sources */,

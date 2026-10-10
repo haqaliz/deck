@@ -578,9 +578,10 @@ enum HostAzureDevOpsLoader {
     /// Reaching *no* project throws the first error, so the panel can say why;
     /// reaching some is a partial answer, which is worth more than nothing.
     static func search(
-        organization: String, projects: [String], token: String, text: String
+        organization: String, projects: [String], token: String, text: String,
+        kind: WorkItemKind? = nil
     ) async throws -> [TaskItem] {
-        guard let condition = TaskSearch.condition(for: text) else { return [] }
+        guard let condition = TaskSearch.condition(for: text, kind: kind) else { return [] }
         // Before any request: an unvalidated condition can escape its
         // parentheses and the project clause with them.
         if let problem = WiqlClause.validate(condition) { throw AzureDevOpsError.invalidQuery(problem) }

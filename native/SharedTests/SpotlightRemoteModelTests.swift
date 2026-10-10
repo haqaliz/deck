@@ -43,7 +43,7 @@ final class SpotlightRemoteModelTests: XCTestCase {
     }
 
     func testTheTaskSourceHasItsSettingsWording() {
-        XCTAssertEqual(SearchProviderID.task.settingsTitle, "Tasks")
+        XCTAssertEqual(SearchProviderID.task.settingsTitle, "Work items")
         XCTAssertTrue(SearchProviderID.task.exampleSummary.contains("dev.azure.com"),
                       "the privacy sentence must be where the user decides")
     }

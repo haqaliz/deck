@@ -26,6 +26,7 @@ enum SpotlightRuntime {
 struct SpotlightSettingsView: View {
     @Binding var settings: SpotlightSettings
 
+    @State private var examplesFor: SearchProviderID?
     @State private var recording = false
     @State private var monitor: Any?
     @State private var shortcutStatus: Int32 = SpotlightRuntime.shortcutStatus
@@ -68,7 +69,7 @@ struct SpotlightSettingsView: View {
                 sourceRow(.oc, isOn: $settings.ocEnabled,
                           note: "Recent sessions only, not the full history.")
                 sourceRow(.task, isOn: $settings.taskEnabled,
-                          note: "Does nothing until an account is chosen in TaskBox. Searches every project on that account, including closed items.")
+                          note: "Needs an account chosen in TaskBox. Searches every project on it, closed items included, and finds bugs, backlog items, epics, features and tasks.")
                 Text("With no prefix, every source above answers. A prefix searches just that one.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -76,6 +77,9 @@ struct SpotlightSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+        .sheet(item: $examplesFor) { provider in
+            SearchExamplesView(provider: provider) { examplesFor = nil }
+        }
         .onAppear {
             shortcutStatus = SpotlightRuntime.shortcutStatus
         }
@@ -104,6 +108,9 @@ struct SpotlightSettingsView: View {
             Text(provider.exampleSummary)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            Button("More examples (\(provider.examples.count))") { examplesFor = provider }
+                .buttonStyle(.link)
+                .font(.caption)
             if let note {
                 Text(note)
                     .font(.caption)
@@ -201,5 +208,70 @@ struct MenuBarSettingsSection: View {
                 settings.openAtLogin = result.state.toggleIsOn
             }
         )
+    }
+}
+
+
+// MARK: - More examples
+
+extension SearchProviderID: Identifiable {
+    var id: String { rawValue }
+}
+
+/// One source's examples: the search to type, and what it finds. Opened from
+/// the "More examples" button under each source's toggle.
+struct SearchExamplesView: View {
+    let provider: SearchProviderID
+    let onDone: () -> Void
+
+    @State private var copied: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(provider.settingsTitle)
+                    .font(.title3.weight(.semibold))
+                Text("Open search with your shortcut and type any of these.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(provider.examples, id: \.query) { example in
+                        HStack(alignment: .top, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(example.query)
+                                    .font(.system(.body, design: .monospaced))
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 2)
+                                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
+                                Text(example.summary)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: 0)
+                            Button(copied == example.query ? "Copied" : "Copy") {
+                                let pasteboard = NSPasteboard.general
+                                pasteboard.clearContents()
+                                pasteboard.setString(example.query, forType: .string)
+                                copied = example.query
+                            }
+                            .buttonStyle(.link)
+                            .font(.caption)
+                        }
+                    }
+                }
+            }
+
+            HStack {
+                Spacer()
+                Button("Done", action: onDone)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 520, height: 420)
     }
 }

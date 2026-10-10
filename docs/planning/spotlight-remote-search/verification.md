@@ -37,3 +37,25 @@ below that touches Azure's actual behaviour is therefore unverified.
 - That quick typing sends one request, and Esc mid-flight cancels it.
 - Opening a result (Enter) and copying its link (Cmd-Return) on a real row.
 - The multi-project path (N+1 requests) on an account with several projects.
+
+## Work-item types and the examples pages (added later the same day)
+- `bug`, `pbi`/`backlog`/`story`, `epic`, `feature`, `task` and `wi` scope to the
+  work-item source with a type. A type is a **category** reference
+  (`[System.WorkItemType] IN GROUP 'Microsoft.BugCategory'` etc.), never a type
+  name, because a backlog item is a PBI, User Story or Requirement depending on
+  the process. **Unverified against Azure:** that every account accepts those
+  category names, and that `IN GROUP` behaves as documented. A rejected category
+  would surface as "The service rejected that search."
+- `task` used to search every type; it now means the Task type. `wi` and no
+  prefix search every type.
+- Tests (1563 passing): prefix scoping, type table, hostile text cannot change
+  the category or add a second clause, every example scopes to its own source.
+  Mutation-checked: removing the grouping parentheses fails 3 assertions.
+- On screen with real mouse clicks: the Spotlight tab shows "More examples (n)"
+  under each source; clicking the row's plain text opens nothing, clicking the
+  link opens the page; the Work items page lists all seven examples; Return
+  closes it.
+- Not reproduced: once, the Clipboard examples page appeared during an
+  accessibility-driven test without a deliberate click and was gone a few
+  seconds later. A read-only accessibility scan and re-selecting the tab do not
+  open it. Cause unknown.
