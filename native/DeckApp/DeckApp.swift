@@ -403,23 +403,36 @@ struct ContentView: View {
 
     /// Sample git activity (host is unsandboxed) for the GitBox widget.
     private func refreshGitBox() {
-        guard let snapshot = HostGitBoxSampler.snapshot(
-            paths: settings.gitbox.repoPaths,
-            scanDepth: settings.gitbox.scanDepth
-        ) else { return }
-        if snapshot != GitBoxSnapshotStore.load() {
-            GitBoxSnapshotStore.save(snapshot)
-            WidgetCenter.shared.reloadAllTimelines()
+        let paths = settings.gitbox.repoPaths
+        let depth = settings.gitbox.scanDepth
+        // `git log` across every repo is a subprocess sweep that took ~2.5s on a
+        // real ~/dev. On the main actor it froze the window — and, once Deck
+        // became a resident tray app, delayed the tray and the shortcut by the
+        // same amount at every launch. A run still in flight skips the tick, so
+        // a slow scan cannot stack up behind the 60s timer.
+        guard BackgroundRefresh.begin("gitbox") else { return }
+        Task.detached {
+            defer { BackgroundRefresh.end("gitbox") }
+            guard let snapshot = HostGitBoxSampler.snapshot(paths: paths, scanDepth: depth) else { return }
+            if snapshot != GitBoxSnapshotStore.load() {
+                GitBoxSnapshotStore.save(snapshot)
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         }
     }
 
     /// Sample open ports and Docker containers (host is unsandboxed) for the
     /// DevBox widget.
     private func refreshDevBox() {
-        guard let snapshot = HostDevBoxSampler.snapshot() else { return }
-        if snapshot != DevBoxSnapshotStore.load() {
-            DevBoxSnapshotStore.save(snapshot)
-            WidgetCenter.shared.reloadAllTimelines()
+        // `lsof` and `docker` are subprocesses; same reasoning as `refreshGitBox`.
+        guard BackgroundRefresh.begin("devbox") else { return }
+        Task.detached {
+            defer { BackgroundRefresh.end("devbox") }
+            guard let snapshot = HostDevBoxSampler.snapshot() else { return }
+            if snapshot != DevBoxSnapshotStore.load() {
+                DevBoxSnapshotStore.save(snapshot)
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         }
     }
 
@@ -845,6 +858,24 @@ struct ContentView: View {
                 toolbar.removeItem(at: index)
             }
         }
+    }
+}
+
+/// One run per source at a time. A refresh that is still going when the next
+/// 60s tick fires makes that tick a no-op instead of stacking a second
+/// subprocess sweep behind the first.
+private enum BackgroundRefresh {
+    private static let lock = NSLock()
+    private static var running: Set<String> = []
+
+    static func begin(_ key: String) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return running.insert(key).inserted
+    }
+
+    static func end(_ key: String) {
+        lock.lock(); defer { lock.unlock() }
+        running.remove(key)
     }
 }
 
