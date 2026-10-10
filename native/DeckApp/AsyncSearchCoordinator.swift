@@ -297,3 +297,66 @@ final class MarketSearchSource: AsyncSearchSource {
         do { return .success(try await work()) } catch { return .failure(error) }
     }
 }
+
+// MARK: - Pull requests
+
+/// GitHub and Azure DevOps, through the accounts PRBox uses. Either side may be
+/// off, unconfigured, or failing; whichever answers is shown.
+@MainActor
+final class PullRequestSearchSource: AsyncSearchSource {
+    let provider = SearchProviderID.pr
+
+    private struct Gates {
+        var github: CredentialGate
+        var azure: CredentialGate
+        var githubScope: String
+    }
+    private var gates: Gates?
+
+    func beginSession() { gates = nil }
+
+    func search(_ request: AsyncSearchRequest) async throws -> [SearchResult] {
+        let gates = await resolve()
+        let text = request.text
+        let scope = gates.githubScope
+
+        async let github = side(gates.github) { credential in
+            try await HostGitHubPRLoader.search(token: credential.token, scope: scope, text: text)
+        }
+        async let azure = side(gates.azure) { credential in
+            try await HostAzurePRLoader.search(
+                organization: credential.organization, projects: credential.projects,
+                token: credential.token, text: text)
+        }
+        let merged = try SourceMerge.combine(await github, await azure, ifNothingAnswered: .notConfigured)
+        return PRSearch.results(from: merged.0 + merged.1, query: text)
+    }
+
+    /// `nil` when the user has not turned that provider on; a failure carrying
+    /// the reason when it is on but cannot be used.
+    private func side(
+        _ gate: CredentialGate, _ work: (ResolvedCredential) async throws -> [PRSearchHit]
+    ) async -> Result<[PRSearchHit], Error>? {
+        switch gate {
+        case .off: return nil
+        case .notConfigured: return .failure(SearchSourceFailure(.notConfigured))
+        case .unavailable: return .failure(SearchSourceFailure(.credentialsUnavailable))
+        case .fetch(let credential):
+            do { return .success(try await work(credential)) } catch { return .failure(error) }
+        }
+    }
+
+    private func resolve() async -> Gates {
+        if let gates { return gates }
+        let resolved = await Task.detached { () -> Gates in
+            var settings = DeckSettings.load()
+            let unavailable = settings.hydrateAccountsFromKeychain()
+            return Gates(
+                github: settings.gate(.prboxGitHub, unavailable: unavailable),
+                azure: settings.gate(.prboxAzure, unavailable: unavailable),
+                githubScope: settings.prbox.github.scope)
+        }.value
+        gates = resolved
+        return resolved
+    }
+}

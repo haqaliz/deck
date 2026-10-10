@@ -22,6 +22,7 @@
 		0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */; };
 		0EB43DC3000E365E99A16A34 /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
 		0EFEAD2186B06EE9B040D282 /* EventSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00B1605BE2B257CBAFBB68 /* EventSearch.swift */; };
+		0F55B8AABAD021045DCA52BF /* PRSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7688FCF0670049554AEC3F8 /* PRSearch.swift */; };
 		0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		105CA43FD678593FF0D25014 /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
 		117970D84E0920F72D67A760 /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
@@ -140,6 +141,7 @@
 		5DAADD8D5F4E17021759CBE1 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		5DC6BA12A3C8B551D4965197 /* AgentLivenessCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B023DC10E49885E273424 /* AgentLivenessCopy.swift */; };
 		5E8B2B87C2D878BB819860BB /* TaskBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7F059BC77B65DAFC1FC3A3A /* TaskBoxSnapshotTests.swift */; };
+		5F5EDB6804ACC8B3FF7D66FA /* PRSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7688FCF0670049554AEC3F8 /* PRSearch.swift */; };
 		5F9CA807E95B0B53E322F135 /* MarketBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */; };
 		60889CDEFD75DC832B50E1DB /* provider-github-light.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 45C45FB37B959FD1CACEE470 /* provider-github-light.pdf */; };
 		609938B3AC53C2958C44F68A /* SystemMetricsCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29738728E12DD5CDF3E8BB45 /* SystemMetricsCoreTests.swift */; };
@@ -176,6 +178,7 @@
 		7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C56299F589BAFF84FF3187 /* ShipBoxWidget.swift */; };
 		78812806AB82947C07528CC1 /* MarketBoxCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F93AE35E753ECCFC7B3CF9 /* MarketBoxCoreTests.swift */; };
 		7ADEE8BA9F19842AD86B99DC /* github_prs.json in Resources */ = {isa = PBXBuildFile; fileRef = 910A3754B71959068BBF2549 /* github_prs.json */; };
+		7AFD02A9670B9DC975E7B906 /* PRSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7688FCF0670049554AEC3F8 /* PRSearch.swift */; };
 		7B0649E3CEC354D446CBCD0D /* RemoteOpenCodeSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */; };
 		7BA588A2F45314DC0BFF6883 /* MarketBoxParsersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C2D4337B99014556B02507 /* MarketBoxParsersTests.swift */; };
 		7C2BB313D7CFBD45C5497F6F /* RemoteSearchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BB1D8EA2DE70705DE12154 /* RemoteSearchPolicy.swift */; };
@@ -198,6 +201,7 @@
 		927979BD8876C6899A2534F0 /* RefreshPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FE2D7379A13510C5A7338BA /* RefreshPolicies.swift */; };
 		92F9D56CB31571F8F4BDB6CC /* SystemMetricsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */; };
 		933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
+		9470434E0154F3EE435380FF /* PRSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34BF9735A3D4E0752938A876 /* PRSearchTests.swift */; };
 		94F97F3C03EB1B33F5792A6C /* DevBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8410285538D08E9259413910 /* DevBoxWidget.swift */; };
 		95C0179C1B5783C2DE56F085 /* SpotlightHotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B249B03D306ADA906175DDD /* SpotlightHotKey.swift */; };
 		96361F53D4F188186ADAE3BA /* CredentialsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */; };
@@ -359,6 +363,7 @@
 		FBD849BD3B656D44706F28F6 /* DeckLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E922A862E405B58537BA49 /* DeckLinkTests.swift */; };
 		FC125295397F417AA47379E3 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		FC5D26AEE58F54EA84894285 /* AgentLivenessCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B023DC10E49885E273424 /* AgentLivenessCopy.swift */; };
+		FE56B2A4CEDAC912BBC16FAF /* PRSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7688FCF0670049554AEC3F8 /* PRSearch.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -432,6 +437,7 @@
 		2DCCCC07040A9422EBEE1358 /* TaskBoxQueryOutcomeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBoxQueryOutcomeTests.swift; sourceTree = "<group>"; };
 		2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeSync.swift; sourceTree = "<group>"; };
 		33023F59AC01FA5D74ED0FD3 /* TrayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrayController.swift; sourceTree = "<group>"; };
+		34BF9735A3D4E0752938A876 /* PRSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRSearchTests.swift; sourceTree = "<group>"; };
 		34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckWidgets.swift; sourceTree = "<group>"; };
 		358E19909138D28C1CFD82F5 /* SpotlightProvidersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightProvidersTests.swift; sourceTree = "<group>"; };
 		361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxDiskCore.swift; sourceTree = "<group>"; };
@@ -567,6 +573,7 @@
 		D63E4A6605648A901BE67985 /* yahoo_chart_unknown.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = yahoo_chart_unknown.json; sourceTree = "<group>"; };
 		D6BB1D8EA2DE70705DE12154 /* RemoteSearchPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSearchPolicy.swift; sourceTree = "<group>"; };
 		D6C015468901E17452BF6132 /* ShipBoxDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxDiscoveryTests.swift; sourceTree = "<group>"; };
+		D7688FCF0670049554AEC3F8 /* PRSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRSearch.swift; sourceTree = "<group>"; };
 		D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThresholdTests.swift; sourceTree = "<group>"; };
 		D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshotTests.swift; sourceTree = "<group>"; };
 		DA30E2EBBF22779F78EA3E3D /* yahoo_chart_gspc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = yahoo_chart_gspc.json; sourceTree = "<group>"; };
@@ -670,6 +677,7 @@
 				1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */,
 				C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */,
 				26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */,
+				D7688FCF0670049554AEC3F8 /* PRSearch.swift */,
 				9FE2D7379A13510C5A7338BA /* RefreshPolicies.swift */,
 				37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */,
 				2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */,
@@ -750,6 +758,7 @@
 				B129C36246D87142F352B506 /* PRBoxSnapshotTests.swift */,
 				21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */,
 				D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */,
+				34BF9735A3D4E0752938A876 /* PRSearchTests.swift */,
 				3C1482ECEE343A435002C514 /* RefreshPoliciesTests.swift */,
 				5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */,
 				18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */,
@@ -1160,6 +1169,7 @@
 				A5E22A6827149E7194FB4E64 /* OpenCodeSnapshot.swift in Sources */,
 				4FFB4889B6E7616A91A4712D /* PRBoxSnapshot.swift in Sources */,
 				D48B0D31B9644A8985F7E702 /* PRBoxWidget.swift in Sources */,
+				5F5EDB6804ACC8B3FF7D66FA /* PRSearch.swift in Sources */,
 				040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */,
 				777306E14AD6683117A05166 /* RefreshPolicies.swift in Sources */,
 				E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */,
@@ -1278,6 +1288,8 @@
 				0A951556D9FDE10F29C3A1EB /* PRBoxReviewStateTests.swift in Sources */,
 				1B8565F372BC3AA492625092 /* PRBoxSnapshot.swift in Sources */,
 				CB54BF2A77B52929C1500593 /* PRBoxSnapshotTests.swift in Sources */,
+				7AFD02A9670B9DC975E7B906 /* PRSearch.swift in Sources */,
+				9470434E0154F3EE435380FF /* PRSearchTests.swift in Sources */,
 				933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */,
 				3F9D2C27AE013737B357EA4D /* ProcessSnapshotStoreTests.swift in Sources */,
 				F4AB6B9FEEF6A118BD4F284B /* ProcessSnapshotTests.swift in Sources */,
@@ -1373,6 +1385,7 @@
 				38CA6F050AB3377F30390895 /* OpenCodeReader.swift in Sources */,
 				15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */,
 				A2EE3F352DA2E30CB3F4E017 /* PRBoxSnapshot.swift in Sources */,
+				0F55B8AABAD021045DCA52BF /* PRSearch.swift in Sources */,
 				CA54C0DBEBA60A7A6A411BB3 /* ProcessSnapshot.swift in Sources */,
 				927979BD8876C6899A2534F0 /* RefreshPolicies.swift in Sources */,
 				4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */,
@@ -1436,6 +1449,7 @@
 				41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */,
 				2D03E1C6AEAD755CE49CF9FD /* OpenCodeSnapshot.swift in Sources */,
 				105CA43FD678593FF0D25014 /* PRBoxSnapshot.swift in Sources */,
+				FE56B2A4CEDAC912BBC16FAF /* PRSearch.swift in Sources */,
 				1967FF4D20A83BF47DDFFCB2 /* ProcessSnapshot.swift in Sources */,
 				5576031FF9731287EA166B74 /* RefreshPolicies.swift in Sources */,
 				D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */,

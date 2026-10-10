@@ -80,24 +80,9 @@ enum MarketSearch {
         coins: Result<[CoinSearchHit], Error>?,
         stocks: Result<[StockSearchHit], Error>?
     ) throws -> (coins: [CoinSearchHit], stocks: [StockSearchHit]) {
-        var coinHits: [CoinSearchHit] = []
-        var stockHits: [StockSearchHit] = []
-        var firstError: Error?
-        var answered = false
-
-        switch coins {
-        case .success(let hits)?: coinHits = hits; answered = true
-        case .failure(let error)?: firstError = firstError ?? error
-        case nil: break
-        }
-        switch stocks {
-        case .success(let hits)?: stockHits = hits; answered = true
-        case .failure(let error)?: firstError = firstError ?? error
-        case nil: break
-        }
-        if answered { return (coinHits, stockHits) }
-        // Nothing answered. Skipping is only ever a back-off, so say that.
-        throw firstError ?? SearchSourceFailure(.rateLimited)
+        // Skipping is only ever a back-off, so that is what to say if nothing answered.
+        let merged = try SourceMerge.combine(coins, stocks, ifNothingAnswered: .rateLimited)
+        return (merged.0, merged.1)
     }
 }
 

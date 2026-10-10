@@ -260,6 +260,7 @@ final class SpotlightController {
             self?.hide()
         }
         deferred.register(WorkItemSearchSource())
+        deferred.register(PullRequestSearchSource())
         deferred.register(CommitSearchSource())
         deferred.register(EventSearchSource())
         deferred.register(MarketSearchSource())
