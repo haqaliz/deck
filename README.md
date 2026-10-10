@@ -281,6 +281,26 @@ to 12. Crypto and stock rows carry the change — and so does the USD row in
   the widget's settings tab as a full sentence, right under the field that
   causes it, and clears the moment you edit that field.
 
+## Spotlight search
+
+Press **⌥Space** (changeable in the **Spotlight** tab) for a floating search
+panel. It searches what Deck already has: ports and containers (DevBox), world
+clocks (ClockBox), recent OpenCode sessions, and — only if you switch it on —
+your ClipBox history. Enter copies the result; Esc closes the panel. Type a
+prefix to search one source: `port 3000`, `time tokyo`, `oc refactor`,
+`clip invoice`. The Spotlight tab shows an example for each source.
+
+- Deck sits in the menu bar (Search, Settings…, Quit Deck). The shortcut only
+  works while Deck is running, so **General → Menu bar** has *Open Deck at
+  login* and *Keep Deck in the menu bar only* (hides the Dock icon while the
+  settings window is closed).
+- Clipboard search is **off by default**: copied text would otherwise appear in
+  a panel that can be on screen while you share it.
+- If the shortcut does nothing, another app may hold the same combination;
+  macOS does not report that.
+- Searching tasks, pull requests, builds and calendar events of any age is
+  planned (ROADMAP M10); this release covers the local sources above.
+
 ## How it works
 
 - **Self-sampled widgets** (LiveBox/NetBox/BatBox) read mach, getifaddrs and
