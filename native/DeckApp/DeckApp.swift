@@ -110,6 +110,7 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
         tray.onSettings = { [weak self] in self?.openSettings() }
         tray.onQuit = { NSApp.terminate(nil) }
         tray.install()
+        SpotlightRuntime.trayReady = tray.isReady
         spotlight.startObservingSize()
 
         let center = NotificationCenter.default
@@ -122,6 +123,13 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
         center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.applyDockPolicy() }
         }
+        center.addObserver(forName: .deckShortcutRecording, object: nil, queue: .main) { [weak self] note in
+            MainActor.assumeIsolated {
+                // Recording releases the shortcut so the current combination can
+                // be re-recorded; stopping puts it back.
+                if (note.object as? Bool) == true { self?.hotKey.unregister() } else { self?.applySettings() }
+            }
+        }
         applySettings()
     }
 
@@ -129,9 +137,11 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
     /// shortcut and the Dock icon.
     private func applySettings() {
         let s = DeckSettings.load().spotlight
-        hotKey.register(keyCode: s.shortcutKeyCode, modifiers: s.shortcutModifiers) { [weak self] in
+        let status = hotKey.register(keyCode: s.shortcutKeyCode, modifiers: s.shortcutModifiers) { [weak self] in
             self?.spotlight.toggle()
         }
+        SpotlightRuntime.shortcutStatus = status
+        NotificationCenter.default.post(name: .deckShortcutStatus, object: status)
         applyDockPolicy()
     }
 
@@ -215,10 +225,12 @@ struct ContentView: View {
             List(selection: $selection) {
                 Label("General", systemImage: "gearshape")
                     .tag(DeckWidget.general)
+                Label("Spotlight", systemImage: "magnifyingglass")
+                    .tag(DeckWidget.spotlight)
                 Label("Credentials", systemImage: "key.fill")
                     .tag(DeckWidget.credentials)
                 Section("Widgets") {
-                    ForEach(DeckWidget.allCases.filter { $0 != .general && $0 != .credentials }) { widget in
+                    ForEach(DeckWidget.allCases.filter { $0 != .general && $0 != .spotlight && $0 != .credentials }) { widget in
                         Label(widget.title, systemImage: widget.systemImage)
                             .tag(widget)
                     }
@@ -230,6 +242,7 @@ struct ContentView: View {
             switch selection {
             case .general: GeneralSettingsView(
                 agentAtLogin: $settings.agentAtLogin,
+                spotlight: $settings.spotlight,
                 agentError: agentError,
                 agentNotice: agentNotice,
                 liveness: liveness,
@@ -248,6 +261,7 @@ struct ContentView: View {
                 onRemoveAgents: uninstallAgents,
                 onEraseData: eraseDeckData
             )
+            case .spotlight: SpotlightSettingsView(settings: $settings.spotlight)
             case .credentials: CredentialsSettingsView(
                 settings: $settings,
                 unavailableAccounts: unavailableAccounts,
@@ -864,7 +878,7 @@ private func refreshMarketBox() async {
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, credentials
+    case general, spotlight, credentials
     case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
     case weatherbox, clockbox, shipbox, taskbox, calbox, prbox, marketbox
 
@@ -873,6 +887,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: "General"
+        case .spotlight: "Spotlight"
         case .credentials: "Credentials"
         case .livebox: "LiveBox"
         case .openbox: "OpenBox"
@@ -894,6 +909,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .general: "gearshape"
+        case .spotlight: "magnifyingglass"
         case .credentials: "key.fill"
         case .livebox: "cpu"
         case .openbox: "arrow.left.arrow.right"
@@ -917,6 +933,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
 
 private struct GeneralSettingsView: View {
     @Binding var agentAtLogin: Bool
+    @Binding var spotlight: SpotlightSettings
     var agentError: String?
     var agentNotice: String?
     /// Registered, but is launchd actually running them? Only `.down` draws.
@@ -990,6 +1007,8 @@ private struct GeneralSettingsView: View {
                     }
                 }
             }
+
+            MenuBarSettingsSection(settings: $spotlight)
 
             // Deck registers two LaunchAgents on first run. Leaving the only
             // removal path in the README as four terminal commands is not a

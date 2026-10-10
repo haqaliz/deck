@@ -119,6 +119,7 @@
 		57F5796192299650422752B1 /* erApiLatest.json in Resources */ = {isa = PBXBuildFile; fileRef = CF554B40AD43EFE339212234 /* erApiLatest.json */; };
 		590B4D6F5F70FC9062131040 /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
 		596256D947FA628D3158EA89 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
+		5AF5213E37E2AA0CCD62EE55 /* SpotlightShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C1C101998A3DF7BA1A0987 /* SpotlightShortcut.swift */; };
 		5C0FC13FD9210AD4499E5B6E /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
 		5C66BC767CDD4C5D197BE30F /* WiqlPresetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD561BD148534E3EA9F6D063 /* WiqlPresetTests.swift */; };
 		5CE30F9D3500ACC02D8D8BF4 /* AgentLivenessCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5EFA4031BC633B2E191C16 /* AgentLivenessCopyTests.swift */; };
@@ -133,6 +134,7 @@
 		6248158B19A1EEA34643CE4D /* TrayLifecyclePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDD6D829248E1B7EF8FF06D9 /* TrayLifecyclePolicy.swift */; };
 		639C6BD8562F1A7344151EAB /* CredentialsCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB175501853DAE0EDDFA4477 /* CredentialsCopy.swift */; };
 		63CAFAA1018EA45415E903FE /* LiveBoxDiskCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361B75CD98E68A658D1EDD3B /* LiveBoxDiskCore.swift */; };
+		64CD16F75AF5E4E6CA02ECBE /* SpotlightShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C1C101998A3DF7BA1A0987 /* SpotlightShortcut.swift */; };
 		6551819CA5506A4D266E0D79 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
 		66B10E484885189925757346 /* DeckBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B96F825FC76E1267D5ACCC /* DeckBundle.swift */; };
 		6859FF716F2A08F81EA0F19E /* WiqlPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */; };
@@ -192,10 +194,13 @@
 		9C8C825172CFF975DC780344 /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
 		9DBCB73513BAF9149ADC7DE9 /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
 		A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5089372A785C079676513337 /* TaskBoxSnapshot.swift */; };
+		A294B651E89A3EFD457D2E9A /* SpotlightShortcutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62EE74D383BD7763C746C21D /* SpotlightShortcutTests.swift */; };
 		A2EE3F352DA2E30CB3F4E017 /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
 		A3610AE8477308D69CE6301A /* ClockBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */; };
 		A366F0122DCFF1970B2158B5 /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
+		A3A7C456EF24595BEB4B2D6D /* SpotlightShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C1C101998A3DF7BA1A0987 /* SpotlightShortcut.swift */; };
 		A412528F9F4A6E67FB4F37D5 /* StockSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6665B8B08E0F39C775A55C /* StockSearch.swift */; };
+		A484769A7C500BFBC3FFDA80 /* SpotlightShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C1C101998A3DF7BA1A0987 /* SpotlightShortcut.swift */; };
 		A5B35DC87D98A640C07225DE /* PRBoxGitHubTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52463282A2101289BD5E16DD /* PRBoxGitHubTests.swift */; };
 		A5D18790439106076A579311 /* FetchStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0F7208894404301344CB11 /* FetchStatusTests.swift */; };
 		A5D6283DF0774FCB9F273152 /* ShipBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B689609DAF712DB93F32A60 /* ShipBoxSnapshotTests.swift */; };
@@ -236,6 +241,7 @@
 		C1880C6DD5759D69ACFFE48B /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
 		C25CF03F42EF2643976A9291 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		C2697957F8E3A81F07B6342B /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
+		C29498F116FBD92A081C2F5D /* SpotlightSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85FA0D76B911A383F8BAA255 /* SpotlightSettingsView.swift */; };
 		C302C7E4ACAF175EC6AD3B6E /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
 		C42FB5B9E249E0FE9710B663 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
 		C4364123C8EC5694D890C272 /* github_user.json in Resources */ = {isa = PBXBuildFile; fileRef = AB6827E74F3CB5B26EA2537F /* github_user.json */; };
@@ -298,6 +304,7 @@
 		E9C9897EA5B6B4BB0A42B780 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		EA007C7EFB10C5747846BBE8 /* StockSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6665B8B08E0F39C775A55C /* StockSearch.swift */; };
 		EA90CCDFFC5A2B29D6F7908F /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
+		EAD2C3E0F5DD9B9C8E814D62 /* MainAppLoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0012EC0104AE63207281CC /* MainAppLoginItem.swift */; };
 		EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		EC304DA0C12EDF3AA590726D /* SpotlightProvidersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 358E19909138D28C1CFD82F5 /* SpotlightProvidersTests.swift */; };
 		ECCBC5BF638E6D313E844B4B /* StockSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6665B8B08E0F39C775A55C /* StockSearch.swift */; };
@@ -418,9 +425,11 @@
 		561AB4E0A1AD6FABCE740F12 /* WeatherSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherSnapshotTests.swift; sourceTree = "<group>"; };
 		580B023DC10E49885E273424 /* AgentLivenessCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentLivenessCopy.swift; sourceTree = "<group>"; };
 		584C732D7197A9020BC1AEF4 /* yahoo_chart_aapl.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = yahoo_chart_aapl.json; sourceTree = "<group>"; };
+		58C1C101998A3DF7BA1A0987 /* SpotlightShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightShortcut.swift; sourceTree = "<group>"; };
 		5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeAggregatorTests.swift; sourceTree = "<group>"; };
 		5D680778E4768CF095D285F7 /* yahoo_search_apple.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = yahoo_search_apple.json; sourceTree = "<group>"; };
 		61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThermalCore.swift; sourceTree = "<group>"; };
+		62EE74D383BD7763C746C21D /* SpotlightShortcutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightShortcutTests.swift; sourceTree = "<group>"; };
 		633ED2890AE2D2C0B501102A /* CredentialAccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialAccountTests.swift; sourceTree = "<group>"; };
 		694F80D691C62D93C806CD51 /* AccessoryCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryCoreTests.swift; sourceTree = "<group>"; };
 		69882E34EC81D79A1C21CA9C /* AgentHeartbeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentHeartbeat.swift; sourceTree = "<group>"; };
@@ -447,6 +456,7 @@
 		82736DC13D9569D028C763BC /* DeckKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychain.swift; sourceTree = "<group>"; };
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
 		84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerMigrationTests.swift; sourceTree = "<group>"; };
+		85FA0D76B911A383F8BAA255 /* SpotlightSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightSettingsView.swift; sourceTree = "<group>"; };
 		86472D68B091CE8C0F8CBFFC /* ShipBoxInventoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxInventoryTests.swift; sourceTree = "<group>"; };
 		871E3F6BD19878F5B8C47B6B /* AzureTeamsParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureTeamsParserTests.swift; sourceTree = "<group>"; };
 		873043B93448D9154A158983 /* MarketTickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketTickerTests.swift; sourceTree = "<group>"; };
@@ -465,6 +475,7 @@
 		94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSnapshot.swift; sourceTree = "<group>"; };
 		94F22FC7144344D976F92FEC /* PRBoxReviewStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxReviewStateTests.swift; sourceTree = "<group>"; };
 		970F6F6A1DFB74AABEE7826C /* ClipBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxWidget.swift; sourceTree = "<group>"; };
+		9C0012EC0104AE63207281CC /* MainAppLoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainAppLoginItem.swift; sourceTree = "<group>"; };
 		9ED77CBAE2B1B436BC1E31BF /* DeckBundleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckBundleTests.swift; sourceTree = "<group>"; };
 		9F1A60E3DD45C0E9455E6109 /* com.deck.agent.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.deck.agent.plist; sourceTree = "<group>"; };
 		9F939C5C1255B0A85CA33D70 /* azure_connectiondata.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = azure_connectiondata.json; sourceTree = "<group>"; };
@@ -560,8 +571,10 @@
 				F291A6BF3E8077A4206A68E9 /* AgentService.swift */,
 				FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */,
 				7B2DB053937C24CBB649992B /* Info.plist */,
+				9C0012EC0104AE63207281CC /* MainAppLoginItem.swift */,
 				0B249B03D306ADA906175DDD /* SpotlightHotKey.swift */,
 				DCCAB889E814296403B2C9A8 /* SpotlightPanel.swift */,
+				85FA0D76B911A383F8BAA255 /* SpotlightSettingsView.swift */,
 				33023F59AC01FA5D74ED0FD3 /* TrayController.swift */,
 				989F8CCC5027070A6EDBE318 /* LaunchAgents */,
 				0A97E3E77BFF383850F9F406 /* Resources */,
@@ -611,6 +624,7 @@
 				94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */,
 				CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */,
 				9265A6E22517B1B6D20AC8FF /* SpotlightProviders.swift */,
+				58C1C101998A3DF7BA1A0987 /* SpotlightShortcut.swift */,
 				2A6665B8B08E0F39C775A55C /* StockSearch.swift */,
 				C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */,
 				5089372A785C079676513337 /* TaskBoxSnapshot.swift */,
@@ -692,6 +706,7 @@
 				75DD62878DBB50EF44C4B91D /* SpotlightCoreTests.swift */,
 				358E19909138D28C1CFD82F5 /* SpotlightProvidersTests.swift */,
 				BF1C18FF61C9DFAE06F926C5 /* SpotlightSettingsTests.swift */,
+				62EE74D383BD7763C746C21D /* SpotlightShortcutTests.swift */,
 				BDD0F69418099679B159BC4C /* StockSearchTests.swift */,
 				29738728E12DD5CDF3E8BB45 /* SystemMetricsCoreTests.swift */,
 				2DCCCC07040A9422EBEE1358 /* TaskBoxQueryOutcomeTests.swift */,
@@ -1086,6 +1101,7 @@
 				7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */,
 				8B0CA68FFC7E3EF359C7826F /* SpotlightCore.swift in Sources */,
 				71B74AEB30AF0997026D034B /* SpotlightProviders.swift in Sources */,
+				64CD16F75AF5E4E6CA02ECBE /* SpotlightShortcut.swift in Sources */,
 				A412528F9F4A6E67FB4F37D5 /* StockSearch.swift in Sources */,
 				D5B3D91CDEAA3FE498A09990 /* SystemMetrics.swift in Sources */,
 				27E46B2CB6BF58E9D9DD72A3 /* SystemMetricsCore.swift in Sources */,
@@ -1209,6 +1225,8 @@
 				22290A5D67B8608E00C09A20 /* SpotlightProviders.swift in Sources */,
 				EC304DA0C12EDF3AA590726D /* SpotlightProvidersTests.swift in Sources */,
 				158A333E465D5F405A61A4F7 /* SpotlightSettingsTests.swift in Sources */,
+				A3A7C456EF24595BEB4B2D6D /* SpotlightShortcut.swift in Sources */,
+				A294B651E89A3EFD457D2E9A /* SpotlightShortcutTests.swift in Sources */,
 				B681F466B7C74C88A4C39B4A /* StockSearch.swift in Sources */,
 				CB411251AD16DA48295DC7CD /* StockSearchTests.swift in Sources */,
 				3D3C97CD45D9FC5B6AF3C06D /* SystemMetricsCore.swift in Sources */,
@@ -1260,6 +1278,7 @@
 				17D71C4767C8E41123882FAB /* LiveBoxCore.swift in Sources */,
 				AF7FE0721F8D203C29B1D8D1 /* LiveBoxDiskCore.swift in Sources */,
 				B78D28F3EFB86CEA57C9803E /* LiveBoxThermalCore.swift in Sources */,
+				EAD2C3E0F5DD9B9C8E814D62 /* MainAppLoginItem.swift in Sources */,
 				AD4AF4B05C1E49736F84F66F /* MarketBoxCore.swift in Sources */,
 				34CAB8CF2B13D17293FC01D7 /* MarketBoxSnapshot.swift in Sources */,
 				47A9B9675547988F1A1C1786 /* NetBoxCore.swift in Sources */,
@@ -1276,6 +1295,8 @@
 				95C0179C1B5783C2DE56F085 /* SpotlightHotKey.swift in Sources */,
 				2FBB7156F7883EA822B63F62 /* SpotlightPanel.swift in Sources */,
 				4D3ECE8B7195BF07E707D11C /* SpotlightProviders.swift in Sources */,
+				C29498F116FBD92A081C2F5D /* SpotlightSettingsView.swift in Sources */,
+				5AF5213E37E2AA0CCD62EE55 /* SpotlightShortcut.swift in Sources */,
 				EA007C7EFB10C5747846BBE8 /* StockSearch.swift in Sources */,
 				92F9D56CB31571F8F4BDB6CC /* SystemMetricsCore.swift in Sources */,
 				A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */,
@@ -1330,6 +1351,7 @@
 				FC125295397F417AA47379E3 /* ShipBoxSnapshot.swift in Sources */,
 				7DE967CF80745F4E197DEBEE /* SpotlightCore.swift in Sources */,
 				DCFB3DD59B6875D41CB81E0A /* SpotlightProviders.swift in Sources */,
+				A484769A7C500BFBC3FFDA80 /* SpotlightShortcut.swift in Sources */,
 				ECCBC5BF638E6D313E844B4B /* StockSearch.swift in Sources */,
 				5310A1B92B3CCF57C291D6F4 /* SystemMetricsCore.swift in Sources */,
 				61AE78535BCAC51B5785634B /* TaskBoxSnapshot.swift in Sources */,
