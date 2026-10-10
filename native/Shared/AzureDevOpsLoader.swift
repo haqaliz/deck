@@ -428,8 +428,19 @@ enum WorkItemParser {
             url: "\(projectBase(for: project, in: target))/_workitems/edit/\(id)",
             provider: .azureDevOps,
             changedAt: AzureDate.parse(fields["System.ChangedDate"]),
-            project: project
+            project: project,
+            tags: TagParser.split(fields["System.Tags"] as? String)
         )
+    }
+}
+
+/// `System.Tags` arrives as one string, `"alpha; beta"`.
+enum TagParser {
+    static func split(_ raw: String?) -> [String] {
+        (raw ?? "")
+            .split(separator: ";")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 }
 
@@ -609,6 +620,21 @@ enum HostAzureDevOpsLoader {
         return try WiqlResponse.interpret(status: status, body: body)
     }
 
+    /// The fields the batch asks for. A property rather than an inline literal
+    /// so a test can pin that nothing the widget depends on gets dropped.
+    static let batchFields = [
+        "System.Id",
+        "System.Title",
+        "System.State",
+        "System.WorkItemType",
+        "System.ChangedDate",
+        // Load-bearing: the batch is organization-scoped, so this is the only
+        // thing that says which project a row came from.
+        "System.TeamProject",
+        // For Spotlight search rows; absent from a work item with none.
+        "System.Tags",
+    ]
+
     private static func workItems(
         ids: [Int], target: AzureTarget, auth: String
     ) async throws -> [TaskItem] {
@@ -617,16 +643,7 @@ enum HostAzureDevOpsLoader {
         }
         let body: [String: Any] = [
             "ids": ids,
-            "fields": [
-                "System.Id",
-                "System.Title",
-                "System.State",
-                "System.WorkItemType",
-                "System.ChangedDate",
-                // Load-bearing: the batch is organization-scoped, so this is
-                // the only thing that says which project a row came from.
-                "System.TeamProject",
-            ],
+            "fields": batchFields,
             // Required, not cosmetic: without it the whole batch fails when a
             // single id is inaccessible or was deleted between the WIQL call
             // and this one — a real race at a 60s cadence.
