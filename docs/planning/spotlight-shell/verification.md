@@ -29,6 +29,7 @@ curated list.
 | Tray Settings… with Dock icon hidden | window returns, app becomes `Foreground` |
 | Recorder: press Ctrl-Option-K | saved as key 40 / modifiers 6144; Option-Space stops, Ctrl-Option-K starts, no relaunch |
 | Recorder armed, then Esc | shortcut released while armed, restored after |
+| Spotlight tab shows an example search per source (`clip invoice`, `port 3000`, `time tokyo`, `oc refactor`) with what it finds and what Enter does | confirmed in a screenshot and the accessibility text; a test pins that each example scopes to its own source |
 | General has Menu bar, Spotlight has the shortcut and sources | confirmed from on-screen text |
 | Launch to usable shortcut | ~7s before, **1.5-2.3s** after GitBox/DevBox moved off the main actor |
 

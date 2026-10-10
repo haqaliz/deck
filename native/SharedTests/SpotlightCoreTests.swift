@@ -65,6 +65,34 @@ final class SpotlightQueryTests: XCTestCase {
     }
 }
 
+/// The settings tab shows one example search per source. These pin that each
+/// example actually does what the tab says — scoped to its own source, with
+/// something to look for — so a copy edit cannot leave a dead example on screen.
+final class SpotlightExampleTests: XCTestCase {
+    func testEveryExampleScopesToItsOwnSource() {
+        for provider in SearchProviderID.allCases {
+            let q = SpotlightQuery.parse(provider.exampleQuery)
+            XCTAssertEqual(q.scope, provider, "\(provider) example: \(provider.exampleQuery)")
+            XCTAssertFalse(q.isEmpty, "\(provider) example has nothing to search for")
+        }
+    }
+
+    func testEveryExampleHasWordingForTheSettingsTab() {
+        for provider in SearchProviderID.allCases {
+            XCTAssertFalse(provider.settingsTitle.isEmpty)
+            XCTAssertFalse(provider.exampleSummary.isEmpty)
+        }
+    }
+
+    /// The examples run against the real providers: the clock one must find a
+    /// city without any configuration, since it is searched with no snapshot.
+    func testTheClockExampleFindsSomethingOnAFreshInstall() {
+        let q = SpotlightQuery.parse(SearchProviderID.time.exampleQuery)
+        let hits = ClockSearch.results(query: q.text, configuredIDs: [], now: Date(), reference: .current)
+        XCTAssertFalse(hits.isEmpty)
+    }
+}
+
 final class SpotlightMatcherTests: XCTestCase {
     func testNoMatchIsNil() {
         XCTAssertNil(SpotlightMatcher.score(query: "xyz", in: "postgres"))

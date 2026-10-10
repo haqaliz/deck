@@ -14,6 +14,41 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
     case time
     case oc
 
+    /// The toggle's label in the Spotlight settings tab.
+    var settingsTitle: String {
+        switch self {
+        case .clip: "Clipboard"
+        case .port: "Ports and containers"
+        case .time: "World clocks"
+        case .oc: "OpenCode sessions"
+        }
+    }
+
+    /// A search to try, shown under the toggle. Must scope to this source and
+    /// have something to look for — pinned by `SpotlightExampleTests`.
+    var exampleQuery: String {
+        switch self {
+        case .clip: "clip invoice"
+        case .port: "port 3000"
+        case .time: "time tokyo"
+        case .oc: "oc refactor"
+        }
+    }
+
+    /// What that search finds, and what Enter does with it.
+    var exampleSummary: String {
+        switch self {
+        case .clip:
+            "Finds text you copied earlier, from ClipBox history. Enter copies it back."
+        case .port:
+            "Finds a listening port by number or process, or a Docker container by name or image. Enter copies the port or container name."
+        case .time:
+            "Shows the current time in a city, with its day and offset from you. Enter copies the time."
+        case .oc:
+            "Finds recent OpenCode sessions by title. Enter copies the title."
+        }
+    }
+
     var sectionTitle: String {
         switch self {
         case .clip: "Clipboard"

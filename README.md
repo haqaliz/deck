@@ -287,7 +287,8 @@ Press **⌥Space** (changeable in the **Spotlight** tab) for a floating search
 panel. It searches what Deck already has: ports and containers (DevBox), world
 clocks (ClockBox), recent OpenCode sessions, and — only if you switch it on —
 your ClipBox history. Enter copies the result; Esc closes the panel. Type a
-prefix to search one source: `port `, `time `, `oc `, `clip `.
+prefix to search one source: `port 3000`, `time tokyo`, `oc refactor`,
+`clip invoice`. The Spotlight tab shows an example for each source.
 
 - Deck sits in the menu bar (Search, Settings…, Quit Deck). The shortcut only
   works while Deck is running, so **General → Menu bar** has *Open Deck at

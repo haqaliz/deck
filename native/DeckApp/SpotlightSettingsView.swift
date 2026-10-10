@@ -61,14 +61,13 @@ struct SpotlightSettingsView: View {
             }
 
             Section("Search in") {
-                Toggle("Clipboard", isOn: $settings.clipEnabled)
-                Text("Off by default: copied text would appear in the search panel, which can be on screen while you share it. Needs ClipBox history.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Toggle("Ports and containers", isOn: $settings.portEnabled)
-                Toggle("World clocks", isOn: $settings.timeEnabled)
-                Toggle("OpenCode sessions", isOn: $settings.ocEnabled)
-                Text("OpenCode covers recent sessions only. Type a prefix to search one source: clip, port, time, oc.")
+                sourceRow(.clip, isOn: $settings.clipEnabled,
+                          note: "Off by default: copied text would appear in the search panel, which can be on screen while you share it. Needs ClipBox history.")
+                sourceRow(.port, isOn: $settings.portEnabled)
+                sourceRow(.time, isOn: $settings.timeEnabled)
+                sourceRow(.oc, isOn: $settings.ocEnabled,
+                          note: "Recent sessions only, not the full history.")
+                Text("With no prefix, every source above answers. A prefix searches just that one.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -82,6 +81,34 @@ struct SpotlightSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: .deckShortcutStatus)) { note in
             if let status = note.object as? Int32 { shortcutStatus = status }
         }
+    }
+
+    /// One source: its switch, an example search to try, what the example finds
+    /// and what Enter does, and any caveat. The example comes from the same
+    /// model the panel uses, so what is shown here is what the panel accepts.
+    private func sourceRow(_ provider: SearchProviderID, isOn: Binding<Bool>, note: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Toggle(provider.settingsTitle, isOn: isOn)
+            HStack(spacing: 6) {
+                Text("Try")
+                    .foregroundStyle(.secondary)
+                Text(provider.exampleQuery)
+                    .font(.system(.caption, design: .monospaced))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+            }
+            .font(.caption)
+            Text(provider.exampleSummary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if let note {
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
     }
 
     // MARK: Recorder
