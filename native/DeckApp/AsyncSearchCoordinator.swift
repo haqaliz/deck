@@ -82,7 +82,10 @@ final class SourceRunner {
 
         onState(source.provider, .searching)
         let ticket = generation.next()
-        let sendAt = RemoteSearchPolicy.sendTime(typedAt: now, lastSent: lastSent, blockedUntil: blockedUntil)
+        let timing = source.provider.timing
+        let sendAt = RemoteSearchPolicy.sendTime(
+            typedAt: now, lastSent: lastSent, blockedUntil: blockedUntil,
+            debounce: timing.debounce, floor: timing.floor)
         inFlight = Task { [weak self] in
             try? await Task.sleep(for: .seconds(max(0, sendAt.timeIntervalSinceNow)))
             await self?.run(request, cacheKey: cacheKey, ticket: ticket)
@@ -252,5 +255,45 @@ final class EventSearchSource: AsyncSearchSource {
         let calbox = await Task.detached { DeckSettings.load().calbox }.value
         let events = try await HostEventSearch.events(settings: calbox)
         return EventSearch.results(query: request.text, events: events, now: Date())
+    }
+}
+
+// MARK: - Markets
+
+/// Coins (CoinGecko) and stocks (Yahoo), through the loaders MarketBox's picker
+/// already uses. Keyless, so there is no account to resolve — which is exactly
+/// why only the `mkt ` prefix may reach it.
+@MainActor
+final class MarketSearchSource: AsyncSearchSource {
+    let provider = SearchProviderID.market
+    /// CoinGecko's own back-off after a 429, kept apart from the runner's: Yahoo
+    /// is a different host with its own quota and should keep answering.
+    private var coinBlockedUntil: Date?
+
+    func beginSession() {}
+
+    func search(_ request: AsyncSearchRequest) async throws -> [SearchResult] {
+        let query = MarketSearch.sanitise(request.text)
+        guard RemoteSearchPolicy.shouldSearch(query) else { return [] }
+
+        let askCoins = (coinBlockedUntil ?? .distantPast) <= Date()
+        async let stocks = Self.capture { try await HostStockSearchLoader.search(query: query) }
+        let coins: Result<[CoinSearchHit], Error>?
+        if askCoins {
+            coins = await Self.capture { try await HostCoinSearchLoader.search(query: query) }
+        } else {
+            coins = nil
+        }
+        let stockResult = await stocks
+
+        if case .failure(let error)? = coins, case CoinSearchFailure.rateLimited = error {
+            coinBlockedUntil = Date().addingTimeInterval(RemoteSearchPolicy.rateLimitBackoff)
+        }
+        let merged = try MarketSearch.combine(coins: coins, stocks: stockResult)
+        return MarketSearch.results(coins: merged.coins, stocks: merged.stocks)
+    }
+
+    private static func capture<T>(_ work: () async throws -> T) async -> Result<T, Error> {
+        do { return .success(try await work()) } catch { return .failure(error) }
     }
 }

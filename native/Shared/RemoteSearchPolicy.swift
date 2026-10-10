@@ -42,9 +42,16 @@ enum RemoteSearchPolicy {
     /// The earliest moment a request may go out: after the debounce, after the
     /// per-source floor, and not before a rate limit's window has passed.
     /// A window already in the past is simply outvoted by the others.
-    static func sendTime(typedAt: Date, lastSent: Date?, blockedUntil: Date?) -> Date {
+    ///
+    /// `debounce` and `floor` default to the generic values; a source with a
+    /// tighter public quota passes its own (see `SearchProviderID.timing`).
+    static func sendTime(
+        typedAt: Date, lastSent: Date?, blockedUntil: Date?,
+        debounce: TimeInterval = RemoteSearchPolicy.debounce,
+        floor: TimeInterval = RemoteSearchPolicy.sourceFloor
+    ) -> Date {
         var time = typedAt.addingTimeInterval(debounce)
-        if let lastSent { time = max(time, lastSent.addingTimeInterval(sourceFloor)) }
+        if let lastSent { time = max(time, lastSent.addingTimeInterval(floor)) }
         if let blockedUntil { time = max(time, blockedUntil) }
         return time
     }
@@ -159,6 +166,14 @@ enum RemoteSearchFailure: Equatable {
         }
         if case HostGitHubLoader.GitHubError.serverError(429) = error {
             self = .rateLimited
+            return
+        }
+        if let coin = error as? CoinSearchFailure {
+            switch coin {
+            case .rateLimited: self = .rateLimited
+            case .offline: self = .unreachable
+            case .badResponse: self = .badResponse
+            }
             return
         }
         switch error {
