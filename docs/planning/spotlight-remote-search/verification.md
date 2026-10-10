@@ -51,10 +51,15 @@ below that touches Azure's actual behaviour is therefore unverified.
 - Tests (1563 passing): prefix scoping, type table, hostile text cannot change
   the category or add a second clause, every example scopes to its own source.
   Mutation-checked: removing the grouping parentheses fails 3 assertions.
-- On screen with real mouse clicks: the Spotlight tab shows "More examples (n)"
-  under each source; clicking the row's plain text opens nothing, clicking the
-  link opens the page; the Work items page lists all seven examples; Return
-  closes it.
+- Examples are a **page inside Settings**, not a dialog (changed after review):
+  clicking "More examples (n)" replaces the Spotlight tab's content with that
+  source's page, with a "‹ Spotlight" back link; Esc goes back too. On screen
+  with real mouse clicks: the plain row text opens nothing, the link opens the
+  page, no separate window exists (0 dialog-sized windows), the back link and
+  Esc each return to the list (the Esc check was made with the page confirmed
+  open immediately before it). The Work items page, with seven examples, was
+  seen as a dialog in an earlier build and **not re-checked on screen as a
+  page**.
 - Not reproduced: once, the Clipboard examples page appeared during an
   accessibility-driven test without a deliberate click and was gone a few
   seconds later. A read-only accessibility scan and re-selecting the tab do not

@@ -32,6 +32,24 @@ struct SpotlightSettingsView: View {
     @State private var shortcutStatus: Int32 = SpotlightRuntime.shortcutStatus
 
     var body: some View {
+        // Examples are a page of their own inside Settings, not a dialog over
+        // it: opening one replaces this tab's content, and Back (or Esc)
+        // returns to the list.
+        ZStack {
+            if let provider = examplesFor {
+                SearchExamplesPage(provider: provider) {
+                    withAnimation(.easeInOut(duration: 0.2)) { examplesFor = nil }
+                }
+                .transition(.move(edge: .trailing))
+            } else {
+                listPage
+                    .transition(.move(edge: .leading))
+            }
+        }
+        .clipped()
+    }
+
+    private var listPage: some View {
         Form {
             Section("Shortcut") {
                 HStack {
@@ -77,9 +95,6 @@ struct SpotlightSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
-        .sheet(item: $examplesFor) { provider in
-            SearchExamplesView(provider: provider) { examplesFor = nil }
-        }
         .onAppear {
             shortcutStatus = SpotlightRuntime.shortcutStatus
         }
@@ -108,7 +123,9 @@ struct SpotlightSettingsView: View {
             Text(provider.exampleSummary)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Button("More examples (\(provider.examples.count))") { examplesFor = provider }
+            Button("More examples (\(provider.examples.count))") {
+                withAnimation(.easeInOut(duration: 0.2)) { examplesFor = provider }
+            }
                 .buttonStyle(.link)
                 .font(.caption)
             if let note {
@@ -218,36 +235,53 @@ extension SearchProviderID: Identifiable {
     var id: String { rawValue }
 }
 
-/// One source's examples: the search to type, and what it finds. Opened from
-/// the "More examples" button under each source's toggle.
-struct SearchExamplesView: View {
+/// One source's examples as a page of Settings: the search to type, and what it
+/// finds. Opened from "More examples" under each source's toggle; Back returns
+/// to the Spotlight list.
+struct SearchExamplesPage: View {
     let provider: SearchProviderID
-    let onDone: () -> Void
+    let onBack: () -> Void
 
     @State private var copied: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Button(action: onBack) {
+                    Label("Spotlight", systemImage: "chevron.left")
+                }
+                .buttonStyle(.link)
+                .keyboardShortcut(.cancelAction)  // Esc goes back too
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 14)
+            .padding(.bottom, 6)
+
             VStack(alignment: .leading, spacing: 3) {
                 Text(provider.settingsTitle)
-                    .font(.title3.weight(.semibold))
+                    .font(.title2.weight(.semibold))
                 Text("Open search with your shortcut and type any of these.")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+
+            Divider()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 16) {
                     ForEach(provider.examples, id: \.query) { example in
-                        HStack(alignment: .top, spacing: 10) {
-                            VStack(alignment: .leading, spacing: 3) {
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(example.query)
                                     .font(.system(.body, design: .monospaced))
-                                    .padding(.horizontal, 7)
-                                    .padding(.vertical, 2)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
                                     .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
                                 Text(example.summary)
-                                    .font(.caption)
+                                    .font(.callout)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
@@ -259,19 +293,12 @@ struct SearchExamplesView: View {
                                 copied = example.query
                             }
                             .buttonStyle(.link)
-                            .font(.caption)
+                            .font(.callout)
                         }
                     }
                 }
-            }
-
-            HStack {
-                Spacer()
-                Button("Done", action: onDone)
-                    .keyboardShortcut(.defaultAction)
+                .padding(20)
             }
         }
-        .padding(20)
-        .frame(width: 520, height: 420)
     }
 }
