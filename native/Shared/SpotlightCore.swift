@@ -13,6 +13,16 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
     case port
     case time
     case oc
+    /// Azure DevOps work items. Remote: answered over the network by the host
+    /// app, never by `SpotlightEngine`.
+    case task
+
+    /// Answered over the network, so it goes through `RemoteSearchPolicy`
+    /// (debounce, floor, cache) instead of running on every keystroke.
+    var isRemote: Bool { self == .task }
+
+    /// The sources `SpotlightEngine` can answer synchronously from snapshots.
+    static var localCases: [SearchProviderID] { allCases.filter { !$0.isRemote } }
 
     /// The toggle's label in the Spotlight settings tab.
     var settingsTitle: String {
@@ -21,6 +31,7 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
         case .port: "Ports and containers"
         case .time: "World clocks"
         case .oc: "OpenCode sessions"
+        case .task: "Tasks"
         }
     }
 
@@ -32,6 +43,7 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
         case .port: "port 3000"
         case .time: "time tokyo"
         case .oc: "oc refactor"
+        case .task: "task login bug"
         }
     }
 
@@ -46,6 +58,8 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
             "Shows the current time in a city, with its day and offset from you. Enter copies the time."
         case .oc:
             "Finds recent OpenCode sessions by title. Enter copies the title."
+        case .task:
+            "Finds Azure DevOps work items of any age by title, tag or id. Enter opens one. What you type is sent to dev.azure.com using the account TaskBox uses."
         }
     }
 
@@ -55,6 +69,7 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
         case .port: "Dev"
         case .time: "Clocks"
         case .oc: "OpenCode sessions"
+        case .task: "Tasks"
         }
     }
 }
@@ -63,6 +78,17 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
 /// open-URL (through `DeckLink.webURL`) without changing the panel's shape.
 enum SpotlightAction: Equatable {
     case copy(String)
+    /// Opens a link in the browser. Built only from a URL that passed
+    /// `DeckLink.webURL`, because remote data decides it.
+    case open(URL)
+
+    /// What Cmd-Return copies: the text itself, or a link's address.
+    var copyText: String {
+        switch self {
+        case .copy(let text): text
+        case .open(let url): url.absoluteString
+        }
+    }
 }
 
 struct SearchResult: Equatable, Identifiable {

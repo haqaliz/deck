@@ -246,6 +246,8 @@ final class SpotlightController {
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
             pasteboard.setString(text, forType: .string)
+        case .open(let url):
+            NSWorkspace.shared.open(url)
         }
         hide()
     }

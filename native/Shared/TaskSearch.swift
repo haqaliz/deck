@@ -50,3 +50,41 @@ enum TaskSearch {
         return condition
     }
 }
+
+// MARK: - Results
+
+extension TaskSearch {
+    /// Azure's rows as panel results. **Nothing is filtered out here:** Azure
+    /// decided these match, and a local matcher that disagrees about partial
+    /// words must not drop them. The matcher only orders them.
+    static func results(from tasks: [TaskItem], query: String) -> [SearchResult] {
+        let text = sanitise(query)
+        return tasks.map { task in
+            let tagText = task.tags.joined(separator: " ")
+            var score = 10
+            if task.id == text { score = 1000 }
+            if let title = SpotlightMatcher.score(query: text, in: task.title) { score = max(score, title) }
+            // A tag hit is real but weaker than a title hit.
+            if let tag = SpotlightMatcher.score(query: text, in: tagText) { score = max(score, tag / 2) }
+
+            // The URL came from remote data, so it goes through the one
+            // http(s)-with-a-host rule; a row that fails it can only be copied.
+            let action: SpotlightAction = DeckLink.webURL(from: task.url).map(SpotlightAction.open)
+                ?? .copy(task.id)
+
+            let parts = [task.itemType, task.state, task.project ?? "", "#\(task.id)"]
+                .filter { !$0.isEmpty }
+            var subtitle = parts.joined(separator: " · ")
+            if !task.tags.isEmpty { subtitle += " · " + task.tags.joined(separator: ", ") }
+
+            return SearchResult(
+                id: "task:\(task.project ?? ""):\(task.id)",
+                provider: .task,
+                title: task.title,
+                subtitle: subtitle,
+                score: score,
+                action: action
+            )
+        }
+    }
+}
