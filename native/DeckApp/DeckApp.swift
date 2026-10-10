@@ -141,6 +141,7 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
             self?.spotlight.toggle()
         }
         SpotlightRuntime.shortcutStatus = status
+        tray.showSearchShortcut(keyCode: s.shortcutKeyCode, modifiers: s.shortcutModifiers)
         NotificationCenter.default.post(name: .deckShortcutStatus, object: status)
         applyDockPolicy()
     }

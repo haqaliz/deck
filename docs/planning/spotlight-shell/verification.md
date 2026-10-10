@@ -23,7 +23,7 @@ curated list.
 | Type "tokyo", Enter | pasteboard becomes Tokyo's local time (08:04), panel closes |
 | Esc | closes the panel, including with an empty field (fixed: `cancelOperation`) |
 | Tray icon | the Deck "D" mark (monochrome template cut from `docs/deck.svg`, 36px at 18pt); confirmed in a screenshot of the real menu bar, tinted like the system icons |
-| Tray menu | Search, Settings…, Quit Deck |
+| Tray menu | Search, Settings…, Quit Deck; Search shows the live shortcut ("⌥ Space"), checked in a screenshot of the open menu and via accessibility; it follows a re-recorded shortcut (Ctrl-Option-K) |
 | Tray Quit Deck | process exits |
 | Tray-only on, window closed | app becomes `UIElement` (no Dock icon), shortcut still works |
 | Tray Settings… with Dock icon hidden | window returns, app becomes `Foreground` |

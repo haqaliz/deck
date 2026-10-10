@@ -9,6 +9,7 @@ import AppKit
 @MainActor
 final class TrayController: NSObject {
     private var item: NSStatusItem?
+    private var searchItem: NSMenuItem?
     var onSearch: () -> Void = {}
     var onSettings: () -> Void = {}
     var onQuit: () -> Void = {}
@@ -39,12 +40,36 @@ final class TrayController: NSObject {
         }
 
         let menu = NSMenu()
-        menu.addItem(withTitle: "Search", action: #selector(search), keyEquivalent: "").target = self
+        let searchItem = menu.addItem(withTitle: "Search", action: #selector(search), keyEquivalent: "")
+        searchItem.target = self
+        self.searchItem = searchItem
         menu.addItem(withTitle: "Settings…", action: #selector(settings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Deck", action: #selector(quit), keyEquivalent: "q").target = self
         item.menu = menu
         self.item = item
+    }
+
+    /// Shows the current global shortcut on the Search item, the way any Mac
+    /// menu shows one. Called whenever the shortcut changes. A key with no menu
+    /// equivalent shows no shortcut rather than a wrong one.
+    ///
+    /// Display only: the key equivalent also fires while this menu is open,
+    /// which does the same thing the item does.
+    func showSearchShortcut(keyCode: Int, modifiers: Int) {
+        guard let searchItem else { return }
+        guard let key = ShortcutFormat.menuKeyEquivalent(keyCode: keyCode) else {
+            searchItem.keyEquivalent = ""
+            searchItem.keyEquivalentModifierMask = []
+            return
+        }
+        var mask: NSEvent.ModifierFlags = []
+        if modifiers & 256 != 0 { mask.insert(.command) }
+        if modifiers & 512 != 0 { mask.insert(.shift) }
+        if modifiers & 2048 != 0 { mask.insert(.option) }
+        if modifiers & 4096 != 0 { mask.insert(.control) }
+        searchItem.keyEquivalent = key
+        searchItem.keyEquivalentModifierMask = mask
     }
 
     @objc private func search() { onSearch() }

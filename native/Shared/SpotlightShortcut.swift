@@ -32,6 +32,25 @@ enum ShortcutFormat {
         return out + (keyNames[keyCode] ?? "Key \(keyCode)")
     }
 
+    /// The string an `NSMenuItem` wants as `keyEquivalent`, so the tray's Search
+    /// item can show the shortcut natively. `nil` for a key with no equivalent —
+    /// no shortcut is drawn rather than a wrong one. AppKit spells arrows and
+    /// function keys as private-use scalars (`NSUpArrowFunctionKey` etc.).
+    static func menuKeyEquivalent(keyCode: Int) -> String? {
+        if let special = specialMenuKeys[keyCode] { return special }
+        // Letters, digits and punctuation: the display name is the character.
+        if let name = keyNames[keyCode], name.count == 1 { return name.lowercased() }
+        return nil
+    }
+
+    private static let specialMenuKeys: [Int: String] = [
+        49: " ", 36: "\r", 48: "\t", 51: "\u{8}", 53: "\u{1B}",
+        126: "\u{F700}", 125: "\u{F701}", 123: "\u{F702}", 124: "\u{F703}",
+        122: "\u{F704}", 120: "\u{F705}", 99: "\u{F706}", 118: "\u{F707}",
+        96: "\u{F708}", 97: "\u{F709}", 98: "\u{F70A}", 100: "\u{F70B}",
+        101: "\u{F70C}", 109: "\u{F70D}", 103: "\u{F70E}", 111: "\u{F70F}",
+    ]
+
     /// US ANSI virtual key codes (`kVK_*`). Anything else renders as
     /// "Key N" rather than as nothing.
     private static let keyNames: [Int: String] = [
