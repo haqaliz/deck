@@ -1094,12 +1094,12 @@ gate; this milestone does not wait on it.
 
 Order (each is its own slug, PRD → plan):
 
-- [ ] **Spotlight shell** — tray icon, global shortcut with a recorder, the
-      floating `NSPanel`, a new settings item beside General, the "keep in
-      tray only" toggle and the lifecycle changes above. Ships with the cheap
-      local providers (ClipBox, DevBox, ClockBox, OpenBox sessions) so the
-      shell is proven before any network code. ClipBox search is opt-in:
-      clipboard contents would otherwise appear in a search panel.
+- [x] **Spotlight shell** — tray icon, global shortcut with a recorder, the
+      floating `NSPanel`, a Spotlight settings tab, and General → Menu bar
+      ("Keep Deck in the menu bar only", "Open Deck at login"). Ships with the
+      local providers (ClipBox opt-in, DevBox, ClockBox, OpenBox recent
+      sessions). Measurements and the checks still owed to a human:
+      [`docs/planning/spotlight-shell/verification.md`](docs/planning/spotlight-shell/verification.md).
 - [ ] **TaskBox search** — WIQL `[System.Title]`/`[System.Tags] CONTAINS` and
       `[System.Id] =`, all states and ages, `$top` always, through
       `WiqlClause.validate`; a different query from the widget's
