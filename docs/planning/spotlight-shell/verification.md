@@ -29,7 +29,7 @@ curated list.
 | Tray Settings… with Dock icon hidden | window returns, app becomes `Foreground` |
 | Recorder: press Ctrl-Option-K | saved as key 40 / modifiers 6144; Option-Space stops, Ctrl-Option-K starts, no relaunch |
 | Recorder armed, then Esc | shortcut released while armed, restored after |
-| Spotlight tab shows an example search per source (`clip invoice`, `port 3000`, `time tokyo`, `oc refactor`) with what it finds and what Enter does | confirmed in a screenshot and the accessibility text; a test pins that each example scopes to its own source |
+| Spotlight tab shows an example search per source (`clip invoice`, `port 3000`, `time tokyo`, `oc refactor`) with what it finds and what Enter does | confirmed in a screenshot for Clipboard, Ports and World clocks (the OpenCode row is below the fold and was not seen on screen); a test pins that each example scopes to its own source |
 | General has Menu bar, Spotlight has the shortcut and sources | confirmed from on-screen text |
 | Launch to usable shortcut | ~7s before, **1.5-2.3s** after GitBox/DevBox moved off the main actor |
 
@@ -86,3 +86,10 @@ The first occurrence also coincided with the launch freeze above.
   opens". A positive control (the probe's own self-test) located the fault.
 - Dev and installed copies share one container and one `settings.json`: quit
   the installed Deck first and restore the file afterwards.
+
+## Settings window sometimes not shown (open, unexplained)
+Three times during testing the settings window existed, fully on a connected
+screen, but was not shown and accessibility could not see it. The sequence
+"close the window, then tray Settings…" works when tried directly (traced:
+`openSettings` runs, the window becomes visible). It happened after idle gaps.
+Cause not found; display sleep or lock is a guess that was not tested.
