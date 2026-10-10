@@ -20,6 +20,7 @@
 		0D92FA03A401FBF07703028E /* ToolCountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */; };
 		0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */; };
 		0EB43DC3000E365E99A16A34 /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
+		0EFEAD2186B06EE9B040D282 /* EventSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00B1605BE2B257CBAFBB68 /* EventSearch.swift */; };
 		0F5E4E46335F44C9FE2CEBCF /* ClipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */; };
 		105CA43FD678593FF0D25014 /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
 		117970D84E0920F72D67A760 /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
@@ -152,6 +153,7 @@
 		6993ADF4472F602F7B97C449 /* LiveBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */; };
 		69A410AA643B0243A7ED6F82 /* yahoo_chart_aapl.json in Resources */ = {isa = PBXBuildFile; fileRef = 584C732D7197A9020BC1AEF4 /* yahoo_chart_aapl.json */; };
 		6AEA36043299CC0B28485A01 /* DeckWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F184F1820A5FC6758145DCAD /* DeckWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		6BED6A46C102B3EBB7A42827 /* EventSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00B1605BE2B257CBAFBB68 /* EventSearch.swift */; };
 		6C7827BCFC076B798D66F5A7 /* MarketBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */; };
 		6CF20BD1883D65E7F8EEE3B8 /* CredentialsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */; };
 		701D2CEE50CA785813158B0D /* azure_connectiondata.json in Resources */ = {isa = PBXBuildFile; fileRef = 9F939C5C1255B0A85CA33D70 /* azure_connectiondata.json */; };
@@ -198,6 +200,7 @@
 		95C0179C1B5783C2DE56F085 /* SpotlightHotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B249B03D306ADA906175DDD /* SpotlightHotKey.swift */; };
 		96361F53D4F188186ADAE3BA /* CredentialsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */; };
 		9679FDE5EC8B876A8C611B2D /* ContainerMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */; };
+		967E638C2F1F341EB79F6A71 /* EventSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00B1605BE2B257CBAFBB68 /* EventSearch.swift */; };
 		96B73870192265B41638143C /* NetBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */; };
 		96DEBAC4E560B48A25B64DE0 /* CredentialKindSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9ED1410532D72412810AE4 /* CredentialKindSearchTests.swift */; };
 		97918506ABC4C75EC3F7F5D2 /* AzureAccountProjectsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1025AA738F2EC2637AA2C /* AzureAccountProjectsTests.swift */; };
@@ -240,6 +243,7 @@
 		B65A51E1C663EA52C4B95C29 /* NetBoxThresholdTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */; };
 		B681F466B7C74C88A4C39B4A /* StockSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6665B8B08E0F39C775A55C /* StockSearch.swift */; };
 		B78D28F3EFB86CEA57C9803E /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
+		B7B4541FD3119CEC96977983 /* EventSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 876C7A7A07443866A6D9EDEF /* EventSearchTests.swift */; };
 		B8D2216F560466E6AB864171 /* AzureDevOpsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */; };
 		BA1A8E2D2BBB42AB8EFF6311 /* WiqlClause.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE170E54FD1094990464C7C7 /* WiqlClause.swift */; };
 		BB0DA9CFEFB09DB47DCA109F /* LiveBoxDiskCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */; };
@@ -306,6 +310,7 @@
 		DDF03B7E05EAF62474FC15C6 /* provider-opencode-dark.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 73F96E7BFEC173880798A099 /* provider-opencode-dark.pdf */; };
 		DE08983334C0343BB41BC78D /* DeckLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */; };
 		DF3E69473804CC777ED434B4 /* MarketBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */; };
+		DF6C9C2689F890C7EFCF6B53 /* EventSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00B1605BE2B257CBAFBB68 /* EventSearch.swift */; };
 		E09BA881F8C82EBC75B0C74D /* HardenedRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2278DCFD3ACC03FB29D2680 /* HardenedRuntimeTests.swift */; };
 		E12D02F197A271DD411D4053 /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
 		E14CADB2CF950D781BA2F195 /* ClockBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 246CB064D9531380A28D9673 /* ClockBoxWidget.swift */; };
@@ -489,6 +494,7 @@
 		86472D68B091CE8C0F8CBFFC /* ShipBoxInventoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxInventoryTests.swift; sourceTree = "<group>"; };
 		871E3F6BD19878F5B8C47B6B /* AzureTeamsParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureTeamsParserTests.swift; sourceTree = "<group>"; };
 		873043B93448D9154A158983 /* MarketTickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketTickerTests.swift; sourceTree = "<group>"; };
+		876C7A7A07443866A6D9EDEF /* EventSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventSearchTests.swift; sourceTree = "<group>"; };
 		87B96F825FC76E1267D5ACCC /* DeckBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckBundle.swift; sourceTree = "<group>"; };
 		8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialsWidgetReadsTests.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -561,6 +567,7 @@
 		DA30E2EBBF22779F78EA3E3D /* yahoo_chart_gspc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = yahoo_chart_gspc.json; sourceTree = "<group>"; };
 		DC563B15EBF100D1CB4139C2 /* ShipBoxMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxMergeTests.swift; sourceTree = "<group>"; };
 		DCCAB889E814296403B2C9A8 /* SpotlightPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightPanel.swift; sourceTree = "<group>"; };
+		DD00B1605BE2B257CBAFBB68 /* EventSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventSearch.swift; sourceTree = "<group>"; };
 		E0E922A862E405B58537BA49 /* DeckLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLinkTests.swift; sourceTree = "<group>"; };
 		E34D57F6804ADB7CB6777F6D /* com.deck.agent.processes.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.deck.agent.processes.plist; sourceTree = "<group>"; };
 		E35C3BA7C9BD2AF13796394B /* RunSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunSearchTests.swift; sourceTree = "<group>"; };
@@ -641,6 +648,7 @@
 				CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */,
 				4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */,
 				0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */,
+				DD00B1605BE2B257CBAFBB68 /* EventSearch.swift */,
 				C38F2902EF0F4B804DB8942F /* FetchStatus.swift */,
 				13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */,
 				F5EB43ABEAC6104F01E7EDB8 /* LiveBoxCore.swift */,
@@ -709,6 +717,7 @@
 				B1A30EA93126D172F0FB1035 /* DeckSettingsSecretsTests.swift */,
 				0B881092482BA9425E3F5918 /* DecodeTests.swift */,
 				290D71C97A8936CF963F219D /* DevBoxSnapshotTests.swift */,
+				876C7A7A07443866A6D9EDEF /* EventSearchTests.swift */,
 				923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */,
 				1D0F7208894404301344CB11 /* FetchStatusTests.swift */,
 				3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */,
@@ -1122,6 +1131,7 @@
 				BD955641DD812C2ADCB20585 /* DeckWidgets.swift in Sources */,
 				D2669CB46930616C7A93FD65 /* DevBoxSnapshot.swift in Sources */,
 				94F97F3C03EB1B33F5792A6C /* DevBoxWidget.swift in Sources */,
+				DF6C9C2689F890C7EFCF6B53 /* EventSearch.swift in Sources */,
 				C1880C6DD5759D69ACFFE48B /* FetchStatus.swift in Sources */,
 				D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */,
 				0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */,
@@ -1221,6 +1231,8 @@
 				503A811FFA42B6C95C900C31 /* DecodeTests.swift in Sources */,
 				2A844B182A8B55D6AE7B4116 /* DevBoxSnapshot.swift in Sources */,
 				C483D310228E6B2532465BC6 /* DevBoxSnapshotTests.swift in Sources */,
+				6BED6A46C102B3EBB7A42827 /* EventSearch.swift in Sources */,
+				B7B4541FD3119CEC96977983 /* EventSearchTests.swift in Sources */,
 				45D576EA50BECDA826166348 /* FetchStatus.swift in Sources */,
 				E8F963A7402C8695BFC89F71 /* FetchStatusCredentialsTests.swift in Sources */,
 				A5D18790439106076A579311 /* FetchStatusTests.swift in Sources */,
@@ -1334,6 +1346,7 @@
 				164F1460B1B3EB7B4049FC67 /* DeckLink.swift in Sources */,
 				EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */,
 				18600374BCF4CECC18E75B9B /* DevBoxSnapshot.swift in Sources */,
+				0EFEAD2186B06EE9B040D282 /* EventSearch.swift in Sources */,
 				596256D947FA628D3158EA89 /* FetchStatus.swift in Sources */,
 				D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */,
 				17D71C4767C8E41123882FAB /* LiveBoxCore.swift in Sources */,
@@ -1396,6 +1409,7 @@
 				74F07107040B1441641C05C1 /* DeckLink.swift in Sources */,
 				4420517F73EA7C32D9543246 /* DeckSettings.swift in Sources */,
 				F585022188C54F15CA606B64 /* DevBoxSnapshot.swift in Sources */,
+				967E638C2F1F341EB79F6A71 /* EventSearch.swift in Sources */,
 				C42FB5B9E249E0FE9710B663 /* FetchStatus.swift in Sources */,
 				5050635C09B6D03A352378E2 /* GitBoxSnapshot.swift in Sources */,
 				758F397B4CB36B934DA2AD64 /* LiveBoxCore.swift in Sources */,

@@ -238,3 +238,19 @@ final class CommitSearchSource: AsyncSearchSource {
         return found
     }
 }
+
+// MARK: - Calendar events
+
+/// EventKit over a year either side, in the calendars CalBox reads. Local.
+@MainActor
+final class EventSearchSource: AsyncSearchSource {
+    let provider = SearchProviderID.event
+
+    func beginSession() {}
+
+    func search(_ request: AsyncSearchRequest) async throws -> [SearchResult] {
+        let calbox = await Task.detached { DeckSettings.load().calbox }.value
+        let events = try await HostEventSearch.events(settings: calbox)
+        return EventSearch.results(query: request.text, events: events, now: Date())
+    }
+}
