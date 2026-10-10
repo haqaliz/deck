@@ -124,6 +124,50 @@ enum OpenCodeSearch {
     }
 }
 
+/// Builds: GitHub Actions runs from the snapshot ShipBox already holds. A live
+/// query would cost ~11 KB per run per repo per search (CLAUDE.md), so this
+/// searches recent runs only, and the settings page says so.
+enum RunSearch {
+    static func statusWord(_ status: ShipStatus) -> String {
+        switch status {
+        case .queued: "Queued"
+        case .running: "Running"
+        case .success: "Passed"
+        case .failure: "Failed"
+        case .neutral: "Neutral"
+        }
+    }
+
+    static func results(query: String, snapshot: ShipBoxSnapshot?) -> [SearchResult] {
+        guard let snapshot else { return [] }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return snapshot.runs.compactMap { run in
+            let haystack = "\(run.name) \(run.branch) \(run.repo) #\(run.runNumber) \(run.runNumber)"
+            guard var score = SpotlightMatcher.score(query: trimmed, in: haystack) else { return nil }
+            // A whole run number is the thing being looked up; a workflow that
+            // merely mentions the digits must not outrank it.
+            if trimmed == String(run.runNumber) || trimmed == "#\(run.runNumber)" { score += 1000 }
+
+            // The URL came from a snapshot written from network data, so it goes
+            // through the one http(s)-with-a-host rule.
+            let action: SpotlightAction = DeckLink.webURL(from: run.htmlURL).map(SpotlightAction.open)
+                ?? .copy("#\(run.runNumber)")
+            let subtitle = [run.repo, run.branch, statusWord(run.status)]
+                .filter { !$0.isEmpty }
+                .joined(separator: " · ")
+            return SearchResult(
+                // Run numbers repeat across workflows and repositories.
+                id: "run:\(run.repo):\(run.name):\(run.runNumber)",
+                provider: .run,
+                title: "\(run.name) #\(run.runNumber)",
+                subtitle: subtitle,
+                score: score,
+                action: action
+            )
+        }
+    }
+}
+
 // MARK: - Engine
 
 /// Everything the engine reads, loaded by the host at query time.
@@ -168,7 +212,7 @@ enum SpotlightEngine {
                     query: query.text, configuredIDs: inputs.configuredClockIDs,
                     now: now, reference: reference)
             case .oc: results += OpenCodeSearch.results(query: query.text, snapshot: inputs.opencode)
-            case .run: break  // wired in the builds slice
+            case .run: results += RunSearch.results(query: query.text, snapshot: inputs.shipbox)
             case .task, .pr, .commit, .event, .market:
                 break  // deferred: answered by the host through RemoteSearchPolicy
             }

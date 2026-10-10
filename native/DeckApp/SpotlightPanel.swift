@@ -279,7 +279,8 @@ final class SpotlightController {
             clip: deck.spotlight.clipEnabled ? ClipBoxSnapshotStore.load() : nil,
             devbox: DevBoxSnapshotStore.load(),
             opencode: OpenCodeSnapshotStore.load(),
-            configuredClockIDs: deck.clockbox.cityIDs)
+            configuredClockIDs: deck.clockbox.cityIDs,
+            shipbox: ShipBoxSnapshotStore.load())
         model.reset()
         deferred.beginSession()
 

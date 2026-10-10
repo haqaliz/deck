@@ -322,6 +322,7 @@
 		EAD2C3E0F5DD9B9C8E814D62 /* MainAppLoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0012EC0104AE63207281CC /* MainAppLoginItem.swift */; };
 		EB9622688B3FE36D327DAD57 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		EC304DA0C12EDF3AA590726D /* SpotlightProvidersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 358E19909138D28C1CFD82F5 /* SpotlightProvidersTests.swift */; };
+		ECA4B500B48EA41764245CD4 /* RunSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E35C3BA7C9BD2AF13796394B /* RunSearchTests.swift */; };
 		ECCBC5BF638E6D313E844B4B /* StockSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6665B8B08E0F39C775A55C /* StockSearch.swift */; };
 		EDD0527FA993CD1BBA58350A /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
 		EF03070D1C89BBB48D30B371 /* MarketBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */; };
@@ -555,6 +556,7 @@
 		DCCAB889E814296403B2C9A8 /* SpotlightPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightPanel.swift; sourceTree = "<group>"; };
 		E0E922A862E405B58537BA49 /* DeckLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLinkTests.swift; sourceTree = "<group>"; };
 		E34D57F6804ADB7CB6777F6D /* com.deck.agent.processes.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.deck.agent.processes.plist; sourceTree = "<group>"; };
+		E35C3BA7C9BD2AF13796394B /* RunSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunSearchTests.swift; sourceTree = "<group>"; };
 		E3FE592855DDE3084D207447 /* ContainerMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerMigration.swift; sourceTree = "<group>"; };
 		E55EA63643575600049612BD /* ModelParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelParserTests.swift; sourceTree = "<group>"; };
 		E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureDevOpsParserTests.swift; sourceTree = "<group>"; };
@@ -726,6 +728,7 @@
 				18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */,
 				CE487C6A0C3F6BB61D681289 /* RemoteSearchPolicyTests.swift */,
 				13DFA928EDB1DBDEF8503D55 /* RGBAPaletteTests.swift */,
+				E35C3BA7C9BD2AF13796394B /* RunSearchTests.swift */,
 				D6C015468901E17452BF6132 /* ShipBoxDiscoveryTests.swift */,
 				86472D68B091CE8C0F8CBFFC /* ShipBoxInventoryTests.swift */,
 				DC563B15EBF100D1CB4139C2 /* ShipBoxMergeTests.swift */,
@@ -1251,6 +1254,7 @@
 				7B0649E3CEC354D446CBCD0D /* RemoteOpenCodeSyncTests.swift in Sources */,
 				DB02655163CCFC808ACC42E2 /* RemoteSearchPolicy.swift in Sources */,
 				CFFBD4FB3CFD4C1F39EB2347 /* RemoteSearchPolicyTests.swift in Sources */,
+				ECA4B500B48EA41764245CD4 /* RunSearchTests.swift in Sources */,
 				51C852BFFD446B7CD99A8BDA /* ShipBoxDiscoveryTests.swift in Sources */,
 				3672B6E64662D1184A37F56E /* ShipBoxInventoryTests.swift in Sources */,
 				37185E555B2E6A0FB7D0A297 /* ShipBoxMergeTests.swift in Sources */,
