@@ -329,6 +329,7 @@ Deck reads personal data, so here is exactly what happens to it.
 | WeatherBox | your location (or nothing, and your IP geolocates) | `wttr.in` |
 | ShipBox | your GitHub token, and the repos you watch (or, in Automatic mode, your repo list) | `api.github.com` |
 | TaskBox | your Azure DevOps PAT, org and projects | `dev.azure.com` |
+| Spotlight → Tasks | the text you type after `task ` (or with no prefix, if Tasks is on), with your TaskBox account's PAT, org and projects; only once you have typed 2+ characters and paused | `dev.azure.com` |
 | OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
 | MarketBox | the coins you picked (e.g. `bitcoin`) and the stocks/indices you picked (e.g. `^GSPC`), plus what you type in the ticker search | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com`, `query1.finance.yahoo.com` |
 
