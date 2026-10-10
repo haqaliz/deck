@@ -31,13 +31,24 @@ enum DockPresence: Equatable {
 }
 
 enum TrayLifecyclePolicy {
-    /// Explicit quits and system shutdown always terminate — a resident app
-    /// must never veto a logout. Closing the window never does: that is how
-    /// Deck already behaves, and in tray-only mode it is the whole feature.
-    static func shouldTerminate(reason: QuitReason, keepInTrayOnly: Bool) -> Bool {
+    /// "Keep Deck in the menu bar only" means closing Deck from the Dock (or
+    /// Cmd-Q in the settings window) closes the app but leaves the tray — and
+    /// with it the search shortcut — running. Only the tray's own Quit, or the
+    /// system logging out, ends it.
+    ///
+    /// Two cases always terminate regardless: the system (a resident app must
+    /// never veto a logout), and a Deck whose tray never appeared, because
+    /// cancelling the quit there would leave an app with no window, no Dock
+    /// icon and no way to quit it. Closing the last window never terminates:
+    /// that is how Deck already behaves.
+    static func shouldTerminate(reason: QuitReason, keepInTrayOnly: Bool, trayReady: Bool) -> Bool {
         switch reason {
-        case .trayQuit, .settingsCmdQ, .dockQuit, .system: true
-        case .lastWindowClosed: false
+        case .system, .trayQuit:
+            return true
+        case .lastWindowClosed:
+            return false
+        case .settingsCmdQ, .dockQuit:
+            return !(keepInTrayOnly && trayReady)
         }
     }
 

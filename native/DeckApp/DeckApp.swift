@@ -100,7 +100,34 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         TrayLifecyclePolicy.shouldTerminate(
             reason: .lastWindowClosed,
-            keepInTrayOnly: DeckSettings.load().spotlight.keepInTrayOnly)
+            keepInTrayOnly: DeckSettings.load().spotlight.keepInTrayOnly,
+            trayReady: tray.isReady)
+    }
+
+    /// Set only by the tray's Quit item, so `applicationShouldTerminate` can
+    /// tell it from a Dock or Cmd-Q quit — AppKit reports them identically.
+    private var quittingFromTray = false
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let reason: QuitReason = quittingFromTray ? .trayQuit : (isSystemQuit() ? .system : .dockQuit)
+        let terminate = TrayLifecyclePolicy.shouldTerminate(
+            reason: reason,
+            keepInTrayOnly: DeckSettings.load().spotlight.keepInTrayOnly,
+            trayReady: tray.isReady)
+        if terminate { return .terminateNow }
+
+        // Tray-only: the user closed Deck from the Dock. Close the window and
+        // let the Dock icon go; the tray and the shortcut stay.
+        NSApp.windows.filter(isSettingsWindow).forEach { $0.close() }
+        applyDockPolicy()
+        return .terminateCancel
+    }
+
+    /// A logout, restart or shutdown arrives as a quit Apple event carrying a
+    /// reason; a Dock "Quit" and Cmd-Q carry none.
+    private func isSystemQuit() -> Bool {
+        NSAppleEventManager.shared().currentAppleEvent?
+            .attributeDescriptor(forKeyword: AEKeyword(kAEQuitReason)) != nil
     }
 
     // MARK: Resident
@@ -108,7 +135,10 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
     private func startResident() {
         tray.onSearch = { [weak self] in self?.spotlight.toggle() }
         tray.onSettings = { [weak self] in self?.openSettings() }
-        tray.onQuit = { NSApp.terminate(nil) }
+        tray.onQuit = { [weak self] in
+            self?.quittingFromTray = true
+            NSApp.terminate(nil)
+        }
         tray.install()
         SpotlightRuntime.trayReady = tray.isReady
         spotlight.startObservingSize()

@@ -7,27 +7,51 @@ import XCTest
 final class TrayLifecyclePolicyTests: XCTestCase {
     // MARK: Quitting
 
-    func testExplicitQuitsAlwaysTerminate() {
-        for tray in [false, true] {
-            for reason in [QuitReason.trayQuit, .settingsCmdQ, .dockQuit] {
-                XCTAssertTrue(
-                    TrayLifecyclePolicy.shouldTerminate(reason: reason, keepInTrayOnly: tray),
-                    "\(reason) must quit (tray-only: \(tray))")
-            }
+    /// "Keep Deck in the menu bar only" means exactly that: closing Deck from
+    /// the Dock (or Cmd-Q in the settings window) closes the app but leaves
+    /// the tray, and so the shortcut, running. Only the tray's own Quit ends it.
+    func testTrayOnlyKeepsRunningWhenQuitFromTheDockOrCmdQ() {
+        for reason in [QuitReason.dockQuit, .settingsCmdQ] {
+            XCTAssertFalse(
+                TrayLifecyclePolicy.shouldTerminate(reason: reason, keepInTrayOnly: true, trayReady: true),
+                "\(reason) must leave the tray running")
         }
+    }
+
+    func testWithoutTrayOnlyEveryQuitTerminates() {
+        for reason in [QuitReason.trayQuit, .settingsCmdQ, .dockQuit, .system] {
+            XCTAssertTrue(
+                TrayLifecyclePolicy.shouldTerminate(reason: reason, keepInTrayOnly: false, trayReady: true),
+                "\(reason) must quit when tray-only is off")
+        }
+    }
+
+    func testTheTrayQuitAlwaysTerminates() {
+        XCTAssertTrue(TrayLifecyclePolicy.shouldTerminate(reason: .trayQuit, keepInTrayOnly: true, trayReady: true))
     }
 
     /// Logout and restart must never be vetoed by a resident app.
     func testSystemShutdownAlwaysTerminates() {
-        XCTAssertTrue(TrayLifecyclePolicy.shouldTerminate(reason: .system, keepInTrayOnly: true))
-        XCTAssertTrue(TrayLifecyclePolicy.shouldTerminate(reason: .system, keepInTrayOnly: false))
+        XCTAssertTrue(TrayLifecyclePolicy.shouldTerminate(reason: .system, keepInTrayOnly: true, trayReady: true))
+        XCTAssertTrue(TrayLifecyclePolicy.shouldTerminate(reason: .system, keepInTrayOnly: true, trayReady: false))
     }
 
-    /// Closing the window never quits Deck: that is today's behaviour, and in
-    /// tray-only mode it is the whole point.
+    /// With no tray there is nothing to stay resident behind: cancelling the
+    /// quit would leave an app with no window, no Dock icon and no way to
+    /// quit it short of Force Quit.
+    func testWithoutAWorkingTrayQuitAlwaysTerminates() {
+        for reason in [QuitReason.dockQuit, .settingsCmdQ, .trayQuit] {
+            XCTAssertTrue(
+                TrayLifecyclePolicy.shouldTerminate(reason: reason, keepInTrayOnly: true, trayReady: false),
+                "\(reason) must quit when the tray never appeared")
+        }
+    }
+
+    /// Closing the last window never quits Deck: that is today's behaviour, and
+    /// in tray-only mode it is the whole point.
     func testClosingTheLastWindowNeverTerminates() {
-        XCTAssertFalse(TrayLifecyclePolicy.shouldTerminate(reason: .lastWindowClosed, keepInTrayOnly: true))
-        XCTAssertFalse(TrayLifecyclePolicy.shouldTerminate(reason: .lastWindowClosed, keepInTrayOnly: false))
+        XCTAssertFalse(TrayLifecyclePolicy.shouldTerminate(reason: .lastWindowClosed, keepInTrayOnly: true, trayReady: true))
+        XCTAssertFalse(TrayLifecyclePolicy.shouldTerminate(reason: .lastWindowClosed, keepInTrayOnly: false, trayReady: true))
     }
 
     // MARK: Dock icon

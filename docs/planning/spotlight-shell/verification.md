@@ -32,7 +32,22 @@ curated list.
 | General has Menu bar, Spotlight has the shortcut and sources | confirmed from on-screen text |
 | Launch to usable shortcut | ~7s before, **1.5-2.3s** after GitBox/DevBox moved off the main actor |
 
+## Quit behaviour (installed copy, tray-only on)
+| Action | Result |
+|---|---|
+| Dock-style Quit (AppleScript `quit`, the same event the Dock menu sends) | process stays, tray stays, Dock icon goes, shortcut still opens the panel |
+| Cmd-Q with the settings window open | process stays, tray stays, Dock icon goes |
+| Tray → Quit Deck | process exits |
+| Tray-only **off**, Dock-style Quit | process exits |
+
+The real Dock menu was not clicked: AppleScript `quit` stands in for it. A
+system logout was not exercised either; it is recognised by the quit event's
+reason attribute.
+
 ## Found and fixed here
+- Quitting from the Dock with tray-only on took the tray down too. The approved
+  rule had said it should (see prd.md); it contradicted the feature. Found by
+  the user while using the installed build.
 - `OpenCodeReader.load()` ran on the main actor against a 5 GB database: ~10s
   launch freeze. Now detached.
 - `HostGitBoxSampler` (~2.5s of `git log`) and `HostDevBoxSampler` also ran on
@@ -46,8 +61,6 @@ curated list.
   location. Install to `/Applications`, then: toggle on, check Login Items,
   switch it off there, reopen General and confirm the note appears; remember
   that replacing the bundle resets a veto.
-- Dock-menu Quit and Cmd-Q in the settings window (the policy is unit-tested,
-  the delegate hook is not exercised).
 - A widget URL click: Deck not running (should open the page and quit) and Deck
   running (should open the page and stay).
 - Click-away dismissal with a real mouse (Esc and app-switching were tried).

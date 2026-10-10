@@ -63,8 +63,14 @@ NetBox/BatBox/LiveBox/WeatherBox.
 - Cold URL launch: a freshly launched Deck still quits after forwarding a
   widget URL; only an already-running Deck is exempt. Quitting from the tray is
   an explicit exit.
-- Only the tray Quit, Cmd-Q from the settings window and the Dock Quit
-  terminate; closing the window does not (tray-only mode).
+- **Quit rule (revised 2026-10-10 after testing).** The approved text said the
+  tray Quit, Cmd-Q and the Dock Quit all terminate. That contradicted the point
+  of tray-only mode: quitting from the Dock took the tray, and the shortcut,
+  with it. Now, with "Keep Deck in the menu bar only" on, Dock Quit and Cmd-Q
+  close the window and the Dock icon but leave the tray running; only the
+  tray's Quit Deck and a system logout/shutdown end the process. With it off,
+  every quit terminates as before, and a Deck whose tray never appeared always
+  terminates.
 - The accessory (no Dock icon) policy applies only after the status item
   exists; tray-only refuses to enable until then.
 - A shortcut registration failure is shown in the Spotlight settings tab.
