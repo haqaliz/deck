@@ -67,6 +67,8 @@ struct SpotlightSettingsView: View {
                 sourceRow(.time, isOn: $settings.timeEnabled)
                 sourceRow(.oc, isOn: $settings.ocEnabled,
                           note: "Recent sessions only, not the full history.")
+                sourceRow(.task, isOn: $settings.taskEnabled,
+                          note: "Does nothing until an account is chosen in TaskBox. Searches every project on that account, including closed items.")
                 Text("With no prefix, every source above answers. A prefix searches just that one.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

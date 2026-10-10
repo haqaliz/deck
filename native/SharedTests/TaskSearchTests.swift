@@ -181,3 +181,32 @@ final class TaskItemTagsTests: XCTestCase {
         }
     }
 }
+
+final class TaskSearchRequestTests: XCTestCase {
+    private var target: AzureTarget {
+        try! AzureTarget.normalise(organization: "Contoso", project: "Web")
+    }
+
+    /// A broad search must stay small: an uncapped condition measured 577 KB
+    /// and up to 17.8 s against a 10 s timeout (CLAUDE.md). Search asks for far
+    /// fewer than the widget does, and always sends `$top`.
+    func testSearchSendsASmallTop() throws {
+        let url = try XCTUnwrap(WiqlResponse.url(target: target, top: HostAzureDevOpsLoader.searchLimit + 1))
+        XCTAssertTrue(url.absoluteString.contains("$top=26"), url.absoluteString)
+        XCTAssertLessThan(HostAzureDevOpsLoader.searchLimit, WiqlIdParser.idLimit)
+    }
+
+    func testTheWidgetsOwnURLIsUnchanged() throws {
+        let url = try XCTUnwrap(WiqlResponse.url(target: target))
+        XCTAssertTrue(url.absoluteString.hasSuffix("&$top=\(WiqlIdParser.requestTop)"))
+    }
+
+    /// Search is read-only against the WIQL endpoint and must never reuse the
+    /// widget's assignee/state filter.
+    func testTheSearchQueryHasNoAssigneeOrStateFilter() throws {
+        let query = WiqlClause.query(for: try XCTUnwrap(TaskSearch.condition(for: "login")))
+        XCTAssertFalse(query.contains("@Me"))
+        XCTAssertFalse(query.contains("System.State"))
+        XCTAssertFalse(query.contains("AssignedTo"))
+    }
+}

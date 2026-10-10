@@ -34,19 +34,35 @@ final class SpotlightKeyPanel: NSPanel {
 final class SpotlightViewModel: ObservableObject {
     @Published var query = "" { didSet { if query != oldValue { refresh() } } }
     @Published private(set) var sections: [SearchSection] = []
+    /// The Tasks block: filled in by the network, after the local sections.
+    @Published private(set) var taskState: RemoteSearchState<[SearchResult]> = .idle
     @Published var selectedID: String?
 
     var settings = SpotlightSettings()
     var inputs = SpotlightInputs(clip: nil, devbox: nil, opencode: nil, configuredClockIDs: [])
     var onRun: (SearchResult) -> Void = { _ in }
+    var onCopy: (SearchResult) -> Void = { _ in }
     var onDismiss: () -> Void = {}
+    /// Told the text after any prefix and whether tasks should be searched.
+    var onRemoteQuery: (_ text: String, _ enabled: Bool) -> Void = { _, _ in }
 
-    var flat: [SearchResult] { sections.flatMap(\.results) }
+    /// The Tasks rows, ranked and capped like a local section.
+    var taskResults: [SearchResult] {
+        guard case .results(let rows) = taskState else { return [] }
+        let limit = SpotlightQuery.parse(query).scope == nil
+            ? SpotlightEngine.perSectionLimit : SpotlightEngine.scopedLimit
+        return Array(SpotlightRanking.sorted(rows).prefix(limit))
+    }
+
+    /// Local rows first, then tasks: the order they are drawn in, so the arrow
+    /// keys move through what is on screen.
+    var flat: [SearchResult] { sections.flatMap(\.results) + taskResults }
     var hasQuery: Bool { !SpotlightQuery.parse(query).isEmpty }
 
     func reset() {
         query = ""
         sections = []
+        taskState = .idle
         selectedID = nil
     }
 
@@ -55,6 +71,24 @@ final class SpotlightViewModel: ObservableObject {
             rawQuery: query, settings: settings, inputs: inputs,
             now: Date(), reference: .current)
         selectedID = flat.first?.id
+
+        // Local results above are synchronous and never wait on this.
+        let parsed = SpotlightQuery.parse(query)
+        let wanted = settings.isEnabled(.task) && (parsed.scope == nil || parsed.scope == .task)
+        onRemoteQuery(parsed.text, wanted)
+    }
+
+    func setTaskState(_ state: RemoteSearchState<[SearchResult]>) {
+        taskState = state
+        // Keep the user's selection if it is still on screen; otherwise land on
+        // the first row.
+        if !flat.contains(where: { $0.id == selectedID }) { selectedID = flat.first?.id }
+    }
+
+    /// Cmd-Return: copy the selected result's text, or a link's address.
+    func copySelected() {
+        guard let result = flat.first(where: { $0.id == selectedID }) else { return }
+        onCopy(result)
     }
 
     func move(_ delta: Int) {
@@ -86,10 +120,15 @@ struct SpotlightPanelView: View {
                 .focused($focused)
                 .onSubmit { model.runSelected() }
                 .onExitCommand { model.onDismiss() }
+                .onKeyPress(keys: [.return]) { press in
+                    guard press.modifiers.contains(.command) else { return .ignored }
+                    model.copySelected()
+                    return .handled
+                }
                 .onKeyPress(.downArrow) { model.move(1); return .handled }
                 .onKeyPress(.upArrow) { model.move(-1); return .handled }
 
-            if !model.sections.isEmpty {
+            if !model.sections.isEmpty || model.taskState != .idle {
                 Divider()
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -108,6 +147,7 @@ struct SpotlightPanelView: View {
                                         .onTapGesture { model.onRun(result) }
                                 }
                             }
+                            tasksBlock
                         }
                         .padding(.bottom, 8)
                     }
@@ -128,6 +168,32 @@ struct SpotlightPanelView: View {
         .frame(width: 640)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .onAppear { focused = true }
+    }
+
+    /// The network-backed section. It owns its own status line, so a slow or
+    /// failed search never blanks the local results above it.
+    @ViewBuilder private var tasksBlock: some View {
+        if model.taskState != .idle {
+            Text(SearchProviderID.task.sectionTitle.uppercased())
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .tracking(1)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 18)
+                .padding(.top, 10)
+                .padding(.bottom, 4)
+            if let line = model.taskState.line(noun: "tasks") {
+                Text(line)
+                    .font(.system(size: 12, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 4)
+            }
+            ForEach(model.taskResults) { result in
+                row(result)
+                    .id(result.id)
+                    .onTapGesture { model.onRun(result) }
+            }
+        }
     }
 
     private func row(_ result: SearchResult) -> some View {
@@ -161,6 +227,7 @@ struct SpotlightPanelView: View {
 @MainActor
 final class SpotlightController {
     private let model = SpotlightViewModel()
+    private let tasks = TaskSearchCoordinator()
     private let panel: SpotlightKeyPanel
     private let host: NSHostingView<SpotlightPanelView>
 
@@ -183,6 +250,12 @@ final class SpotlightController {
 
         model.onDismiss = { [weak self] in self?.hide() }
         model.onRun = { [weak self] result in self?.perform(result) }
+        model.onCopy = { [weak self] result in
+            self?.copyToPasteboard(result.action.copyText)
+            self?.hide()
+        }
+        tasks.onState = { [weak model] state in model?.setTaskState(state) }
+        model.onRemoteQuery = { [weak tasks] text, enabled in tasks?.update(text: text, enabled: enabled) }
     }
 
     var isVisible: Bool { panel.isVisible }
@@ -199,6 +272,7 @@ final class SpotlightController {
             opencode: OpenCodeSnapshotStore.load(),
             configuredClockIDs: deck.clockbox.cityIDs)
         model.reset()
+        tasks.beginSession()
 
         position()
         panel.makeKeyAndOrderFront(nil)
@@ -207,6 +281,8 @@ final class SpotlightController {
     func hide() {
         guard panel.isVisible else { return }
         panel.orderOut(nil)
+        // Anything still in flight is for a panel nobody is looking at.
+        tasks.cancel()
         model.reset()
     }
 
@@ -240,12 +316,16 @@ final class SpotlightController {
         }
     }
 
+    private func copyToPasteboard(_ text: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+    }
+
     private func perform(_ result: SearchResult) {
         switch result.action {
         case .copy(let text):
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            pasteboard.setString(text, forType: .string)
+            copyToPasteboard(text)
         case .open(let url):
             NSWorkspace.shared.open(url)
         }

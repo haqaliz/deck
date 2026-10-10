@@ -267,8 +267,10 @@ enum WiqlErrorParser {
 /// The WIQL call's request URL and its reading of the answer, kept pure so the
 /// 400 path is pinned without a network.
 enum WiqlResponse {
-    static func url(target: AzureTarget) -> URL? {
-        URL(string: "\(target.projectBase)/_apis/wit/wiql?api-version=7.1&$top=\(WiqlIdParser.requestTop)")
+    /// `top` defaults to the widget's cap; Spotlight search asks for far fewer.
+    /// Always sent: an uncapped condition measured 577 KB and up to 17.8s.
+    static func url(target: AzureTarget, top: Int = WiqlIdParser.requestTop) -> URL? {
+        URL(string: "\(target.projectBase)/_apis/wit/wiql?api-version=7.1&$top=\(top)")
     }
 
     /// Only this call turns a 400, or a 500 carrying a reason, into a rejected
@@ -562,6 +564,48 @@ enum HostAzureDevOpsLoader {
         )
     }
 
+    /// Most work items a search returns. Far under the widget's 200: a search
+    /// is a person looking for one thing, and a broad term is cheap to refine.
+    static let searchLimit = 25
+
+    /// Find work items of any age and state by title, tag or id, for Spotlight.
+    ///
+    /// Host-app only, on user interaction, behind `RemoteSearchPolicy` — never
+    /// from the agent, so it cannot spend the agent's budget. N projects cost
+    /// N+1 requests (one WIQL each, then one organization-scoped batch). Text
+    /// shorter than the policy minimum sends nothing and returns `[]`.
+    ///
+    /// Reaching *no* project throws the first error, so the panel can say why;
+    /// reaching some is a partial answer, which is worth more than nothing.
+    static func search(
+        organization: String, projects: [String], token: String, text: String
+    ) async throws -> [TaskItem] {
+        guard let condition = TaskSearch.condition(for: text) else { return [] }
+        // Before any request: an unvalidated condition can escape its
+        // parentheses and the project clause with them.
+        if let problem = WiqlClause.validate(condition) { throw AzureDevOpsError.invalidQuery(problem) }
+        let targets = try AzureTargets.normalise(organization: organization, projects: projects)
+        let auth = "Basic " + Data(":\(token)".utf8).base64EncodedString()
+        let query = WiqlClause.query(for: condition)
+
+        let queried = try await inParallel(targets) { target in
+            try await workItemIDs(target: target, query: query, auth: auth, top: searchLimit + 1)
+        }
+        var idLists: [[Int]] = []
+        var firstError: Error?
+        for result in queried {
+            switch result {
+            case .success(let wiql): idLists.append(wiql.ids)
+            case .failure(let error): firstError = firstError ?? error
+            }
+        }
+        if idLists.isEmpty, let firstError { throw firstError }
+
+        let ids = AzureIDMerge.interleave(idLists, limit: searchLimit)
+        guard !ids.isEmpty else { return [] }
+        return try await workItems(ids: ids, target: targets[0], auth: auth)
+    }
+
     /// The settings window's Test button: the WIQL call alone, per project, no
     /// batch and no snapshot. Host-app only and one click at a time — never as
     /// you type. A locally invalid condition sends nothing.
@@ -613,9 +657,9 @@ enum HostAzureDevOpsLoader {
     /// `WiqlResponse`, because unlike every other call here the body is the
     /// user's and a 400 means "your condition", not "our request".
     private static func workItemIDs(
-        target: AzureTarget, query: String, auth: String
+        target: AzureTarget, query: String, auth: String, top: Int = WiqlIdParser.requestTop
     ) async throws -> ParsedWiql {
-        guard let url = WiqlResponse.url(target: target) else { throw AzureDevOpsError.invalidTarget }
+        guard let url = WiqlResponse.url(target: target, top: top) else { throw AzureDevOpsError.invalidTarget }
         let (status, body) = try await exchange(url: url, auth: auth, body: ["query": query])
         return try WiqlResponse.interpret(status: status, body: body)
     }

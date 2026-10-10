@@ -48,6 +48,7 @@
 		22290A5D67B8608E00C09A20 /* SpotlightProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9265A6E22517B1B6D20AC8FF /* SpotlightProviders.swift */; };
 		2266BFBB98C3E0FBA6312E69 /* CredentialsWiringTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 920FB174B8F493303CA61487 /* CredentialsWiringTests.swift */; };
 		234BBFEE49DDFBC2A6F9A084 /* ThresholdTierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */; };
+		23E4928FA125EC2B08A775C8 /* TaskSearchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC94AB2E733EFCFB9FEA255B /* TaskSearchCoordinator.swift */; };
 		23EF43A1E8789309DDAE5D28 /* AzureProjectsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BDAAE2C8DB83E54F1D11C85 /* AzureProjectsParserTests.swift */; };
 		24D2B39CF2040FBDA001CDE7 /* MarketBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */; };
 		272BF418D178E587CB0AE675 /* RefreshPoliciesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C1482ECEE343A435002C514 /* RefreshPoliciesTests.swift */; };
@@ -525,6 +526,7 @@
 		CB348CAA59C48A66AEC08E61 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLink.swift; sourceTree = "<group>"; };
 		CBC89EF1D34611CB2B244F15 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		CC94AB2E733EFCFB9FEA255B /* TaskSearchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSearchCoordinator.swift; sourceTree = "<group>"; };
 		CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightCore.swift; sourceTree = "<group>"; };
 		CCED7DB3FECDD4E23935642E /* WeatherBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherBoxWidget.swift; sourceTree = "<group>"; };
 		CD561BD148534E3EA9F6D063 /* WiqlPresetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlPresetTests.swift; sourceTree = "<group>"; };
@@ -594,6 +596,7 @@
 				0B249B03D306ADA906175DDD /* SpotlightHotKey.swift */,
 				DCCAB889E814296403B2C9A8 /* SpotlightPanel.swift */,
 				85FA0D76B911A383F8BAA255 /* SpotlightSettingsView.swift */,
+				CC94AB2E733EFCFB9FEA255B /* TaskSearchCoordinator.swift */,
 				33023F59AC01FA5D74ED0FD3 /* TrayController.swift */,
 				989F8CCC5027070A6EDBE318 /* LaunchAgents */,
 				0A97E3E77BFF383850F9F406 /* Resources */,
@@ -1334,6 +1337,7 @@
 				92F9D56CB31571F8F4BDB6CC /* SystemMetricsCore.swift in Sources */,
 				A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */,
 				2BD33CF674C48D8007479B5E /* TaskSearch.swift in Sources */,
+				23E4928FA125EC2B08A775C8 /* TaskSearchCoordinator.swift in Sources */,
 				3FDD64990B3C6288B15ACEEA /* TrayController.swift in Sources */,
 				6248158B19A1EEA34643CE4D /* TrayLifecyclePolicy.swift in Sources */,
 				590B4D6F5F70FC9062131040 /* WeatherSnapshot.swift in Sources */,
