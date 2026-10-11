@@ -4,7 +4,7 @@
 
 # Deck
 
-**Fourteen small, beautiful macOS desktop widgets — one native app, no floating windows on your desktop — plus a Spotlight-style search.**
+**Fourteen small, beautiful macOS desktop widgets — one native app, no floating windows on your desktop — plus a quick-search panel.**
 
 Deck adds real WidgetKit widgets to your desktop: your machine, your network, your
 battery, your commits, your ports, your calendar, your tasks, your builds and your
@@ -281,9 +281,9 @@ to 12. Crypto and stock rows carry the change — and so does the USD row in
   the widget's settings tab as a full sentence, right under the field that
   causes it, and clears the moment you edit that field.
 
-## Spotlight search
+## Search
 
-Press **⌥Space** (changeable in the **Spotlight** tab) for a floating search
+Press **⌥Space** (changeable in the **Search** tab) for a floating search
 panel. Enter runs the top action (copy, or open in the browser); Cmd-Return
 copies a result's link; Esc closes it. Start a query with a prefix to search
 one source.
@@ -315,7 +315,7 @@ one source.
   in a panel that can be on screen while you share it.
 - If the shortcut does nothing, another app may hold the same combination;
   macOS does not report that.
-- Each source has a **More examples** page under its toggle in the Spotlight tab.
+- Each source has a **More examples** page under its toggle in the Search tab.
 
 ## How it works
 
@@ -345,9 +345,9 @@ Deck reads personal data, so here is exactly what happens to it.
 | WeatherBox | your location (or nothing, and your IP geolocates) | `wttr.in` |
 | ShipBox | your GitHub token, and the repos you watch (or, in Automatic mode, your repo list) | `api.github.com` |
 | TaskBox | your Azure DevOps PAT, org and projects | `dev.azure.com` |
-| Spotlight → Work items | the text you type after a type prefix (or with no prefix, if Work items is on), with your TaskBox account's PAT, org and projects; only after 2+ characters and a pause | `dev.azure.com` |
-| Spotlight → Pull requests | the text you type after `pr `, with your PRBox GitHub token and Azure PAT | `api.github.com`, `dev.azure.com` |
-| Spotlight → Markets | the text you type after `mkt ` (no token) | `api.coingecko.com`, `query1.finance.yahoo.com` |
+| Search → Work items | the text you type after a type prefix (or with no prefix, if Work items is on), with your TaskBox account's PAT, org and projects; only after 2+ characters and a pause | `dev.azure.com` |
+| Search → Pull requests | the text you type after `pr `, with your PRBox GitHub token and Azure PAT | `api.github.com`, `dev.azure.com` |
+| Search → Markets | the text you type after `mkt ` (no token) | `api.coingecko.com`, `query1.finance.yahoo.com` |
 | OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
 | MarketBox | the coins you picked (e.g. `bitcoin`) and the stocks/indices you picked (e.g. `^GSPC`), plus what you type in the ticker search | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com`, `query1.finance.yahoo.com` |
 

@@ -282,7 +282,7 @@ struct SearchExamplesPage: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
                 Button(action: onBack) {
-                    Label("Spotlight", systemImage: "chevron.left")
+                    Label("Search", systemImage: "chevron.left")
                 }
                 .buttonStyle(.link)
                 .keyboardShortcut(.cancelAction)  // Esc goes back too
