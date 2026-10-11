@@ -8,7 +8,7 @@ context lives in `ROADMAP.md` and `docs/planning/`.
 **Deck** is a set of small, beautiful macOS desktop widgets, delivered as a
 single native app you add from the **Widget Center** (right-click desktop →
 Edit Widgets). No floating window cards — everything on the desktop is a real
-WidgetKit widget. The one floating surface is the **Spotlight search panel**
+WidgetKit widget. The one floating surface is the **Search panel**
 (⌥Space), opened from Deck's menu-bar item; it searches data the widgets already
 have access to and shows nothing until it is opened.
 
@@ -55,7 +55,7 @@ have access to and shows nothing until it is opened.
   charts in the face (see the Swift Charts trap).
 
 All fourteen ship in one WidgetKit extension: `Deck.app` (host + settings window
-+ menu-bar item + Spotlight panel) → `DeckWidgets.appex`.
++ menu-bar item + Search panel) → `DeckWidgets.appex`.
 
 ## Architecture
 
@@ -64,7 +64,7 @@ targets:
 
 ```
 DeckApp/        # host app: settings window (tabs per widget), agent installer,
-                #   menu-bar item, global shortcut, Spotlight panel and its sources
+                #   menu-bar item, global shortcut, Search panel and its sources
 DeckWidgets/    # WidgetKit extension: 13 widgets + Loaders/ (mach, getifaddrs, IOKit)
 DeckAgent/      # silent CLI: refreshes sandbox-blocked data snapshots, then exits
 Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
@@ -667,7 +667,7 @@ Do not delete the container; see the trap below.
   charts still drawn) at every size. Repair with `scripts/lsclean.sh`.
 
 - **A global shortcut needs a resident Deck, and Carbon will not tell you a
-  rival holds it.** Spotlight search (M10, 2026-10-10,
+  rival holds it.** Search (M10, 2026-10-10,
   `docs/planning/spotlight-shell/`) registers its shortcut with Carbon's
   `RegisterEventHotKey` from `DeckAppDelegate`, behind an `NSStatusItem` rather
   than a `MenuBarExtra`. Measured under hardened runtime: no entitlement, no
@@ -697,7 +697,7 @@ Do not delete the container; see the trap below.
   activated itself and made a working panel look dead.
 
 - **Typed text must never become an argument of its own — measured with `git`.**
-  Spotlight commit search (`docs/planning/spotlight-more-sources/`) runs
+  Commit search (`docs/planning/spotlight-more-sources/`) runs
   `git -C <repo> log --all -i -F --all-match --grep=<word>… -n 8 --format=… --`.
   There is no shell (the arguments are an array), but git still reads
   `--output=<path>` as an option: with the `--grep=` wrapper deliberately

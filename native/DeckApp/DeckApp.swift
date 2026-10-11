@@ -256,7 +256,7 @@ struct ContentView: View {
             List(selection: $selection) {
                 Label("General", systemImage: "gearshape")
                     .tag(DeckWidget.general)
-                Label("Spotlight", systemImage: "magnifyingglass")
+                Label("Search", systemImage: "magnifyingglass")
                     .tag(DeckWidget.spotlight)
                 Label("Credentials", systemImage: "key.fill")
                     .tag(DeckWidget.credentials)
@@ -949,7 +949,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: "General"
-        case .spotlight: "Spotlight"
+        case .spotlight: "Search"
         case .credentials: "Credentials"
         case .livebox: "LiveBox"
         case .openbox: "OpenBox"
