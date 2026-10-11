@@ -725,6 +725,16 @@ Do not delete the container; see the trap below.
   fullAccess 3, writeOnly 4) and only `3` can search; `4` is reported as a
   denial. Never pass an empty `calendars:` array to `predicateForEvents` — it
   means "all calendars".
+- **The calendar-access prompt belongs in Settings, never in the panel.** Search's
+  calendar source reads EventKit (`HostEventSearch.events`), but the *ask* lives
+  on the **Calendar events** toggle in Settings → Search
+  (`CalendarSearchAccess.shouldRequestOnEnable`), and fires once, in context, on
+  the off→on transition. The panel is a non-activating `NSPanel` and `cal` needs
+  no prefix, so an ask from there would be raised by a non-frontmost Deck as a
+  side effect of typing an ordinary query — exactly the wrong moment for a TCC
+  prompt. `HostEventSearch.events` therefore **never prompts**: it reads with the
+  grant it has, or throws `.calendarAccess`. The same shape applies to any future
+  panel source that would trigger a system prompt.
 
 - **`glassEffect` needs two guards, not one.** The Search panel uses Liquid Glass
   on macOS 26 and the old material below it (`SearchPanelSurface`). Deck's

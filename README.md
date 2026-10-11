@@ -312,7 +312,8 @@ one source.
   works while Deck is running, so **General → Menu bar** has *Open Deck at
   login* and *Keep Deck in the menu bar only*.
 - Clipboard and calendar search are **off by default**: their text would appear
-  in a panel that can be on screen while you share it.
+  in a panel that can be on screen while you share it. Turning calendar on asks
+  macOS for access right there in Settings.
 - If the shortcut does nothing, another app may hold the same combination;
   macOS does not report that.
 - Each source has a **More examples** page under its toggle in the Search tab.
