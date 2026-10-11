@@ -726,6 +726,14 @@ Do not delete the container; see the trap below.
   denial. Never pass an empty `calendars:` array to `predicateForEvents` — it
   means "all calendars".
 
+- **`glassEffect` needs two guards, not one.** The Search panel uses Liquid Glass
+  on macOS 26 and the old material below it (`SearchPanelSurface`). Deck's
+  deployment target is macOS 15, so `if #available(macOS 26, *)` is required — and
+  it is not enough: `glassEffect` only exists in the macOS 26 SDK, so a toolchain
+  built before it (an older `macos-latest` runner image) fails to *compile* the
+  symbol at all. It also sits behind `#if compiler(>=6.2)`. The macOS 15 branch has
+  only ever been compiled, never run, on the Mac this was built on (26.5).
+
 ## Conventions
 
 - Metrics loaders return pure data; stores own timers; views own layout.
