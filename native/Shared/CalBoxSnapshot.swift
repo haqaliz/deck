@@ -267,6 +267,13 @@ enum HostCalendarLoader {
         (try? await store.requestFullAccessToEvents()) ?? false
     }
 
+    /// The current calendar authorization as a raw `EKAuthorizationStatus` (see
+    /// `CalendarAccess`), so callers that only need to decide can do so without
+    /// importing EventKit.
+    static var authorizationStatus: Int {
+        EKEventStore.authorizationStatus(for: .event).rawValue
+    }
+
     /// Every event calendar, for the settings picker. Empty when access is not
     /// granted.
     static func calendars(store: EKEventStore = EKEventStore()) -> [CalendarChoice] {
