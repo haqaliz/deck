@@ -1059,15 +1059,33 @@ lost by choosing it.
   The container now decodes each section with `decodeIfPresent`; three
   regression tests pin it.
 
-### M10 — Spotlight search (added 2026-10-10; ships ahead of M9)
+### M10 — Spotlight search (DONE, shipped in v1.49)
 
-A Spotlight-style floating panel, opened by a global shortcut, that searches
-the services Deck is already connected to. It reaches **beyond what the
-widgets display**: TaskBox shows only open items assigned to you, but search
-covers any task of any age, by title, tag or id. M9 stays the Developer ID
-gate; this milestone does not wait on it.
+A Spotlight-style floating panel, opened by a global shortcut (default ⌥Space),
+that searches the services Deck is already connected to. It reaches **beyond
+what the widgets display**: TaskBox shows only open items assigned to you, but
+search covers any work item of any age, by title, tag or id. Shipped as three
+stacked PRs (#60 shell, #61 remote layer + work items, #62 the remaining
+sources). Every network source was built and fixture-tested; **pull requests and
+work-item search were never run against a live account** — the probe that would
+measure that is the first thing to do before trusting them (see
+`docs/planning/spotlight-remote-search/verification.md` and
+`docs/planning/spotlight-more-sources/verification.md`). M9 stays the Developer
+ID gate.
 
-**Design (decided 2026-10-10, spec still to be written):**
+**Follow-ups, none started:**
+- [ ] Run the Azure DevOps and GitHub probes (read-only, needs the user's tokens)
+      and correct whatever they contradict — type filters, `CONTAINS` on tags,
+      the PR number lookup, Azure by-id.
+- [ ] Enable and test calendar search against a live calendar (off by default;
+      EventKit path and access prompt unexercised).
+- [ ] The shell checks never run: "Open Deck at login", widget-URL clicks with
+      Deck running/stopped, click-away dismissal, the panel over a full-screen
+      app, the Dock menu's own Quit.
+- [ ] Two unexplained oddities: the settings window once failed to show; an
+      examples page once opened without a click. Neither reproduced.
+
+**Design (decided 2026-10-10; as built, see the PRDs under `docs/planning/spotlight-*`):**
 - *Federated providers.* Each widget gets a small `SearchProvider`; the panel
   fans out and groups results by section. Local providers (snapshots, the
   opencode DB, EventKit) answer instantly. Remote providers (TaskBox, PRBox,

@@ -7,8 +7,10 @@ context lives in `ROADMAP.md` and `docs/planning/`.
 
 **Deck** is a set of small, beautiful macOS desktop widgets, delivered as a
 single native app you add from the **Widget Center** (right-click desktop →
-Edit Widgets). No floating window cards — everything is a real WidgetKit
-widget.
+Edit Widgets). No floating window cards — everything on the desktop is a real
+WidgetKit widget. The one floating surface is the **Spotlight search panel**
+(⌥Space), opened from Deck's menu-bar item; it searches data the widgets already
+have access to and shows nothing until it is opened.
 
 - **LiveBox** — system monitor: live CPU / MEM / DISK chart + top processes.
 - **OpenBox** — opencode usage: today's in/out tokens + cost, 14-day chart,
@@ -52,8 +54,8 @@ widget.
   settings store the coin's id, so the agent resolves nothing at fetch time; no
   charts in the face (see the Swift Charts trap).
 
-All fourteen ship in one WidgetKit extension: `Deck.app` (host + settings window)
-→ `DeckWidgets.appex`.
+All fourteen ship in one WidgetKit extension: `Deck.app` (host + settings window
++ menu-bar item + Spotlight panel) → `DeckWidgets.appex`.
 
 ## Architecture
 
@@ -61,7 +63,8 @@ All fourteen ship in one WidgetKit extension: `Deck.app` (host + settings window
 targets:
 
 ```
-DeckApp/        # host app: settings window (tabs per widget), agent installer
+DeckApp/        # host app: settings window (tabs per widget), agent installer,
+                #   menu-bar item, global shortcut, Spotlight panel and its sources
 DeckWidgets/    # WidgetKit extension: 13 widgets + Loaders/ (mach, getifaddrs, IOKit)
 DeckAgent/      # silent CLI: refreshes sandbox-blocked data snapshots, then exits
 Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers

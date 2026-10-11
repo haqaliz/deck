@@ -4,7 +4,7 @@
 
 # Deck
 
-**Fourteen small, beautiful macOS desktop widgets — one native app, no floating windows.**
+**Fourteen small, beautiful macOS desktop widgets — one native app, no floating windows on your desktop — plus a Spotlight-style search.**
 
 Deck adds real WidgetKit widgets to your desktop: your machine, your network, your
 battery, your commits, your ports, your calendar, your tasks, your builds and your
