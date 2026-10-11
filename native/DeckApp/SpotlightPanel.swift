@@ -110,6 +110,34 @@ final class SpotlightViewModel: ObservableObject {
     }
 }
 
+// MARK: - Surface
+
+/// The panel's background: Liquid Glass on macOS 26, the older material below it.
+///
+/// Deck's minimum is macOS 15, so the glass is behind an availability check, and
+/// behind `#if compiler(>=6.2)` as well because `glassEffect` only exists in the
+/// macOS 26 SDK — a toolchain built before it (an older CI runner image) must
+/// still compile, and simply gets the material.
+struct SearchPanelSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) {
+            // A larger radius than the old card: glass reads best with generous,
+            // concentric curves.
+            content.glassEffect(.regular, in: .rect(cornerRadius: 24))
+        } else {
+            legacy(content)
+        }
+        #else
+        legacy(content)
+        #endif
+    }
+
+    private func legacy(_ content: Content) -> some View {
+        content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
 // MARK: - View
 
 struct SpotlightPanelView: View {
@@ -172,7 +200,7 @@ struct SpotlightPanelView: View {
             }
         }
         .frame(width: 640)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .modifier(SearchPanelSurface())
         .onAppear { focused = true }
     }
 
@@ -218,8 +246,12 @@ struct SpotlightPanelView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 6)
+        // Inset and rounded, so the highlight sits inside the glass like a lozenge
+        // instead of running edge to edge like a table row.
         .background(
-            result.id == model.selectedID ? Color.accentColor.opacity(0.22) : Color.clear
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(result.id == model.selectedID ? Color.accentColor.opacity(0.22) : Color.clear)
+                .padding(.horizontal, 8)
         )
     }
 }
