@@ -26,15 +26,28 @@ Mutation-checked (the guard was removed on purpose and the suite had to fail):
 | Work items, no account | `bug login` still shows the WORK ITEMS block with "Choose an account for this in Credentials." after the move onto the generic layer |
 | Agent/widget isolation | no reference to any search entry point from `DeckAgent` or `DeckWidgets`; no widget file changed |
 
-## NOT verified
-- **Pull requests (GitHub and Azure DevOps): never run against either service.**
-  Requests are built and parsed from fixtures that follow the documented shapes.
-  Unknown: that `involves:@me` with `in:title,body` returns what the examples
-  promise, that the number lookup through "100 most recently updated" behaves,
-  the Azure by-id route's response and 404 behaviour, and that a project's list
-  of 100 recent pull requests is a useful pool.
-- **Work-item search (earlier slice): never run against Azure**, including the
-  type filters (`IN GROUP 'Microsoft.*Category'`).
+## Verified live 2026-10-11 (search-live-probes)
+
+Run against the real GitHub and Azure DevOps accounts
+(`docs/planning/search-live-probes/probe.md`).
+
+- **Pull requests — GitHub: verified.** `is:pr involves:@me "login"
+  in:title,body` returned 11 rows; quoted terms AND-ed; `is:pr` drops issues
+  (18 → 17); the 100-item recent pool backs the number lookup. **The
+  fine-grained token does search** — the old `total_count: 0`
+  (`prbox-review-state/probe.md:68-75`) was PRBox's `author:@me is:open`, not a
+  token limit.
+- **Pull requests — Azure: verified.** By-id returns the PR and 404s an unknown
+  id; the list route's rows carry `repository.project.name` and map
+  `completed`→merged / `abandoned`→closed; the deep link resolves. **Cost
+  measured:** the list payload is ~0.5–0.6 MB and ~2 s **per project** (no
+  server-side text criteria exists), so a words search is heavy but correct.
+- **Work-item search (earlier slice): verified** — see
+  `spotlight-remote-search/verification.md`. One fix came out of it: a typed
+  `,`/`;` no longer makes the tag clause 400 the whole search.
+
+## Still not verified
+
 - **Calendar events**: off by default and not enabled in testing, so macOS was
   not asked for calendar access and no calendar was read. The EventKit path,
   the access prompt and the meeting-link action are unexercised.

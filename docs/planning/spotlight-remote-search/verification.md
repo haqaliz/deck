@@ -25,27 +25,41 @@ below that touches Azure's actual behaviour is therefore unverified.
   clearing `taskbox.accountID` in a backed-up `settings.json`, then restoring it.)
 - Local sections are unaffected and still synchronous.
 
-## NOT verified (needs the user's Azure account)
-- That `[System.Tags] CONTAINS` and `[System.Title] CONTAINS` match the way the
-  settings copy promises, including partial words and case.
-- That closed and old items come back with no state filter.
-- Latency and size of a broad term at `$top=26`.
-- How Azure answers `'`, `)`, `[`, `]`, `%` after escaping (the tests prove the
-  query's *shape*, not Azure's reply).
-- That `workitemsbatch` returns `System.Tags`.
-- A real token refused, a locked keychain, and a real 429, as seen in the panel.
-- That quick typing sends one request, and Esc mid-flight cancels it.
-- Opening a result (Enter) and copying its link (Cmd-Return) on a real row.
-- The multi-project path (N+1 requests) on an account with several projects.
+## Verified live 2026-10-11 (was: NOT verified)
+
+Run against the real Azure account for `search-live-probes`
+(`docs/planning/search-live-probes/probe.md`).
+
+- **Title/tags matching:** `[System.Title] CONTAINS` is case-insensitive
+  **substring** (`'ogin'` matches "login"); `[System.Tags] CONTAINS` is
+  case-insensitive **whole tag** (`'eventprocessor'` does *not* match the tag
+  `eventprocessor-worker`). The copy is accurate; a partial tag was never
+  promised.
+- **Closed/old items:** confirmed — with no state filter the newest hits were
+  all `Done`.
+- **Latency/size at `$top=26`:** a broad term is ~3.6 KB / ~1.0 s.
+- **Escaping:** `'`, `)`, `[`, `]`, `%` in a title literal → 200; an
+  un-doubled `'` → 400. **Found and fixed:** a typed `,` or `;` reached the
+  *tags* literal and 400'd the whole search (`TF401265`); the tags literal now
+  drops them (`TaskSearch.condition`, +2 tests).
+- **`workitemsbatch` returns `System.Tags`:** confirmed (rows carry it).
+- **Multi-project:** two projects → 3 requests, rows correctly project-tagged.
+- Still not the panel's own behaviour: a refused token, a locked keychain, a
+  real 429, an Esc-cancelled in-flight request, and Enter/Cmd-Return on a real
+  row are unit-tested but were not driven through the UI here.
 
 ## Work-item types and the examples pages (added later the same day)
 - `bug`, `pbi`/`backlog`/`story`, `epic`, `feature`, `task` and `wi` scope to the
   work-item source with a type. A type is a **category** reference
   (`[System.WorkItemType] IN GROUP 'Microsoft.BugCategory'` etc.), never a type
   name, because a backlog item is a PBI, User Story or Requirement depending on
-  the process. **Unverified against Azure:** that every account accepts those
-  category names, and that `IN GROUP` behaves as documented. A rejected category
-  would surface as "The service rejected that search."
+  the process. **Verified live 2026-10-11**
+  (`docs/planning/search-live-probes/probe.md`): all five category names are
+  accepted (200) on a real org, and `IN GROUP` behaves as documented. **One
+  correction:** a *bogus* category is **not** rejected — it answers **200 with 0
+  items**, unlike an unknown field (400). The shipped table is valid, so no user
+  sees this, but the earlier "a rejected category would surface as rejected" was
+  wrong.
 - `task` used to search every type; it now means the Task type. `wi` and no
   prefix search every type.
 - Tests (1563 passing): prefix scoping, type table, hostile text cannot change

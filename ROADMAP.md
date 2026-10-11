@@ -1074,9 +1074,18 @@ measure that is the first thing to do before trusting them (see
 ID gate.
 
 **Follow-ups, none started:**
-- [ ] Run the Azure DevOps and GitHub probes (read-only, needs the user's tokens)
+- [x] Run the Azure DevOps and GitHub probes (read-only, needs the user's tokens)
       and correct whatever they contradict — type filters, `CONTAINS` on tags,
-      the PR number lookup, Azure by-id.
+      the PR number lookup, Azure by-id. **Shipped 2026-10-11**
+      (`docs/planning/search-live-probes/probe.md`). Measured: title `CONTAINS`
+      is case-insensitive substring, tags is whole-tag; all five
+      `IN GROUP 'Microsoft.*Category'` accepted (a bogus one is 200-empty, not
+      the 400 the code assumed); GitHub's fine-grained token **does** search
+      (`involves:@me "login"` returned 11 — the old zero was PRBox's
+      `author:@me is:open`); Azure by-id 404s unknown ids and the list route is
+      ~0.5–0.6 MB/project. **One fix:** a typed `,` or `;` reached the tag
+      literal and 400'd the *whole* work-item search (`TF401265`); the tag
+      clause now drops them (`TaskSearch.condition`, +2 tests, 1673 green).
 - [ ] Enable and test calendar search against a live calendar (off by default;
       EventKit path and access prompt unexercised).
 - [ ] The shell checks never run: "Open Deck at login", widget-URL clicks with
