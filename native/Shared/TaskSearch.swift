@@ -39,9 +39,21 @@ enum TaskSearch {
     static func condition(for text: String, kind: WorkItemKind? = nil) -> String? {
         let clean = sanitise(text)
         guard RemoteSearchPolicy.shouldSearch(clean) else { return nil }
-        let literal = "'" + clean.replacingOccurrences(of: "'", with: "''") + "'"
+        let literal = quoted(clean)
 
-        var condition = "[System.Title] CONTAINS \(literal) OR [System.Tags] CONTAINS \(literal)"
+        // Azure rejects a `[System.Tags] CONTAINS` literal containing `,` or `;`
+        // (`TF401265: The tag name '…' is invalid`), and no valid tag contains
+        // either — so the tag clause drops them while the title clause keeps the
+        // typed text verbatim. Measured live 2026-10-11 (search-live-probes):
+        // otherwise a typed comma or semicolon 400s the whole search ("The
+        // service rejected that search.") even though the title half matched.
+        let tagText = tagSafe(clean)
+        var condition = "[System.Title] CONTAINS \(literal)"
+        // A text of nothing but delimiters leaves nothing to look for as a tag;
+        // an empty tags literal is itself a 400, so the clause is omitted.
+        if !tagText.isEmpty {
+            condition += " OR [System.Tags] CONTAINS \(quoted(tagText))"
+        }
         // A whole number may also be a work item id. Digits only, so nothing
         // typed can reach this clause as anything but a number.
         if clean.count <= maxIdDigits, clean.allSatisfy({ $0.isASCII && $0.isNumber }) {
@@ -54,6 +66,19 @@ enum TaskSearch {
             condition = "(\(condition)) AND [System.WorkItemType] IN GROUP '\(category)'"
         }
         return condition
+    }
+
+    /// A quote-doubled WIQL string literal (`''` escapes an inner quote).
+    private static func quoted(_ text: String) -> String {
+        "'" + text.replacingOccurrences(of: "'", with: "''") + "'"
+    }
+
+    /// The text with the two characters Azure forbids in a tag name removed, so
+    /// it is safe in a `[System.Tags] CONTAINS` literal. Tags match whole tags,
+    /// so a partial tag never matches anyway; this only stops the 400.
+    private static func tagSafe(_ text: String) -> String {
+        text.split(whereSeparator: { $0 == "," || $0 == ";" || $0 == " " })
+            .joined(separator: " ")
     }
 }
 

@@ -66,6 +66,39 @@ final class TaskSearchConditionTests: XCTestCase {
         XCTAssertTrue(c.contains("'login bug'"))
     }
 
+    /// Azure rejects a `[System.Tags] CONTAINS` literal containing `,` or `;`
+    /// (`TF401265: The tag name '…' is invalid`), and the builder ORs the title
+    /// and tags clauses with the same literal — so a typed comma or semicolon
+    /// made the *whole* search 400 ("The service rejected that search.") even
+    /// though the title half would have matched. Measured live 2026-10-11
+    /// (search-live-probes). No valid tag contains either character, so the tag
+    /// clause drops them; the title clause keeps them verbatim.
+    func testATypedCommaOrSemicolonNeverReachesTheTagClause() throws {
+        for text in ["fix login, logout", "dead code; cleanup", "a,b;c"] {
+            let c = try XCTUnwrap(TaskSearch.condition(for: text))
+            let tagsPart = try XCTUnwrap(c.range(of: "[System.Tags] CONTAINS ")?.upperBound)
+            let tagsLiteral = c[tagsPart...]
+            XCTAssertFalse(tagsLiteral.contains(","), "\(text) -> \(c)")
+            XCTAssertFalse(tagsLiteral.contains(";"), "\(text) -> \(c)")
+            XCTAssertNil(WiqlClause.validate(c), "\(text) -> \(c)")
+        }
+        // The title clause still carries the typed text unchanged.
+        let c = try XCTUnwrap(TaskSearch.condition(for: "fix login, logout"))
+        XCTAssertTrue(c.contains("[System.Title] CONTAINS 'fix login, logout'"))
+    }
+
+    /// A query of nothing but tag delimiters has nothing to match as a tag, so
+    /// the tags clause is omitted rather than sent as an empty literal (which
+    /// Azure also rejects: "The specified operator cannot be used in
+    /// conjunction with an empty string"). The title half is still a valid,
+    /// non-empty search.
+    func testADelimiterOnlyQuerySearchesTheTitleWithoutATagsClause() throws {
+        let c = try XCTUnwrap(TaskSearch.condition(for: ", ;"))
+        XCTAssertTrue(c.contains("[System.Title] CONTAINS ', ;'"))
+        XCTAssertFalse(c.contains("[System.Tags] CONTAINS"))
+        XCTAssertNil(WiqlClause.validate(c))
+    }
+
     func testTextIsCapped() throws {
         let c = try XCTUnwrap(TaskSearch.condition(for: String(repeating: "a", count: 4000)))
         XCTAssertLessThan(c.count, 400)

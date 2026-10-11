@@ -1,18 +1,20 @@
-# Brief: spotlight-remote-search (ROADMAP M10, second item onward)
+# Brief: search-live-probes (ROADMAP M10 follow-up)
 
-Stacked on `feat/spotlight-shell/aliz` (the shell is not merged yet).
+Verify the Search panel's network providers against live accounts, then fix
+whatever they contradict.
 
-Add network-backed sources to the Spotlight panel. The shell's providers are
-synchronous functions over local snapshots; remote sources cannot be, because
-typing must not fire a request per keystroke and Deck already hits rate limits
-(CoinGecko 429s, GitHub's 30 searches/min, Yahoo bursts — see CLAUDE.md).
+The M10 Spotlight/Search feature shipped (v1.49–v1.50) with five deferred
+sources. Two network providers were built and fixture-tested but never run
+against a live account:
 
-This slice: the shared remote-search layer (debounce, min length, per-source
-floor, per-query cache, 429 degrades one section, stale-response safety, async
-panel sections) plus its first user, TaskBox search: any task of any age by
-title, tag or id, via WIQL against the account TaskBox is configured with.
+- **Work-item search** (Azure DevOps, `task`/`bug`/`pbi`/… prefixes) —
+  "never run against a live Azure account"
+  (`docs/planning/spotlight-remote-search/verification.md:28-39`).
+- **Pull-request search** (GitHub + Azure DevOps, `pr ` prefix) — "never run
+  against either service" (`docs/planning/spotlight-more-sources/verification.md:29-37`).
 
-Later slices reuse the layer: PRBox, GitBox/CalBox, ShipBox/MarketBox.
-Defaults agreed 2026-10-10: prefixes task/pr/commit/cal/run/mkt; every project
-on the account, closed items included; 300 ms debounce, 2 chars minimum;
-Enter opens in the browser, Cmd-Return copies the link.
+ROADMAP.md:1077-1079 is explicit: run the read-only probes and "correct
+whatever they contradict — type filters, `CONTAINS` on tags, the PR number
+lookup, Azure by-id."
+
+This is `dbf task search-live-probes`, chosen by `deck-next`.
