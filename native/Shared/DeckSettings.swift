@@ -711,6 +711,9 @@ struct SpotlightSettings: Codable, Equatable {
     var portEnabled = true
     var timeEnabled = true
     var ocEnabled = true
+    /// On, but inert until TaskBox has an account. What is typed is sent to
+    /// dev.azure.com, which the settings row says in plain words.
+    var taskEnabled = true
 
     init() {}
 
@@ -720,6 +723,7 @@ struct SpotlightSettings: Codable, Equatable {
         case .port: portEnabled
         case .time: timeEnabled
         case .oc: ocEnabled
+        case .task: taskEnabled
         }
     }
 
@@ -741,11 +745,12 @@ struct SpotlightSettings: Codable, Equatable {
         portEnabled = try c.decodeIfPresent(Bool.self, forKey: .portEnabled) ?? true
         timeEnabled = try c.decodeIfPresent(Bool.self, forKey: .timeEnabled) ?? true
         ocEnabled = try c.decodeIfPresent(Bool.self, forKey: .ocEnabled) ?? true
+        taskEnabled = try c.decodeIfPresent(Bool.self, forKey: .taskEnabled) ?? true
     }
 
     enum CodingKeys: String, CodingKey {
         case shortcutKeyCode, shortcutModifiers, keepInTrayOnly, openAtLogin
-        case clipEnabled, portEnabled, timeEnabled, ocEnabled
+        case clipEnabled, portEnabled, timeEnabled, ocEnabled, taskEnabled
     }
 }
 

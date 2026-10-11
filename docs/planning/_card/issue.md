@@ -1,29 +1,18 @@
-# Brief: spotlight-shell (ROADMAP M10, first item)
+# Brief: spotlight-remote-search (ROADMAP M10, second item onward)
 
-Add a Spotlight-style search shell to Deck.
+Stacked on `feat/spotlight-shell/aliz` (the shell is not merged yet).
 
-- Deck.app stays resident as an `NSStatusItem` tray icon with menu items
-  Search, Settings, Quit (not `MenuBarExtra`).
-- A global shortcut, set with a recorder, opens a floating non-activating
-  `NSPanel`.
-- A new settings item beside General holds the shortcut and a "keep Deck in
-  the tray only" toggle. With it on, closing the window or quitting from the
-  Dock leaves the tray running.
-- The panel fans out to local `SearchProvider`s and shows results grouped by
-  section, with prefix scoping (`clip `, etc.). Providers in this slice:
-  ClipBox (opt-in), DevBox, ClockBox, OpenBox sessions. No network code.
-- Anything a result opens goes through `DeckURLForwarding`.
+Add network-backed sources to the Spotlight panel. The shell's providers are
+synchronous functions over local snapshots; remote sources cannot be, because
+typing must not fire a request per keystroke and Deck already hits rate limits
+(CoinGecko 429s, GitHub's 30 searches/min, Yahoo bursts — see CLAUDE.md).
 
-Caveats to design around:
-- Timers, refreshes and the settings `@State` live in `ContentView`, so a
-  window-less tray Deck needs its own settings read and loop.
-- `DeckAppDelegate` terminates after a widget-URL launch; that must not fire
-  for a resident Deck.
-- Keep the `LegacyAgentCleanup` guard.
-- Probe the hotkey API and the `NSStatusItem` + `NSPanel` combination under
-  hardened runtime before committing to a design.
+This slice: the shared remote-search layer (debounce, min length, per-source
+floor, per-query cache, 429 degrades one section, stale-response safety, async
+panel sections) plus its first user, TaskBox search: any task of any age by
+title, tag or id, via WIQL against the account TaskBox is configured with.
 
-Later M10 items (TaskBox, PRBox, GitBox/CalBox, ShipBox/MarketBox search) are
-out of scope here; they plug into this shell as providers.
-
-Source: discussion on 2026-10-10, recorded in ROADMAP.md M10. No GitHub issue.
+Later slices reuse the layer: PRBox, GitBox/CalBox, ShipBox/MarketBox.
+Defaults agreed 2026-10-10: prefixes task/pr/commit/cal/run/mkt; every project
+on the account, closed items included; 300 ms debounce, 2 chars minimum;
+Enter opens in the browser, Cmd-Return copies the link.

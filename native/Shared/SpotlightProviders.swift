@@ -151,7 +151,7 @@ enum SpotlightEngine {
 
         // A disabled provider is never searched — not even when the user types
         // its prefix. The toggle is the privacy control for the clipboard.
-        let providers = SearchProviderID.allCases.filter { id in
+        let providers = SearchProviderID.localCases.filter { id in
             settings.isEnabled(id) && (query.scope == nil || query.scope == id)
         }
 
@@ -165,6 +165,7 @@ enum SpotlightEngine {
                     query: query.text, configuredIDs: inputs.configuredClockIDs,
                     now: now, reference: reference)
             case .oc: results += OpenCodeSearch.results(query: query.text, snapshot: inputs.opencode)
+            case .task: break  // remote: answered by the host through RemoteSearchPolicy
             }
         }
         return SpotlightRanking.sections(

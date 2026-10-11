@@ -288,7 +288,10 @@ panel. It searches what Deck already has: ports and containers (DevBox), world
 clocks (ClockBox), recent OpenCode sessions, and — only if you switch it on —
 your ClipBox history. Enter copies the result; Esc closes the panel. Type a
 prefix to search one source: `port 3000`, `time tokyo`, `oc refactor`,
-`clip invoice`. The Spotlight tab shows an example for each source.
+`clip invoice`. Azure DevOps work items are searched by type: `bug login`,
+`pbi checkout` (a PBI, User Story or Requirement, whatever your process calls
+it), `epic payments`, `feature search`, `task 4521`, or `wi …` for every type.
+The Spotlight tab has a *More examples* page for each source.
 
 - Deck sits in the menu bar (Search, Settings…, Quit Deck). The shortcut only
   works while Deck is running, so **General → Menu bar** has *Open Deck at
@@ -329,6 +332,7 @@ Deck reads personal data, so here is exactly what happens to it.
 | WeatherBox | your location (or nothing, and your IP geolocates) | `wttr.in` |
 | ShipBox | your GitHub token, and the repos you watch (or, in Automatic mode, your repo list) | `api.github.com` |
 | TaskBox | your Azure DevOps PAT, org and projects | `dev.azure.com` |
+| Spotlight → Tasks | the text you type after `task ` (or with no prefix, if Tasks is on), with your TaskBox account's PAT, org and projects; only once you have typed 2+ characters and paused | `dev.azure.com` |
 | OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
 | MarketBox | the coins you picked (e.g. `bitcoin`) and the stocks/indices you picked (e.g. `^GSPC`), plus what you type in the ticker search | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com`, `query1.finance.yahoo.com` |
 

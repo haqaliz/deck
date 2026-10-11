@@ -10,8 +10,10 @@
 		002E0EC3864755B908E7E4A6 /* SpotlightCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75DD62878DBB50EF44C4B91D /* SpotlightCoreTests.swift */; };
 		01BB25D086A5451976DCC54A /* azure_prs_votes.json in Resources */ = {isa = PBXBuildFile; fileRef = F52085AAB762F8008E810AAA /* azure_prs_votes.json */; };
 		040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
+		06482CCF82A9FBAFF325B4DD /* RemoteSearchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BB1D8EA2DE70705DE12154 /* RemoteSearchPolicy.swift */; };
 		083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F06724D8333A9A74C4156DB6 /* SmokeTests.swift */; };
 		09092463B54E5E76973919A0 /* CredentialAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812063688CE39D11189608C8 /* CredentialAccount.swift */; };
+		09329B3069A91E89137EDABC /* SpotlightRemoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16CB07AB687AD7FAEFF7529C /* SpotlightRemoteModelTests.swift */; };
 		0A951556D9FDE10F29C3A1EB /* PRBoxReviewStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94F22FC7144344D976F92FEC /* PRBoxReviewStateTests.swift */; };
 		0ADA696C2CD6D8BE83B10C12 /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
 		0CCA2FD72913340759E87FC0 /* AgentHeartbeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69882E34EC81D79A1C21CA9C /* AgentHeartbeat.swift */; };
@@ -46,6 +48,7 @@
 		22290A5D67B8608E00C09A20 /* SpotlightProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9265A6E22517B1B6D20AC8FF /* SpotlightProviders.swift */; };
 		2266BFBB98C3E0FBA6312E69 /* CredentialsWiringTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 920FB174B8F493303CA61487 /* CredentialsWiringTests.swift */; };
 		234BBFEE49DDFBC2A6F9A084 /* ThresholdTierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */; };
+		23E4928FA125EC2B08A775C8 /* TaskSearchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC94AB2E733EFCFB9FEA255B /* TaskSearchCoordinator.swift */; };
 		23EF43A1E8789309DDAE5D28 /* AzureProjectsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BDAAE2C8DB83E54F1D11C85 /* AzureProjectsParserTests.swift */; };
 		24D2B39CF2040FBDA001CDE7 /* MarketBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */; };
 		272BF418D178E587CB0AE675 /* RefreshPoliciesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C1482ECEE343A435002C514 /* RefreshPoliciesTests.swift */; };
@@ -54,6 +57,7 @@
 		29301B875DF6C63903F7C456 /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		2A844B182A8B55D6AE7B4116 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
 		2A95575107BE1619EF3BB4D9 /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
+		2BD33CF674C48D8007479B5E /* TaskSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B9F9C74F80D7C3B071E5838 /* TaskSearch.swift */; };
 		2C671351EA35B15FB9B3CD15 /* CredentialVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */; };
 		2C779AEBAA4BC463256AE916 /* DeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD1620AB8C6D73F4CD9EBD08 /* DeckApp.swift */; };
 		2CA27863BE18A0F76E619E66 /* TaskBoxQueryOutcomeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DCCCC07040A9422EBEE1358 /* TaskBoxQueryOutcomeTests.swift */; };
@@ -97,6 +101,7 @@
 		47A9B9675547988F1A1C1786 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		482E9A15C89DD93832340B3B /* CredentialsMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD5C85FCA16CC6CB16BA6D4 /* CredentialsMigrationTests.swift */; };
 		4908B2BE0C5A785B8F08F91D /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
+		4CB5AFE123CBED3941DE81FC /* SpotlightWorkItemTypeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165389F3D67AC6A1E8ECC639 /* SpotlightWorkItemTypeTests.swift */; };
 		4D3ECE8B7195BF07E707D11C /* SpotlightProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9265A6E22517B1B6D20AC8FF /* SpotlightProviders.swift */; };
 		4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		4F121926AB6ABBDED6AB4C45 /* AzureTeamsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 871E3F6BD19878F5B8C47B6B /* AzureTeamsParserTests.swift */; };
@@ -120,6 +125,7 @@
 		57F5796192299650422752B1 /* erApiLatest.json in Resources */ = {isa = PBXBuildFile; fileRef = CF554B40AD43EFE339212234 /* erApiLatest.json */; };
 		590B4D6F5F70FC9062131040 /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
 		596256D947FA628D3158EA89 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
+		5A49AB319DD6A5F7CD06DF70 /* RemoteSearchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BB1D8EA2DE70705DE12154 /* RemoteSearchPolicy.swift */; };
 		5AF5213E37E2AA0CCD62EE55 /* SpotlightShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C1C101998A3DF7BA1A0987 /* SpotlightShortcut.swift */; };
 		5C0FC13FD9210AD4499E5B6E /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
 		5C66BC767CDD4C5D197BE30F /* WiqlPresetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD561BD148534E3EA9F6D063 /* WiqlPresetTests.swift */; };
@@ -164,6 +170,7 @@
 		7ADEE8BA9F19842AD86B99DC /* github_prs.json in Resources */ = {isa = PBXBuildFile; fileRef = 910A3754B71959068BBF2549 /* github_prs.json */; };
 		7B0649E3CEC354D446CBCD0D /* RemoteOpenCodeSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */; };
 		7BA588A2F45314DC0BFF6883 /* MarketBoxParsersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C2D4337B99014556B02507 /* MarketBoxParsersTests.swift */; };
+		7C2BB313D7CFBD45C5497F6F /* RemoteSearchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BB1D8EA2DE70705DE12154 /* RemoteSearchPolicy.swift */; };
 		7DE967CF80745F4E197DEBEE /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
 		822044370E47F70F35A7D360 /* BatteryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF35AEFE2CAA5E64BF05CA3 /* BatteryMetrics.swift */; };
 		82D525C8424FF0CFA882A47F /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
@@ -240,6 +247,7 @@
 		BFA88F4BF6B1007CC6725C4B /* provider-azure-dark.pdf in Resources */ = {isa = PBXBuildFile; fileRef = CE8FC52B15143ACCE8231B27 /* provider-azure-dark.pdf */; };
 		BFD1028CDBFBB49E951CB781 /* DeckSettingsSecretsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A30EA93126D172F0FB1035 /* DeckSettingsSecretsTests.swift */; };
 		C1880C6DD5759D69ACFFE48B /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
+		C254D130C2B2BC1A0A51D392 /* TaskSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A369FDC60ED3282601EAD50 /* TaskSearchTests.swift */; };
 		C25CF03F42EF2643976A9291 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		C2697957F8E3A81F07B6342B /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		C29498F116FBD92A081C2F5D /* SpotlightSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85FA0D76B911A383F8BAA255 /* SpotlightSettingsView.swift */; };
@@ -262,8 +270,10 @@
 		CB54BF2A77B52929C1500593 /* PRBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B129C36246D87142F352B506 /* PRBoxSnapshotTests.swift */; };
 		CC6900F5EAD6D77258D86F4B /* LiveBoxThermalCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61263CB1763F7F518688BA05 /* LiveBoxThermalCore.swift */; };
 		CCC6405CB841E90B3F5496EB /* AccessoryCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 694F80D691C62D93C806CD51 /* AccessoryCoreTests.swift */; };
+		CD29DCD83CC825D0AA6DE26F /* TaskSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B9F9C74F80D7C3B071E5838 /* TaskSearch.swift */; };
 		CE021C5C20C5DAD337EBA0BA /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
 		CE062D2F4728EBFDF662CACE /* github_pr_reviews.json in Resources */ = {isa = PBXBuildFile; fileRef = 8F194F129DDFDA60312EA5D1 /* github_pr_reviews.json */; };
+		CFFBD4FB3CFD4C1F39EB2347 /* RemoteSearchPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE487C6A0C3F6BB61D681289 /* RemoteSearchPolicyTests.swift */; };
 		D0E68887D6CF1F2F3EAFA435 /* DeckAgent in Resources */ = {isa = PBXBuildFile; fileRef = EA5EADBCA4E36B421CDE1542 /* DeckAgent */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
 		D2669CB46930616C7A93FD65 /* DevBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */; };
@@ -284,6 +294,8 @@
 		D970D0114B18C7A6FBF1C73B /* TrayLifecyclePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDD6D829248E1B7EF8FF06D9 /* TrayLifecyclePolicy.swift */; };
 		D9873960F255D965BA294750 /* CredentialGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277279067EB7808B71A4759B /* CredentialGateTests.swift */; };
 		DAD7D5822D2A6F40FD89DD26 /* AtomicFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */; };
+		DB02655163CCFC808ACC42E2 /* RemoteSearchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BB1D8EA2DE70705DE12154 /* RemoteSearchPolicy.swift */; };
+		DB2F8D9403757BEA911C5DC6 /* TaskSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B9F9C74F80D7C3B071E5838 /* TaskSearch.swift */; };
 		DCFB3DD59B6875D41CB81E0A /* SpotlightProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9265A6E22517B1B6D20AC8FF /* SpotlightProviders.swift */; };
 		DD3E61D42DB4A46DB5C256BF /* OpenBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */; };
 		DD9B2E32F244BE3B25773C3C /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
@@ -294,6 +306,7 @@
 		E12D02F197A271DD411D4053 /* DeckKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82736DC13D9569D028C763BC /* DeckKeychain.swift */; };
 		E14CADB2CF950D781BA2F195 /* ClockBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 246CB064D9531380A28D9673 /* ClockBoxWidget.swift */; };
 		E1EBE95E84F8F791E5B3D34A /* WeatherSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */; };
+		E23EF15D8E2B6648BF11E6E8 /* TaskSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B9F9C74F80D7C3B071E5838 /* TaskSearch.swift */; };
 		E243A28095E18E5CAD6F03DF /* CredentialVerificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A81DDCB64140958465D2A8 /* CredentialVerificationTests.swift */; };
 		E2DE130621C6683B7AA69F2D /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */; };
@@ -373,9 +386,12 @@
 		13A1025AA738F2EC2637AA2C /* AzureAccountProjectsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureAccountProjectsTests.swift; sourceTree = "<group>"; };
 		13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBoxSnapshot.swift; sourceTree = "<group>"; };
 		13DFA928EDB1DBDEF8503D55 /* RGBAPaletteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RGBAPaletteTests.swift; sourceTree = "<group>"; };
+		165389F3D67AC6A1E8ECC639 /* SpotlightWorkItemTypeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightWorkItemTypeTests.swift; sourceTree = "<group>"; };
+		16CB07AB687AD7FAEFF7529C /* SpotlightRemoteModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightRemoteModelTests.swift; sourceTree = "<group>"; };
 		16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxSessionCoreTests.swift; sourceTree = "<group>"; };
 		18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeSyncTests.swift; sourceTree = "<group>"; };
 		18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxWidget.swift; sourceTree = "<group>"; };
+		1A369FDC60ED3282601EAD50 /* TaskSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSearchTests.swift; sourceTree = "<group>"; };
 		1AD46890DC73D8196846F990 /* CoinSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinSearch.swift; sourceTree = "<group>"; };
 		1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychainTests.swift; sourceTree = "<group>"; };
 		1D0F7208894404301344CB11 /* FetchStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchStatusTests.swift; sourceTree = "<group>"; };
@@ -407,6 +423,7 @@
 		38FE485560E13BED32845511 /* DeckSharedTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeckSharedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		39345060F67E6A48EE022B19 /* MarketBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxSnapshotTests.swift; sourceTree = "<group>"; };
 		3ABAF4C66B6C708DCEB04DCC /* azure_projects.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = azure_projects.json; sourceTree = "<group>"; };
+		3B9F9C74F80D7C3B071E5838 /* TaskSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSearch.swift; sourceTree = "<group>"; };
 		3C1482ECEE343A435002C514 /* RefreshPoliciesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshPoliciesTests.swift; sourceTree = "<group>"; };
 		420094A8B06783D875A8DCC6 /* AccessoryCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryCore.swift; sourceTree = "<group>"; };
 		4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherSnapshot.swift; sourceTree = "<group>"; };
@@ -511,6 +528,7 @@
 		CB348CAA59C48A66AEC08E61 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLink.swift; sourceTree = "<group>"; };
 		CBC89EF1D34611CB2B244F15 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		CC94AB2E733EFCFB9FEA255B /* TaskSearchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSearchCoordinator.swift; sourceTree = "<group>"; };
 		CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightCore.swift; sourceTree = "<group>"; };
 		CCED7DB3FECDD4E23935642E /* WeatherBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherBoxWidget.swift; sourceTree = "<group>"; };
 		CD561BD148534E3EA9F6D063 /* WiqlPresetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlPresetTests.swift; sourceTree = "<group>"; };
@@ -518,6 +536,7 @@
 		CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSQLTests.swift; sourceTree = "<group>"; };
 		CDD6D829248E1B7EF8FF06D9 /* TrayLifecyclePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrayLifecyclePolicy.swift; sourceTree = "<group>"; };
 		CE170E54FD1094990464C7C7 /* WiqlClause.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlClause.swift; sourceTree = "<group>"; };
+		CE487C6A0C3F6BB61D681289 /* RemoteSearchPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSearchPolicyTests.swift; sourceTree = "<group>"; };
 		CE8FC52B15143ACCE8231B27 /* provider-azure-dark.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "provider-azure-dark.pdf"; sourceTree = "<group>"; };
 		CF554B40AD43EFE339212234 /* erApiLatest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = erApiLatest.json; sourceTree = "<group>"; };
 		D0C5F74D51A679F618989367 /* DeckWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeckWidgets.entitlements; sourceTree = "<group>"; };
@@ -525,6 +544,7 @@
 		D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = wallexMarkets.json; sourceTree = "<group>"; };
 		D4A81DDCB64140958465D2A8 /* CredentialVerificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialVerificationTests.swift; sourceTree = "<group>"; };
 		D63E4A6605648A901BE67985 /* yahoo_chart_unknown.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = yahoo_chart_unknown.json; sourceTree = "<group>"; };
+		D6BB1D8EA2DE70705DE12154 /* RemoteSearchPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSearchPolicy.swift; sourceTree = "<group>"; };
 		D6C015468901E17452BF6132 /* ShipBoxDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxDiscoveryTests.swift; sourceTree = "<group>"; };
 		D7780161EB0FB8B0EA6E34E2 /* LiveBoxThresholdTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThresholdTests.swift; sourceTree = "<group>"; };
 		D7FCBF802BC9D24B105C3C4F /* ProcessSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSnapshotTests.swift; sourceTree = "<group>"; };
@@ -578,6 +598,7 @@
 				0B249B03D306ADA906175DDD /* SpotlightHotKey.swift */,
 				DCCAB889E814296403B2C9A8 /* SpotlightPanel.swift */,
 				85FA0D76B911A383F8BAA255 /* SpotlightSettingsView.swift */,
+				CC94AB2E733EFCFB9FEA255B /* TaskSearchCoordinator.swift */,
 				33023F59AC01FA5D74ED0FD3 /* TrayController.swift */,
 				989F8CCC5027070A6EDBE318 /* LaunchAgents */,
 				0A97E3E77BFF383850F9F406 /* Resources */,
@@ -624,6 +645,7 @@
 				9FE2D7379A13510C5A7338BA /* RefreshPolicies.swift */,
 				37B70613268ED436D3F67B3D /* RemoteOpenCodeLoader.swift */,
 				2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */,
+				D6BB1D8EA2DE70705DE12154 /* RemoteSearchPolicy.swift */,
 				94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */,
 				CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */,
 				9265A6E22517B1B6D20AC8FF /* SpotlightProviders.swift */,
@@ -631,6 +653,7 @@
 				2A6665B8B08E0F39C775A55C /* StockSearch.swift */,
 				C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */,
 				5089372A785C079676513337 /* TaskBoxSnapshot.swift */,
+				3B9F9C74F80D7C3B071E5838 /* TaskSearch.swift */,
 				CDD6D829248E1B7EF8FF06D9 /* TrayLifecyclePolicy.swift */,
 				4232A5F2C55389B483C3E630 /* WeatherSnapshot.swift */,
 				CE170E54FD1094990464C7C7 /* WiqlClause.swift */,
@@ -699,6 +722,7 @@
 				3C1482ECEE343A435002C514 /* RefreshPoliciesTests.swift */,
 				5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */,
 				18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */,
+				CE487C6A0C3F6BB61D681289 /* RemoteSearchPolicyTests.swift */,
 				13DFA928EDB1DBDEF8503D55 /* RGBAPaletteTests.swift */,
 				D6C015468901E17452BF6132 /* ShipBoxDiscoveryTests.swift */,
 				86472D68B091CE8C0F8CBFFC /* ShipBoxInventoryTests.swift */,
@@ -708,12 +732,15 @@
 				F06724D8333A9A74C4156DB6 /* SmokeTests.swift */,
 				75DD62878DBB50EF44C4B91D /* SpotlightCoreTests.swift */,
 				358E19909138D28C1CFD82F5 /* SpotlightProvidersTests.swift */,
+				16CB07AB687AD7FAEFF7529C /* SpotlightRemoteModelTests.swift */,
 				BF1C18FF61C9DFAE06F926C5 /* SpotlightSettingsTests.swift */,
 				62EE74D383BD7763C746C21D /* SpotlightShortcutTests.swift */,
+				165389F3D67AC6A1E8ECC639 /* SpotlightWorkItemTypeTests.swift */,
 				BDD0F69418099679B159BC4C /* StockSearchTests.swift */,
 				29738728E12DD5CDF3E8BB45 /* SystemMetricsCoreTests.swift */,
 				2DCCCC07040A9422EBEE1358 /* TaskBoxQueryOutcomeTests.swift */,
 				A7F059BC77B65DAFC1FC3A3A /* TaskBoxSnapshotTests.swift */,
+				1A369FDC60ED3282601EAD50 /* TaskSearchTests.swift */,
 				72DD406B6CE5CFB313241EBD /* ThresholdTierTests.swift */,
 				AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */,
 				0B73EE38D2EDC1B6922422BD /* TrayLifecyclePolicyTests.swift */,
@@ -1101,6 +1128,7 @@
 				777306E14AD6683117A05166 /* RefreshPolicies.swift in Sources */,
 				E32E93875865D100E4823228 /* RemoteOpenCodeLoader.swift in Sources */,
 				CE021C5C20C5DAD337EBA0BA /* RemoteOpenCodeSync.swift in Sources */,
+				7C2BB313D7CFBD45C5497F6F /* RemoteSearchPolicy.swift in Sources */,
 				611DC32A1889B095CAE4D132 /* ShipBoxSnapshot.swift in Sources */,
 				7829C9C7B3CA00EDEED8C10D /* ShipBoxWidget.swift in Sources */,
 				8B0CA68FFC7E3EF359C7826F /* SpotlightCore.swift in Sources */,
@@ -1111,6 +1139,7 @@
 				27E46B2CB6BF58E9D9DD72A3 /* SystemMetricsCore.swift in Sources */,
 				5650F7F4BB3B97AF335BCD05 /* TaskBoxSnapshot.swift in Sources */,
 				55D9104F71906E66209EB1B6 /* TaskBoxWidget.swift in Sources */,
+				CD29DCD83CC825D0AA6DE26F /* TaskSearch.swift in Sources */,
 				38835B3F27FC0586408A047F /* TrayLifecyclePolicy.swift in Sources */,
 				35493BC168CD39B744DDCB28 /* WeatherBoxWidget.swift in Sources */,
 				BD8A7273480E5B5E14C8BB51 /* WeatherSnapshot.swift in Sources */,
@@ -1217,6 +1246,8 @@
 				4D8D20B5E8DFA9E20784A9DF /* RemoteOpenCodeLoader.swift in Sources */,
 				AB600153AB7326FCBC557576 /* RemoteOpenCodeSync.swift in Sources */,
 				7B0649E3CEC354D446CBCD0D /* RemoteOpenCodeSyncTests.swift in Sources */,
+				DB02655163CCFC808ACC42E2 /* RemoteSearchPolicy.swift in Sources */,
+				CFFBD4FB3CFD4C1F39EB2347 /* RemoteSearchPolicyTests.swift in Sources */,
 				51C852BFFD446B7CD99A8BDA /* ShipBoxDiscoveryTests.swift in Sources */,
 				3672B6E64662D1184A37F56E /* ShipBoxInventoryTests.swift in Sources */,
 				37185E555B2E6A0FB7D0A297 /* ShipBoxMergeTests.swift in Sources */,
@@ -1228,9 +1259,11 @@
 				002E0EC3864755B908E7E4A6 /* SpotlightCoreTests.swift in Sources */,
 				22290A5D67B8608E00C09A20 /* SpotlightProviders.swift in Sources */,
 				EC304DA0C12EDF3AA590726D /* SpotlightProvidersTests.swift in Sources */,
+				09329B3069A91E89137EDABC /* SpotlightRemoteModelTests.swift in Sources */,
 				158A333E465D5F405A61A4F7 /* SpotlightSettingsTests.swift in Sources */,
 				A3A7C456EF24595BEB4B2D6D /* SpotlightShortcut.swift in Sources */,
 				A294B651E89A3EFD457D2E9A /* SpotlightShortcutTests.swift in Sources */,
+				4CB5AFE123CBED3941DE81FC /* SpotlightWorkItemTypeTests.swift in Sources */,
 				B681F466B7C74C88A4C39B4A /* StockSearch.swift in Sources */,
 				CB411251AD16DA48295DC7CD /* StockSearchTests.swift in Sources */,
 				3D3C97CD45D9FC5B6AF3C06D /* SystemMetricsCore.swift in Sources */,
@@ -1238,6 +1271,8 @@
 				2CA27863BE18A0F76E619E66 /* TaskBoxQueryOutcomeTests.swift in Sources */,
 				37A84AFF0995EEEBF909BDE7 /* TaskBoxSnapshot.swift in Sources */,
 				5E8B2B87C2D878BB819860BB /* TaskBoxSnapshotTests.swift in Sources */,
+				DB2F8D9403757BEA911C5DC6 /* TaskSearch.swift in Sources */,
+				C254D130C2B2BC1A0A51D392 /* TaskSearchTests.swift in Sources */,
 				234BBFEE49DDFBC2A6F9A084 /* ThresholdTierTests.swift in Sources */,
 				0D92FA03A401FBF07703028E /* ToolCountTests.swift in Sources */,
 				D970D0114B18C7A6FBF1C73B /* TrayLifecyclePolicy.swift in Sources */,
@@ -1294,6 +1329,7 @@
 				927979BD8876C6899A2534F0 /* RefreshPolicies.swift in Sources */,
 				4580C4442FB6D8BED1A52FCA /* RemoteOpenCodeLoader.swift in Sources */,
 				43C94E87B1444FE3968131A8 /* RemoteOpenCodeSync.swift in Sources */,
+				06482CCF82A9FBAFF325B4DD /* RemoteSearchPolicy.swift in Sources */,
 				E2DE130621C6683B7AA69F2D /* ShipBoxSnapshot.swift in Sources */,
 				9DBCB73513BAF9149ADC7DE9 /* SpotlightCore.swift in Sources */,
 				95C0179C1B5783C2DE56F085 /* SpotlightHotKey.swift in Sources */,
@@ -1304,6 +1340,8 @@
 				EA007C7EFB10C5747846BBE8 /* StockSearch.swift in Sources */,
 				92F9D56CB31571F8F4BDB6CC /* SystemMetricsCore.swift in Sources */,
 				A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */,
+				2BD33CF674C48D8007479B5E /* TaskSearch.swift in Sources */,
+				23E4928FA125EC2B08A775C8 /* TaskSearchCoordinator.swift in Sources */,
 				3FDD64990B3C6288B15ACEEA /* TrayController.swift in Sources */,
 				6248158B19A1EEA34643CE4D /* TrayLifecyclePolicy.swift in Sources */,
 				590B4D6F5F70FC9062131040 /* WeatherSnapshot.swift in Sources */,
@@ -1352,6 +1390,7 @@
 				5576031FF9731287EA166B74 /* RefreshPolicies.swift in Sources */,
 				D263DFD2D4DD627E0702C18E /* RemoteOpenCodeLoader.swift in Sources */,
 				D446DBBC43FC3D34BE96103A /* RemoteOpenCodeSync.swift in Sources */,
+				5A49AB319DD6A5F7CD06DF70 /* RemoteSearchPolicy.swift in Sources */,
 				FC125295397F417AA47379E3 /* ShipBoxSnapshot.swift in Sources */,
 				7DE967CF80745F4E197DEBEE /* SpotlightCore.swift in Sources */,
 				DCFB3DD59B6875D41CB81E0A /* SpotlightProviders.swift in Sources */,
@@ -1359,6 +1398,7 @@
 				ECCBC5BF638E6D313E844B4B /* StockSearch.swift in Sources */,
 				5310A1B92B3CCF57C291D6F4 /* SystemMetricsCore.swift in Sources */,
 				61AE78535BCAC51B5785634B /* TaskBoxSnapshot.swift in Sources */,
+				E23EF15D8E2B6648BF11E6E8 /* TaskSearch.swift in Sources */,
 				8FABF43322F072496EB81E4C /* TrayLifecyclePolicy.swift in Sources */,
 				2A95575107BE1619EF3BB4D9 /* WeatherSnapshot.swift in Sources */,
 				97A4B82046694420FB236D6F /* WiqlClause.swift in Sources */,
