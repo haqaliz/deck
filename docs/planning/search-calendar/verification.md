@@ -1,7 +1,7 @@
 # Verification: search-calendar
 
-Status: **code complete and tested; the live run is not observed** (the user left
-before driving the panel — see "Still to observe").
+Status: **complete and verified** — automated suite green, signed build
+installed, and the live panel steps run by the user (see "Live run" below).
 
 ## Automated
 
@@ -40,22 +40,26 @@ Release build installed over `/Applications/Deck.app` (v1.51), `scripts/lsclean.
 run, app relaunched. `settings.json` still has `spotlight.eventEnabled: false`, so
 the live test starts from a clean, off state.
 
-## Still to observe (not claimed)
+## Live run (user-driven, 2026-10-11)
 
-The panel needs a human at the screen; there is no computer-use tooling here.
-Run these on the installed build and record the results:
+The panel needs a human at the screen — there is no computer-use tooling here —
+so these steps were run by the user on the installed build and reported back. All
+four behaved as expected:
 
-1. Settings → Search → toggle **Calendar events** on → the access prompt should
-   appear **in context, Deck frontmost** (the fix). Allow. (No prompt at all is
-   also meaningful: it would mean Deck.app already held the grant.)
+1. Settings → Search → **Calendar events** on → the macOS access prompt appeared
+   **in context, with Deck frontmost** (the fix). Allowed.
 2. ⌥Space → `cal <a real event word>` → a **CALENDAR** section with real events
    and `date · calendar` subtitles.
-3. Enter on an event with a meeting link → browser opens it; Enter without one →
-   title copied; Cmd-Return → copies.
-4. Denied path: revoke Deck under System Settings → Privacy & Security →
-   Calendars, search again → the one-line reason shows and **no prompt appears**.
-5. Read cost of a broad query (time from stop-typing to the section filling).
+3. Enter on an event with a meeting link → browser opened it; Enter without one →
+   title copied; Cmd-Return → copied.
+4. Denied path (Deck switched off under Privacy & Security → Calendars) → the
+   one-line reason showed and **no prompt appeared**.
 
-Until these are run, this file claims **nothing** about the live EventKit read,
-the prompt, or the meeting link — only that the decision logic that gates them is
-tested and the build is green.
+**Attribution.** These are the user's observations, not the assistant's — the
+assistant cannot see the panel. They are recorded as such rather than restated as
+independently measured.
+
+**Not separately measured:** the read cost of a broad prefix-free query (time
+from stop-typing to the section filling). It was not reported, so no number is
+claimed; the prefix-free decision is unaffected.
+

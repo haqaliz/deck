@@ -1086,8 +1086,18 @@ ID gate.
       ~0.5–0.6 MB/project. **One fix:** a typed `,` or `;` reached the tag
       literal and 400'd the *whole* work-item search (`TF401265`); the tag
       clause now drops them (`TaskSearch.condition`, +2 tests, 1673 green).
-- [ ] Enable and test calendar search against a live calendar (off by default;
-      EventKit path and access prompt unexercised).
+- [x] **Enable and test calendar search against a live calendar.** Shipped
+      2026-10-11 (`docs/planning/search-calendar/`). Verified on the installed
+      build: the access prompt now fires **in context from the Settings toggle**
+      (`CalendarSearchAccess.shouldRequestOnEnable`), not from the non-activating
+      panel; `cal <word>` returned real events; Enter opened a meeting link and
+      copied a title where there was none; the denied path showed the one-line
+      reason with no prompt. **The prompt move is the substance:** today the
+      source asked for access lazily on the first query that reached it, and
+      `.event` needs no prefix, so a system prompt could be raised by a
+      non-frontmost Deck as a side effect of typing. `HostEventSearch.events` no
+      longer prompts; the toggle does. Read cost of a broad query was not
+      separately measured.
 - [ ] The shell checks never run: "Open Deck at login", widget-URL clicks with
       Deck running/stopped, click-away dismissal, the panel over a full-screen
       app, the Dock menu's own Quit.

@@ -45,12 +45,15 @@ Run against the real GitHub and Azure DevOps accounts
 - **Work-item search (earlier slice): verified** — see
   `spotlight-remote-search/verification.md`. One fix came out of it: a typed
   `,`/`;` no longer makes the tag clause 400 the whole search.
+- **Calendar events — verified 2026-10-11** (`docs/planning/search-calendar/`).
+  Enabled on the installed build; the access prompt now fires **in context from
+  the Settings toggle** (it used to fire lazily from the non-activating panel on
+  any query), `cal <word>` returned real events, Enter opened a meeting link and
+  copied a title where there was none, and the denied path showed the reason with
+  no prompt.
 
 ## Still not verified
 
-- **Calendar events**: off by default and not enabled in testing, so macOS was
-  not asked for calendar access and no calendar was read. The EventKit path,
-  the access prompt and the meeting-link action are unexercised.
 - Opening a result (Enter) and copying a link (Cmd-Return) were not clicked for
   any of the new sources; the actions are unit-tested.
 - A real 429, a bad token and a locked keychain as seen in the panel.
