@@ -42,9 +42,16 @@ enum RemoteSearchPolicy {
     /// The earliest moment a request may go out: after the debounce, after the
     /// per-source floor, and not before a rate limit's window has passed.
     /// A window already in the past is simply outvoted by the others.
-    static func sendTime(typedAt: Date, lastSent: Date?, blockedUntil: Date?) -> Date {
+    ///
+    /// `debounce` and `floor` default to the generic values; a source with a
+    /// tighter public quota passes its own (see `SearchProviderID.timing`).
+    static func sendTime(
+        typedAt: Date, lastSent: Date?, blockedUntil: Date?,
+        debounce: TimeInterval = RemoteSearchPolicy.debounce,
+        floor: TimeInterval = RemoteSearchPolicy.sourceFloor
+    ) -> Date {
         var time = typedAt.addingTimeInterval(debounce)
-        if let lastSent { time = max(time, lastSent.addingTimeInterval(sourceFloor)) }
+        if let lastSent { time = max(time, lastSent.addingTimeInterval(floor)) }
         if let blockedUntil { time = max(time, blockedUntil) }
         return time
     }
@@ -119,6 +126,10 @@ enum RemoteSearchFailure: Equatable {
     case unreachable
     case badResponse
     case queryRejected
+    /// macOS has not allowed Deck to read calendars.
+    case calendarAccess
+    /// GitBox has no repository paths, so there is nothing to search.
+    case noRepositories
 
     /// One line, so a section never grows to explain itself.
     var message: String {
@@ -132,6 +143,8 @@ enum RemoteSearchFailure: Equatable {
         case .unreachable: "Couldn't reach the service."
         case .badResponse: "Got an answer Deck couldn't read."
         case .queryRejected: "The service rejected that search."
+        case .calendarAccess: "Deck can't read your calendars. Allow it in System Settings → Privacy → Calendars."
+        case .noRepositories: "No repositories to search. Add some in the GitBox settings."
         }
     }
 
@@ -143,8 +156,24 @@ enum RemoteSearchFailure: Equatable {
     /// both mean "wait". Here the distinction matters — it blocks sends — so a
     /// 429 is picked out first.
     init(error: Error) {
+        if let own = error as? SearchSourceFailure {
+            self = own.failure
+            return
+        }
         if case AzureDevOpsError.serverError(429) = error {
             self = .rateLimited
+            return
+        }
+        if case HostGitHubLoader.GitHubError.serverError(429) = error {
+            self = .rateLimited
+            return
+        }
+        if let coin = error as? CoinSearchFailure {
+            switch coin {
+            case .rateLimited: self = .rateLimited
+            case .offline: self = .unreachable
+            case .badResponse: self = .badResponse
+            }
             return
         }
         switch error {
@@ -161,6 +190,13 @@ enum RemoteSearchFailure: Equatable {
             }
         }
     }
+}
+
+/// Thrown by a source that knows exactly why it has nothing to show, so the
+/// panel reports that reason instead of reclassifying a generic error.
+struct SearchSourceFailure: Error, Equatable {
+    let failure: RemoteSearchFailure
+    init(_ failure: RemoteSearchFailure) { self.failure = failure }
 }
 
 /// What one remote section shows.

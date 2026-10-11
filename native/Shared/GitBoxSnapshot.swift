@@ -84,7 +84,7 @@ enum HostGitBoxSampler {
 
     // MARK: - Repo discovery (ported from the window GitBox)
 
-    private static func discoverRepos(paths: [String], depth: Int) -> [URL] {
+    static func discoverRepos(paths: [String], depth: Int) -> [URL] {
         // No default scan root: the user configures repo paths explicitly.
         var repos: [URL] = []
         for root in paths {

@@ -60,7 +60,7 @@ final class WorkItemKindPrefixTests: XCTestCase {
         let all = WorkItemKind.allCases.flatMap(\.prefixes)
         XCTAssertEqual(all.count, Set(all).count)
         // …and none shadows a local source's prefix.
-        for p in all { XCTAssertNil(SearchProviderID.localCases.first { $0.rawValue == p }, p) }
+        for p in all { XCTAssertNil(SearchProviderID.instantCases.first { $0.rawValue == p }, p) }
     }
 }
 

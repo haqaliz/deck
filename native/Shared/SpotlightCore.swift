@@ -13,16 +13,48 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
     case port
     case time
     case oc
-    /// Azure DevOps work items. Remote: answered over the network by the host
-    /// app, never by `SpotlightEngine`.
+    /// ShipBox: GitHub Actions runs. Instant — searched in the snapshot ShipBox
+    /// already holds.
+    case run
+    /// Azure DevOps work items. Deferred: answered over the network by the host.
     case task
+    /// PRBox: pull requests on GitHub and Azure DevOps. Deferred, network.
+    case pr
+    /// GitBox: commit messages of any age, via `git log`. Deferred (subprocess).
+    case commit
+    /// CalBox: calendar events within a year either side. Deferred (EventKit).
+    /// Raw value is the prefix the user types.
+    case event = "cal"
+    /// MarketBox: live coin / stock lookup. Deferred, network, keyless.
+    case market = "mkt"
 
-    /// Answered over the network, so it goes through `RemoteSearchPolicy`
-    /// (debounce, floor, cache) instead of running on every keystroke.
-    var isRemote: Bool { self == .task }
+    /// Answered asynchronously by the host through `RemoteSearchPolicy`
+    /// (debounce, floor, cache, cancel) rather than on every keystroke by
+    /// `SpotlightEngine`. Not all of these are remote: commits are a
+    /// subprocess and calendar events are EventKit, but both are too slow to
+    /// run per keystroke.
+    var isDeferred: Bool {
+        switch self {
+        case .task, .pr, .commit, .event, .market: true
+        case .clip, .port, .time, .oc, .run: false
+        }
+    }
 
-    /// The sources `SpotlightEngine` can answer synchronously from snapshots.
-    static var localCases: [SearchProviderID] { allCases.filter { !$0.isRemote } }
+    /// Only a typed prefix asks these anything. An unscoped query would
+    /// otherwise send every word to GitHub (the PRBox agent's 30/min search
+    /// budget), CoinGecko and Yahoo (one shared IP quota) and run `git log`
+    /// in every repo. Work items allow it (shipped before this rule) and
+    /// calendar events never leave the Mac.
+    var requiresPrefix: Bool {
+        switch self {
+        case .pr, .commit, .market: true
+        default: false
+        }
+    }
+
+    /// The sources `SpotlightEngine` answers synchronously from snapshots.
+    static var instantCases: [SearchProviderID] { allCases.filter { !$0.isDeferred } }
+    static var deferredCases: [SearchProviderID] { allCases.filter(\.isDeferred) }
 
     /// The toggle's label in the Spotlight settings tab.
     var settingsTitle: String {
@@ -31,7 +63,28 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
         case .port: "Ports and containers"
         case .time: "World clocks"
         case .oc: "OpenCode sessions"
+        case .run: "Builds"
         case .task: "Work items"
+        case .pr: "Pull requests"
+        case .commit: "Commits"
+        case .event: "Calendar events"
+        case .market: "Markets"
+        }
+    }
+
+    /// Plural noun for "No … found" under a section.
+    var noun: String {
+        switch self {
+        case .clip: "clips"
+        case .port: "ports or containers"
+        case .time: "cities"
+        case .oc: "sessions"
+        case .run: "builds"
+        case .task: "work items"
+        case .pr: "pull requests"
+        case .commit: "commits"
+        case .event: "events"
+        case .market: "markets"
         }
     }
 
@@ -74,6 +127,34 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
             SearchExample("wi release-blocker", "Any type of work item with that tag, or “release-blocker” in the title. “wi” means every type."),
             SearchExample("login", "No prefix: every source answers, and work items of every type appear under their own heading."),
         ]
+        case .run: [
+            SearchExample("run deploy", "Recent builds whose workflow name mentions “deploy”. Enter opens the run."),
+            SearchExample("run main", "Recent builds on the main branch."),
+            SearchExample("run 1234", "The build with run number 1234, if it is among the recent ones."),
+            SearchExample("run deck", "Recent builds in a repository whose name contains “deck”."),
+        ]
+        case .pr: [
+            SearchExample("pr login", "Pull requests you are involved in whose title or description mention “login”, open or not. Enter opens the pull request."),
+            SearchExample("pr fix flaky test", "Every word must match, in any order."),
+            SearchExample("pr 1234", "The pull request numbered 1234, if it is among your 100 most recently updated. Older ones are found by words, not by number."),
+            SearchExample("pr refactor", "Pull requests about a refactor, on GitHub or Azure DevOps."),
+        ]
+        case .commit: [
+            SearchExample("commit fix login", "Commits whose message mentions “fix login”, in every repository GitBox scans, of any age. Enter copies the short hash."),
+            SearchExample("commit revert", "Reverts."),
+            SearchExample("commit migration", "Commits about a migration."),
+        ]
+        case .event: [
+            SearchExample("cal standup", "Calendar events with “standup” in the title, location or notes, up to a year back and ahead. Enter opens the meeting link, or copies the title."),
+            SearchExample("cal dentist", "An appointment, past or upcoming."),
+            SearchExample("cal 1:1", "One-to-one meetings."),
+        ]
+        case .market: [
+            SearchExample("mkt bitcoin", "Coins named Bitcoin, by market-cap rank. Enter opens the coin page."),
+            SearchExample("mkt eth", "Coins with “eth” in the name or symbol."),
+            SearchExample("mkt tesla", "Stocks and ETFs matching Tesla. Enter opens the quote page."),
+            SearchExample("mkt nasdaq", "Indices and funds matching Nasdaq."),
+        ]
         }
     }
 
@@ -90,6 +171,16 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
             "Finds recent OpenCode sessions by title. Enter copies the title."
         case .task:
             "Finds Azure DevOps work items of any age by title, tag or id. Start with bug, pbi, epic, feature or task to narrow by type. Enter opens one. What you type is sent to dev.azure.com using the account TaskBox uses."
+        case .run:
+            "Finds recent GitHub Actions runs by workflow, branch, repository or run number, from the runs ShipBox already holds. Enter opens the run."
+        case .pr:
+            "Needs the pr prefix. Finds pull requests you are involved in, by title, description or number, on GitHub and Azure DevOps. Enter opens one. What you type is sent to GitHub and Azure DevOps using the PRBox accounts."
+        case .commit:
+            "Needs the commit prefix. Finds commits by message in every repository GitBox scans, of any age. Enter copies the short hash. Runs on this Mac; nothing is sent anywhere."
+        case .event:
+            "Finds calendar events by title, location or notes, up to a year back and ahead, in the calendars CalBox uses. Enter opens the meeting link or copies the title. Off by default: titles would show in the panel."
+        case .market:
+            "Needs the mkt prefix. Finds coins and stocks by name or symbol. Enter opens the page. What you type is sent to CoinGecko and Yahoo Finance."
         }
     }
 
@@ -99,7 +190,12 @@ enum SearchProviderID: String, CaseIterable, Codable, Equatable {
         case .port: "Dev"
         case .time: "Clocks"
         case .oc: "OpenCode sessions"
+        case .run: "Builds"
         case .task: "Work items"
+        case .pr: "Pull requests"
+        case .commit: "Commits"
+        case .event: "Calendar"
+        case .market: "Markets"
         }
     }
 }

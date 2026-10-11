@@ -622,6 +622,31 @@ enum HostGitHubPRLoader {
         return PRReviewState.fold(reviews)
     }
 
+    /// Pull request search for Spotlight: host-app only, on user interaction,
+    /// behind `RemoteSearchPolicy`. The search endpoint's 30 a minute is shared
+    /// with the agent's two requests per tick, so a search never fans out: one
+    /// request for the words, plus one for a bare number (the 100 most recently
+    /// updated pull requests, filtered by number).
+    static func search(token: String, scope: String, text: String) async throws -> [PRSearchHit] {
+        let tokens = GitHubPRSearch.tokens(for: text)
+        guard !tokens.isEmpty,
+              let url = GitHubPRSearch.url(
+                query: GitHubPRSearch.query(tokens: tokens, scope: scope), perPage: GitHubPRSearch.perPage)
+        else { return [] }
+        guard var hits = GitHubPRSearchParser.parse(try await send(url: url, token: token)) else {
+            throw HostGitHubLoader.GitHubError.invalidPayload
+        }
+        if let number = GitHubPRSearch.number(from: text),
+           let recentURL = GitHubPRSearch.url(
+            query: GitHubPRSearch.recentQuery(scope: scope), perPage: GitHubPRSearch.recentLimit),
+           // Best effort: the words already answered, so this failing costs only the number lookup.
+           let data = try? await send(url: recentURL, token: token),
+           let recent = GitHubPRSearchParser.parse(data) {
+            hits += recent.filter { $0.number == number }
+        }
+        return hits
+    }
+
     /// Same request shape as `HostGitHubLoader.fetch` — Bearer token, the
     /// versioned Accept header, 10s timeout.
     private static func send(url: URL, token: String) async throws -> Data {
