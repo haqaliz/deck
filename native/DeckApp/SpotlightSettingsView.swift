@@ -109,8 +109,24 @@ struct SpotlightSettingsView: View {
         case .task: $settings.taskEnabled
         case .pr: $settings.prEnabled
         case .commit: $settings.commitEnabled
-        case .event: $settings.eventEnabled
         case .market: $settings.marketEnabled
+        case .event:
+            // Calendar access is asked for here, in context, not lazily from the
+            // non-activating search panel: a system prompt raised by an app that
+            // is not frontmost — as a side effect of typing a query — is the
+            // wrong ask. Only on the off→on transition, and only if macOS has
+            // never been asked. See docs/planning/search-calendar.
+            Binding(
+                get: { settings.eventEnabled },
+                set: { on in
+                    let enabling = on && !settings.eventEnabled
+                    settings.eventEnabled = on
+                    if enabling,
+                       CalendarSearchAccess.shouldRequestOnEnable(rawStatus: HostCalendarLoader.authorizationStatus) {
+                        Task { _ = await HostCalendarLoader.requestAccess() }
+                    }
+                }
+            )
         }
     }
 
@@ -130,7 +146,7 @@ struct SpotlightSettingsView: View {
         case .commit:
             "Searches the repositories GitBox scans; add some in the GitBox settings. Runs on this Mac."
         case .event:
-            "Off by default: event titles would appear in the panel, which can be on screen while you share it. macOS asks for calendar access the first time. Reads the calendars CalBox uses."
+            "Off by default: event titles would appear in the panel, which can be on screen while you share it. macOS asks for calendar access when you turn this on. Reads the calendars CalBox uses."
         case .market:
             "Needs no account. Shares CoinGecko's and Yahoo's public limits with the MarketBox widget, so it only searches after the mkt prefix."
         case .port, .time:

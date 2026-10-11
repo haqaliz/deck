@@ -111,3 +111,22 @@ final class CalendarAccessTests: XCTestCase {
         XCTAssertFalse(CalendarAccess.canRead(rawStatus: 4))
     }
 }
+
+/// Where calendar access is asked for, and where it is only read (see
+/// `docs/planning/search-calendar`): Settings asks on the off→on toggle, in
+/// context; the non-activating panel never does.
+final class CalendarSearchAccessTests: XCTestCase {
+    func testSettingsAsksOnlyWhenMacOSHasNeverBeenAsked() {
+        XCTAssertTrue(CalendarSearchAccess.shouldRequestOnEnable(rawStatus: 0))
+        for raw in [1, 2, 3, 4, 99] {
+            XCTAssertFalse(CalendarSearchAccess.shouldRequestOnEnable(rawStatus: raw), "\(raw)")
+        }
+    }
+
+    func testThePanelReadsOnlyWithFullAccess() {
+        XCTAssertTrue(CalendarSearchAccess.panelCanRead(rawStatus: 3))
+        for raw in [0, 1, 2, 4, 99] {
+            XCTAssertFalse(CalendarSearchAccess.panelCanRead(rawStatus: raw), "\(raw)")
+        }
+    }
+}

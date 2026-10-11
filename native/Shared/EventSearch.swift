@@ -89,6 +89,24 @@ enum CalendarAccess {
     static func shouldPrompt(rawStatus: Int) -> Bool { rawStatus == 0 }
 }
 
+/// Where calendar access is asked for, and where it is only read.
+///
+/// Settings asks, in context, when the Search source is switched on. The search
+/// panel never does: it is a non-activating panel, so a system prompt raised by
+/// an app that is not frontmost — as a side effect of typing a query — is the
+/// wrong ask (see `docs/planning/search-calendar`).
+enum CalendarSearchAccess {
+    /// Off→on in Settings: ask only if macOS has never been asked.
+    static func shouldRequestOnEnable(rawStatus: Int) -> Bool {
+        CalendarAccess.shouldPrompt(rawStatus: rawStatus)
+    }
+
+    /// The panel reads with the grant it has, or reports why it cannot.
+    static func panelCanRead(rawStatus: Int) -> Bool {
+        CalendarAccess.canRead(rawStatus: rawStatus)
+    }
+}
+
 // MARK: - Reading it (host only — unsandboxed)
 
 enum HostEventSearch {
@@ -98,14 +116,13 @@ enum HostEventSearch {
     static func events(
         settings: CalBoxSettings, now: Date = Date(), store: EKEventStore = EKEventStore()
     ) async throws -> [EventHit] {
-        var status = EKEventStore.authorizationStatus(for: .event).rawValue
-        // Prompt only from "never asked", and only because the user typed a
-        // calendar search. Anything else that is not full access is a denial.
-        if CalendarAccess.shouldPrompt(rawStatus: status) {
-            _ = await HostCalendarLoader.requestAccess(store: store)
-            status = EKEventStore.authorizationStatus(for: .event).rawValue
+        // The panel never prompts: Settings asks when the source is turned on.
+        // Anything that is not full access here is a denial — a revoked grant,
+        // or the narrow case of a hand-edited setting that turned the source on
+        // without passing through the toggle.
+        guard CalendarSearchAccess.panelCanRead(rawStatus: HostCalendarLoader.authorizationStatus) else {
+            throw SearchSourceFailure(.calendarAccess)
         }
-        guard CalendarAccess.canRead(rawStatus: status) else { throw SearchSourceFailure(.calendarAccess) }
 
         return await Task.detached { () -> [EventHit] in
             // Resolved like CalBox does, so search and widget read the same calendars.
