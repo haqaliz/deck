@@ -36,6 +36,7 @@ struct DeckApp: App {
 /// So Deck forwards the URL and gets out of the way: if it was launched purely
 /// to carry that click, it opens the page and quits instead of leaving a
 /// window nobody asked for.
+@MainActor
 final class DeckAppDelegate: NSObject, NSApplicationDelegate {
     /// True when the process was started to deliver a URL rather than by
     /// someone opening Deck. `application(_:open:)` runs before
@@ -43,6 +44,16 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
     /// whether a window is wanted at all.
     private var launchedToOpenAURL = false
     private var finishedLaunching = false
+
+    // The resident half: tray, hotkey and search panel. They read settings and
+    // snapshots themselves and share nothing with `ContentView`, which only
+    // exists while the settings window does.
+    private let tray = TrayController()
+    private let spotlight = SpotlightController()
+    private let hotKey = SpotlightHotKey()
+    /// Set by the tray's Settings item so the next reopen event is allowed to
+    /// make a window; a Dock click with no window still does nothing.
+    private var reopenForSettings = false
 
     func application(_ application: NSApplication, open urls: [URL]) {
         let webURLs = DeckURLForwarding.webURLs(from: urls)
@@ -54,9 +65,9 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
         // quitting an app the user may have opened deliberately.
         guard !webURLs.isEmpty else { return }
 
-        if finishedLaunching {
-            // Already running with a window on screen: the user gets their
-            // page and keeps whatever they were doing.
+        // Already running (window or tray): the user gets their page and keeps
+        // whatever they were doing.
+        guard TrayLifecyclePolicy.quitsAfterForwardingURL(alreadyRunning: finishedLaunching) else {
             return
         }
         launchedToOpenAURL = true
@@ -64,18 +75,141 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         finishedLaunching = true
-        guard launchedToOpenAURL else { return }
-        // The page is already opening in the browser; a settings window would
-        // be pure noise.
-        NSApplication.shared.windows.forEach { $0.close() }
-        NSApplication.shared.terminate(nil)
+        if launchedToOpenAURL {
+            // The page is already opening in the browser; a settings window
+            // would be pure noise. Quit before any tray exists.
+            NSApplication.shared.windows.forEach { $0.close() }
+            NSApplication.shared.terminate(nil)
+            return
+        }
+        startResident()
     }
 
     /// Clicking the Dock icon of a running Deck should raise the window it
     /// already has, not manufacture another one.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        flag
+        if reopenForSettings {
+            reopenForSettings = false
+            return true
+        }
+        return flag
     }
+
+    /// Closing the window never quits Deck; the policy owns that answer so
+    /// tray-only mode and the normal mode cannot drift apart.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        TrayLifecyclePolicy.shouldTerminate(
+            reason: .lastWindowClosed,
+            keepInTrayOnly: DeckSettings.load().spotlight.keepInTrayOnly,
+            trayReady: tray.isReady)
+    }
+
+    /// Set only by the tray's Quit item, so `applicationShouldTerminate` can
+    /// tell it from a Dock or Cmd-Q quit — AppKit reports them identically.
+    private var quittingFromTray = false
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let reason: QuitReason = quittingFromTray ? .trayQuit : (isSystemQuit() ? .system : .dockQuit)
+        let terminate = TrayLifecyclePolicy.shouldTerminate(
+            reason: reason,
+            keepInTrayOnly: DeckSettings.load().spotlight.keepInTrayOnly,
+            trayReady: tray.isReady)
+        if terminate { return .terminateNow }
+
+        // Tray-only: the user closed Deck from the Dock. Close the window and
+        // let the Dock icon go; the tray and the shortcut stay.
+        NSApp.windows.filter(isSettingsWindow).forEach { $0.close() }
+        applyDockPolicy()
+        return .terminateCancel
+    }
+
+    /// A logout, restart or shutdown arrives as a quit Apple event carrying a
+    /// reason; a Dock "Quit" and Cmd-Q carry none.
+    private func isSystemQuit() -> Bool {
+        NSAppleEventManager.shared().currentAppleEvent?
+            .attributeDescriptor(forKeyword: AEKeyword(kAEQuitReason)) != nil
+    }
+
+    // MARK: Resident
+
+    private func startResident() {
+        tray.onSearch = { [weak self] in self?.spotlight.toggle() }
+        tray.onSettings = { [weak self] in self?.openSettings() }
+        tray.onQuit = { [weak self] in
+            self?.quittingFromTray = true
+            NSApp.terminate(nil)
+        }
+        tray.install()
+        SpotlightRuntime.trayReady = tray.isReady
+        spotlight.startObservingSize()
+
+        let center = NotificationCenter.default
+        center.addObserver(forName: .deckSettingsDidSave, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.applySettings() }
+        }
+        center.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { [weak self] note in
+            MainActor.assumeIsolated { self?.applyDockPolicy(closing: note.object as? NSWindow) }
+        }
+        center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.applyDockPolicy() }
+        }
+        center.addObserver(forName: .deckShortcutRecording, object: nil, queue: .main) { [weak self] note in
+            MainActor.assumeIsolated {
+                // Recording releases the shortcut so the current combination can
+                // be re-recorded; stopping puts it back.
+                if (note.object as? Bool) == true { self?.hotKey.unregister() } else { self?.applySettings() }
+            }
+        }
+        applySettings()
+    }
+
+    /// Re-reads what the settings window just saved and applies it: the
+    /// shortcut and the Dock icon.
+    private func applySettings() {
+        let s = DeckSettings.load().spotlight
+        let status = hotKey.register(keyCode: s.shortcutKeyCode, modifiers: s.shortcutModifiers) { [weak self] in
+            self?.spotlight.toggle()
+        }
+        SpotlightRuntime.shortcutStatus = status
+        tray.showSearchShortcut(keyCode: s.shortcutKeyCode, modifiers: s.shortcutModifiers)
+        NotificationCenter.default.post(name: .deckShortcutStatus, object: status)
+        applyDockPolicy()
+    }
+
+    private func isSettingsWindow(_ window: NSWindow) -> Bool {
+        !(window is NSPanel) && window.styleMask.contains(.titled)
+    }
+
+    private func applyDockPolicy(closing: NSWindow? = nil) {
+        let open = NSApp.windows.contains {
+            $0 !== closing && $0.isVisible && isSettingsWindow($0)
+        }
+        let wanted = TrayLifecyclePolicy.activationPolicy(
+            trayReady: tray.isReady,
+            keepInTrayOnly: DeckSettings.load().spotlight.keepInTrayOnly,
+            settingsWindowOpen: open)
+        let policy: NSApplication.ActivationPolicy = wanted == .accessory ? .accessory : .regular
+        if NSApp.activationPolicy() != policy { NSApp.setActivationPolicy(policy) }
+    }
+
+    private func openSettings() {
+        // A Dock icon first: the window cannot be brought forward by an
+        // accessory app.
+        NSApp.setActivationPolicy(.regular)
+        if let window = NSApp.windows.first(where: isSettingsWindow) {
+            window.makeKeyAndOrderFront(nil)
+        } else {
+            reopenForSettings = true
+            NSWorkspace.shared.open(Bundle.main.bundleURL)
+        }
+        NSApp.activate()
+    }
+}
+
+extension Notification.Name {
+    /// Posted by `ContentView` after it writes `settings.json`, so the
+    /// resident parts can re-read it. They never share state with the view.
+    static let deckSettingsDidSave = Notification.Name("com.deck.settingsDidSave")
 }
 
 struct ContentView: View {
@@ -122,10 +256,12 @@ struct ContentView: View {
             List(selection: $selection) {
                 Label("General", systemImage: "gearshape")
                     .tag(DeckWidget.general)
+                Label("Spotlight", systemImage: "magnifyingglass")
+                    .tag(DeckWidget.spotlight)
                 Label("Credentials", systemImage: "key.fill")
                     .tag(DeckWidget.credentials)
                 Section("Widgets") {
-                    ForEach(DeckWidget.allCases.filter { $0 != .general && $0 != .credentials }) { widget in
+                    ForEach(DeckWidget.allCases.filter { $0 != .general && $0 != .spotlight && $0 != .credentials }) { widget in
                         Label(widget.title, systemImage: widget.systemImage)
                             .tag(widget)
                     }
@@ -137,6 +273,7 @@ struct ContentView: View {
             switch selection {
             case .general: GeneralSettingsView(
                 agentAtLogin: $settings.agentAtLogin,
+                spotlight: $settings.spotlight,
                 agentError: agentError,
                 agentNotice: agentNotice,
                 liveness: liveness,
@@ -155,6 +292,7 @@ struct ContentView: View {
                 onRemoveAgents: uninstallAgents,
                 onEraseData: eraseDeckData
             )
+            case .spotlight: SpotlightSettingsView(settings: $settings.spotlight)
             case .credentials: CredentialsSettingsView(
                 settings: $settings,
                 unavailableAccounts: unavailableAccounts,
@@ -244,6 +382,7 @@ struct ContentView: View {
         .onChange(of: settings) { _ in
             settings.save()
             WidgetCenter.shared.reloadAllTimelines()
+            NotificationCenter.default.post(name: .deckSettingsDidSave, object: nil)
         }
         .onChange(of: settings.agentAtLogin) { _ in
             applyAgent()
@@ -276,7 +415,10 @@ struct ContentView: View {
                 FetchStatusStore.record(.notConfigured, for: .opencodeRemote)
             }
         } else {
-            snapshot = OpenCodeReader.load()
+            // Off the main actor: this reads the whole opencode database, which
+            // is multiple GB on a heavy user's machine and froze the app (and
+            // now the tray and shortcut behind it) for ~10s at every launch.
+            snapshot = await Task.detached { OpenCodeReader.load() }.value
             // Local mode shows no chip, but a stale remote failure must not
             // outlive the mode that produced it.
             if snapshot != nil {
@@ -292,23 +434,36 @@ struct ContentView: View {
 
     /// Sample git activity (host is unsandboxed) for the GitBox widget.
     private func refreshGitBox() {
-        guard let snapshot = HostGitBoxSampler.snapshot(
-            paths: settings.gitbox.repoPaths,
-            scanDepth: settings.gitbox.scanDepth
-        ) else { return }
-        if snapshot != GitBoxSnapshotStore.load() {
-            GitBoxSnapshotStore.save(snapshot)
-            WidgetCenter.shared.reloadAllTimelines()
+        let paths = settings.gitbox.repoPaths
+        let depth = settings.gitbox.scanDepth
+        // `git log` across every repo is a subprocess sweep that took ~2.5s on a
+        // real ~/dev. On the main actor it froze the window — and, once Deck
+        // became a resident tray app, delayed the tray and the shortcut by the
+        // same amount at every launch. A run still in flight skips the tick, so
+        // a slow scan cannot stack up behind the 60s timer.
+        guard BackgroundRefresh.begin("gitbox") else { return }
+        Task.detached {
+            defer { BackgroundRefresh.end("gitbox") }
+            guard let snapshot = HostGitBoxSampler.snapshot(paths: paths, scanDepth: depth) else { return }
+            if snapshot != GitBoxSnapshotStore.load() {
+                GitBoxSnapshotStore.save(snapshot)
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         }
     }
 
     /// Sample open ports and Docker containers (host is unsandboxed) for the
     /// DevBox widget.
     private func refreshDevBox() {
-        guard let snapshot = HostDevBoxSampler.snapshot() else { return }
-        if snapshot != DevBoxSnapshotStore.load() {
-            DevBoxSnapshotStore.save(snapshot)
-            WidgetCenter.shared.reloadAllTimelines()
+        // `lsof` and `docker` are subprocesses; same reasoning as `refreshGitBox`.
+        guard BackgroundRefresh.begin("devbox") else { return }
+        Task.detached {
+            defer { BackgroundRefresh.end("devbox") }
+            guard let snapshot = HostDevBoxSampler.snapshot() else { return }
+            if snapshot != DevBoxSnapshotStore.load() {
+                DevBoxSnapshotStore.save(snapshot)
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         }
     }
 
@@ -737,6 +892,24 @@ struct ContentView: View {
     }
 }
 
+/// One run per source at a time. A refresh that is still going when the next
+/// 60s tick fires makes that tick a no-op instead of stacking a second
+/// subprocess sweep behind the first.
+private enum BackgroundRefresh {
+    private static let lock = NSLock()
+    private static var running: Set<String> = []
+
+    static func begin(_ key: String) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return running.insert(key).inserted
+    }
+
+    static func end(_ key: String) {
+        lock.lock(); defer { lock.unlock() }
+        running.remove(key)
+    }
+}
+
 /// Read the calendar (host is unsandboxed) for the CalBox widget.
 ///
 /// The app pumps the same snapshot the agent does, so opening settings gives
@@ -767,7 +940,7 @@ private func refreshMarketBox() async {
 // MARK: - Sidebar selection
 
 private enum DeckWidget: String, CaseIterable, Identifiable {
-    case general, credentials
+    case general, spotlight, credentials
     case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
     case weatherbox, clockbox, shipbox, taskbox, calbox, prbox, marketbox
 
@@ -776,6 +949,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: "General"
+        case .spotlight: "Spotlight"
         case .credentials: "Credentials"
         case .livebox: "LiveBox"
         case .openbox: "OpenBox"
@@ -797,6 +971,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .general: "gearshape"
+        case .spotlight: "magnifyingglass"
         case .credentials: "key.fill"
         case .livebox: "cpu"
         case .openbox: "arrow.left.arrow.right"
@@ -820,6 +995,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
 
 private struct GeneralSettingsView: View {
     @Binding var agentAtLogin: Bool
+    @Binding var spotlight: SpotlightSettings
     var agentError: String?
     var agentNotice: String?
     /// Registered, but is launchd actually running them? Only `.down` draws.
@@ -893,6 +1069,8 @@ private struct GeneralSettingsView: View {
                     }
                 }
             }
+
+            MenuBarSettingsSection(settings: $spotlight)
 
             // Deck registers two LaunchAgents on first run. Leaving the only
             // removal path in the README as four terminal commands is not a

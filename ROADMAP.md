@@ -1059,6 +1059,64 @@ lost by choosing it.
   The container now decodes each section with `decodeIfPresent`; three
   regression tests pin it.
 
+### M10 — Spotlight search (added 2026-10-10; ships ahead of M9)
+
+A Spotlight-style floating panel, opened by a global shortcut, that searches
+the services Deck is already connected to. It reaches **beyond what the
+widgets display**: TaskBox shows only open items assigned to you, but search
+covers any task of any age, by title, tag or id. M9 stays the Developer ID
+gate; this milestone does not wait on it.
+
+**Design (decided 2026-10-10, spec still to be written):**
+- *Federated providers.* Each widget gets a small `SearchProvider`; the panel
+  fans out and groups results by section. Local providers (snapshots, the
+  opencode DB, EventKit) answer instantly. Remote providers (TaskBox, PRBox,
+  ShipBox, MarketBox) share one policy — debounce, a per-source floor, a
+  per-query cache, a minimum query length, and a 429 that degrades only that
+  section — the `CoinSearchPolicy` shape, **host-app-only on user interaction**
+  so a search can never starve the agent's rate-limit budget. Prefixes (`t `,
+  `pr `, `clip `) narrow the search to one provider. A single FTS index
+  fed by the agent was rejected: "any age" would make the agent bulk-crawl
+  every task and PR each tick.
+- *Deck stays resident as a tray icon* (`NSStatusItem` on the app delegate,
+  not `MenuBarExtra`): Search, Settings, Quit. A global shortcut needs a
+  running process, and the separate login-item helper was dropped as another
+  signed binary with its own registration traps. A General toggle keeps Deck
+  **in the tray only**, so closing the window or quitting from the Dock leaves
+  it running.
+- *Traps already found in the lifecycle* (read before touching it): refreshes,
+  timers and the settings `@State` live in `ContentView`, so the panel needs
+  its own settings read and loaders; `DeckAppDelegate` terminates after a
+  widget-URL launch, which must not fire for a resident Deck; Deck must keep
+  the `LegacyAgentCleanup` guard.
+- Anything a result opens goes through `DeckURLForwarding` (http(s) with a
+  host), because result URLs originate in remote data.
+
+Order (each is its own slug, PRD → plan):
+
+- [x] **Spotlight shell** — tray icon, global shortcut with a recorder, the
+      floating `NSPanel`, a Spotlight settings tab, and General → Menu bar
+      ("Keep Deck in the menu bar only", "Open Deck at login"). Ships with the
+      local providers (ClipBox opt-in, DevBox, ClockBox, OpenBox recent
+      sessions). Measurements and the checks still owed to a human:
+      [`docs/planning/spotlight-shell/verification.md`](docs/planning/spotlight-shell/verification.md).
+- [ ] **TaskBox search** — WIQL `[System.Title]`/`[System.Tags] CONTAINS` and
+      `[System.Id] =`, all states and ages, `$top` always, through
+      `WiqlClause.validate`; a different query from the widget's
+      "assigned to me" one. Per-account, project-aware identity.
+- [ ] **PRBox search** — GitHub `search/issues` with `is:pr … in:title,body`
+      (30/min search quota); Azure by id and by title, where the list API has
+      no text criteria — needs a probe first (`docs/planning/` probe.md).
+- [ ] **GitBox and CalBox any-age search** — `git log --grep` across scanned
+      repos; an EventKit predicate over a wide window (the snapshot holds
+      today and tomorrow only).
+- [ ] **ShipBox and MarketBox search** — runs by repo, workflow, branch and
+      run number (~11 KB per run, so narrow and capped); coin and stock
+      lookup reusing `CoinSearch`/`StockSearch` and their shared rate budget.
+
+Not searchable, on purpose: NetBox, BatBox, LiveBox and WeatherBox have
+nothing meaningful to find.
+
 ## Feature backlog (existing widgets)
 
 LiveBox:

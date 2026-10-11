@@ -663,6 +663,36 @@ Do not delete the container; see the trap below.
   match", and every widget falls back to its placeholder (text as grey blocks,
   charts still drawn) at every size. Repair with `scripts/lsclean.sh`.
 
+- **A global shortcut needs a resident Deck, and Carbon will not tell you a
+  rival holds it.** Spotlight search (M10, 2026-10-10,
+  `docs/planning/spotlight-shell/`) registers its shortcut with Carbon's
+  `RegisterEventHotKey` from `DeckAppDelegate`, behind an `NSStatusItem` rather
+  than a `MenuBarExtra`. Measured under hardened runtime: no entitlement, no
+  Accessibility prompt, and a non-activating `NSPanel` takes keystrokes while the
+  previous app stays frontmost. But `eventHotKeyExistsErr` (-9878) comes back
+  only for a duplicate **inside one process**; a second process registering the
+  same combination got status 0, so a clash with Raycast, Alfred or another app
+  is invisible. Never word a successful registration as "no conflict"; the
+  settings tab says the shortcut may be held elsewhere. A recorder must also
+  release the shortcut while armed (or recording the current combination toggles
+  the panel instead) and restore it on Esc, since a cancelled recording changes
+  no setting for anything else to react to.
+- **Anything slow on the main actor now delays the tray and the shortcut, not
+  just a window.** Deck's launch work used to run in `ContentView.onAppear` on
+  the main actor: the opencode reader against a 5 GB database was ~10s and
+  GitBox's `git log` sweep ~2.5s, each invisible while the window was merely
+  slow and a dead shortcut once Deck lived in the menu bar (launch to a working
+  shortcut: ~7s, now 1.5-2.3s after moving both off the main actor). New
+  sampling work goes in `Task.detached` with the `BackgroundRefresh` in-flight
+  guard so a slow run cannot stack behind the 60s timer. The resident parts
+  (tray, hotkey, panel) read settings and snapshots themselves and share nothing
+  with `ContentView`, which exists only while the settings window does.
+- **`System Events keystroke` is the wrong tool for testing the panel.** It
+  activates the target app, which resigns the non-activating panel's key status
+  and dismisses it. Post raw `CGEvent` key events from a non-activating helper,
+  and prove the helper first against a known-good receiver; the first one here
+  activated itself and made a working panel look dead.
+
 ## Conventions
 
 - Metrics loaders return pure data; stores own timers; views own layout.

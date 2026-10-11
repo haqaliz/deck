@@ -100,6 +100,7 @@ struct DeckSettings: Codable, Equatable {
     var calbox = CalBoxSettings()
     var prbox = PRBoxSettings()
     var marketbox = MarketBoxSettings()
+    var spotlight = SpotlightSettings()
     /// Every credential the user has configured. Widgets reference these by id
     /// rather than each owning a token of its own.
     var credentials = CredentialsSettings()
@@ -141,7 +142,7 @@ struct DeckSettings: Codable, Equatable {
         case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
         case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
         case marketbox, credentials, agentAtLogin, didShowRenameNotice
-        case agentsRegisteredAt
+        case agentsRegisteredAt, spotlight
     }
 
     /// Decode-only. See `LegacyHomeBoxSettings`.
@@ -180,6 +181,7 @@ struct DeckSettings: Codable, Equatable {
         calbox = try c.decodeIfPresent(CalBoxSettings.self, forKey: .calbox) ?? CalBoxSettings()
         prbox = try c.decodeIfPresent(PRBoxSettings.self, forKey: .prbox) ?? PRBoxSettings()
         marketbox = try c.decodeIfPresent(MarketBoxSettings.self, forKey: .marketbox) ?? MarketBoxSettings()
+        spotlight = try c.decodeIfPresent(SpotlightSettings.self, forKey: .spotlight) ?? SpotlightSettings()
         credentials = try c.decodeIfPresent(CredentialsSettings.self, forKey: .credentials) ?? CredentialsSettings()
         agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
         didShowRenameNotice = try c.decodeIfPresent(Bool.self, forKey: .didShowRenameNotice) ?? false
@@ -685,6 +687,65 @@ struct ClockBoxSettings: Codable, Equatable {
         showRelativeDay = try c.decodeIfPresent(Bool.self, forKey: .showRelativeDay) ?? true
         showOffset = try c.decodeIfPresent(Bool.self, forKey: .showOffset) ?? true
         timeColor = try c.decodeIfPresent(RGBA.self, forKey: .timeColor) ?? RGBA.systemTeal
+    }
+}
+
+/// The floating search panel. The shortcut is stored as a Carbon key code and
+/// modifier mask (`optionKey` = 0x800) so `Shared` need not import Carbon.
+struct SpotlightSettings: Codable, Equatable {
+    static let defaultKeyCode = 49       // kVK_Space
+    static let defaultModifiers = 2048   // optionKey
+
+    /// cmdKey | shiftKey | optionKey | controlKey. Anything else in the mask
+    /// is not a modifier a global hotkey can use.
+    private static let modifierMask = 256 | 512 | 2048 | 4096
+
+    var shortcutKeyCode = SpotlightSettings.defaultKeyCode
+    var shortcutModifiers = SpotlightSettings.defaultModifiers
+    /// Keep Deck running in the menu bar after its window closes.
+    var keepInTrayOnly = false
+    /// Register Deck.app itself as a login item (the agents are separate).
+    var openAtLogin = false
+    /// Off: clipboard text must not appear in a floating panel unless asked for.
+    var clipEnabled = false
+    var portEnabled = true
+    var timeEnabled = true
+    var ocEnabled = true
+
+    init() {}
+
+    func isEnabled(_ provider: SearchProviderID) -> Bool {
+        switch provider {
+        case .clip: clipEnabled
+        case .port: portEnabled
+        case .time: timeEnabled
+        case .oc: ocEnabled
+        }
+    }
+
+    /// A hand-edited shortcut that cannot work falls back to the default as a
+    /// pair: a key code with no usable modifier would swallow ordinary typing
+    /// system-wide, and half a replaced shortcut is worse than neither.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let code = try c.decodeIfPresent(Int.self, forKey: .shortcutKeyCode) ?? Self.defaultKeyCode
+        let mods = try c.decodeIfPresent(Int.self, forKey: .shortcutModifiers) ?? Self.defaultModifiers
+        let valid = (0...127).contains(code)
+            && mods != 0
+            && mods & ~Self.modifierMask == 0
+        shortcutKeyCode = valid ? code : Self.defaultKeyCode
+        shortcutModifiers = valid ? mods : Self.defaultModifiers
+        keepInTrayOnly = try c.decodeIfPresent(Bool.self, forKey: .keepInTrayOnly) ?? false
+        openAtLogin = try c.decodeIfPresent(Bool.self, forKey: .openAtLogin) ?? false
+        clipEnabled = try c.decodeIfPresent(Bool.self, forKey: .clipEnabled) ?? false
+        portEnabled = try c.decodeIfPresent(Bool.self, forKey: .portEnabled) ?? true
+        timeEnabled = try c.decodeIfPresent(Bool.self, forKey: .timeEnabled) ?? true
+        ocEnabled = try c.decodeIfPresent(Bool.self, forKey: .ocEnabled) ?? true
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case shortcutKeyCode, shortcutModifiers, keepInTrayOnly, openAtLogin
+        case clipEnabled, portEnabled, timeEnabled, ocEnabled
     }
 }
 
