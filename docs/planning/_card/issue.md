@@ -1,47 +1,42 @@
-# search-calendar (inline brief)
+# credentials-legacy-fallback (inline brief)
 
-Source: `dbf task search-calendar`, handed off by `deck-next` (2026-10-11).
+Source: `dbf chore credentials-legacy-fallback`, handed off by `deck-next` (2026-10-12).
 
 ## Brief
 
-Enable calendar search in the Search panel and verify it against a live calendar
-— it shipped off by default with the EventKit path, the macOS access prompt and
-the meeting-link action all unexercised
-(`docs/planning/spotlight-more-sources/verification.md:49-53`). Turn the source
-on, run real searches over the user's synced calendars, and fix whatever the live
-read contradicts; record a `verification.md`.
+Remove the legacy per-slot credential fallback now that the one-release courtesy
+is long overdue. The repo is v1.52; the fallback was written as a single-release
+courtesy for a Deck upgraded to the accounts model but never opened, and the
+ROADMAP has carried it open since v1.30 shipped (`ROADMAP.md:971-972`).
 
-Respect the panel invariants: host-app-only loaders (no new search caller in
-`DeckAgent` or `DeckWidgets`), and reuse CalBox's `CalendarLink` for the meeting
-link.
+Delete `DeckSettings.legacyCredential(for:)` and its call site in
+`credential(for:)`, drop the welded token/connection fields from the four widget
+settings structs, and reduce `DeckSecret` to the one-way migration path only.
+Clear the old copies as part of the removal — a migration that leaves a dead
+field behind lets the pre-migration fallback keep answering (see the CLAUDE.md
+trap). Tighten the existing legacy-parity tests to pin the new behaviour and
+confirm `settings.json` no longer round-trips the dead fields.
 
-Caveat (from the recommender): this may be verification-only if EventKit works
-first try — the deliverable is then a verification record plus any corrected
-copy, not a feature.
+Respect the shell invariants: the widget extension has **no keychain access at
+all**, so anything the extension reads must stay answerable from `settings.json`
+without a token; and any migration that moves a field must clear the old copy.
 
 ## Why this and not something else
 
-- Search is the newest, largest surface (M10, `ROADMAP.md:1062-1156`); calendar is
-  its only never-exercised data path.
-- The data source exists and is local-first (EventKit — the same transport CalBox
-  already uses).
-- The M10 follow-up names it directly (`ROADMAP.md:1089-1090`) and it is
-  unblocked, narrow and testable.
+- Open **M8** item, explicitly *"the one-release courtesy from the credentials
+  entry, overdue since v1.30 shipped"* (`ROADMAP.md:971-972`); the repo is at
+  v1.52.
+- Pure shell-reuse cleanup with a proven data path and no new source: the
+  fallback is consulted only when `accountID(for: slot) == nil`
+  (`CredentialsMigration.swift:39-41`).
+- Fully local and already unit-pinned (`CredentialsWidgetReadsTests`,
+  `CredentialsWiringTests`, `DeckSecretsMigrationTests`), so the first slice is
+  unambiguous.
 
-## What is already built (do not rebuild)
+## Caveat (from the recommender)
 
-- `native/Shared/EventSearch.swift` — pure matching + `HostEventSearch.events`.
-- `native/DeckApp/AsyncSearchCoordinator.swift:249` — `EventSearchSource`.
-- `native/DeckApp/SpotlightPanel.swift:297` — registration.
-- `native/Shared/DeckSettings.swift:724` — `eventEnabled`, default `false`.
-- `native/Shared/SpotlightCore.swift:147` — examples / copy.
-- `native/SharedTests/EventSearchTests.swift` — pure-logic + access-status tests.
-
-## Definition of done
-
-- Calendar search enabled on the installed build and driven live.
-- The EventKit read, the access prompt and the meeting-link action observed (or a
-  fix shipped for whatever does not work).
-- `docs/planning/search-calendar/verification.md` records what was measured and
-  what was not.
-- Panel invariant grep stays empty; `DeckSharedTests` green.
+This touches the exact seam the ROADMAP warns about — a migration that moves a
+field must clear the old copy, or the pre-migration fallback keeps answering
+from a dead field (`CLAUDE.md`). Removal must delete the legacy fields, not
+merely stop reading them, or a future migration re-introduces the
+silently-wrong face. Nothing here is gated on M9.
