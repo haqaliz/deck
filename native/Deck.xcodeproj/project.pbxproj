@@ -332,7 +332,6 @@
 		E434D6F1F2AAB0692FE40CC0 /* MarketSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC479766830152EFA098CD42 /* MarketSearch.swift */; };
 		E664FE89330E4F4FC2851875 /* CredentialsWidgetReadsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */; };
 		E78150B6C51925B5F4A27D11 /* com.deck.agent.processes.plist in Resources */ = {isa = PBXBuildFile; fileRef = E34D57F6804ADB7CB6777F6D /* com.deck.agent.processes.plist */; };
-		E8F963A7402C8695BFC89F71 /* FetchStatusCredentialsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */; };
 		E97789ED88F4683BFBC40A78 /* CommitSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25274AA88948E709BC38423D /* CommitSearch.swift */; };
 		E9C9897EA5B6B4BB0A42B780 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
 		EA007C7EFB10C5747846BBE8 /* StockSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6665B8B08E0F39C775A55C /* StockSearch.swift */; };
@@ -515,7 +514,6 @@
 		90DB9AA4F4D36E04F12769CA /* MarketBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBoxSnapshot.swift; sourceTree = "<group>"; };
 		910A3754B71959068BBF2549 /* github_prs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = github_prs.json; sourceTree = "<group>"; };
 		920FB174B8F493303CA61487 /* CredentialsWiringTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialsWiringTests.swift; sourceTree = "<group>"; };
-		923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchStatusCredentialsTests.swift; sourceTree = "<group>"; };
 		9265A6E22517B1B6D20AC8FF /* SpotlightProviders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightProviders.swift; sourceTree = "<group>"; };
 		92C80445C9EC1F419FFAC0DB /* LiveBoxThermalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxThermalTests.swift; sourceTree = "<group>"; };
 		94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShipBoxSnapshot.swift; sourceTree = "<group>"; };
@@ -734,7 +732,6 @@
 				0B881092482BA9425E3F5918 /* DecodeTests.swift */,
 				290D71C97A8936CF963F219D /* DevBoxSnapshotTests.swift */,
 				876C7A7A07443866A6D9EDEF /* EventSearchTests.swift */,
-				923CCA4100CB4FE14B8FD6ED /* FetchStatusCredentialsTests.swift */,
 				1D0F7208894404301344CB11 /* FetchStatusTests.swift */,
 				3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */,
 				F2278DCFD3ACC03FB29D2680 /* HardenedRuntimeTests.swift */,
@@ -1254,7 +1251,6 @@
 				6BED6A46C102B3EBB7A42827 /* EventSearch.swift in Sources */,
 				B7B4541FD3119CEC96977983 /* EventSearchTests.swift in Sources */,
 				45D576EA50BECDA826166348 /* FetchStatus.swift in Sources */,
-				E8F963A7402C8695BFC89F71 /* FetchStatusCredentialsTests.swift in Sources */,
 				A5D18790439106076A579311 /* FetchStatusTests.swift in Sources */,
 				29301B875DF6C63903F7C456 /* GitBoxSnapshot.swift in Sources */,
 				D74629484729CBEAE1664FFD /* GitBoxSnapshotTests.swift in Sources */,

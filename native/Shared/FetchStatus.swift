@@ -49,19 +49,6 @@ enum FetchOutcome: String, Codable {
     case queryRejected
 }
 
-extension DeckSecret {
-    /// Which widget goes dark when this credential can't be read.
-    var fetchSource: FetchSource {
-        switch self {
-        case .openboxToken: return .opencodeRemote
-        case .shipboxToken: return .shipbox
-        case .taskboxToken: return .taskbox
-        case .prboxGitHubToken: return .prboxGitHub
-        case .prboxAzureToken: return .prboxAzure
-        }
-    }
-}
-
 struct FetchStatus: Codable, Equatable {
     var source: FetchSource
     var outcome: FetchOutcome
