@@ -1109,7 +1109,14 @@ ID gate.
       separately measured.
 - [ ] The shell checks never run: "Open Deck at login", widget-URL clicks with
       Deck running/stopped, click-away dismissal, the panel over a full-screen
-      app, the Dock menu's own Quit.
+      app, the Dock menu's own Quit. **Automated half verified 2026-10-13**
+      (`docs/planning/spotlight-shell-checks/`): the committed probe harness
+      confirmed widget-URL clicks (cold and running — no fabricated window),
+      the panel opening on the shortcut with the previous app staying frontmost,
+      agent liveness across a relaunch, and the quit semantics (tray-only veto /
+      tray-only exit). No product defect; the human half (login-item veto, real
+      click-away, full-screen, the real Dock menu) is a numbered checklist in
+      that doc's `verification.md`.
 - [ ] Two unexplained oddities: the settings window once failed to show; an
       examples page once opened without a click. Neither reproduced.
 

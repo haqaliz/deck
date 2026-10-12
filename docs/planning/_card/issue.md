@@ -1,42 +1,49 @@
-# credentials-legacy-fallback (inline brief)
+# spotlight-shell-checks (inline brief)
 
-Source: `dbf chore credentials-legacy-fallback`, handed off by `deck-next` (2026-10-12).
+Source: `dbf task spotlight-shell-checks`, handed off by `deck-next` (2026-10-12).
 
 ## Brief
 
-Remove the legacy per-slot credential fallback now that the one-release courtesy
-is long overdue. The repo is v1.52; the fallback was written as a single-release
-courtesy for a Deck upgraded to the accounts model but never opened, and the
-ROADMAP has carried it open since v1.30 shipped (`ROADMAP.md:971-972`).
+Close out the M10 Search (Spotlight) shell verification debt left by v1.49.
+The shell shipped, but its lifecycle checks were never run:
 
-Delete `DeckSettings.legacyCredential(for:)` and its call site in
-`credential(for:)`, drop the welded token/connection fields from the four widget
-settings structs, and reduce `DeckSecret` to the one-way migration path only.
-Clear the old copies as part of the removal — a migration that leaves a dead
-field behind lets the pre-migration fallback keep answering (see the CLAUDE.md
-trap). Tighten the existing legacy-parity tests to pin the new behaviour and
-confirm `settings.json` no longer round-trips the dead fields.
+- **Open Deck at login** — the General toggle (`SMAppService.mainApp`), the
+  Login Items row, and the veto note.
+- **A widget-URL click** with Deck **running** and **stopped** (it should open
+  the page and stay / open and quit).
+- **Click-away dismissal** with a real mouse.
+- **The panel over a full-screen app** and on another Space.
+- **The Dock menu's own Quit** (only an AppleScript `quit` stands in for it).
 
-Respect the shell invariants: the widget extension has **no keychain access at
-all**, so anything the extension reads must stay answerable from `settings.json`
-without a token; and any migration that moves a field must clear the old copy.
+Either build a small reusable key-event probe harness (raw `CGEvent`s from a
+**non-activating** helper, never `System Events keystroke`) and drive the checks
+with it, or — where a human is genuinely required — hand back a precise manual
+checklist. Fix whatever the checks reveal.
+
+Watch the two documented lifecycle traps while doing it:
+
+- `DeckAppDelegate` terminates after a widget-URL launch, which must **not** fire
+  for a resident Deck (`docs/planning/spotlight-shell/prd.md`).
+- Deck must keep the `LegacyAgentCleanup` guard (a launch must never boot out the
+  running agents; `CLAUDE.md`).
 
 ## Why this and not something else
 
-- Open **M8** item, explicitly *"the one-release courtesy from the credentials
-  entry, overdue since v1.30 shipped"* (`ROADMAP.md:971-972`); the repo is at
-  v1.52.
-- Pure shell-reuse cleanup with a proven data path and no new source: the
-  fallback is consulted only when `accountID(for: slot) == nil`
-  (`CredentialsMigration.swift:39-41`).
-- Fully local and already unit-pinned (`CredentialsWidgetReadsTests`,
-  `CredentialsWiringTests`, `DeckSecretsMigrationTests`), so the first slice is
-  unambiguous.
+- The M10 follow-up list is explicit (`ROADMAP.md:1110-1114`) and matches the
+  "Not verified (needs a human at the screen, or the installed copy)" section of
+  `docs/planning/spotlight-shell/verification.md:60-72`.
+- This pass has already caught real bugs — the Dock-quit-takes-the-tray-down
+  bug and the empty-field Esc bug (`verification.md:48-58`).
+- Unblocked and testable with no external dependency, unlike M9 (gated on the
+  not-yet-bought Apple Developer Program) and M8's remaining locked-keychain
+  item (needs a scratch account).
 
 ## Caveat (from the recommender)
 
-This touches the exact seam the ROADMAP warns about — a migration that moves a
-field must clear the old copy, or the pre-migration fallback keeps answering
-from a dead field (`CLAUDE.md`). Removal must delete the legacy fields, not
-merely stop reading them, or a future migration re-introduces the
-silently-wrong face. Nothing here is gated on M9.
+The checks need a human at the screen and the installed `/Applications` copy.
+The tray lifecycle resists naive automation: `System Events keystroke` activates
+the target and dismisses the non-activating panel, so any harness must post raw
+`CGEvent`s from a process that does not activate — and prove the harness first
+against a known-good receiver (`CLAUDE.md` trap). The buildable form is a probe
+harness plus fixes for whatever breaks; anything the harness cannot drive is
+owed back as a manual checklist.
