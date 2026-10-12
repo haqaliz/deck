@@ -1,103 +1,127 @@
-# Understanding — credentials-legacy-fallback
+# Understanding — spotlight-shell-checks
 
 ## What the work is really asking
 
-Remove the **fetch-time legacy credential fallback** — the pre-accounts
-compatibility shim that lets `DeckAgent` (and the widget extension) fetch with a
-token still sitting in `settings.json`, for a Deck that was upgraded from ≤v1.29
-but never opened. The ROADMAP records it as a one-release courtesy, overdue
-since v1.30 shipped (`ROADMAP.md:971-972`).
+Close the **verification debt** on the Search shell (shipped v1.49), not add a
+feature. The shell's *logic* is already pure and unit-pinned; what was never
+done is running its five **lifecycle checks against the installed app**
+(`ROADMAP.md:1110-1114`, `docs/planning/spotlight-shell/verification.md:60-72`).
+The work is: drive each check where a harness can, hand back a precise manual
+checklist where a human is required, and fix whatever breaks. If nothing breaks
+— a real and acceptable outcome — the deliverable is evidence, not code.
 
-## The brief is internally inconsistent — this is the finding
+## What is already covered (do not re-test; do not rewrite)
 
-The `deck-next` handoff said to *delete `legacyCredential(for:)` and drop the
-welded settings fields*. The dig shows that is **unsafe**: both one-way
-migrations read those very things.
+The lifecycle decisions are pure functions with tests, so the *rules* are not in
+question — only that the delegate **wires them as intended at runtime**.
 
-The pre-accounts layer is two chained migrations plus a fetch-time fallback:
+- `Shared/TrayLifecyclePolicy.swift` — `shouldTerminate(reason:keepInTrayOnly:trayReady:)`,
+  `activationPolicy(...)`, `canEnableTrayOnly`, `quitsAfterForwardingURL(alreadyRunning:)`.
+  Pinned by `SharedTests/TrayLifecyclePolicyTests.swift` (every quit reason,
+  tray-only, no-tray, cold vs running URL launch).
+- `LoginItemState` raw-value mapping (`SpotlightShortcut.swift:75-109`) is pinned
+  by `SpotlightShortcutTests.swift:82-112` (off 0 / on 1 / needsApproval 2 /
+  notFound 3), including `.needsApproval` wording.
+- `ShortcutRegistrationCopy` (the "-9878 only means a same-process duplicate"
+  honesty) is pinned (`ShortcutRegistrationCopyTests`).
 
-1. `DeckSecretsMigration.migrate` (`DeckKeychain.swift:184`) — moves the welded
-   `settings.json` fields into the legacy keychain items (`DeckSecret`), then
-   blanks the fields. Reads `settings.secretValue(secret)`.
-2. `CredentialsMigration.migrate` (`CredentialsMigration.swift:199`) — moves the
-   fields into `CredentialAccount`s, blanks the fields, deletes the legacy
-   keychain items. Reads `settings.legacyCredential(for: slot)` (line 215).
-3. The **fallback** — `credential(for:)` consults `legacyCredential(for:)` when
-   no account is selected (`CredentialsMigration.swift:39-41`).
+So a "failure" here is almost never a wrong rule; it is the delegate mapping the
+wrong `QuitReason`, or the OS doing something the rule never saw.
 
-`legacyCredential(for:)` is used by **both** the migration (line 215) and the
-fetch-time fallback (line 40). Deleting it breaks migration #2. Dropping the
-welded fields breaks both migrations. So the correct scope is: **remove the
-fetch-time reads, keep the migrations and the fields they consume.**
+## Where the runtime wiring lives
 
-## Affected files and symbols
-
-### Remove (fetch-time fallback)
-
-| Site | What |
+| Concern | Site |
 |---|---|
-| `Shared/CredentialsMigration.swift:39-41` | the `legacyCredential` tail of `credential(for:)` |
-| `Shared/CredentialsMigration.swift:113` | `gate(_:unavailable:)`'s `legacyCredential(...).token.isEmpty` test |
-| `Shared/CredentialsMigration.swift:144-153` | `gate(_:unavailableAccounts:unavailableLegacySecrets:)` overload |
-| `Shared/CredentialsMigration.swift:165-167` | `openBoxUsesRemoteServer` legacy branch |
-| `Shared/CredentialsMigration.swift:172-183` | `providerIsOn(_:legacyEnabled:)` + `prBoxGitHubIsOn`/`prBoxAzureIsOn` |
-| `DeckAgent/main.swift:86,88-89` | `hydrateFromKeychain()` + the legacy gate overload |
-| `DeckApp/DeckApp.swift:249,837,845-846` | `unavailableSecrets` state + legacy gate overload |
-| `Shared/FetchStatus.swift:52-63` | `DeckSecret.fetchSource` — **already dead in production**, only tests call it |
-| `Shared/CredentialAccount.swift:306-316` | `CredentialSlot.legacySecret` if the only remaining caller is `CredentialsMigration` (line 250/252) — **still used by the migration, keep** |
+| URL delivery → forward → maybe quit | `DeckApp.swift:58-74` (`application(_:open:)`), `:76-86` (`applicationDidFinishLaunching`), `TrayLifecyclePolicy.quitsAfterForwardingURL` |
+| Quit classification | `DeckApp.swift:109-131` (`applicationShouldTerminate`, `isSystemQuit()` reading `kAEQuitReason`); `.settingsCmdQ` exists in the enum but **nothing on the real app sets it** — Cmd-Q and Dock Quit both map to `.dockQuit` (policy treats them identically) |
+| Dock icon / accessory policy | `DeckApp.swift:183-193` (`applyDockPolicy`) |
+| Tray + Quit item | `TrayController.swift` |
+| Panel, click-away (`resignKey`), Esc (`cancelOperation`) | `SpotlightPanel.swift:9-29`, controller `:264-346` |
+| Hotkey | `SpotlightHotKey.swift` |
+| "Open Deck at login" | `MenuBarSettingsSection` (`SpotlightSettingsView.swift:241-279`) + `MainAppLoginItem.swift` (`SMAppService.mainApp`) |
 
-### Keep (migrations + their inputs)
+## The five checks, decomposed by what can actually drive them
 
-- `DeckSecret`, `DeckKeychain.{read,write,delete,readAll}` (legacy items)
-- `DeckSecretsMigration`, `CredentialsMigration`
-- `DeckSettings.{setSecret,secretValue,hydrate,hydrateFromKeychain}`
-- `legacyCredential(for:)` — the migration's input
-- The welded fields on `OpenBoxSettings` (`token`,`serverURL`),
-  `ShipBoxSettings` (`token`), `TaskBoxSettings`
-  (`token`,`organization`,`project`), `PRGitHubSettings`
-  (`token`,`enabled`), `PRAzureSettings`
-  (`token`,`enabled`,`organization`,`project`) — decode inputs for the migration
-- `DeckSettings.scrubbedOfSecrets`'s five-field blanking (`DeckSettings.swift:243-247`)
-- `DeckApp.adoptKeychainSecrets` (`DeckApp.swift:824-841`) — the *only* place
-  `hydrateFromKeychain` still runs between the two migrations
+1. **Open Deck at login.** `SMAppService.mainApp` registers **only from an
+   approved location** (`/Applications`), so this is an installed-copy check.
+   *Scriptable:* toggle via `MainAppLoginItem.set` (or the UI), read
+   `LoginItemState` raw status back. *Not scriptable:* the Login Items **row**,
+   the **veto** (`.requiresApproval`) and the in-app note — `sfltool dumpbtm`
+   prompts for an admin password and blocks, so BTM inspection is a human step.
+   Test trap already recorded: **replacing the bundle resets the veto**, so
+   install → toggle → (veto in System Settings) → relaunch.
+2. **Widget-URL click, Deck running and stopped.** There is **no
+   `CFBundleURLTypes`** and there must not be (CLAUDE.md trap), so the delivery
+   path is the app delegate's `application(_:open:)`. Stand-in for a widget
+   click: `open -a /Applications/Deck.app "<url>"` — LaunchServices sends the
+   same open-URL event. *Scriptable end-to-end:* `pgrep` before/after + whether a
+   browser opened. **Two things to observe beyond the policy:** no **extra
+   settings window** appears (the `.handlesExternalEvents(matching: [])` trap,
+   `DeckApp.swift:27`), and a *stopped* Deck that forwards quits **without
+   leaving a window**.
+3. **Click-away dismissal, real mouse.** Mechanism is `resignKey()` →
+   `onResignKey` → `hide()` (`SpotlightPanel.swift:23-28,285`). A synthesized
+   `CGEvent` mouse click outside the panel *may* drive it, but this is exactly
+   the "needs a real mouse" gap; treat a synthesized click as a bonus and keep a
+   human line for it.
+4. **Panel over a full-screen app / another Space.** `collectionBehavior =
+   [.canJoinAllSpaces, .fullScreenAuxiliary]`, `.floating` level
+   (`SpotlightPanel.swift:277-279`). Phase 0 proved it for the *probe*, not the
+   real panel (`verification.md:70-71`). Needs a full-screen app present to test
+   against — semi-automatable, human-confirmed.
+5. **The Dock menu's own Quit.** Only an AppleScript `quit` has been run; the
+   real Dock menu was never clicked. The substantive risk: `isSystemQuit()`
+   reads `kAEQuitReason`, and if a real Dock Quit carried that attribute it would
+   be misread as `.system` → always terminate, breaking tray-only. AppleScript
+   `quit` is believed to be the same Apple event, but that is the unproven half.
 
-### Tests to update / delete
-
-- `CredentialsWidgetReadsTests.swift` — the legacy-fallback cases (lines 55-57,
-  140-145) become "no account → local / provider off".
-- `CredentialsWiringTests.swift:230-239` — the `DeckSecret.fetchSource` parity
-  block goes with the extension.
-- `CredentialGateTests.swift:148,157` — drop the `unavailableLegacySecrets:`
-  argument.
-- `FetchStatusCredentialsTests.swift` — pins the removed `DeckSecret.fetchSource`.
-- `DecodeTests.swift` — OpenBox `serverURL` decode still valid (field kept).
-- `DeckSecretsMigrationTests.swift`, `DeckSettingsSecretsTests.swift`,
-  `CredentialsMigrationTests.swift` — **unchanged**; the migrations stay.
-
-## The one user-visible change
-
-A Deck upgraded from ≤v1.29 that **never opens the app** now reads its
-credential widgets as *off / unconfigured* instead of fetching with the
-pre-accounts token. A ≤v1.29 Deck that **does** open migrates exactly as today
-(both migrations run). On a migrated install nothing changes — the fields are
-already blank, so the fallback returned empty anyway.
+Also outstanding but **not reproducible** (`ROADMAP.md:1113-1114`): the settings
+window once failed to show; an examples page once opened without a click.
+Recommend **out of scope** — nothing to plan against.
 
 ## Shell invariants checked (CLAUDE.md)
 
-- The widget extension has **no keychain access**: `openBoxUsesRemoteServer` /
-  `prBoxGitHubIsOn` / `prBoxAzureIsOn` turn only on non-secret fields
-  (`account.serverURL`, account presence). After removal they read accounts
-  only — still token-free. ✅
-- "A migration that moves a field must clear the old copy": both migrations
-  still clear; nothing removed here weakens that. ✅
-- `grep -rn "\.enabled\|serverURL" native/DeckWidgets/` must stay clean — after
-  removal the extension reads `openBoxUsesRemoteServer`/`prBox*IsOn` only. ✅
+- **`.handlesExternalEvents(matching: [])` must stay** — otherwise a URL open
+  manufactures a settings window (check 2 observes this). ✅ unchanged by this task.
+- **`LegacyAgentCleanup` guard must stay** — a launch must never boot out the
+  running agents. Every check here launches/relaunches Deck, so this is a live
+  risk: confirm `processes.json` / `agent-heartbeat.json` mtimes keep advancing
+  across a quit/relaunch during the run.
+- **`System Events keystroke` is the wrong tool** — any harness posts **raw
+  `CGEvent`s from a non-activating process**, and proves itself first against a
+  known-good receiver. `docs/planning/spotlight-shell/probe/main.swift` is the
+  existing (throwaway) raw-`CGEvent` precedent.
+- **No widget-extension code touched** — `grep -rn "\.enabled\|serverURL"
+  native/DeckWidgets/` must stay clean.
 
-## Open questions
+## Build / test facts for the plan
 
-1. **Scope depth.** (A) remove the fetch-time fallback only, keep both
-   migrations and the fields [recommended, matches the ROADMAP]; (B) also rip
-   out `DeckSecretsMigration` + the welded fields + `DeckSecret`, accepting that
-   a ≤v1.30 → current upgrade loses tokens. The dig favours (A).
-2. Whether to also delete the already-dead `DeckSecret.fetchSource` (and its
-   tests) in the same pass, or leave it. It is production-dead today.
+- Repo is **xcodegen + xcodebuild**, not SwiftPM. Any new `.swift` file (harness
+  under a target, or a test) needs `xcodegen generate --spec native/project.yml`
+  or it is silently not compiled and the suite still passes.
+- Test command: `xcodebuild test -project native/Deck.xcodeproj -scheme
+  DeckSharedTests -derivedDataPath native/build.noindex CODE_SIGNING_ALLOWED=NO`.
+- Build only into `native/build.noindex`; `scripts/lsclean.sh` after a release
+  build; install only by replacing the bundle in `/Applications`.
+- Quit a running Deck (`pgrep -lf "MacOS/Deck$"`) before anything that reads or
+  writes `settings.json` — the app overwrites the file from memory.
+- Current test count is **1665** (`credentials-legacy-fallback`, 2026-10-12).
+
+## Open questions for the PRD interview
+
+1. **Deliverable shape.** (A) evidence-only: run the checks, write
+   `verification.md`, fix nothing that passes; (B) build a **committed** reusable
+   probe harness under `docs/planning/spotlight-shell-checks/probe/` (like the
+   shell's) *plus* fixes; (C) a script the maintainer re-runs. Recommendation:
+   (B) but **only for the checks a harness can genuinely drive** (URL forwarding
+   both ways, and panel visibility/hotkey), with a crisp manual checklist for
+   the login-item UI, click-away, full-screen and the real Dock menu.
+2. **Does anything in `DeckApp/` change?** Only if a check fails. If it does,
+   the fix goes through TDD: any new pure rule → `Shared/`, pinned in
+   `DeckSharedTests`; the delegate keeps applying.
+3. **The two oddities** — confirm out of scope (not reproducible).
+4. **Where does the harness live** — a throwaway under `docs/planning/…/probe/`
+   (precedent) or a `scripts/` helper? Precedent favours the planning folder.
+5. **Definition of done** — every one of the five checks is either *measured with
+   a recorded command/result* or *explicitly handed back as a human step*, with
+   `verification.md` updated; no check left unclassified.

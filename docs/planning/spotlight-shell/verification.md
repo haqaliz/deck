@@ -58,6 +58,17 @@ reason attribute.
   the settings copy no longer claims to detect another app.
 
 ## Not verified (needs a human at the screen, or the installed copy)
+
+> **Partly closed 2026-10-13** (`docs/planning/spotlight-shell-checks/`). A
+> committed probe harness (`…/probe/main.swift`) verified the automatable half on
+> the installed v1.53: **widget-URL clicks** (cold and running, both PASS — no
+> fabricated window), **the panel opening on the shortcut with the previous app
+> staying frontmost**, **agent liveness across a relaunch**, and the **quit
+> semantics** (tray-only veto / tray-only exit) via the AppleScript stand-in. No
+> product defect was found. The remaining human steps — Open Deck at login, real
+> click-away, over a full-screen app, and the **real Dock menu** — are listed as a
+> numbered checklist in that doc's `verification.md`.
+
 - **Open Deck at login.** `SMAppService.mainApp` registers only from an approved
   location. Install to `/Applications`, then: toggle on, check Login Items,
   switch it off there, reopen General and confirm the note appears; remember

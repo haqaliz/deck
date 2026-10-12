@@ -697,7 +697,16 @@ Do not delete the container; see the trap below.
   activates the target app, which resigns the non-activating panel's key status
   and dismisses it. Post raw `CGEvent` key events from a non-activating helper,
   and prove the helper first against a known-good receiver; the first one here
-  activated itself and made a working panel look dead.
+  activated itself and made a working panel look dead. Two more from building the
+  lifecycle checks (`docs/planning/spotlight-shell-checks/`): **a widget URL
+  arriving is only observable from the log, not from the browser** — Deck
+  declares no URL scheme, so `open -a … <url>` opens the link whether or not
+  `application(_:open:)` ran; the app now logs it (`Logger(subsystem:
+  "com.deck.app", category: "url")`, read with `log show --info --debug`), and a
+  *cold* launch that quits is itself proof the callback fired (it only quits when
+  `launchedToOpenAURL` was set). And **`URL.resourceValues(...contentModificationDate)`
+  is cached for the life of the process** — polling one `URL` reported frozen
+  mtimes for files that were advancing; read `FileManager.attributesOfItem` instead.
 
 - **Typed text must never become an argument of its own — measured with `git`.**
   Commit search (`docs/planning/spotlight-more-sources/`) runs
