@@ -968,8 +968,17 @@ pick the next item with `deck-next`.
 - [ ] **Keychain: exercise the locked-keychain path** on a scratch account —
       the one designed-and-unit-tested error path never exercised against a
       genuinely locked keychain.
-- [ ] **Credentials: remove the legacy per-slot fallback** — the one-release
-      courtesy from the credentials entry, overdue since v1.30 shipped.
+- [x] **Credentials: remove the legacy per-slot fallback** — the one-release
+      courtesy from the credentials entry, overdue since v1.30 shipped. Shipped
+      2026-10-12 (`docs/planning/credentials-legacy-fallback/`). The removal is
+      **narrower than the handoff brief implied**: the fetch-time fallback goes,
+      but both one-way migrations and the welded fields they consume stay,
+      because `CredentialsMigration.migrate` reads those fields to build
+      accounts (`CredentialsMigration.swift:180`) — deleting them would strand
+      every ≤v1.30 upgrade. A Deck upgraded from ≤v1.29 that **never opens** now
+      reads its credential widgets as off until the migration runs; one that
+      opens migrates exactly as before. The already-dead `DeckSecret.fetchSource`
+      and its pins went in the same pass. 1665 tests green.
 
 ### M9 — Developer ID release (the last milestone)
 

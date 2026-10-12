@@ -20,34 +20,31 @@ extension DeckSettings {
     /// The credential a slot should fetch with, or `nil` when it is not
     /// configured.
     ///
-    /// Order matters. A resolved account always wins. A slot whose `accountID`
-    /// **dangles** — the account was deleted or is of the wrong kind — is not
-    /// configured, and deliberately does *not* fall back: a dangling id means
-    /// the user deleted something, not that a stale token should be revived.
-    /// Only a slot with no selection at all consults the legacy field.
+    /// A resolved account always wins. A slot whose `accountID` **dangles** —
+    /// the account was deleted or is of the wrong kind — is not configured, and
+    /// deliberately does *not* fall back: a dangling id means the user deleted
+    /// something, not that a stale token should be revived. A slot with no
+    /// selection at all is simply off; the pre-accounts fields are no longer a
+    /// fetch path (they are read only by the migrations).
     func credential(for slot: CredentialSlot) -> ResolvedCredential? {
-        if let account = account(for: slot) {
-            guard !account.token.isEmpty else { return nil }
-            return ResolvedCredential(
-                id: account.id,
-                token: account.token,
-                organization: account.organization,
-                projects: account.projects,
-                serverURL: account.serverURL
-            )
-        }
-        guard accountID(for: slot) == nil else { return nil }
-        let legacy = legacyCredential(for: slot)
-        return legacy.token.isEmpty ? nil : legacy
+        guard let account = account(for: slot) else { return nil }
+        guard !account.token.isEmpty else { return nil }
+        return ResolvedCredential(
+            id: account.id,
+            token: account.token,
+            organization: account.organization,
+            projects: account.projects,
+            serverURL: account.serverURL
+        )
     }
 
-    /// The pre-accounts shape, for a Deck that was upgraded but never opened.
+    /// The pre-accounts shape of a slot's fields, read **only** by
+    /// `CredentialsMigration.migrate` when it turns a legacy file into accounts.
     ///
-    /// `DeckAgent` reads settings and never writes them, so it can run for
-    /// weeks on a file the migration has not touched. Without this, upgrading
-    /// and not opening Deck silently unconfigures four widgets. It goes inert
-    /// on its own once the migration runs: the legacy field is blanked and the
-    /// legacy keychain item deleted, so there is nothing left to return.
+    /// This is not a fetch path: `credential(for:)` no longer consults it, so a
+    /// Deck upgraded but never opened reads its slots as off until the
+    /// migration runs. Kept because the migration needs the fields the file
+    /// still carries.
     func legacyCredential(for slot: CredentialSlot) -> ResolvedCredential {
         switch slot {
         case .openbox:
@@ -108,11 +105,9 @@ extension DeckSettings {
         if let id = accountID(for: slot), unavailable.contains(id) { return .unavailable }
 
         guard let credential = credential(for: slot) else {
-            // Nothing selected and nothing left over: the user simply has not
-            // turned this on.
-            return accountID(for: slot) == nil && legacyCredential(for: slot).token.isEmpty
-                ? .off
-                : .notConfigured
+            // Nothing selected is a switch the user left alone; a selection that
+            // no longer resolves is something to report.
+            return accountID(for: slot) == nil ? .off : .notConfigured
         }
 
         guard slot.kind == .azure else { return .fetch(credential) }
@@ -134,53 +129,23 @@ extension DeckSettings {
         ))
     }
 
-    /// `gate(_:unavailable:)` that also understands a locked keychain on the
-    /// **pre-accounts** items.
-    ///
-    /// `DeckAgent` reads settings and never writes them, so it can run for a
-    /// long time on a file the migration has not touched. Without this, a
-    /// locked login keychain would read there as "not configured" — the exact
-    /// collapse the `credentialsUnavailable` outcome exists to prevent.
-    func gate(
-        _ slot: CredentialSlot,
-        unavailableAccounts: Set<String>,
-        unavailableLegacySecrets: Set<DeckSecret>
-    ) -> CredentialGate {
-        if accountID(for: slot) == nil, unavailableLegacySecrets.contains(slot.legacySecret) {
-            return .unavailable
-        }
-        return gate(slot, unavailable: unavailableAccounts)
-    }
-
     /// Whether OpenBox reads a remote opencode server rather than the local
     /// database — **decidable inside the widget extension**, which has no
     /// keychain access, because it turns only on non-secret fields.
     ///
-    /// The rule is now the picker: no account means the local database, an
-    /// account with a server URL means remote. Clearer than the old convention,
-    /// where the emptiness of a text field was load-bearing.
+    /// The rule is the picker: no account means the local database, an account
+    /// with a server URL means remote. Clearer than the old convention, where
+    /// the emptiness of a text field was load-bearing.
     var openBoxUsesRemoteServer: Bool {
-        if let account = account(for: .openbox) { return !account.serverURL.isEmpty }
-        // A dangling selection is not configured; only an untouched slot may
-        // consult the pre-accounts field.
-        guard accountID(for: .openbox) == nil else { return false }
-        return !(openbox.serverURL ?? "").isEmpty
+        account(for: .openbox).map { !$0.serverURL.isEmpty } ?? false
     }
 
     /// Whether PRBox's GitHub provider is on. The picker replaced the Enable
     /// toggle, so a selected account *is* "on".
-    var prBoxGitHubIsOn: Bool { providerIsOn(.prboxGitHub, legacyEnabled: prbox.github.enabled) }
+    var prBoxGitHubIsOn: Bool { account(for: .prboxGitHub) != nil }
 
     /// Whether PRBox's Azure DevOps provider is on.
-    var prBoxAzureIsOn: Bool { providerIsOn(.prboxAzure, legacyEnabled: prbox.azure.enabled) }
-
-    private func providerIsOn(_ slot: CredentialSlot, legacyEnabled: Bool) -> Bool {
-        if account(for: slot) != nil { return true }
-        guard accountID(for: slot) == nil else { return false }
-        // Before migration the toggle is still the truth, and the agent may
-        // well be fetching. The migration clears it, so this goes inert.
-        return legacyEnabled
-    }
+    var prBoxAzureIsOn: Bool { account(for: .prboxAzure) != nil }
 }
 
 /// Turns the five welded credentials into accounts, once.

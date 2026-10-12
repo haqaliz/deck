@@ -226,16 +226,4 @@ final class CredentialsWiringTests: XCTestCase {
         settings.hydrateAccounts(from: ["a1": .absent])
         XCTAssertEqual(settings.credentials.accounts[0].token, "already-here")
     }
-
-    // MARK: - Parity with the legacy mapping while both exist
-
-    func testSlotSourcesStillMatchTheLegacySecretSources() {
-        // The migration reads `DeckSecret` and writes slots. If these two
-        // mappings ever drift, a failure lands on the wrong widget's chip.
-        XCTAssertEqual(CredentialSlot.openbox.source, DeckSecret.openboxToken.fetchSource)
-        XCTAssertEqual(CredentialSlot.shipbox.source, DeckSecret.shipboxToken.fetchSource)
-        XCTAssertEqual(CredentialSlot.taskbox.source, DeckSecret.taskboxToken.fetchSource)
-        XCTAssertEqual(CredentialSlot.prboxGitHub.source, DeckSecret.prboxGitHubToken.fetchSource)
-        XCTAssertEqual(CredentialSlot.prboxAzure.source, DeckSecret.prboxAzureToken.fetchSource)
-    }
 }

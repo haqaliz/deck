@@ -94,8 +94,11 @@ One decision table, `DeckSettings.gate(_:unavailable:)`, answers "fetch, and if
 not, what does the widget say?" for both `DeckAgent` and the settings window —
 `off` (nothing selected), `notConfigured` (a selection that no longer resolves)
 and `unavailable` (locked keychain) are three different answers on purpose.
-`DeckSecret`'s five fixed cases survive only for the one-way migration and a
-one-release fallback for a Deck that was upgraded but never opened.
+`DeckSecret`'s five fixed cases survive only for the two one-way migrations
+(`settings.json` fields → legacy keychain items → accounts). The fetch-time
+fallback that once let a never-opened upgrade keep fetching from the
+pre-accounts fields is gone (`docs/planning/credentials-legacy-fallback/`): a
+slot with no account is off, and `DeckAgent` reads no pre-accounts field.
 
 **Settings live in the Deck app window only** (per-widget tabs: show toggles,
 colors, counts, account pickers, GitBox repo paths; credentials in their own

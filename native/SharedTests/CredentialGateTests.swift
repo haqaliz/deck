@@ -123,40 +123,20 @@ final class CredentialGateTests: XCTestCase {
         XCTAssertEqual(s.gate(.shipbox, unavailable: []), .notConfigured)
     }
 
-    // MARK: - The pre-migration file
+    // MARK: - The pre-migration file is no longer a fetch path
 
-    func testAnUnmigratedSlotStillFetches() {
+    func testAnUnmigratedSlotIsOff() {
+        // The one-release courtesy has expired: a token left in the
+        // pre-accounts field, with no account selected, no longer fetches. A
+        // Deck that opens runs the migration and the account takes over.
         var s = DeckSettings()
         s.shipbox.token = "ghp"
 
-        XCTAssertEqual(s.gate(.shipbox, unavailable: []), .fetch(ResolvedCredential(token: "ghp")))
+        XCTAssertEqual(s.gate(.shipbox, unavailable: []), .off)
     }
 
     func testAnUnmigratedSlotWithNothingStoredIsOff() {
         XCTAssertEqual(DeckSettings().gate(.shipbox, unavailable: []), .off)
-    }
-
-    // MARK: - A locked keychain before the migration has run
-
-    func testAnUnreadableLegacyItemIsUnavailableToo() {
-        // DeckAgent can run for weeks on an unmigrated file. A locked keychain
-        // must read the same there as it does afterwards.
-        var s = DeckSettings()
-        s.shipbox.token = ""
-
-        XCTAssertEqual(
-            s.gate(.shipbox, unavailableAccounts: [], unavailableLegacySecrets: [.shipboxToken]),
-            .unavailable
-        )
-    }
-
-    func testALegacyFailureIsIgnoredOnceTheSlotHasAnAccount() {
-        let s = settings(kind: .github, on: .shipbox)
-
-        XCTAssertEqual(
-            s.gate(.shipbox, unavailableAccounts: [], unavailableLegacySecrets: [.shipboxToken]),
-            .fetch(ResolvedCredential(id: "a1", token: "tok"))
-        )
     }
 
     // MARK: - The outcome each answer records
@@ -215,19 +195,13 @@ final class CredentialGateTests: XCTestCase {
         )
     }
 
-    func testALegacyProjectStringStillFetchesAsAOneElementList() {
-        // A Deck upgraded but never opened runs on a file the migration has not
-        // touched; the pre-accounts field must still name one project.
+    func testALegacyProjectStringIsNotAFetchPath() {
+        // The pre-accounts fields no longer resolve a credential at fetch time.
         var s = DeckSettings()
         s.taskbox.token = "tok"
         s.taskbox.organization = "acme"
         s.taskbox.project = "ForesightManifold"
 
-        XCTAssertEqual(
-            s.gate(.taskbox, unavailable: []),
-            .fetch(ResolvedCredential(
-                token: "tok", organization: "acme", projects: ["ForesightManifold"]
-            ))
-        )
+        XCTAssertEqual(s.gate(.taskbox, unavailable: []), .off)
     }
 }

@@ -271,28 +271,25 @@ final class CredentialsMigrationTests: XCTestCase {
         XCTAssertEqual(settings.account(for: .openbox)?.label, "opencode")
     }
 
-    // MARK: - The one-release fallback for an unopened Deck
+    // MARK: - The pre-accounts fields are not a fetch path
 
-    func testAnUnmigratedSettingsStillResolvesEverySlotFromTheLegacyFields() {
-        // DeckAgent reads settings and never writes them, so it can run for
-        // weeks on a file that predates the migration. Without this, upgrading
-        // and not opening Deck silently unconfigures four widgets.
+    func testAPopulatedLegacyFieldWithNoAccountIsNotAConfiguredCredential() {
+        // The fetch-time fallback is gone. A file that predates the migration
+        // still migrates when Deck opens, but until then its pre-accounts fields
+        // resolve nothing.
         let settings = hydrated(openbox: "tok", serverURL: "http://nuc:4096",
                                 shipbox: "ghp", taskbox: "pat", org: "acme",
                                 project: "Manifold", prGitHub: "ghp2",
                                 prAzure: "pat2", prOrg: "acme", prProject: "F")
 
-        XCTAssertEqual(settings.credential(for: .shipbox)?.token, "ghp")
-        XCTAssertEqual(settings.credential(for: .openbox)?.serverURL, "http://nuc:4096")
-        XCTAssertEqual(settings.credential(for: .taskbox)?.organization, "acme")
-        XCTAssertEqual(settings.credential(for: .prboxAzure)?.projects, ["F"])
+        for slot in CredentialSlot.allCases {
+            XCTAssertNil(settings.credential(for: slot), "\(slot) must not resolve from a legacy field")
+        }
     }
 
     func testClearingASlotAfterMigrationResurrectsNothing() {
-        // The fallback is per-slot rather than "only while no account exists",
-        // so a partial migration cannot strand a slot. It goes inert on its
-        // own: a migrated slot's legacy field is blank and its legacy keychain
-        // item is gone, so there is nothing left to fall back to.
+        // A migrated slot's pre-accounts field is blank and its legacy keychain
+        // item is gone, so clearing the selection leaves nothing behind.
         var settings = hydrated(shipbox: "ghp")
         run(&settings, store: Store(legacy: [.shipboxToken]))
         settings.setAccountID(nil, for: .shipbox)
@@ -300,7 +297,7 @@ final class CredentialsMigrationTests: XCTestCase {
         XCTAssertNil(settings.credential(for: .shipbox))
     }
 
-    func testASlotPointingAtADeletedAccountDoesNotFallBackToItsLegacyField() {
+    func testASlotPointingAtADeletedAccountIsNotConfigured() {
         // A dangling id means the user deleted the account. That is "not
         // configured", not an invitation to use a stale token.
         var settings = hydrated(shipbox: "ghp")
@@ -310,7 +307,7 @@ final class CredentialsMigrationTests: XCTestCase {
         XCTAssertNil(settings.credential(for: .shipbox))
     }
 
-    func testAResolvedAccountWinsOverTheLegacyField() {
+    func testAResolvedAccountWins() {
         var settings = hydrated(shipbox: "stale-legacy")
         var account = CredentialAccount(id: "a1", kind: .github, label: "work")
         account.token = "current"

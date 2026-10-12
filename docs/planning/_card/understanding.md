@@ -1,79 +1,103 @@
-# Understanding — taskbox-query-presets (2026-10-07)
+# Understanding — credentials-legacy-fallback
 
-Inputs: `issue.md`, `../taskbox-query-presets/probe.md`, the
-`taskbox-custom-wiql` PRD/plan, and the code below.
+## What the work is really asking
 
-## What the work really asks
+Remove the **fetch-time legacy credential fallback** — the pre-accounts
+compatibility shim that lets `DeckAgent` (and the widget extension) fetch with a
+token still sitting in `settings.json`, for a Deck that was upgraded from ≤v1.29
+but never opened. The ROADMAP records it as a one-release courtesy, overdue
+since v1.30 shipped (`ROADMAP.md:971-972`).
 
-Two recorded follow-ups from custom WIQL (ROADMAP.md:939-941), sharing the
-Query settings section:
+## The brief is internally inconsistent — this is the finding
 
-1. **Presets** — quick conditions (`assigned / created / current sprint`) for the
-   existing WHERE-condition field, which today is free text plus "Start from
-   default".
-2. **Team context for `@CurrentIteration`** — a team segment so the macro does
-   not always resolve against each project's default team (probe P7).
+The `deck-next` handoff said to *delete `legacyCredential(for:)` and drop the
+welded settings fields*. The dig shows that is **unsafe**: both one-way
+migrations read those very things.
 
-## Current state, by file
+The pre-accounts layer is two chained migrations plus a fetch-time fallback:
 
-- **Query UI** — `DeckApp.swift:2343-2392`. A `TextEditor` edits `draft`; only
-  **Apply** writes `settings.query` (A1 in the prior PRD: the host's 60s timer
-  and the agent must never run a half-typed condition). Validation runs as you
-  type; Test runs one WIQL per project, one click at a time; "Start from
-  default" replaces the draft with `WiqlClause.builtInCondition`.
-- **Pure clause logic** — `WiqlClause.swift` (156 lines): `validate`,
-  `query(for:)`, `isCustom`, `builtInCondition`. Composition owns the project
-  clause and ORDER BY and wraps the user's text in `( … )`.
-- **Loader** — `HostAzureDevOpsLoader.fetch` (`AzureDevOpsLoader.swift:436`)
-  composes **one** query string for every project; `test` (`:518`) is the
-  host-only one-shot; `currentSprint` (`:606`) hits the project base (default
-  team) and the chip is gated on `targets.count == 1` (`:484`).
-- **Settings** — `TaskBoxSettings` (`DeckSettings.swift:832-898`): custom
-  `init(from:)` with `decodeIfPresent` per field; no hand-written
-  `encode(to:)` (auto-synthesized — the CLAUDE.md `ShipBoxSettings` trap does
-  not apply here, but adding a field must still decode tolerantly).
-- **Widget** — `TaskBoxWidget.swift` reads only `taskCount`, `showLegend`,
-  `showProject`, the lane mapping and colours; the query reaches the face only
-  as `snapshot.isCustomQuery` wording. **No face change is anticipated.**
-- **Tests** — `WiqlClauseTests.swift` (validation + composition, 142 lines),
-  `AzureDevOpsParserTests.swift`, `DecodeTests.swift`.
+1. `DeckSecretsMigration.migrate` (`DeckKeychain.swift:184`) — moves the welded
+   `settings.json` fields into the legacy keychain items (`DeckSecret`), then
+   blanks the fields. Reads `settings.secretValue(secret)`.
+2. `CredentialsMigration.migrate` (`CredentialsMigration.swift:199`) — moves the
+   fields into `CredentialAccount`s, blanks the fields, deletes the legacy
+   keychain items. Reads `settings.legacyCredential(for: slot)` (line 215).
+3. The **fallback** — `credential(for:)` consults `legacyCredential(for:)` when
+   no account is selected (`CredentialsMigration.swift:39-41`).
 
-## What the probe changed
+`legacyCredential(for:)` is used by **both** the migration (line 215) and the
+fetch-time fallback (line 40). Deleting it breaks migration #2. Dropping the
+welded fields breaks both migrations. So the correct scope is: **remove the
+fetch-time reads, keep the migrations and the fields they consume.**
 
-- A team literal (`'[Project]\Team'`, name not id, brackets required) is valid
-  only in its own project; in another project it is **200 with 0 ids** (P20).
-  So a single team literal cannot serve a multi-project account honestly.
-- A bad/malformed literal is a **500 with a readable message**, which today
-  maps to `.badResponse`, not `.queryRejected` (P18/P19).
-- Teams are listable with the current PAT (F1-F3), and the team sprint route
-  works (F5).
-- In this org the picker changes nothing today: one team per project
-  (P16 = P17, F4 = F5).
+## Affected files and symbols
 
-## Ambiguities to settle in the interview
+### Remove (fetch-time fallback)
 
-1. **Team scope and storage.** Recommended: a team picker in TaskBox settings,
-   offered only when the account has exactly one project (mirrors the sprint
-   chip rule); the "Current sprint" preset emits the literal when a team is
-   chosen; the sprint chip follows the Team route. Multi-project accounts keep
-   today's default-team behavior; per-project team mapping is a later slice.
-2. **Preset model.** Replace the draft with a complete condition (like "Start
-   from default"), or append a fragment joined by `AND`? Which conditions, and
-   do they carry the open-state exclusion?
-3. **The 500.** Map WIQL 500-with-a-message to `queryRejected` (with a guard
-   for 502/503/504 outages), or surface the message only in Test?
-4. **Multi-project limitation wording** — a recorded non-goal: a team literal in
-   a multi-project account silently returns 0 elsewhere. Test prints its 0, but
-   the face shows "No matches".
+| Site | What |
+|---|---|
+| `Shared/CredentialsMigration.swift:39-41` | the `legacyCredential` tail of `credential(for:)` |
+| `Shared/CredentialsMigration.swift:113` | `gate(_:unavailable:)`'s `legacyCredential(...).token.isEmpty` test |
+| `Shared/CredentialsMigration.swift:144-153` | `gate(_:unavailableAccounts:unavailableLegacySecrets:)` overload |
+| `Shared/CredentialsMigration.swift:165-167` | `openBoxUsesRemoteServer` legacy branch |
+| `Shared/CredentialsMigration.swift:172-183` | `providerIsOn(_:legacyEnabled:)` + `prBoxGitHubIsOn`/`prBoxAzureIsOn` |
+| `DeckAgent/main.swift:86,88-89` | `hydrateFromKeychain()` + the legacy gate overload |
+| `DeckApp/DeckApp.swift:249,837,845-846` | `unavailableSecrets` state + legacy gate overload |
+| `Shared/FetchStatus.swift:52-63` | `DeckSecret.fetchSource` — **already dead in production**, only tests call it |
+| `Shared/CredentialAccount.swift:306-316` | `CredentialSlot.legacySecret` if the only remaining caller is `CredentialsMigration` (line 250/252) — **still used by the migration, keep** |
 
-## Shell invariants (pre-check)
+### Keep (migrations + their inputs)
 
-- The extension must not read the new field; the face keeps reading the
-  snapshot. `query` stays where it is (the CLAUDE.md "extension reads
-  settings" trap).
-- `TaskBoxSettings` needs `decodeIfPresent` for the new field; no hand-written
-  encode to miss.
-- New source/test files need `xcodegen generate` or they silently do not
-  compile.
-- No new snapshot file, no new sampler; the agent path is untouched unless the
-  chip route changes (one URL).
+- `DeckSecret`, `DeckKeychain.{read,write,delete,readAll}` (legacy items)
+- `DeckSecretsMigration`, `CredentialsMigration`
+- `DeckSettings.{setSecret,secretValue,hydrate,hydrateFromKeychain}`
+- `legacyCredential(for:)` — the migration's input
+- The welded fields on `OpenBoxSettings` (`token`,`serverURL`),
+  `ShipBoxSettings` (`token`), `TaskBoxSettings`
+  (`token`,`organization`,`project`), `PRGitHubSettings`
+  (`token`,`enabled`), `PRAzureSettings`
+  (`token`,`enabled`,`organization`,`project`) — decode inputs for the migration
+- `DeckSettings.scrubbedOfSecrets`'s five-field blanking (`DeckSettings.swift:243-247`)
+- `DeckApp.adoptKeychainSecrets` (`DeckApp.swift:824-841`) — the *only* place
+  `hydrateFromKeychain` still runs between the two migrations
+
+### Tests to update / delete
+
+- `CredentialsWidgetReadsTests.swift` — the legacy-fallback cases (lines 55-57,
+  140-145) become "no account → local / provider off".
+- `CredentialsWiringTests.swift:230-239` — the `DeckSecret.fetchSource` parity
+  block goes with the extension.
+- `CredentialGateTests.swift:148,157` — drop the `unavailableLegacySecrets:`
+  argument.
+- `FetchStatusCredentialsTests.swift` — pins the removed `DeckSecret.fetchSource`.
+- `DecodeTests.swift` — OpenBox `serverURL` decode still valid (field kept).
+- `DeckSecretsMigrationTests.swift`, `DeckSettingsSecretsTests.swift`,
+  `CredentialsMigrationTests.swift` — **unchanged**; the migrations stay.
+
+## The one user-visible change
+
+A Deck upgraded from ≤v1.29 that **never opens the app** now reads its
+credential widgets as *off / unconfigured* instead of fetching with the
+pre-accounts token. A ≤v1.29 Deck that **does** open migrates exactly as today
+(both migrations run). On a migrated install nothing changes — the fields are
+already blank, so the fallback returned empty anyway.
+
+## Shell invariants checked (CLAUDE.md)
+
+- The widget extension has **no keychain access**: `openBoxUsesRemoteServer` /
+  `prBoxGitHubIsOn` / `prBoxAzureIsOn` turn only on non-secret fields
+  (`account.serverURL`, account presence). After removal they read accounts
+  only — still token-free. ✅
+- "A migration that moves a field must clear the old copy": both migrations
+  still clear; nothing removed here weakens that. ✅
+- `grep -rn "\.enabled\|serverURL" native/DeckWidgets/` must stay clean — after
+  removal the extension reads `openBoxUsesRemoteServer`/`prBox*IsOn` only. ✅
+
+## Open questions
+
+1. **Scope depth.** (A) remove the fetch-time fallback only, keep both
+   migrations and the fields [recommended, matches the ROADMAP]; (B) also rip
+   out `DeckSecretsMigration` + the welded fields + `DeckSecret`, accepting that
+   a ≤v1.30 → current upgrade loses tokens. The dig favours (A).
+2. Whether to also delete the already-dead `DeckSecret.fetchSource` (and its
+   tests) in the same pass, or leave it. It is production-dead today.
