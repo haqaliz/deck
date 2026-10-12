@@ -1,6 +1,7 @@
 import SwiftUI
 import WidgetKit
 import AppKit
+import OSLog
 
 @main
 struct DeckApp: App {
@@ -45,6 +46,12 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
     private var launchedToOpenAURL = false
     private var finishedLaunching = false
 
+    /// Diagnostic only: widget-URL delivery is invisible from outside the
+    /// process (Deck declares no URL scheme on purpose), so a check that a URL
+    /// actually reached `application(_:open:)` has to be able to read it back.
+    /// `log show --info --debug --predicate 'subsystem == "com.deck.app"'`.
+    private let urlLog = Logger(subsystem: "com.deck.app", category: "url")
+
     // The resident half: tray, hotkey and search panel. They read settings and
     // snapshots themselves and share nothing with `ContentView`, which only
     // exists while the settings window does.
@@ -57,6 +64,9 @@ final class DeckAppDelegate: NSObject, NSApplicationDelegate {
 
     func application(_ application: NSApplication, open urls: [URL]) {
         let webURLs = DeckURLForwarding.webURLs(from: urls)
+        // Logged before the early returns so both the cold-launch and the
+        // already-running cases are visible to the verification harness.
+        urlLog.info("open: received=\(urls.count, privacy: .public) forwarding=\(webURLs.count, privacy: .public) urls=\(webURLs.map(\.absoluteString).joined(separator: " "), privacy: .public)")
         for url in webURLs {
             NSWorkspace.shared.open(url)
         }
