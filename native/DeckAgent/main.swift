@@ -83,10 +83,8 @@ Task {
     // gate below skips rather than falling through to "not configured", which
     // would tell the user to paste a token they already pasted.
     let unavailableAccounts = settings.hydrateAccountsFromKeychain()
-    let unavailableLegacy = settings.hydrateFromKeychain()
     let credentialGates = Dictionary(uniqueKeysWithValues: CredentialSlot.allCases.map {
-        ($0, settings.gate($0, unavailableAccounts: unavailableAccounts,
-                           unavailableLegacySecrets: unavailableLegacy))
+        ($0, settings.gate($0, unavailable: unavailableAccounts))
     })
     for slot in CredentialSlot.allCases where credentialGates[slot] == .unavailable {
         FetchStatusStore.record(.credentialsUnavailable, for: slot.source)

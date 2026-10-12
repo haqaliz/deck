@@ -48,13 +48,14 @@ final class CredentialsWidgetReadsTests: XCTestCase {
         XCTAssertFalse(settings.openBoxUsesRemoteServer)
     }
 
-    func testOpenBoxHonoursTheLegacyServerURLBeforeMigration() {
-        // An upgraded-but-never-opened Deck: the agent is fetching remotely, so
-        // the face must not claim to be local.
+    func testOpenBoxIsLocalWhenOnlyALegacyServerURLIsSet() {
+        // The pre-accounts field is no longer read at fetch time, so an
+        // upgraded-but-never-opened Deck reads local — matching the gate, which
+        // reports the slot off rather than fetching.
         var settings = DeckSettings()
         settings.openbox.serverURL = "http://nuc:4096"
 
-        XCTAssertTrue(settings.openBoxUsesRemoteServer)
+        XCTAssertFalse(settings.openBoxUsesRemoteServer)
     }
 
     // MARK: - PRBox: a provider is on when it has an account
@@ -89,11 +90,11 @@ final class CredentialsWidgetReadsTests: XCTestCase {
         XCTAssertFalse(settings.prBoxGitHubIsOn)
     }
 
-    func testAProviderHonoursTheLegacyEnabledFlagBeforeMigration() {
+    func testAProviderIsOffWhenOnlyTheLegacyEnabledFlagIsSet() {
         var settings = DeckSettings()
         settings.prbox.github.enabled = true
 
-        XCTAssertTrue(settings.prBoxGitHubIsOn)
+        XCTAssertFalse(settings.prBoxGitHubIsOn)
     }
 
     // MARK: - The property that makes all of this safe in the extension
@@ -159,8 +160,8 @@ final class CredentialsWidgetReadsTests: XCTestCase {
     }
 
     func testMigrationClearsThePRBoxEnabledFlagItRepresentedAsASelection() {
-        // Otherwise the legacy fallback above would keep answering from a dead
-        // field after the picker became the real control.
+        // The migration clears the field so the account selection is the only
+        // truth, and no stale toggle lingers next to it.
         var settings = DeckSettings()
         settings.prbox.github.token = "ghp"
         settings.prbox.github.enabled = true
@@ -171,8 +172,10 @@ final class CredentialsWidgetReadsTests: XCTestCase {
         XCTAssertFalse(settings.prbox.github.enabled)
     }
 
-    func testMigrationLeavesAnUnmigratedSlotsFieldsAlone() {
-        // A slot whose write failed must keep everything the fallback needs.
+    func testAFailedMigrationKeepsTheFieldsButTheyAreNotAFetchPath() {
+        // A slot whose write failed must keep everything the retry needs, but
+        // the preserved fields no longer resolve a credential — the fetch-time
+        // fallback is gone, so the slot is off until the migration succeeds.
         var settings = DeckSettings()
         settings.taskbox.token = "pat"
         settings.taskbox.organization = "acme"
@@ -188,8 +191,9 @@ final class CredentialsWidgetReadsTests: XCTestCase {
         )
 
         XCTAssertEqual(attempted, 1)
+        XCTAssertEqual(settings.taskbox.token, "pat")
         XCTAssertEqual(settings.taskbox.organization, "acme")
         XCTAssertEqual(settings.taskbox.project, "Manifold")
-        XCTAssertEqual(settings.credential(for: .taskbox)?.organization, "acme")
+        XCTAssertNil(settings.credential(for: .taskbox))
     }
 }

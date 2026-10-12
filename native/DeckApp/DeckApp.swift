@@ -245,8 +245,6 @@ struct ContentView: View {
     /// login keychain, most likely. Kept apart from "never set", which is a
     /// different message and a different field to fix.
     @State private var unavailableAccounts: Set<String> = []
-    /// The same, for the five pre-accounts items, until the migration runs.
-    @State private var unavailableSecrets: Set<DeckSecret> = []
     @State private var selection: DeckWidget = .livebox
     @State private var timer: Timer?
     @State private var toolbarSweepTimer: Timer?
@@ -827,6 +825,8 @@ struct ContentView: View {
         // Then the second, one-way step: the five welded credentials become
         // accounts. Same ordering guarantee — write, read back, only then
         // delete — so a keychain failure costs nothing and retries next launch.
+        // `hydrateFromKeychain` is the bridge: the first migration left the
+        // tokens in the legacy keychain items, and the second reads the fields.
         _ = migrated.hydrateFromKeychain()
         if CredentialsMigration.migrate(&migrated) { changed = true }
         if changed {
@@ -834,7 +834,6 @@ struct ContentView: View {
             settings.save()
         }
         unavailableAccounts = settings.hydrateAccountsFromKeychain()
-        unavailableSecrets = settings.hydrateFromKeychain()
         for slot in CredentialSlot.allCases where gate(slot) == .unavailable {
             FetchStatusStore.record(.credentialsUnavailable, for: slot.source)
         }
@@ -842,17 +841,12 @@ struct ContentView: View {
 
     /// The one decision table, shared with `DeckAgent` so the two cannot drift.
     private func gate(_ slot: CredentialSlot) -> CredentialGate {
-        settings.gate(slot, unavailableAccounts: unavailableAccounts,
-                      unavailableLegacySecrets: unavailableSecrets)
+        settings.gate(slot, unavailable: unavailableAccounts)
     }
 
     /// A freshly pasted credential clears a read failure from this launch —
     /// otherwise the widget would keep saying it can't read a token the user
     /// just typed.
-    ///
-    /// Accounts only: the five pre-accounts fields have no editing surface any
-    /// more, so a legacy read failure can only be cleared by unlocking the
-    /// keychain and reopening Deck, which is what the caption says to do.
     private func accountSecretCommitted(_ accountID: String) {
         unavailableAccounts.remove(accountID)
     }
