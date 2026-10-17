@@ -1,0 +1,61 @@
+# Deck — the landing page.
+#
+# Not part of the app build: `deck.yml` builds and releases the macOS app, this
+# only stages the static site in `site/` and publishes it to GitHub Pages. They
+# are kept apart so a docs change never triggers a macOS build, and a site
+# deploy never depends on signing secrets.
+#
+# One-time setup (the workflow cannot do this): repo Settings → Pages → Source
+# = "GitHub Actions". Until that is set, `actions/deploy-pages` fails with
+# "Get Pages site failed" — the other steps still run.
+#
+# The site source is plain static HTML + CSS (no build toolchain);
+# `scripts/stage-site.sh` only copies `site/` plus the assets that live elsewhere
+# in the repo. `scripts/check-site.sh` gates the deploy on the install copy.
+
+name: Pages
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "site/**"
+      - "scripts/stage-site.sh"
+      - "scripts/check-site.sh"
+      - "docs/screenshots/**"
+      - "docs/deck.svg"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage the site
+        run: scripts/stage-site.sh
+
+      - name: Check the install copy
+        run: scripts/check-site.sh
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .site-build
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

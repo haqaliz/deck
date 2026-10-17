@@ -1,4 +1,5 @@
 .build/
+.site-build/
 native/build/
 native/build.noindex/
 .claude/worktrees/

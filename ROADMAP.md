@@ -816,7 +816,22 @@ remain here.
       One trap found while testing it: **replacing the app bundle resets the
       veto to `[enabled, allowed]`**, so a disable/reinstall/relaunch sequence
       tests nothing. Install first, then disable, then relaunch.
-- [ ] **Landing page** for the launch URL.
+- [x] **Landing page** for the launch URL — `https://haqaliz.github.io/deck`.
+      A plain static `site/` (HTML + CSS, no build toolchain) published to
+      GitHub Pages by `.github/workflows/pages.yml`, which stages the assets
+      that live elsewhere in the repo (`docs/deck.svg`, the screenshots) via
+      `scripts/stage-site.sh` and gates the deploy on `scripts/check-site.sh`.
+      Shipped 2026-10-17 (`docs/planning/landing-page/`). The PATH filter covers
+      `site/**`, both scripts, `docs/screenshots/**` and `docs/deck.svg`, so a
+      screenshot change redeploys while a Swift change never reaches it.
+      **Deploy needs one manual step:** repo Settings → Pages → Source =
+      *GitHub Actions* — the workflow cannot set it, and until it is set
+      `actions/deploy-pages` fails with "Get Pages site failed".
+      **The install copy now lives in four places** (`README.md`,
+      `homebrew/deck.rb`, the `deck.yml` release notes and `site/index.html`);
+      `check-site.sh` proves the page *has* the required strings and order and
+      never the removed flag, but it is a floor, not parity — the notarization
+      release (M9) must update all four.
 
 ### M8 — Follow-on improvements (after M7)
 
