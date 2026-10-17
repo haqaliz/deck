@@ -1,49 +1,33 @@
-# spotlight-shell-checks (inline brief)
+# landing-page (inline brief)
 
-Source: `dbf task spotlight-shell-checks`, handed off by `deck-next` (2026-10-12).
+Source: `dbf feat landing-page`, handed off by `deck-next` (2026-10-17).
 
 ## Brief
 
-Close out the M10 Search (Spotlight) shell verification debt left by v1.49.
-The shell shipped, but its lifecycle checks were never run:
+Build the landing page for Deck's launch URL — the last un-gated item in M7
+(`ROADMAP.md:819`). M9's notarization, expiry-cliff, bundle-identifier and
+Sparkle work all wait on the paid Apple Developer Program, so this is the only
+launch-readiness piece buildable today.
 
-- **Open Deck at login** — the General toggle (`SMAppService.mainApp`), the
-  Login Items row, and the veto note.
-- **A widget-URL click** with Deck **running** and **stopped** (it should open
-  the page and stay / open and quit).
-- **Click-away dismissal** with a real mouse.
-- **The panel over a full-screen app** and on another Space.
-- **The Dock menu's own Quit** (only an AppleScript `quit` stands in for it).
+Deck is a set of fourteen small, beautiful macOS desktop widgets delivered as one
+native app plus a quick-search panel. The landing page is the front door for the
+launch URL: it should present that story and get a visitor to install.
 
-Either build a small reusable key-event probe harness (raw `CGEvent`s from a
-**non-activating** helper, never `System Events keystroke`) and drive the checks
-with it, or — where a human is genuinely required — hand back a precise manual
-checklist. Fix whatever the checks reveal.
+## Scope to settle in the PRD (the ROADMAP gives a single line)
 
-Watch the two documented lifecycle traps while doing it:
+- **Hosting** — GitHub Pages served from `docs/` in this repo, a `gh-pages`
+  branch, or a separate repo.
+- **Content** — the widget story (lifted from `README.md`: the fourteen widgets,
+  screenshots in `docs/screenshots/`, the Deck mark in `docs/deck.svg`), and
+  what a visitor can do (download the DMG, or `brew install --cask`).
+- **Install copy** — must stay byte-consistent with `README.md` and
+  `homebrew/deck.rb`, including the rule that the `xattr -dr
+  com.apple.quarantine` line runs **before** the first launch (`README.md:88-104`)
+  and the note that both steps disappear on notarization.
 
-- `DeckAppDelegate` terminates after a widget-URL launch, which must **not** fire
-  for a resident Deck (`docs/planning/spotlight-shell/prd.md`).
-- Deck must keep the `LegacyAgentCleanup` guard (a launch must never boot out the
-  running agents; `CLAUDE.md`).
+## Caveat from the recommender
 
-## Why this and not something else
-
-- The M10 follow-up list is explicit (`ROADMAP.md:1110-1114`) and matches the
-  "Not verified (needs a human at the screen, or the installed copy)" section of
-  `docs/planning/spotlight-shell/verification.md:60-72`.
-- This pass has already caught real bugs — the Dock-quit-takes-the-tray-down
-  bug and the empty-field Esc bug (`verification.md:48-58`).
-- Unblocked and testable with no external dependency, unlike M9 (gated on the
-  not-yet-bought Apple Developer Program) and M8's remaining locked-keychain
-  item (needs a scratch account).
-
-## Caveat (from the recommender)
-
-The checks need a human at the screen and the installed `/Applications` copy.
-The tray lifecycle resists naive automation: `System Events keystroke` activates
-the target and dismisses the non-activating panel, so any harness must post raw
-`CGEvent`s from a process that does not activate — and prove the harness first
-against a known-good receiver (`CLAUDE.md` trap). The buildable form is a probe
-harness plus fixes for whatever breaks; anything the harness cannot drive is
-owed back as a manual checklist.
+This reuses **none** of the widget shell and the docs are thin (a one-line
+ROADMAP entry, no planning doc). Confirm it is worth a unit of work versus
+waiting for M9, and do not let the install instructions drift from `README.md`
+and the cask.
