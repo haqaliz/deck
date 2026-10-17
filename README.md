@@ -20,7 +20,7 @@ native colors, corners and materials, at three sizes each.
 [![Downloads](https://img.shields.io/github/downloads/haqaliz/deck/total?color=3fb950&label=downloads)](https://github.com/haqaliz/deck/releases)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-3fb950)](CONTRIBUTING.md)
 
-[Screenshots](#screenshots) · [Install](#install) · [Widgets](#widgets) · [Settings](#settings) · [Privacy](#privacy) · [How it works](#how-it-works) · [Troubleshooting](#troubleshooting) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md)
+[Website](https://haqaliz.github.io/deck) · [Screenshots](#screenshots) · [Install](#install) · [Widgets](#widgets) · [Settings](#settings) · [Privacy](#privacy) · [How it works](#how-it-works) · [Troubleshooting](#troubleshooting) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md)
 
 </div>
 
