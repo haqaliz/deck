@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck — fourteen widgets for your Mac desktop</title>
+<meta name="description" content="Deck adds fourteen small, beautiful widgets to your macOS desktop — system, network, battery, git, ports, clipboard, weather, world clocks, builds, tasks, calendar, pull requests and markets — plus a quick-search panel.">
+<link rel="icon" type="image/svg+xml" href="assets/deck.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="mark" src="assets/deck.svg" alt="Deck" width="84" height="84">
+    <h1>Deck</h1>
+    <p class="tagline">Fourteen small, beautiful macOS desktop widgets in one native app — plus a quick&#8209;search panel.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/haqaliz/deck/releases/latest">Download — latest release</a>
+      <div class="brew">
+        <code id="brew-cmd">brew install --cask haqaliz/deck/deck</code>
+        <button class="copy" type="button" data-copy="brew install --cask haqaliz/deck/deck" aria-label="Copy the Homebrew command">Copy</button>
+      </div>
+    </div>
+    <p class="fine">Free and open source · macOS 15+ · Apple&nbsp;silicon &amp; Intel</p>
+  </div>
+</header>
+
+<section class="screens" aria-label="Deck on the desktop">
+  <div class="wrap">
+    <img src="assets/A1.png" alt="Deck widgets arranged on a macOS desktop" loading="lazy" width="1400" height="900">
+    <img src="assets/A3.png" alt="Deck widgets arranged on a macOS desktop" loading="lazy" width="1400" height="900">
+    <img src="assets/A5.png" alt="Deck widgets arranged on a macOS desktop" loading="lazy" width="1400" height="900">
+  </div>
+</section>
+
+<main>
+
+  <section class="section" id="widgets">
+    <div class="wrap">
+      <h2>Fourteen widgets, one app</h2>
+      <p class="lede">Real WidgetKit widgets on your desktop — no floating window cards. Each comes in small, medium and large.</p>
+      <div class="grid">
+        <article class="card"><h3>LiveBox</h3><p>CPU, memory and disk with a live chart, top processes and threshold coloring.</p></article>
+        <article class="card"><h3>OpenBox</h3><p>opencode usage: tokens, cost, a 14&#8209;day chart, models and sessions.</p></article>
+        <article class="card"><h3>NetBox</h3><p>Per&#8209;interface up/down rates and history.</p></article>
+        <article class="card"><h3>BatBox</h3><p>Battery level and time remaining, plus Bluetooth accessory batteries.</p></article>
+        <article class="card"><h3>GitBox</h3><p>Commits per day, today&rsquo;s count, streak and active repos.</p></article>
+        <article class="card"><h3>DevBox</h3><p>Open TCP ports and running Docker containers.</p></article>
+        <article class="card"><h3>ClipBox</h3><p>Clipboard history, local only — passwords are skipped.</p></article>
+        <article class="card"><h3>WeatherBox</h3><p>Conditions and a 3&#8209;day forecast for your location.</p></article>
+        <article class="card"><h3>ClockBox</h3><p>World clocks for up to six cities.</p></article>
+        <article class="card"><h3>ShipBox</h3><p>GitHub Actions runs across your repos, merged newest&#8209;first.</p></article>
+        <article class="card"><h3>TaskBox</h3><p>Azure DevOps work items: open count, current sprint, board lanes.</p></article>
+        <article class="card"><h3>CalBox</h3><p>Today and tomorrow&rsquo;s events from every calendar macOS syncs.</p></article>
+        <article class="card"><h3>PRBox</h3><p>Your open PRs and the ones awaiting your review — GitHub and Azure DevOps in one queue.</p></article>
+        <article class="card"><h3>MarketBox</h3><p>Crypto, fiat, gold and US stocks in one display currency.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="search">
+    <div class="wrap">
+      <h2>Search</h2>
+      <p class="lede">Press <kbd>&#8997;</kbd><kbd>Space</kbd> for a floating panel that searches the services your widgets already use. It stays out of the way — silent until you open it, and it shows nothing on your desktop you didn&rsquo;t ask for.</p>
+      <ul class="chips">
+        <li><code>pr</code> pull requests</li>
+        <li><code>mkt</code> markets</li>
+        <li><code>cal</code> calendar</li>
+        <li><code>commit</code> commits</li>
+        <li><code>run</code> CI builds</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <!-- Keep in step with README.md, homebrew/deck.rb and the deck.yml release notes. -->
+      <div class="install-grid">
+        <div class="route">
+          <h3>Download</h3>
+          <p>Open the disk image and drag <strong>Deck</strong> to Applications.</p>
+          <a class="btn" href="https://github.com/haqaliz/deck/releases/latest">Latest release</a>
+        </div>
+        <div class="route">
+          <h3>Homebrew</h3>
+          <div class="brew">
+            <code>brew install --cask haqaliz/deck/deck</code>
+            <button class="copy" type="button" data-copy="brew install --cask haqaliz/deck/deck" aria-label="Copy the Homebrew command">Copy</button>
+          </div>
+          <p class="fine">Then right-click the desktop → <strong>Edit Widgets…</strong> → search &ldquo;Deck&rdquo;.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <p><strong>Run this line before opening Deck the first time.</strong></p>
+        <div class="brew">
+          <code>xattr -dr com.apple.quarantine /Applications/Deck.app</code>
+          <button class="copy" type="button" data-copy="xattr -dr com.apple.quarantine /Applications/Deck.app" aria-label="Copy the quarantine command">Copy</button>
+        </div>
+        <p>Deck isn&rsquo;t notarized yet, so macOS quarantines it on download. Launching it while it is still quarantined does not just warn — macOS <strong>deletes the app</strong>, and not to the Trash. If that already happened, install again and run the line above first.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Deck is <a href="https://github.com/haqaliz/deck/blob/master/LICENSE">Apache&#8209;2.0</a> licensed · <a href="https://github.com/haqaliz/deck">source on GitHub</a></p>
+    <p class="fine">No analytics, no telemetry, no Deck server. The widgets read your machine and talk only to the services you configure.</p>
+  </div>
+</footer>
+
+<script>
+  // Progressive enhancement: the commands are always visible and selectable;
+  // the button only copies them when scripting is available.
+  document.querySelectorAll('.copy').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var text = button.dataset.copy || '';
+      if (!navigator.clipboard) { return; }
+      navigator.clipboard.writeText(text).then(function () {
+        var original = button.textContent;
+        button.textContent = 'Copied';
+        button.disabled = true;
+        setTimeout(function () {
+          button.textContent = original;
+          button.disabled = false;
+        }, 1500);
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
