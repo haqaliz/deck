@@ -554,6 +554,14 @@ for the development guide, the two data paths, and the platform traps that will
 otherwise cost you a day. Participation is covered by the
 [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## Support the project
+
+If this project is useful to you, you can chip in with a crypto donation:
+
+<a href="https://nowpayments.io/donation?api_key=52f38854-167a-4828-a00f-0424ab7dcc1e" target="_blank" rel="noreferrer noopener">
+    <img src="https://nowpayments.io/images/embeds/donation-button-black.svg" alt="Crypto donation button by NOWPayments">
+</a>
+
 ## License
 
 [Apache License 2.0](LICENSE) © 2026 Ali Haqiqi. See [NOTICE](NOTICE).
