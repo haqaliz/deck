@@ -71,7 +71,7 @@ final class CredentialsWidgetReadsTests: XCTestCase {
         XCTAssertTrue(settings.prBoxGitHubIsOn)
         XCTAssertFalse(settings.prBoxAzureIsOn)
 
-        settings.prbox.azure.accountID = "az"
+        settings.setAccountID("az", for: .prboxAzure)
         XCTAssertTrue(settings.prBoxAzureIsOn)
     }
 

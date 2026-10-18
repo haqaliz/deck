@@ -431,6 +431,7 @@ enum WorkItemParser {
             provider: .azureDevOps,
             changedAt: AzureDate.parse(fields["System.ChangedDate"]),
             project: project,
+            organization: target.organizationName,
             tags: TagParser.split(fields["System.Tags"] as? String)
         )
     }
@@ -945,8 +946,10 @@ enum AzurePRParser {
             // The project is part of the identity, not decoration: PR numbers
             // are per repo and a repo name is only unique within its project,
             // so two projects with an `api` repo would otherwise share an id —
-            // a duplicate ForEach key, and one row silently dropped.
-            id: "azureDevOps:\(target.projectName)/\(repo)#\(number)",
+            // a duplicate ForEach key, and one row silently dropped. The
+            // organization joins it for the same reason across bound accounts:
+            // one slot can now span several orgs, each with its own `api`.
+            id: "azureDevOps:\(target.organizationName)/\(target.projectName)/\(repo)#\(number)",
             number: number,
             title: title,
             repo: repo,
@@ -955,7 +958,8 @@ enum AzurePRParser {
             isDraft: entry["isDraft"] as? Bool ?? false,
             createdAt: createdAt,
             url: webURL(target: target, repo: repo, number: number),
-            project: target.projectName
+            project: target.projectName,
+            organization: target.organizationName
         )
         // The reviewers array rides the same payload — zero extra requests —
         // but the owner's own vote must not count (probe §1).

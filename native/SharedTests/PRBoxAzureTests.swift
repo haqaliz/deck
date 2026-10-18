@@ -127,14 +127,15 @@ final class AzurePRParserTests: XCTestCase {
         )
     }
 
-    func testIDIsProviderAndProjectQualified() throws {
+    func testIDIsProviderOrganizationAndProjectQualified() throws {
         // The project belongs in the id because PR numbers are per repo and a
-        // repo name is only unique within its project — see
+        // repo name is only unique within its project, and the organization
+        // because one slot can now span several orgs — see
         // AzureMultiProjectTests for the collision this prevents.
         let items = try XCTUnwrap(
             AzurePRParser.parse(try fixture("azure_prs"), role: .authored, me: me, target: target)
         )
-        XCTAssertEqual(items.first?.id, "azureDevOps:ForesightManifold/manifold-validation-swa#4475")
+        XCTAssertEqual(items.first?.id, "azureDevOps:ForesightAnalytics/ForesightManifold/manifold-validation-swa#4475")
     }
 
     // MARK: - The vote filter

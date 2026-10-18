@@ -255,8 +255,8 @@ final class AzureMultiProjectTests: XCTestCase {
 
         let ids = (one + two).map(\.id)
         XCTAssertEqual(Set(ids).count, 2, "same repo name in two projects collapsed into one row")
-        XCTAssertEqual(ids[0], "azureDevOps:ForesightManifold/api#12")
-        XCTAssertEqual(ids[1], "azureDevOps:Manifold Ops/api#12")
+        XCTAssertEqual(ids[0], "azureDevOps:ForesightAnalytics/ForesightManifold/api#12")
+        XCTAssertEqual(ids[1], "azureDevOps:ForesightAnalytics/Manifold Ops/api#12")
     }
 
     func testAPullRequestCarriesItsProjectAndLinksIntoIt() throws {

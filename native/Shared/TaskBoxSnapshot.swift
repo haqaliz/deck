@@ -38,6 +38,12 @@ struct TaskItem: Codable, Equatable {
     /// nil for a row written before the list existed, and for a provider with
     /// no such concept.
     var project: String?
+    /// Which Azure **organization** this row came from, when the slot is bound
+    /// to several accounts (a PAT is organization-scoped, so one account is one
+    /// org). nil for a row written before the field existed, for a provider
+    /// with no such concept, and for a single-org slot — where it would only
+    /// repeat the header.
+    var organization: String?
     /// Azure's `System.Tags`, split. Only Spotlight search asks for them; the
     /// widget never shows them. Empty for a row written before they existed.
     var tags: [String]
@@ -45,7 +51,7 @@ struct TaskItem: Codable, Equatable {
     init(
         id: String, title: String, state: String, itemType: String,
         url: String, provider: TaskProvider, changedAt: Date?,
-        project: String? = nil, tags: [String] = []
+        project: String? = nil, organization: String? = nil, tags: [String] = []
     ) {
         self.id = id
         self.title = title
@@ -55,6 +61,7 @@ struct TaskItem: Codable, Equatable {
         self.provider = provider
         self.changedAt = changedAt
         self.project = project
+        self.organization = organization
         self.tags = tags
     }
 
@@ -72,6 +79,7 @@ struct TaskItem: Codable, Equatable {
         provider = TaskProvider(rawValue: rawProvider) ?? .unknown
         changedAt = try c.decodeIfPresent(Date.self, forKey: .changedAt)
         project = try c.decodeIfPresent(String.self, forKey: .project)
+        organization = try c.decodeIfPresent(String.self, forKey: .organization)
         tags = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
     }
 }
@@ -252,6 +260,12 @@ enum TaskFormatting {
             let lc = lhs.changedAt ?? .distantPast
             let rc = rhs.changedAt ?? .distantPast
             if lc != rc { return lc > rc }
+            // Two organizations can each own a work item #123, so the org breaks
+            // the tie before the id — the order stays total and stable across
+            // ticks when a slot is bound to several accounts.
+            let lo = lhs.organization ?? ""
+            let ro = rhs.organization ?? ""
+            if lo != ro { return lo < ro }
             // Last resort so the order is total even for identical keys.
             return lhs.id < rhs.id
         }
@@ -282,5 +296,92 @@ enum TaskFormatting {
     /// the built-in filter.
     static func emptyLine(custom: Bool) -> String {
         custom ? "No matches" : "Nothing assigned"
+    }
+
+    /// Whether the rows span more than one organization — which is what turns a
+    /// row's project label into `org/project`, so two orgs with a
+    /// same-named project stay distinguishable.
+    static func spansMultipleOrgs(_ tasks: [TaskItem]) -> Bool {
+        Set(tasks.compactMap(\.organization)).count > 1
+    }
+
+    /// `project`, or `org/project` when the rows span more than one org. nil
+    /// when the row names no project.
+    static func projectLabel(_ item: TaskItem, multipleOrgs: Bool) -> String? {
+        guard let project = item.project, !project.isEmpty else { return nil }
+        guard multipleOrgs, let org = item.organization, !org.isEmpty else { return project }
+        return "\(org)/\(project)"
+    }
+}
+
+// MARK: - Merging several accounts (pure)
+//
+// A PAT is organization-scoped, so multi-org is a slot bound to several
+// accounts. Each account fetches exactly as it did alone; this is the one place
+// their snapshots become the one face, so the agent and the host app can never
+// drift.
+
+enum TaskBoxMerge {
+    /// One snapshot from the bound accounts' own snapshots.
+    ///
+    /// - Parameters:
+    ///   - parts: one per account that answered, in binding order.
+    ///   - organizations: the distinct organizations the slot is bound to, for
+    ///     the header wording. Counted over the accounts that resolved, so a
+    ///     failed account does not inflate it.
+    ///   - targetCount: projects across every resolved account, which decides
+    ///     whether a sprint can be shown at all.
+    ///   - failures: the bound accounts that did not contribute.
+    static func merged(
+        _ parts: [TaskBoxSnapshot],
+        organizations: [String],
+        targetCount: Int,
+        failures: [AzureAccountFailure]
+    ) -> TaskBoxSnapshot {
+        let distinctOrgs = distinct(organizations.filter { !$0.isEmpty })
+
+        return TaskBoxSnapshot(
+            writtenAt: Date(),
+            scope: scope(parts: parts, distinctOrgs: distinctOrgs, targetCount: targetCount),
+            totalCount: parts.reduce(0) { $0 + $1.totalCount },
+            // A sprint belongs to one project and one team, so it is offered
+            // only when the whole slot is a single target.
+            sprint: targetCount == 1 ? parts.first?.sprint : nil,
+            tasks: TaskFormatting.sorted(parts.flatMap(\.tasks)),
+            note: note(parts: parts, failures: failures),
+            totalIsLowerBound: parts.contains { $0.totalIsLowerBound },
+            isCustomQuery: parts.first?.isCustomQuery ?? false
+        )
+    }
+
+    /// One project keeps today's wording exactly; several projects in one org
+    /// show the organization; several orgs show the count, because naming one
+    /// would be a lie about the rest and naming all of them would overflow.
+    static func scope(
+        parts: [TaskBoxSnapshot], distinctOrgs: [String], targetCount: Int
+    ) -> String {
+        if targetCount == 1 { return parts.first?.scope ?? distinctOrgs.first ?? "" }
+        if distinctOrgs.count == 1 { return distinctOrgs[0] }
+        return "\(distinctOrgs.count) orgs"
+    }
+
+    /// Each account's own per-project note, plus a line naming the accounts that
+    /// did not contribute at all — so a bound account is never silently absent.
+    static func note(
+        parts: [TaskBoxSnapshot], failures: [AzureAccountFailure]
+    ) -> String? {
+        var lines = parts.compactMap(\.note)
+        if let line = AzureProjectNote.compose(
+            failures: failures.map { .init(project: $0.name, outcome: $0.outcome) },
+            source: .taskbox
+        ) {
+            lines.append(line)
+        }
+        return lines.isEmpty ? nil : lines.joined(separator: " · ")
+    }
+
+    private static func distinct(_ names: [String]) -> [String] {
+        var seen = Set<String>()
+        return names.filter { seen.insert($0.lowercased()).inserted }
     }
 }

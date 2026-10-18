@@ -267,6 +267,7 @@
 		C2697957F8E3A81F07B6342B /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
 		C29498F116FBD92A081C2F5D /* SpotlightSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85FA0D76B911A383F8BAA255 /* SpotlightSettingsView.swift */; };
 		C302C7E4ACAF175EC6AD3B6E /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
+		C30FA85A556B670873171539 /* AzureMultiAccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E9BA9BD5D5803990E2EEBE1 /* AzureMultiAccountTests.swift */; };
 		C42FB5B9E249E0FE9710B663 /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
 		C4364123C8EC5694D890C272 /* github_user.json in Resources */ = {isa = PBXBuildFile; fileRef = AB6827E74F3CB5B26EA2537F /* github_user.json */; };
 		C483D310228E6B2532465BC6 /* DevBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290D71C97A8936CF963F219D /* DevBoxSnapshotTests.swift */; };
@@ -357,6 +358,7 @@
 		F7C61B7366E45966CD60DCB8 /* OpenCodeSQLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */; };
 		F7D714F5EC3F20D7242F6E85 /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
 		F7F3E55580FB2E9464402615 /* provider-github-dark.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 36B787FA6039451942D992E8 /* provider-github-dark.pdf */; };
+		F82770721B16E22EF5A56574 /* AzureAccountBindingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50CFC898B80244E125DCA46 /* AzureAccountBindingTests.swift */; };
 		F8D0B9E76E31D7928A486CAA /* wallexMarkets.json in Resources */ = {isa = PBXBuildFile; fileRef = D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */; };
 		FA798EC3517F9FDFD10FB9FC /* WiqlPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */; };
 		FBD849BD3B656D44706F28F6 /* DeckLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E922A862E405B58537BA49 /* DeckLinkTests.swift */; };
@@ -435,6 +437,7 @@
 		2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureDevOpsLoader.swift; sourceTree = "<group>"; };
 		2DCCCC07040A9422EBEE1358 /* TaskBoxQueryOutcomeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBoxQueryOutcomeTests.swift; sourceTree = "<group>"; };
 		2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeSync.swift; sourceTree = "<group>"; };
+		2E9BA9BD5D5803990E2EEBE1 /* AzureMultiAccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureMultiAccountTests.swift; sourceTree = "<group>"; };
 		33023F59AC01FA5D74ED0FD3 /* TrayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrayController.swift; sourceTree = "<group>"; };
 		34BF9735A3D4E0752938A876 /* PRSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRSearchTests.swift; sourceTree = "<group>"; };
 		34CE52DEDA045671246CDCD9 /* DeckWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckWidgets.swift; sourceTree = "<group>"; };
@@ -584,6 +587,7 @@
 		E34D57F6804ADB7CB6777F6D /* com.deck.agent.processes.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.deck.agent.processes.plist; sourceTree = "<group>"; };
 		E35C3BA7C9BD2AF13796394B /* RunSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunSearchTests.swift; sourceTree = "<group>"; };
 		E3FE592855DDE3084D207447 /* ContainerMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerMigration.swift; sourceTree = "<group>"; };
+		E50CFC898B80244E125DCA46 /* AzureAccountBindingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureAccountBindingTests.swift; sourceTree = "<group>"; };
 		E55EA63643575600049612BD /* ModelParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelParserTests.swift; sourceTree = "<group>"; };
 		E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureDevOpsParserTests.swift; sourceTree = "<group>"; };
 		EA5EADBCA4E36B421CDE1542 /* DeckAgent */ = {isa = PBXFileReference; includeInIndex = 0; path = DeckAgent; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -703,8 +707,10 @@
 				B8EAAB7C3768527CFC875754 /* AgentHeartbeatTests.swift */,
 				CD5EFA4031BC633B2E191C16 /* AgentLivenessCopyTests.swift */,
 				8FF3B0A638CC1835670858DD /* AtomicFileTests.swift */,
+				E50CFC898B80244E125DCA46 /* AzureAccountBindingTests.swift */,
 				13A1025AA738F2EC2637AA2C /* AzureAccountProjectsTests.swift */,
 				E73EF446BAEE8202260771B7 /* AzureDevOpsParserTests.swift */,
+				2E9BA9BD5D5803990E2EEBE1 /* AzureMultiAccountTests.swift */,
 				52E64CEB52D9007544C51690 /* AzureMultiProjectTests.swift */,
 				6BDAAE2C8DB83E54F1D11C85 /* AzureProjectsParserTests.swift */,
 				871E3F6BD19878F5B8C47B6B /* AzureTeamsParserTests.swift */,
@@ -1203,9 +1209,11 @@
 				5CE30F9D3500ACC02D8D8BF4 /* AgentLivenessCopyTests.swift in Sources */,
 				712262DD2FEF389783A540A1 /* AtomicFile.swift in Sources */,
 				DAD7D5822D2A6F40FD89DD26 /* AtomicFileTests.swift in Sources */,
+				F82770721B16E22EF5A56574 /* AzureAccountBindingTests.swift in Sources */,
 				97918506ABC4C75EC3F7F5D2 /* AzureAccountProjectsTests.swift in Sources */,
 				14D533149620BDF218F5C8A1 /* AzureDevOpsLoader.swift in Sources */,
 				B8D2216F560466E6AB864171 /* AzureDevOpsParserTests.swift in Sources */,
+				C30FA85A556B670873171539 /* AzureMultiAccountTests.swift in Sources */,
 				F30F2267A3769A3B6B02554B /* AzureMultiProjectTests.swift in Sources */,
 				23EF43A1E8789309DDAE5D28 /* AzureProjectsParserTests.swift in Sources */,
 				4F121926AB6ABBDED6AB4C45 /* AzureTeamsParserTests.swift in Sources */,
