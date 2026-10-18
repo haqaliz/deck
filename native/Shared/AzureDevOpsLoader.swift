@@ -1194,3 +1194,134 @@ enum HostAzurePRLoader {
         return data
     }
 }
+
+// MARK: - Multi-account tick (host/agent only)
+//
+// A PAT is organization-scoped, so a slot bound to several accounts is
+// multi-org. Each account is fetched exactly as it was alone; these helpers fan
+// out, merge with the pure `TaskBoxMerge` / `PRRoleTotals.merged`, and hand back
+// one result. The agent and the host app both call them, so the two writers
+// cannot drift.
+
+/// One tick's TaskBox answer across a slot's bound accounts.
+struct AzureTaskBoxTick {
+    /// nil when *no* account answered — the caller records `firstOutcome` and
+    /// lets the last good snapshot stand.
+    var snapshot: TaskBoxSnapshot?
+    var firstOutcome: FetchOutcome?
+}
+
+enum HostAzureTaskBoxFetch {
+    /// Fetch every bound account concurrently and merge them into the one
+    /// snapshot.
+    ///
+    /// - Parameter skipped: the bound accounts the gate did not resolve
+    ///   (`skippedBoundAccounts`), carried into the merged note.
+    static func merged(
+        credentials: [ResolvedCredential], condition: String, team: String,
+        skipped: [AzureAccountFailure]
+    ) async -> AzureTaskBoxTick {
+        var parts: [TaskBoxSnapshot] = []
+        var failures = skipped
+        var firstOutcome: FetchOutcome?
+
+        await withTaskGroup(of: (Int, Result<TaskBoxSnapshot, Error>).self) { group in
+            for (index, credential) in credentials.enumerated() {
+                group.addTask {
+                    do {
+                        let snapshot = try await HostAzureDevOpsLoader.fetch(
+                            organization: credential.organization,
+                            projects: credential.projects,
+                            token: credential.token,
+                            condition: condition,
+                            team: team
+                        )
+                        return (index, .success(snapshot))
+                    } catch {
+                        return (index, .failure(error))
+                    }
+                }
+            }
+            var ordered: [(Int, Result<TaskBoxSnapshot, Error>)] = []
+            for await result in group { ordered.append(result) }
+            for (index, result) in ordered.sorted(by: { $0.0 < $1.0 }) {
+                switch result {
+                case .success(let snapshot): parts.append(snapshot)
+                case .failure(let error):
+                    let outcome = FetchClassifier.outcome(for: error)
+                    failures.append(AzureAccountFailure(
+                        name: azureAccountDisplayName(credentials[index]), outcome: outcome
+                    ))
+                    if firstOutcome == nil { firstOutcome = outcome }
+                }
+            }
+        }
+
+        guard !parts.isEmpty else { return AzureTaskBoxTick(snapshot: nil, firstOutcome: firstOutcome) }
+        return AzureTaskBoxTick(
+            snapshot: TaskBoxMerge.merged(
+                parts,
+                organizations: credentials.map(\.organization),
+                targetCount: credentials.reduce(0) { $0 + $1.projects.count },
+                failures: failures
+            ),
+            firstOutcome: nil
+        )
+    }
+}
+
+/// One tick's PRBox answer across a slot's bound accounts.
+struct AzurePRTick {
+    var totals: PRRoleTotals?
+    var firstOutcome: FetchOutcome?
+}
+
+enum HostAzurePRFetch {
+    static func merged(
+        credentials: [ResolvedCredential], cap: Int, skipped: [AzureAccountFailure]
+    ) async -> AzurePRTick {
+        var parts: [PRRoleTotals] = []
+        var failures = skipped
+        var firstOutcome: FetchOutcome?
+
+        await withTaskGroup(of: (Int, Result<PRRoleTotals, Error>).self) { group in
+            for (index, credential) in credentials.enumerated() {
+                group.addTask {
+                    do {
+                        let totals = try await HostAzurePRLoader.fetch(
+                            organization: credential.organization,
+                            projects: credential.projects,
+                            token: credential.token,
+                            cap: cap
+                        )
+                        return (index, .success(totals))
+                    } catch {
+                        return (index, .failure(error))
+                    }
+                }
+            }
+            var ordered: [(Int, Result<PRRoleTotals, Error>)] = []
+            for await result in group { ordered.append(result) }
+            for (index, result) in ordered.sorted(by: { $0.0 < $1.0 }) {
+                switch result {
+                case .success(let totals): parts.append(totals)
+                case .failure(let error):
+                    let outcome = FetchClassifier.outcome(for: error)
+                    failures.append(AzureAccountFailure(
+                        name: azureAccountDisplayName(credentials[index]), outcome: outcome
+                    ))
+                    if firstOutcome == nil { firstOutcome = outcome }
+                }
+            }
+        }
+
+        guard !parts.isEmpty else { return AzurePRTick(totals: nil, firstOutcome: firstOutcome) }
+        return AzurePRTick(totals: PRRoleTotals.merged(parts, failures: failures), firstOutcome: nil)
+    }
+}
+
+/// The name a bound account is reported under on the face — its organization,
+/// which is what identifies it, falling back to its id.
+private func azureAccountDisplayName(_ credential: ResolvedCredential) -> String {
+    credential.organization.isEmpty ? credential.id : credential.organization
+}

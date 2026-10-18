@@ -327,4 +327,24 @@ final class AzureMultiAccountTests: XCTestCase {
             "acme/p1"
         )
     }
+
+    // MARK: - The new field is additive and tolerant
+
+    func testATaskWithoutAnOrganizationDecodesToNil() throws {
+        let json = #"{"id":"1","title":"t","state":"New","itemType":"Task","url":"https://x","provider":"azureDevOps"}"#
+        let item = try JSONDecoder().decode(TaskItem.self, from: Data(json.utf8))
+        XCTAssertNil(item.organization)
+    }
+
+    func testANilOrganizationIsNotEncoded() throws {
+        // A single-org slot must not gain the key on every row.
+        let text = String(decoding: try JSONEncoder().encode(task("1", changed: 0)), as: UTF8.self)
+        XCTAssertFalse(text.contains("\"organization\""))
+    }
+
+    func testAPullRequestWithoutAnOrganizationDecodesToNil() throws {
+        let json = #"{"id":"github:a/b#1","number":1,"title":"t","role":"authored","createdAt":0}"#
+        let item = try JSONDecoder().decode(PullRequestItem.self, from: Data(json.utf8))
+        XCTAssertNil(item.organization)
+    }
 }

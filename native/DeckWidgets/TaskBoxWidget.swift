@@ -349,7 +349,10 @@ struct TaskBoxWidgetEntryView: View {
                 .foregroundStyle(.secondary)
             // Off by default: with one project it repeats the header on every
             // row, and the row already carries a number, a title and a state.
-            if entry.settings.showProject, let project = task.project, !project.isEmpty {
+            // When the slot spans several orgs the label is `org/project`.
+            if entry.settings.showProject,
+               let project = TaskFormatting.projectLabel(
+                   task, multipleOrgs: TaskFormatting.spansMultipleOrgs(entry.tasks)) {
                 Text(project)
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
