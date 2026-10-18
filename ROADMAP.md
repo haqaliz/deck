@@ -162,8 +162,8 @@ the next slate. Ordered by priority, not by cost.
         team using those words really does receive finished items. TaskBox
         gives them a `done` lane (checked before the open lanes) and renders
         them struck through rather than letting them read as outstanding.
-      **Open follow-ups:** multi-org, a second provider. (Custom WIQL shipped
-      2026-09-25, see M8.)
+      **Open follow-ups:** a second provider. (Multi-org shipped 2026-10-19 and
+      custom WIQL 2026-09-25 — see M8.)
       (Multi-project shipped 2026-08-28, see M6; Keychain shipped 2026-08-26.)
 - [x] **PRBox** — review queue: your open PRs + PRs awaiting your review,
       **mixed from GitHub and Azure DevOps Git** in one list (the original
@@ -209,8 +209,8 @@ the next slate. Ordered by priority, not by cost.
         the probe set is capped to the provider's own newest `prCount` rows
         (the only ones that can render). A per-PR failure is a row without a
         glyph, never a failed tick.
-      **Open follow-ups:** multi-org, a third provider. (Multi-project shipped
-      2026-08-28, see M6; Keychain shipped 2026-08-26.)
+      **Open follow-ups:** a third provider. (Multi-org shipped 2026-10-19 — see
+      M8; multi-project shipped 2026-08-28, see M6; Keychain 2026-08-26.)
 - [x] **MarketBox** — configured tickers/crypto: price, day change, sparkline.
       Shipped 2026-08-24 (`docs/planning/marketbox/`), and the interview grew
       it past the ROADMAP entry: **mixed assets** (crypto + fiat + gold 1g) all
@@ -430,10 +430,9 @@ Deferred behind the new widgets by decision on 2026-08-22.
       naming the ones that failed, none throws and the last good snapshot
       stands (verified by an unchanged file mtime). The sprint chip shows only
       with exactly one project, since a current sprint is per project and team.
-      **Open follow-ups:** multi-org (needs a slot that binds several accounts,
-      interviewed and deliberately not chosen), review state / approval counts,
-      raising the five-project cap (one constant — this org has
-      six). *(Cap raised to eight 2026-10-04, see M8.)*
+      **Open follow-ups:** review state / approval counts. *(Multi-org shipped
+      2026-10-19 — the "slot that binds several accounts" this entry predicted —
+      see M8; the cap was raised to eight 2026-10-04, see M8.)*
 - [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic
       (`docs/planning/devbox/prd.md:106`).
 
@@ -980,6 +979,40 @@ pick the next item with `deck-next`.
       snapshot **mtime unchanged**; `[System.Id] > 0` → `200+`. Not observed and
       said so: the Test button against a real 500, the two-project row hiding,
       and a gallery re-add (no extension change).
+- [x] **Azure DevOps multi-org** — one slot bound to several accounts, for
+      **both** TaskBox and PRBox (each listed it as an open follow-up). Shipped
+      2026-10-19 (`docs/planning/azure-multi-org/`).
+      **A blocker found while interviewing rewrote the design.** The handoff
+      proposed an *organization list on the account*; checking the Microsoft
+      docs (updated 2026-09-21) showed that cannot work: a PAT is created
+      against **one organization**, and the only kind that crossed orgs — a
+      **global PAT** — *"stop[s] working on December 1, 2026"*. One account's
+      one token therefore cannot reach a second org, which is exactly why the
+      multi-project entry recorded that multi-org "needs a slot that binds
+      several accounts". So a slot binds up to **four Azure accounts** (one org
+      each), each fetched exactly as it was alone and merged:
+      - `CredentialGate.fetch` carries a **list**; `taskbox`/`prboxAzure` are the
+        only multi-account slots, and a one-element list reproduces the old
+        answers exactly.
+      - `TaskItem`/`PullRequestItem` gained `organization`, and the Azure PR row
+        id and `PRFormatting.deduped`'s key gained it too — or two orgs' `api`
+        repos with the same PR number collapse into one row, the multi-project
+        bug one level up.
+      - The merge is one pure `Shared/` function (`TaskBoxMerge`,
+        `PRRoleTotals.merged`) called by both writers, so the agent and the app
+        cannot drift. A bound account that did not contribute is named in the
+        snapshot note, and `unavailable` (a failed keychain read) stays
+        authoritative even when a token is in memory.
+      - The header reads "N orgs" when the slot spans orgs, rows read
+        `org/project`, and the sprint chip and team picker keep their
+        single-target rule.
+      **Not measured, and said so on purpose:** this org has one organization, so
+      the whole feature is unit-tested only (1720 tests). The live two-org run is
+      the recorded follow-up below.
+- [ ] **Azure multi-org: the live two-org run** — a second organization and PAT,
+      so the merged face is seen against real data rather than fixtures. Unit
+      tests are the whole surface on this machine
+      (`docs/planning/azure-multi-org/prd.md`, §9).
 - [ ] **Keychain: exercise the locked-keychain path** on a scratch account —
       the one designed-and-unit-tested error path never exercised against a
       genuinely locked keychain.

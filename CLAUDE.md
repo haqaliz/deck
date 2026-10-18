@@ -88,12 +88,15 @@ Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
 and whatever identifies the connection — Azure org + project, opencode server
 URL. Widgets reference one by id through a `CredentialSlot` (`openbox`,
 `shipbox`, `taskbox`, `prboxGitHub`, `prboxAzure`), each of which knows its
-kind and its `FetchSource`. The keychain item is `account.<id>.token`; the id
-is generated once and never rewritten, because renaming it strands the token.
-One decision table, `DeckSettings.gate(_:unavailable:)`, answers "fetch, and if
-not, what does the widget say?" for both `DeckAgent` and the settings window —
-`off` (nothing selected), `notConfigured` (a selection that no longer resolves)
-and `unavailable` (locked keychain) are three different answers on purpose.
+kind and its `FetchSource`. The two **Azure** slots bind a *list* of ids (up to
+four accounts, one organization each — see the PAT trap below); the other three
+bind one. The keychain item is `account.<id>.token`; the id is generated once
+and never rewritten, because renaming it strands the token.
+One decision table, `DeckSettings.gate(_:unavailable:)`, answers
+"fetch, and if not, what does the widget say?" for both `DeckAgent` and the
+settings window — `off` (nothing selected), `notConfigured` (a selection that no
+longer resolves) and `unavailable` (locked keychain) are three different answers
+on purpose.
 `DeckSecret`'s five fixed cases survive only for the two one-way migrations
 (`settings.json` fields → legacy keychain items → accounts). The fetch-time
 fallback that once let a never-opened upgrade keep fetching from the
@@ -275,6 +278,24 @@ Do not delete the container; see the trap below.
   `…/_git/{repo}/pullrequest/{id}`), and `reviewerId` returns PRs you have
   **already voted on**, so the review queue filters to `vote == 0` to mean what
   GitHub's `review-requested` means.
+- **A PAT belongs to one organization, so "multi-org" is "multi-account".**
+  Found building Azure DevOps multi-org (2026-10-19,
+  `docs/planning/azure-multi-org/`). A personal access token is created by
+  *selecting one organization* and is **organization-scoped**; the only kind that
+  ever crossed orgs, a **global PAT**, is being retired — *"All existing global
+  PATs stop working on December 1, 2026"* (Microsoft Learn, updated 2026-09-21).
+  One `CredentialAccount` (one token) therefore can never reach a second org, and
+  the multi-project entry's "needs a slot that binds several accounts" was the
+  mechanism, not a preference. `taskbox`/`prboxAzure` bind up to four accounts;
+  `CredentialGate.fetch` carries a **list** (a one-element list for the other
+  three slots), and the merge is one pure `Shared/` function (`TaskBoxMerge`,
+  `PRRoleTotals.merged`) called by both the agent and the app so the two writers
+  cannot drift. Two consequences worth keeping: a row's identity needs the
+  **org** as well as the project (`azureDevOps:{org}/{project}/{repo}#{n}`, and
+  `PRFormatting.deduped`'s key) or two orgs' same-named repos with the same PR
+  number collapse into one row; and a bound account whose keychain read
+  **failed** stays `unavailable` and is named in the snapshot note —
+  `resolvedCredentials` excludes it even when a token is in memory.
 - **GitHub's Actions API costs ~11 KB per run, and no field says whether a
   repo has CI.** A `workflow_runs` entry embeds the *entire* repository object,
   so payload scales with runs, not repos: measured on a live account,
