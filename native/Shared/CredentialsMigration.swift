@@ -77,10 +77,20 @@ extension DeckSettings {
 /// locked-keychain case, which must never read as "you forgot to paste a
 /// token".
 enum CredentialGate: Equatable {
-    case fetch(ResolvedCredential)
+    /// One credential per bound account, never empty. A single-account slot is
+    /// a one-element list; `taskbox`/`prboxAzure` may carry several, because a
+    /// PAT is organization-scoped and multi-org is therefore multi-account.
+    case fetch([ResolvedCredential])
     case notConfigured
     case unavailable
     case off
+
+    /// The one credential, for a single-account slot. `nil` when none or more
+    /// than one is bound — a caller that must have exactly one reads the list.
+    var single: ResolvedCredential? {
+        if case .fetch(let credentials) = self, credentials.count == 1 { return credentials[0] }
+        return nil
+    }
 
     /// What to record for the slot's `FetchSource`, or `nil` when the fetch
     /// itself will record the outcome.
@@ -96,37 +106,79 @@ enum CredentialGate: Equatable {
     }
 }
 
+/// A bound account that will not contribute this tick — a failed keychain read,
+/// no token, or no usable Azure target. Named on the face's note so a bound
+/// account is never silently absent (the C1 mistake).
+struct AzureAccountFailure: Equatable {
+    var name: String
+    var outcome: FetchOutcome
+}
+
 extension DeckSettings {
     /// The one decision table, so the agent and the host app cannot drift.
     ///
     /// - Parameter unavailable: account ids whose keychain read **failed**,
     ///   from `hydrateAccounts(from:)`. Not the same as absent.
     func gate(_ slot: CredentialSlot, unavailable: Set<String>) -> CredentialGate {
-        if let id = accountID(for: slot), unavailable.contains(id) { return .unavailable }
+        let ids = accountIDs(for: slot)
+        guard !ids.isEmpty else { return .off }
 
-        guard let credential = credential(for: slot) else {
-            // Nothing selected is a switch the user left alone; a selection that
-            // no longer resolves is something to report.
-            return accountID(for: slot) == nil ? .off : .notConfigured
+        // Every bound account's keychain read failed: nothing can be fetched,
+        // and it is the locked-keychain answer, never "you forgot to paste".
+        if ids.allSatisfy({ unavailable.contains($0) }) { return .unavailable }
+
+        let credentials = resolvedCredentials(for: slot, unavailable: unavailable)
+        // At least one is an answer, the partial-failure rule: one bad account
+        // must not blank the others, and `skippedBoundAccounts` names it.
+        if !credentials.isEmpty { return .fetch(credentials) }
+
+        return ids.contains(where: { unavailable.contains($0) }) ? .unavailable : .notConfigured
+    }
+
+    /// Every bound account of `slot` that resolves to something a loader can
+    /// use, in selection order — the gate's `.fetch` payload.
+    ///
+    /// An account whose keychain read **failed** is excluded even when a token
+    /// happens to be in memory: `unavailable` is authoritative, exactly as it
+    /// is for a single-account slot. Azure needs a target as much as a token,
+    /// and the loader would only fail later with something less legible, so an
+    /// account with no organization or no project is not resolved either.
+    func resolvedCredentials(
+        for slot: CredentialSlot, unavailable: Set<String>
+    ) -> [ResolvedCredential] {
+        accounts(for: slot).compactMap { account in
+            guard !unavailable.contains(account.id) else { return nil }
+            guard !account.token.isEmpty else { return nil }
+            guard slot.kind == .azure else {
+                return ResolvedCredential(id: account.id, token: account.token,
+                                          serverURL: account.serverURL)
+            }
+            let organization = account.organization.trimmingCharacters(in: .whitespacesAndNewlines)
+            // The last gate before a loader: a duplicate here would double every
+            // row its project owns, and a fifth would blow the slot budget.
+            let projects = AzureAccountProjects.normalise(account.projects)
+            guard !organization.isEmpty, !projects.isEmpty else { return nil }
+            return ResolvedCredential(
+                id: account.id, token: account.token,
+                organization: organization, projects: projects,
+                serverURL: account.serverURL
+            )
         }
+    }
 
-        guard slot.kind == .azure else { return .fetch(credential) }
-
-        // Azure needs a target as much as it needs a token, and the loader
-        // would only fail later with something less legible.
-        let organization = credential.organization.trimmingCharacters(in: .whitespacesAndNewlines)
-        // The last gate before a loader: a duplicate here would double every
-        // row its project owns, and a sixth would blow the slot budget.
-        let projects = AzureAccountProjects.normalise(credential.projects)
-        guard !organization.isEmpty, !projects.isEmpty else { return .notConfigured }
-
-        return .fetch(ResolvedCredential(
-            id: credential.id,
-            token: credential.token,
-            organization: organization,
-            projects: projects,
-            serverURL: credential.serverURL
-        ))
+    /// The bound accounts that will not contribute this tick, named and
+    /// classified for the snapshot note.
+    func skippedBoundAccounts(
+        for slot: CredentialSlot, unavailable: Set<String>
+    ) -> [AzureAccountFailure] {
+        let resolved = Set(resolvedCredentials(for: slot, unavailable: unavailable).map(\.id))
+        return accountIDs(for: slot).compactMap { id in
+            guard !resolved.contains(id) else { return nil }
+            let label = accounts(for: slot).first(where: { $0.id == id })?.label ?? ""
+            let name = label.isEmpty ? slot.widgetName : label
+            let outcome: FetchOutcome = unavailable.contains(id) ? .credentialsUnavailable : .notConfigured
+            return AzureAccountFailure(name: name, outcome: outcome)
+        }
     }
 
     /// Whether OpenBox reads a remote opencode server rather than the local
@@ -144,8 +196,10 @@ extension DeckSettings {
     /// toggle, so a selected account *is* "on".
     var prBoxGitHubIsOn: Bool { account(for: .prboxGitHub) != nil }
 
-    /// Whether PRBox's Azure DevOps provider is on.
-    var prBoxAzureIsOn: Bool { account(for: .prboxAzure) != nil }
+    /// Whether PRBox's Azure DevOps provider is on. The picker replaced the
+    /// Enable toggle, so a selected account *is* "on"; any bound account counts.
+    /// Read inside the widget extension, so it turns only on non-secret fields.
+    var prBoxAzureIsOn: Bool { !accounts(for: .prboxAzure).isEmpty }
 }
 
 /// Turns the five welded credentials into accounts, once.

@@ -96,7 +96,9 @@ Task {
         // Remote mode: never passes a default token — without the user's own
         // token no data is fetched (no silent local-DB fallback).
         switch credentialGates[.openbox] {
-        case .fetch(let credential):
+        case .fetch(let credentials):
+            // A single-account slot: `.fetch` is never empty.
+            let credential = credentials[0]
             do {
                 let state = OpenCodeSyncStore.load()
                 let (remote, newState) = try await RemoteOpenCodeLoader.load(
@@ -195,7 +197,8 @@ Task {
     let shipboxHasATarget = shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty
     if credentialGates[.shipbox] == .unavailable {
         agentLog.info("skipped shipbox snapshot (credential unavailable)")
-    } else if case .fetch(let credential)? = credentialGates[.shipbox], shipboxHasATarget {
+    } else if case .fetch(let credentials)? = credentialGates[.shipbox], shipboxHasATarget,
+              let credential = credentials.first {
         do {
             // Always written: writtenAt drives the staleness windows. A repo
             // that failed while others succeeded rides in the snapshot's note
@@ -219,29 +222,32 @@ Task {
         agentLog.info("skipped shipbox snapshot (not configured)")
     }
 
-    // TaskBox: requires the user's own org + project + PAT — never a default token.
+    // TaskBox: requires the user's own org + project + PAT — never a default
+    // token. The slot may be bound to several accounts (one organization each,
+    // because a PAT is organization-scoped), so each is fetched and their
+    // snapshots merged into the one face.
     if credentialGates[.taskbox] == .unavailable {
         agentLog.info("skipped taskbox snapshot (credential unavailable)")
-    } else if case .fetch(let credential)? = credentialGates[.taskbox] {
-        do {
+    } else if case .fetch(let credentials)? = credentialGates[.taskbox] {
+        let tick = await HostAzureTaskBoxFetch.merged(
+            credentials: credentials,
+            condition: settings.taskbox.query,
+            team: settings.taskbox.team,
+            skipped: settings.skippedBoundAccounts(for: .taskbox, unavailable: unavailableAccounts)
+        )
+        if let taskbox = tick.snapshot {
             // Always written: writtenAt drives the staleness windows, so a
             // successful fetch must refresh it even when the task list is
             // unchanged — otherwise a quiet day reads as a stale widget.
-            let taskbox = try await HostAzureDevOpsLoader.fetch(
-                organization: credential.organization,
-                projects: credential.projects,
-                token: credential.token,
-                condition: settings.taskbox.query,
-                team: settings.taskbox.team
-            )
             TaskBoxSnapshotStore.save(taskbox)
             FetchStatusStore.record(.ok, for: .taskbox)
             // Counts and outcomes only — never a project name.
             agentLog.info(
-                "written taskbox snapshot (\(credential.projects.count, privacy: .public) projects)"
+                "written taskbox snapshot (\(credentials.count, privacy: .public) accounts, \(taskbox.totalCount, privacy: .public) items)"
             )
-        } catch {
-            let outcome = FetchClassifier.outcome(for: error)
+        } else {
+            // No account answered: the last good snapshot stands.
+            let outcome = tick.firstOutcome ?? .unreachable
             FetchStatusStore.record(outcome, for: .taskbox)
             agentLog.info("failed taskbox snapshot (\(outcome.rawValue, privacy: .public))")
         }
@@ -274,7 +280,9 @@ Task {
     let prbox = settings.prbox
     var githubTotals: PRRoleTotals?
     switch credentialGates[.prboxGitHub] {
-    case .fetch(let credential):
+    case .fetch(let credentials):
+        // A single-account slot: `.fetch` is never empty.
+        let credential = credentials[0]
         do {
             githubTotals = try await HostGitHubPRLoader.fetch(
                 token: credential.token,
@@ -300,17 +308,19 @@ Task {
 
     var azureTotals: PRRoleTotals?
     switch credentialGates[.prboxAzure] {
-    case .fetch(let credential):
-        do {
-            azureTotals = try await HostAzurePRLoader.fetch(
-                organization: credential.organization,
-                projects: credential.projects,
-                token: credential.token,
-                cap: prbox.prCount
-            )
+    case .fetch(let credentials):
+        // One organization per account, so several accounts is several orgs;
+        // each is fetched and the totals merged.
+        let tick = await HostAzurePRFetch.merged(
+            credentials: credentials,
+            cap: prbox.prCount,
+            skipped: settings.skippedBoundAccounts(for: .prboxAzure, unavailable: unavailableAccounts)
+        )
+        azureTotals = tick.totals
+        if tick.totals != nil {
             FetchStatusStore.record(.ok, for: .prboxAzure)
-        } catch {
-            let outcome = FetchClassifier.outcome(for: error)
+        } else {
+            let outcome = tick.firstOutcome ?? .unreachable
             FetchStatusStore.record(outcome, for: .prboxAzure)
             agentLog.info("failed prbox azure (\(outcome.rawValue, privacy: .public))")
         }

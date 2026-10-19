@@ -302,40 +302,60 @@ struct DeckSettings: Codable, Equatable {
 
     // MARK: - Accounts
 
-    /// The account id a slot is pointed at, or `nil` when it is unset.
-    func accountID(for slot: CredentialSlot) -> String? {
+    /// Every account id a slot is pointed at, in display order. Empty when the
+    /// slot is unset. `taskbox` and `prboxAzure` may carry several — a PAT is
+    /// organization-scoped, so multi-org is several accounts.
+    func accountIDs(for slot: CredentialSlot) -> [String] {
         switch slot {
-        case .openbox: return openbox.accountID
-        case .shipbox: return shipbox.accountID
-        case .taskbox: return taskbox.accountID
-        case .prboxGitHub: return prbox.github.accountID
-        case .prboxAzure: return prbox.azure.accountID
+        case .openbox: return openbox.accountID.map { [$0] } ?? []
+        case .shipbox: return shipbox.accountID.map { [$0] } ?? []
+        case .taskbox: return taskbox.accountIDs
+        case .prboxGitHub: return prbox.github.accountID.map { [$0] } ?? []
+        case .prboxAzure: return prbox.azure.accountIDs
+        }
+    }
+
+    /// The first account id — for the single-account slots, and for any caller
+    /// that predates the list. `taskbox`/`prboxAzure` may carry more.
+    func accountID(for slot: CredentialSlot) -> String? { accountIDs(for: slot).first }
+
+    /// Writes a slot's selection. The normaliser runs here so a duplicate or a
+    /// fifth entry cannot reach a loader from the settings UI.
+    mutating func setAccountIDs(_ ids: [String], for slot: CredentialSlot) {
+        let list = AzureAccountBinding.normalise(ids)
+        switch slot {
+        case .openbox: openbox.accountID = list.first
+        case .shipbox: shipbox.accountID = list.first
+        case .taskbox: taskbox.accountIDs = list
+        case .prboxGitHub: prbox.github.accountID = list.first
+        case .prboxAzure: prbox.azure.accountIDs = list
         }
     }
 
     mutating func setAccountID(_ id: String?, for slot: CredentialSlot) {
-        switch slot {
-        case .openbox: openbox.accountID = id
-        case .shipbox: shipbox.accountID = id
-        case .taskbox: taskbox.accountID = id
-        case .prboxGitHub: prbox.github.accountID = id
-        case .prboxAzure: prbox.azure.accountID = id
-        }
+        setAccountIDs(id.map { [$0] } ?? [], for: slot)
     }
 
     /// The account a slot resolves to, or `nil` when it is unset, **dangles**
     /// (the account was deleted behind it) or names an account of the wrong
     /// kind. All three read as "not configured" — never as an error.
     func account(for slot: CredentialSlot) -> CredentialAccount? {
-        guard let id = accountID(for: slot) else { return nil }
-        guard let account = credentials.accounts.first(where: { $0.id == id }) else { return nil }
-        return account.kind == slot.kind ? account : nil
+        accounts(for: slot).first
+    }
+
+    /// Every account a slot resolves to, in selection order, kind-checked and
+    /// with dangling ids dropped.
+    func accounts(for slot: CredentialSlot) -> [CredentialAccount] {
+        accountIDs(for: slot).compactMap { id in
+            guard let account = credentials.accounts.first(where: { $0.id == id }) else { return nil }
+            return account.kind == slot.kind ? account : nil
+        }
     }
 
     /// Which widgets would stop working if this account went away. Drives the
     /// delete confirmation, which names them rather than deleting silently.
     func slots(using accountID: String) -> [CredentialSlot] {
-        CredentialSlot.allCases.filter { self.accountID(for: $0) == accountID }
+        CredentialSlot.allCases.filter { self.accountIDs(for: $0).contains(accountID) }
     }
 
     /// Fills every account's token from a set of keychain reads and returns the
@@ -925,9 +945,11 @@ struct TaskBoxSettings: Codable, Equatable {
     /// Personal access token — required; no default is ever sent. A read-only
     /// Work Items (Read) scope is enough.
     var token = ""
-    /// The credential this widget uses, by `CredentialAccount.id`. `nil` means
-    /// no account is selected, which reads as "not configured".
-    var accountID: String?
+    /// The credentials this widget uses, by `CredentialAccount.id`, in display
+    /// order. Empty means no account is selected, which reads as "not
+    /// configured". Up to `AzureAccountBinding.maxAccounts` of them: a PAT is
+    /// organization-scoped, so several entries is how multi-org is expressed.
+    var accountIDs: [String] = []
     /// The lane legend under the header.
     var showLegend = true
     var showList = true
@@ -961,7 +983,14 @@ struct TaskBoxSettings: Codable, Equatable {
         organization = try c.decodeIfPresent(String.self, forKey: .organization) ?? ""
         project = try c.decodeIfPresent(String.self, forKey: .project) ?? ""
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
-        accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
+        // The plural key wins outright: once this build has written a file, the
+        // singular one is gone, and a file carrying both is a hand-edit.
+        if let list = try c.decodeIfPresent([String].self, forKey: .accountIDs) {
+            accountIDs = AzureAccountBinding.normalise(list)
+        } else {
+            let legacy = try c.decodeIfPresent(String.self, forKey: .accountID) ?? ""
+            accountIDs = AzureAccountBinding.normalise([legacy])
+        }
         showLegend = try c.decodeIfPresent(Bool.self, forKey: .showLegend) ?? true
         showList = try c.decodeIfPresent(Bool.self, forKey: .showList) ?? true
         showProject = try c.decodeIfPresent(Bool.self, forKey: .showProject) ?? false
@@ -986,6 +1015,39 @@ struct TaskBoxSettings: Codable, Equatable {
         case .done: doneColor
         case .other: otherColor
         }
+    }
+
+    // Hand-written, and it must stay in step with the stored properties:
+    // `accountID` exists only so the legacy key can be *read*; writing it back
+    // would let a dead field answer after the list took over (CLAUDE.md). A
+    // forgotten case compiles, decodes absent and never encodes —
+    // `testTaskBoxRoundTripsEveryField` is the guard.
+    private enum CodingKeys: String, CodingKey {
+        case organization, project, token
+        case accountID, accountIDs
+        case showLegend, showList, showProject, taskCount, stateMapping, query, team
+        case todoColor, inProgressColor, testingColor, doneColor, otherColor
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(organization, forKey: .organization)
+        try c.encode(project, forKey: .project)
+        try c.encode(token, forKey: .token)
+        // `accountID` is deliberately absent.
+        try c.encode(accountIDs, forKey: .accountIDs)
+        try c.encode(showLegend, forKey: .showLegend)
+        try c.encode(showList, forKey: .showList)
+        try c.encode(showProject, forKey: .showProject)
+        try c.encode(taskCount, forKey: .taskCount)
+        try c.encode(stateMapping, forKey: .stateMapping)
+        try c.encode(query, forKey: .query)
+        try c.encode(team, forKey: .team)
+        try c.encode(todoColor, forKey: .todoColor)
+        try c.encode(inProgressColor, forKey: .inProgressColor)
+        try c.encode(testingColor, forKey: .testingColor)
+        try c.encode(doneColor, forKey: .doneColor)
+        try c.encode(otherColor, forKey: .otherColor)
     }
 }
 
@@ -1115,9 +1177,10 @@ struct PRGitHubSettings: Codable, Equatable {
 
 struct PRAzureSettings: Codable, Equatable {
     var enabled = false
-    /// The credential this widget uses, by `CredentialAccount.id`. `nil` means
-    /// no account is selected, which reads as "not configured".
-    var accountID: String?
+    /// The credentials this widget uses, by `CredentialAccount.id`, in display
+    /// order. Empty means no account is selected, which reads as "not
+    /// configured". Up to `AzureAccountBinding.maxAccounts` — one org each.
+    var accountIDs: [String] = []
     /// Organization — a bare name or a full dev.azure.com URL.
     var organization = ""
     /// Project within the organization. The pull-request query is scoped to it.
@@ -1137,7 +1200,30 @@ struct PRAzureSettings: Codable, Equatable {
         organization = try c.decodeIfPresent(String.self, forKey: .organization) ?? ""
         project = try c.decodeIfPresent(String.self, forKey: .project) ?? ""
         token = try c.decodeIfPresent(String.self, forKey: .token) ?? ""
-        accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
+        // The plural key wins outright; the singular is read once, never written.
+        if let list = try c.decodeIfPresent([String].self, forKey: .accountIDs) {
+            accountIDs = AzureAccountBinding.normalise(list)
+        } else {
+            let legacy = try c.decodeIfPresent(String.self, forKey: .accountID) ?? ""
+            accountIDs = AzureAccountBinding.normalise([legacy])
+        }
+    }
+
+    // Hand-written, and it must stay in step with the stored properties — see
+    // `TaskBoxSettings`. `accountID` exists only so the legacy key can be read.
+    private enum CodingKeys: String, CodingKey {
+        case enabled, accountID, accountIDs, organization, project, token, showProject
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(enabled, forKey: .enabled)
+        // `accountID` is deliberately absent.
+        try c.encode(accountIDs, forKey: .accountIDs)
+        try c.encode(organization, forKey: .organization)
+        try c.encode(project, forKey: .project)
+        try c.encode(token, forKey: .token)
+        try c.encode(showProject, forKey: .showProject)
     }
 }
 

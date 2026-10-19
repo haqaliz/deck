@@ -179,18 +179,30 @@ final class WorkItemSearchSource: AsyncSearchSource {
     func beginSession() { gate = nil }
 
     func search(_ request: AsyncSearchRequest) async throws -> [SearchResult] {
-        let credential: ResolvedCredential
+        let credentials: [ResolvedCredential]
         switch await resolveGate() {
-        case .fetch(let resolved): credential = resolved
+        case .fetch(let resolved): credentials = resolved
         case .off, .notConfigured: throw SearchSourceFailure(.notConfigured)
         case .unavailable: throw SearchSourceFailure(.credentialsUnavailable)
         }
-        let tasks = try await HostAzureDevOpsLoader.search(
-            organization: credential.organization,
-            projects: credential.projects,
-            token: credential.token,
-            text: request.text,
-            kind: request.kind)
+        // A slot may be bound to several accounts (one organization each), so
+        // every one is searched; reaching some is a partial answer, reaching
+        // none throws the first reason — the widget's own rule.
+        var tasks: [TaskItem] = []
+        var firstError: Error?
+        for credential in credentials {
+            do {
+                tasks += try await HostAzureDevOpsLoader.search(
+                    organization: credential.organization,
+                    projects: credential.projects,
+                    token: credential.token,
+                    text: request.text,
+                    kind: request.kind)
+            } catch {
+                firstError = firstError ?? error
+            }
+        }
+        if tasks.isEmpty, let firstError { throw firstError }
         return TaskSearch.results(from: tasks, query: request.text)
     }
 
@@ -341,8 +353,16 @@ final class PullRequestSearchSource: AsyncSearchSource {
         case .off: return nil
         case .notConfigured: return .failure(SearchSourceFailure(.notConfigured))
         case .unavailable: return .failure(SearchSourceFailure(.credentialsUnavailable))
-        case .fetch(let credential):
-            do { return .success(try await work(credential)) } catch { return .failure(error) }
+        case .fetch(let credentials):
+            // One organization per bound account; a partial answer is kept.
+            var hits: [PRSearchHit] = []
+            var firstError: Error?
+            for credential in credentials {
+                do { hits += try await work(credential) }
+                catch { firstError = firstError ?? error }
+            }
+            if hits.isEmpty, let firstError { return .failure(firstError) }
+            return .success(hits)
         }
     }
 

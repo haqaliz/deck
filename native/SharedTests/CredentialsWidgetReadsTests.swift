@@ -71,7 +71,7 @@ final class CredentialsWidgetReadsTests: XCTestCase {
         XCTAssertTrue(settings.prBoxGitHubIsOn)
         XCTAssertFalse(settings.prBoxAzureIsOn)
 
-        settings.prbox.azure.accountID = "az"
+        settings.setAccountID("az", for: .prboxAzure)
         XCTAssertTrue(settings.prBoxAzureIsOn)
     }
 
@@ -80,6 +80,26 @@ final class CredentialsWidgetReadsTests: XCTestCase {
         settings.prbox.github.accountID = "gone"
 
         XCTAssertFalse(settings.prBoxGitHubIsOn)
+    }
+
+    func testTheAzureProviderIsOnWhenAnyBoundAccountResolves() {
+        // The Azure slot can bind several accounts (a PAT is organization-
+        // scoped); the provider is on when at least one of them resolves.
+        var settings = DeckSettings()
+        settings.credentials.accounts = [
+            CredentialAccount(id: "az1", kind: .azure, label: "acme"),
+            CredentialAccount(id: "az2", kind: .azure, label: "other"),
+        ]
+        settings.setAccountIDs(["az1", "az2"], for: .prboxAzure)
+        XCTAssertTrue(settings.prBoxAzureIsOn)
+
+        // One dangling id among several still leaves the provider on.
+        settings.setAccountIDs(["gone", "az2"], for: .prboxAzure)
+        XCTAssertTrue(settings.prBoxAzureIsOn)
+
+        // Only dangling ids: off.
+        settings.setAccountIDs(["gone", "also-gone"], for: .prboxAzure)
+        XCTAssertFalse(settings.prBoxAzureIsOn)
     }
 
     func testAProviderIsOffWhenItsAccountIsOfTheWrongKind() {

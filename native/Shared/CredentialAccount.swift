@@ -140,6 +140,51 @@ enum AzureAccountProjects {
     }
 }
 
+/// The one place a list of bound Azure **accounts** is made safe to use.
+///
+/// A PAT is organization-scoped (a global PAT stops working 2026-12-01), so
+/// one account is one organization. Multi-org is therefore a *slot* bound to
+/// several accounts — the `.taskbox` and `.prboxAzure` slots — and every reader
+/// funnels through here, exactly as `AzureAccountProjects` funnels projects.
+enum AzureAccountBinding {
+    /// Four accounts. It is a UI/readability bound and a request bound at once:
+    /// the project list multiplies it, so it caps the per-tick arithmetic
+    /// (N accounts × 8 projects). A fifth account is reachable by swapping one
+    /// out; nothing is lost from the keychain.
+    static let maxAccounts = 4
+
+    /// Writes one slot of the account list, leaving the value as typed.
+    ///
+    /// Not normalised per keystroke, for the same reason
+    /// `AzureAccountProjects.setSlot` is not: the value is a place a pending
+    /// paste lands, and interior empties are kept so the slots below one being
+    /// cleared do not jump up under the cursor. Only trailing empties are
+    /// dropped, to stop the array growing on its own.
+    static func setSlot(_ slot: Int, in ids: [String], to value: String) -> [String] {
+        guard slot < maxAccounts else { return ids }
+        var out = ids
+        while out.count <= slot { out.append("") }
+        out[slot] = value
+        while let last = out.last, last.isEmpty { out.removeLast() }
+        return out
+    }
+
+    /// Trimmed, empties dropped, de-duplicated case-insensitively keeping the
+    /// first spelling, capped, order preserved — the account-id analogue of
+    /// `AzureAccountProjects.normalise`.
+    static func normalise(_ raw: [String]) -> [String] {
+        var seen = Set<String>()
+        var out: [String] = []
+        for id in raw {
+            let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed.lowercased()).inserted else { continue }
+            out.append(trimmed)
+            if out.count == maxAccounts { break }
+        }
+        return out
+    }
+}
+
 struct CredentialAccount: Codable, Equatable, Identifiable {
     /// Opaque, generated once, never rewritten. It is the keychain item name,
     /// so changing it strands whatever the user already pasted.

@@ -57,9 +57,9 @@ native colors, corners and materials, at three sizes each.
 | **WeatherBox** | weather for your location (conditions + 3-day forecast); a failed fetch says why |
 | **ClockBox** | world clocks for up to six cities (3 on medium, 6 on large): time, relative day, offset from your own zone |
 | **ShipBox** | GitHub Actions runs across up to five repos, newest first: status dots, durations, totals; clickable rows; a failed fetch says why |
-| **TaskBox** | Azure DevOps work items assigned to you, or matching your own WIQL condition (with presets), across up to eight projects (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; the sprint chip can follow a chosen team (single-project accounts); a failed fetch says why |
+| **TaskBox** | Azure DevOps work items assigned to you, or matching your own WIQL condition (with presets), across up to eight projects in up to four organizations (click a row to open the work item): open count, current sprint, board-lane legend (to do / in progress / testing) and up to 15 recent items; the sprint chip can follow a chosen team (single-project accounts); a failed fetch says why |
 | **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
-| **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps (up to eight projects) in one queue: counts, provider-tagged rows, drafts marked, per-row review state (approved / changes requested), click a row to open the PR; a failed fetch names the provider |
+| **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps (up to eight projects across up to four organizations) in one queue: counts, provider-tagged rows, drafts marked, per-row review state (approved / changes requested), click a row to open the PR; a failed fetch names the provider |
 | **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, gold per gram, and US stocks and indices (with day change), searchable live in the picker — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
 
 All fourteen come in **small / medium / large** sizes.
@@ -227,6 +227,13 @@ to 12. Crypto and stock rows carry the change — and so does the USD row in
   still render, with a line naming the one that failed. The same eight slots
   serve PRBox, where the project also prefixes the repository name — a repo
   name is only unique within its project.
+- **A widget can be bound to up to four Azure accounts — four organizations.**
+  A personal access token belongs to one organization, so one account is one
+  org; ticking several on the TaskBox or PRBox **Azure DevOps** tab merges them
+  into the same list, and the header then reads the number of orgs. With more
+  than one org bound a row's project reads `org/project`, because a project name
+  is only unique within its organization. Verify, *Load projects* and the eight
+  project slots stay per account.
 - **PRBox review state** marks each row `✓` (green — someone else has
   approved) or `✗` (red — someone is asking for changes); a row with no
   substantive review shows nothing. It is *other* reviewers' aggregate state,

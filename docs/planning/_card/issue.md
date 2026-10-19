@@ -1,33 +1,31 @@
-# landing-page (inline brief)
+# azure-multi-org (inline brief)
 
-Source: `dbf feat landing-page`, handed off by `deck-next` (2026-10-17).
+Source: `dbf feat azure-multi-org`, handed off by `deck-next` (2026-10-18).
 
 ## Brief
 
-Build the landing page for Deck's launch URL — the last un-gated item in M7
-(`ROADMAP.md:819`). M9's notarization, expiry-cliff, bundle-identifier and
-Sparkle work all wait on the paid Apple Developer Program, so this is the only
-launch-readiness piece buildable today.
+One Azure DevOps account should span **more than one organization**, so TaskBox
+and PRBox can pull from two orgs in one list. This is the recorded "natural next
+slice" from `docs/planning/azure-multi-project/prd.md:185-187` (where multi-org
+was a deliberate non-goal) and the last surviving follow-up in that family —
+still open in `ROADMAP.md:165` (TaskBox), `:212` (PRBox) and `:433`
+(azure-multi-project). Every sibling has shipped: multi-project (`:401`), the
+five→eight cap (`:907`), review state (`:194`), custom WIQL (`:926`) and presets
+(`:957`).
 
-Deck is a set of fourteen small, beautiful macOS desktop widgets delivered as one
-native app plus a quick-search panel. The landing page is the front door for the
-launch URL: it should present that story and get a visitor to install.
+## Scope to settle in the PRD
 
-## Scope to settle in the PRD (the ROADMAP gives a single line)
+The obvious design was **declined**, so the PRD must choose a mechanism:
 
-- **Hosting** — GitHub Pages served from `docs/` in this repo, a `gh-pages`
-  branch, or a separate repo.
-- **Content** — the widget story (lifted from `README.md`: the fourteen widgets,
-  screenshots in `docs/screenshots/`, the Deck mark in `docs/deck.svg`), and
-  what a visitor can do (download the DMG, or `brew install --cask`).
-- **Install copy** — must stay byte-consistent with `README.md` and
-  `homebrew/deck.rb`, including the rule that the `xattr -dr
-  com.apple.quarantine` line runs **before** the first launch (`README.md:88-104`)
-  and the note that both steps disappear on notarization.
+- `azure-multi-project/prd.md:186` — *"a slot that binds several accounts … was
+  interviewed and deliberately not chosen."*
+- Candidate designs to weigh: (A) an organization list on the account,
+  symmetric to the project list that shipped; (B) org→projects groups (each org
+  carries its own project list); (C) the declined multi-account slot.
 
 ## Caveat from the recommender
 
-This reuses **none** of the widget shell and the docs are thin (a one-line
-ROADMAP entry, no planning doc). Confirm it is worth a unit of work versus
-waiting for M9, and do not let the install instructions drift from `README.md`
-and the cask.
+This org has **one** Azure organization, so the work is unit-testable only —
+the live two-org run is a recorded follow-up, exactly as the team picker's was
+(`ROADMAP.md:975-977`). Reuse the accounts shell and both widgets; do not invent
+a new data path.

@@ -35,7 +35,7 @@ final class CredentialGateTests: XCTestCase {
 
         XCTAssertEqual(
             s.gate(.shipbox, unavailable: []),
-            .fetch(ResolvedCredential(id: "a1", token: "tok"))
+            .fetch([ResolvedCredential(id: "a1", token: "tok")])
         )
     }
 
@@ -43,7 +43,7 @@ final class CredentialGateTests: XCTestCase {
         let complete = settings(kind: .azure, organization: "acme", project: "Manifold", on: .taskbox)
         XCTAssertEqual(
             complete.gate(.taskbox, unavailable: []),
-            .fetch(ResolvedCredential(id: "a1", token: "tok", organization: "acme", projects: ["Manifold"]))
+            .fetch([ResolvedCredential(id: "a1", token: "tok", organization: "acme", projects: ["Manifold"])])
         )
 
         let noProject = settings(kind: .azure, organization: "acme", on: .taskbox)
@@ -64,7 +64,7 @@ final class CredentialGateTests: XCTestCase {
 
         XCTAssertEqual(
             s.gate(.taskbox, unavailable: []),
-            .fetch(ResolvedCredential(id: "a1", token: "tok", organization: "acme", projects: ["Manifold"]))
+            .fetch([ResolvedCredential(id: "a1", token: "tok", organization: "acme", projects: ["Manifold"])])
         )
     }
 
@@ -89,7 +89,7 @@ final class CredentialGateTests: XCTestCase {
 
         XCTAssertEqual(
             s.gate(.shipbox, unavailable: ["somebody-else"]),
-            .fetch(ResolvedCredential(id: "a1", token: "tok"))
+            .fetch([ResolvedCredential(id: "a1", token: "tok")])
         )
     }
 
@@ -147,7 +147,7 @@ final class CredentialGateTests: XCTestCase {
         // A provider that is simply switched off records `ok`, which is what
         // clears a stale failure from when it was on.
         XCTAssertEqual(CredentialGate.off.outcome, .ok)
-        XCTAssertNil(CredentialGate.fetch(ResolvedCredential(token: "t")).outcome)
+        XCTAssertNil(CredentialGate.fetch([ResolvedCredential(token: "t")]).outcome)
     }
 
     // MARK: - Several projects
@@ -160,11 +160,11 @@ final class CredentialGateTests: XCTestCase {
 
         XCTAssertEqual(
             s.gate(.taskbox, unavailable: []),
-            .fetch(ResolvedCredential(
+            .fetch([ResolvedCredential(
                 id: "a1",
                 token: "tok", organization: "acme",
                 projects: ["ForesightManifold", "Manifold Ops"]
-            ))
+            )])
         )
     }
 
@@ -187,11 +187,11 @@ final class CredentialGateTests: XCTestCase {
 
         XCTAssertEqual(
             s.gate(.prboxAzure, unavailable: []),
-            .fetch(ResolvedCredential(
+            .fetch([ResolvedCredential(
                 id: "a1",
                 token: "tok", organization: "acme",
                 projects: ["Manifold Ops", "p3", "p4", "p5", "p6"]
-            ))
+            )])
         )
     }
 

@@ -329,12 +329,12 @@ struct ContentView: View {
             )
             case .taskbox: TaskBoxSettingsView(
                 settings: $settings.taskbox,
-                accountID: $settings.taskbox.accountID,
+                accountIDs: $settings.taskbox.accountIDs,
                 accounts: settings.credentials.accounts,
                 onManage: { selection = .credentials },
-                credential: {
-                    guard case .fetch(let credential) = gate(.taskbox) else { return nil }
-                    return credential
+                credentials: {
+                    guard case .fetch(let credentials) = gate(.taskbox) else { return [] }
+                    return credentials
                 },
                 onApply: { Task { await refreshTaskBox() } }
             )
@@ -404,7 +404,9 @@ struct ContentView: View {
         let snapshot: OpenCodeSnapshot?
         if settings.openBoxUsesRemoteServer {
             switch gate(.openbox) {
-            case .fetch(let credential):
+            case .fetch(let credentials):
+                // A single-account slot: `.fetch` is never empty.
+                let credential = credentials[0]
                 do {
                     let (remote, _) = try await RemoteOpenCodeLoader.load(
                         serverURL: credential.serverURL, token: credential.token, state: nil
@@ -513,7 +515,9 @@ struct ContentView: View {
 
         var github: PRRoleTotals?
         switch gate(.prboxGitHub) {
-        case .fetch(let credential):
+        case .fetch(let credentials):
+            // A single-account slot: `.fetch` is never empty.
+            let credential = credentials[0]
             do {
                 github = try await HostGitHubPRLoader.fetch(
                     token: credential.token,
@@ -531,17 +535,18 @@ struct ContentView: View {
 
         var azure: PRRoleTotals?
         switch gate(.prboxAzure) {
-        case .fetch(let credential):
-            do {
-                azure = try await HostAzurePRLoader.fetch(
-                    organization: credential.organization,
-                    projects: credential.projects,
-                    token: credential.token,
-                    cap: prbox.prCount
-                )
+        case .fetch(let credentials):
+            // One organization per bound account; each is fetched and merged.
+            let tick = await HostAzurePRFetch.merged(
+                credentials: credentials,
+                cap: prbox.prCount,
+                skipped: settings.skippedBoundAccounts(for: .prboxAzure, unavailable: unavailableAccounts)
+            )
+            azure = tick.totals
+            if tick.totals != nil {
                 FetchStatusStore.record(.ok, for: .prboxAzure)
-            } catch {
-                FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .prboxAzure)
+            } else {
+                FetchStatusStore.record(tick.firstOutcome ?? .unreachable, for: .prboxAzure)
             }
         case let other:
             if let outcome = other.outcome { FetchStatusStore.record(outcome, for: .prboxAzure) }
@@ -568,7 +573,8 @@ struct ContentView: View {
             return
         }
         let hasATarget = shipbox.repoMode == .dynamic || !shipbox.repos.isEmpty
-        guard case .fetch(let credential) = gate(.shipbox), hasATarget else {
+        guard case .fetch(let credentials) = gate(.shipbox), hasATarget,
+              let credential = credentials.first else {
             FetchStatusStore.record(.notConfigured, for: .shipbox)
             WidgetCenter.shared.reloadAllTimelines()
             return
@@ -596,22 +602,21 @@ struct ContentView: View {
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
-        guard case .fetch(let credential) = gate(.taskbox) else {
+        guard case .fetch(let credentials) = gate(.taskbox) else {
             FetchStatusStore.record(.notConfigured, for: .taskbox)
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
-        let snapshot: TaskBoxSnapshot
-        do {
-            snapshot = try await HostAzureDevOpsLoader.fetch(
-                organization: credential.organization,
-                projects: credential.projects,
-                token: credential.token,
-                condition: settings.taskbox.query,
-                team: settings.taskbox.team
-            )
-        } catch {
-            FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .taskbox)
+        // One organization per bound account; each is fetched and merged into
+        // the one face.
+        let tick = await HostAzureTaskBoxFetch.merged(
+            credentials: credentials,
+            condition: settings.taskbox.query,
+            team: settings.taskbox.team,
+            skipped: settings.skippedBoundAccounts(for: .taskbox, unavailable: unavailableAccounts)
+        )
+        guard let snapshot = tick.snapshot else {
+            FetchStatusStore.record(tick.firstOutcome ?? .unreachable, for: .taskbox)
             WidgetCenter.shared.reloadAllTimelines()
             return
         }
@@ -1248,6 +1253,94 @@ private struct AccountPicker: View {
             return "No \(kind.displayName) accounts yet."
         }
         return accountID == nil ? "Nothing is fetched until an account is picked." : ""
+    }
+}
+
+/// A slot bound to several accounts, one organization each. A PAT belongs to
+/// one organization, so this is how a slot spans several orgs.
+///
+/// The cap is four: ticking a fifth is refused rather than silently dropping
+/// the oldest, and a bound id that no longer resolves stays visible as
+/// "Deleted account" so it can be cleared.
+private struct MultiAccountPicker: View {
+    let kind: CredentialKind
+    let accounts: [CredentialAccount]
+    @Binding var accountIDs: [String]
+    var onManage: () -> Void
+
+    private var matching: [CredentialAccount] { accounts.filter { $0.kind == kind } }
+
+    /// Bound ids that no longer resolve — the account was deleted behind them.
+    private var dangling: [String] {
+        let known = Set(matching.map(\.id))
+        return accountIDs.filter { !known.contains($0) }
+    }
+
+    private var atCap: Bool { accountIDs.count >= AzureAccountBinding.maxAccounts }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Accounts")
+            ForEach(matching) { account in
+                Toggle(isOn: selection(account.id)) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(account.label.isEmpty ? kind.displayName : account.label)
+                        Text(CredentialsCopy.subtitle(for: account))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                // At the cap an unbound row cannot be ticked; the caption below
+                // says why, rather than the tick silently doing nothing.
+                .disabled(atCap && !accountIDs.contains(account.id))
+            }
+            ForEach(dangling, id: \.self) { id in
+                Toggle(isOn: selection(id)) {
+                    Text("Deleted account").foregroundStyle(.secondary)
+                }
+            }
+            HStack(spacing: 6) {
+                Text(caption)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Manage in Credentials…", action: onManage)
+                    .buttonStyle(.link)
+                    .font(.caption)
+            }
+        }
+    }
+
+    /// Tick to bind, untick to unbind. The normaliser runs on write, so a
+    /// duplicate or a fifth can never reach the slot.
+    private func selection(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { accountIDs.contains(id) },
+            set: { on in
+                var ids = accountIDs
+                if on {
+                    guard !ids.contains(id) else { return }
+                    guard ids.count < AzureAccountBinding.maxAccounts else { return }
+                    ids.append(id)
+                } else {
+                    ids.removeAll { $0 == id }
+                }
+                accountIDs = AzureAccountBinding.normalise(ids)
+            }
+        )
+    }
+
+    private var caption: String {
+        if matching.isEmpty, dangling.isEmpty {
+            return "No \(kind.displayName) accounts yet."
+        }
+        if accountIDs.isEmpty {
+            return "Nothing is fetched until an account is picked."
+        }
+        if atCap {
+            return "\(accountIDs.count) of \(AzureAccountBinding.maxAccounts) bound — the maximum. Untick one to add another."
+        }
+        return "\(accountIDs.count) of \(AzureAccountBinding.maxAccounts) bound."
     }
 }
 
@@ -2315,16 +2408,16 @@ private struct PRBoxSettingsView: View {
 
     private var azureSection: some View {
         Section("Azure DevOps") {
-            AccountPicker(kind: .azure, accounts: accounts,
-                          accountID: $settings.azure.accountID, onManage: onManage)
-            Text("Shows pull requests created by, or awaiting review from, whoever owns the PAT \u{2014} not whoever is signed in to the browser. The token is sent only to dev.azure.com over TLS; a read-only PAT that can see Code is enough.")
+            MultiAccountPicker(kind: .azure, accounts: accounts,
+                               accountIDs: $settings.azure.accountIDs, onManage: onManage)
+            Text("Shows pull requests created by, or awaiting review from, whoever owns each PAT \u{2014} not whoever is signed in to the browser. One account is one organization, so binding several merges several orgs. The token is sent only to dev.azure.com over TLS; a read-only PAT that can see Code is enough.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Toggle("Show project on rows", isOn: $settings.azure.showProject)
-            Text("Prefixes each Azure row with its project. Worth turning on when the account covers several — a repository name is only unique within its project.")
+            Text("Prefixes each Azure row with its project. Worth turning on when the account covers several — a repository name is only unique within its project. With more than one org bound, the row reads org/project.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            FetchStatusCaption(source: .prboxAzure, clearOn: settings.azure.accountID ?? "")
+            FetchStatusCaption(source: .prboxAzure, clearOn: settings.azure.accountIDs.joined(separator: "\u{0}"))
         }
     }
 }
@@ -2488,11 +2581,11 @@ private struct ShipBoxSettingsView: View {
 
 private struct TaskBoxSettingsView: View {
     @Binding var settings: TaskBoxSettings
-    @Binding var accountID: String?
+    @Binding var accountIDs: [String]
     let accounts: [CredentialAccount]
     var onManage: () -> Void = {}
-    /// The resolved account, for Test. The view never reads the keychain.
-    var credential: () -> ResolvedCredential? = { nil }
+    /// The resolved accounts, for Test. The view never reads the keychain.
+    var credentials: () -> [ResolvedCredential] = { [] }
     /// After Apply: one host refresh, so the widget follows the new condition
     /// without waiting for the agent's next tick.
     var onApply: () -> Void = {}
@@ -2516,19 +2609,19 @@ private struct TaskBoxSettingsView: View {
     var body: some View {
         // One keychain resolution per render: the Test button and the Team row
         // both read it.
-        let resolved = credential()
+        let resolved = credentials()
 
         Form {
             Section("Azure DevOps") {
-                AccountPicker(kind: .azure, accounts: accounts,
-                              accountID: $accountID, onManage: onManage)
-                Text("The account carries the organization, up to eight projects and the PAT. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
+                MultiAccountPicker(kind: .azure, accounts: accounts,
+                                   accountIDs: $accountIDs, onManage: onManage)
+                Text("Each account carries one organization, up to eight projects and its own PAT. Bind up to four: a personal access token belongs to one organization, so several accounts is how a slot spans several orgs. The token is sent only to dev.azure.com over TLS; a read-only Work Items (Read) PAT is enough.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Shows open work items assigned to whoever owns the PAT \u{2014} not whoever is signed in to the browser or the az CLI \u{2014} across every project the account lists.")
+                Text("Shows open work items assigned to whoever owns each PAT \u{2014} not whoever is signed in to the browser or the az CLI \u{2014} merged across every bound account and project.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                FetchStatusCaption(source: .taskbox, clearOn: accountID ?? "")
+                FetchStatusCaption(source: .taskbox, clearOn: accountIDs.joined(separator: "\u{0}"))
             }
             Section("Query") {
                 ZStack(alignment: .topLeading) {
@@ -2557,7 +2650,7 @@ private struct TaskBoxSettingsView: View {
                     }
                     .disabled(problem != nil || !isDirty)
                     Button(testing ? "Testing\u{2026}" : "Test") { runTest() }
-                        .disabled(problem != nil || testing || resolved == nil)
+                        .disabled(problem != nil || testing || resolved.isEmpty)
                     Menu("Presets") {
                         ForEach(WiqlPreset.allCases, id: \.self) { preset in
                             Button(preset.title) { draft = preset.condition(team: teamContext) }
@@ -2577,7 +2670,7 @@ private struct TaskBoxSettingsView: View {
                         .foregroundStyle(testLine.isProblem ? .red : .secondary)
                         .textSelection(.enabled)
                 }
-                if resolved?.projects.count == 1 {
+                if resolved.count == 1, resolved[0].projects.count == 1 {
                     Picker("Team", selection: $settings.team) {
                         Text("Default team").tag("")
                         ForEach(teamOptions, id: \.self) { name in
@@ -2630,26 +2723,30 @@ private struct TaskBoxSettingsView: View {
         .onAppear { draft = settings.query }
         // One host call per account selection — never on the agent tick, never
         // per keystroke (the MarketBox rate-budget lesson).
-        .task(id: accountID) { await loadTeams() }
+        .task(id: accountIDs) { await loadTeams() }
         // A result describes the text and the account it ran against.
         .onChange(of: draft) { testLine = nil }
-        .onChange(of: accountID) { testLine = nil }
+        .onChange(of: accountIDs) { testLine = nil }
     }
 
-    /// One click, one WIQL call per project. Held in memory only: the result
-    /// can echo the condition, which may name people.
+    /// One click, one WIQL call per project per bound account. Held in memory
+    /// only: the result can echo the condition, which may name people.
     private func runTest() {
-        guard let credential = credential() else { return }
+        let resolved = credentials()
+        guard !resolved.isEmpty else { return }
         testing = true
         testLine = nil
         let condition = draft
         Task {
-            let results = await HostAzureDevOpsLoader.test(
-                organization: credential.organization,
-                projects: credential.projects,
-                token: credential.token,
-                condition: condition
-            )
+            var results: [WiqlTestResult] = []
+            for credential in resolved {
+                results += await HostAzureDevOpsLoader.test(
+                    organization: credential.organization,
+                    projects: credential.projects,
+                    token: credential.token,
+                    condition: condition
+                )
+            }
             await MainActor.run {
                 // Stale if the draft moved on while the request was out.
                 if draft == condition { testLine = WiqlTestSummary.line(results) }
@@ -2670,11 +2767,19 @@ private struct TaskBoxSettingsView: View {
         return options
     }
 
-    /// The context a Current-sprint preset names. Non-nil only when the
-    /// account has exactly one project and a team is chosen — the same gate
-    /// the fetch applies (probe P20: elsewhere a literal silently matches 0).
+    /// The one account, when the slot is bound to exactly one — the team picker
+    /// and the sprint chip only make sense for a single target.
+    private var soleAccount: ResolvedCredential? {
+        let resolved = credentials()
+        return resolved.count == 1 ? resolved[0] : nil
+    }
+
+    /// The context a Current-sprint preset names. Non-nil only when the slot is
+    /// exactly one target (one account, one project) and a team is chosen — the
+    /// same gate the fetch applies (probe P20: elsewhere a literal silently
+    /// matches 0).
     private var teamContext: WiqlTeamContext? {
-        guard let resolved = credential(),
+        guard let resolved = soleAccount,
               resolved.projects.count == 1,
               !settings.team.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else { return nil }
@@ -2684,7 +2789,7 @@ private struct TaskBoxSettingsView: View {
     private func loadTeams() async {
         teams = []
         teamsProblem = nil
-        guard let resolved = credential(),
+        guard let resolved = soleAccount,
               resolved.projects.count == 1,
               !resolved.organization.isEmpty
         else { return }

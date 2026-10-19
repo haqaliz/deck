@@ -362,9 +362,10 @@ struct PRBoxWidgetEntryView: View {
 
     private func rowLabel(for pr: PullRequestItem) -> String {
         guard entry.settings.azure.showProject,
-              let project = pr.project, !project.isEmpty
+              let label = PRFormatting.projectLabel(
+                  pr, multipleOrgs: PRFormatting.spansMultipleOrgs(entry.pullRequests))
         else { return "\(pr.repo) #\(pr.number)" }
-        return "\(project)/\(pr.repo) #\(pr.number)"
+        return "\(label)/\(pr.repo) #\(pr.number)"
     }
 
     private func tag(for provider: PRProvider) -> String {

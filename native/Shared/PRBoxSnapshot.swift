@@ -62,6 +62,11 @@ struct PullRequestItem: Codable, Equatable {
     /// account covers several. nil for GitHub, which has no such level, and for
     /// a row written before the list existed.
     var project: String?
+    /// Azure DevOps only: which **organization** the row came from, when the
+    /// slot is bound to several accounts. It is part of a row's identity — two
+    /// orgs can each have an `api` repo with a pull request #12 — so the dedupe
+    /// key and the row id carry it. nil for GitHub and old rows.
+    var organization: String?
     /// Other reviewers' aggregate review state. nil when nobody has
     /// substantively reviewed, or when the state is unknown (a per-PR fetch
     /// failed, or a snapshot written before the field existed).
@@ -74,8 +79,8 @@ struct PullRequestItem: Codable, Equatable {
     init(
         id: String, number: Int, title: String, repo: String, role: PRRole,
         provider: PRProvider, isDraft: Bool, createdAt: Date, url: String,
-        project: String? = nil, reviewState: PRReviewState? = nil,
-        repositoryPath: String? = nil
+        project: String? = nil, organization: String? = nil,
+        reviewState: PRReviewState? = nil, repositoryPath: String? = nil
     ) {
         self.id = id
         self.number = number
@@ -87,6 +92,7 @@ struct PullRequestItem: Codable, Equatable {
         self.createdAt = createdAt
         self.url = url
         self.project = project
+        self.organization = organization
         self.reviewState = reviewState
         self.repositoryPath = repositoryPath
     }
@@ -115,6 +121,7 @@ struct PullRequestItem: Codable, Equatable {
         createdAt = try c.decode(Date.self, forKey: .createdAt)
         url = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
         project = try c.decodeIfPresent(String.self, forKey: .project)
+        organization = try c.decodeIfPresent(String.self, forKey: .organization)
         reviewState = try c.decodeIfPresent(PRReviewState.self, forKey: .reviewState)
         repositoryPath = try c.decodeIfPresent(String.self, forKey: .repositoryPath)
     }
@@ -205,20 +212,33 @@ enum PRFormatting {
             if a.provider.rawValue != b.provider.rawValue {
                 return a.provider.rawValue < b.provider.rawValue
             }
+            // The org before the repo: two orgs can each have an `api` repo and
+            // a PR #12, and the order must stay total between ticks.
+            let ao = a.organization ?? ""
+            let bo = b.organization ?? ""
+            if ao != bo { return ao < bo }
             if a.repo != b.repo { return a.repo < b.repo }
             return a.number < b.number
         }
     }
 
-    /// One row per pull request, keyed by (provider, repo, number).
+    /// One row per pull request, keyed by
+    /// (provider, organization, project, repo, number).
     ///
     /// Azure DevOps lets you be a reviewer on your own pull request and the
     /// unvoted filter keeps it, so the same PR really does arrive from both
     /// role queries. `.authored` wins: you cannot review your own PR, so
     /// showing it in the review queue would be a task you can't act on.
+    ///
+    /// The organization and project are in the key because a slot can span
+    /// several accounts and projects: without them, two orgs' (or two projects')
+    /// `api` repos with the same PR number collapse to one row and one is
+    /// silently dropped.
     static func deduped(_ items: [PullRequestItem]) -> [PullRequestItem] {
         struct Key: Hashable {
             let provider: PRProvider
+            let organization: String?
+            let project: String?
             let repo: String
             let number: Int
         }
@@ -226,7 +246,10 @@ enum PRFormatting {
         var byKey: [Key: PullRequestItem] = [:]
         var order: [Key] = []
         for item in items {
-            let key = Key(provider: item.provider, repo: item.repo, number: item.number)
+            let key = Key(
+                provider: item.provider, organization: item.organization,
+                project: item.project, repo: item.repo, number: item.number
+            )
             if let existing = byKey[key] {
                 if existing.role == .reviewing && item.role == .authored {
                     byKey[key] = item
@@ -266,6 +289,20 @@ enum PRFormatting {
     /// "3", or "100+" when the number is a floor rather than a total.
     static func countLabel(_ count: Int, capped: Bool) -> String {
         capped ? "\(count)+" : "\(count)"
+    }
+
+    /// Whether the rows span more than one organization — what turns a row's
+    /// project label into `org/project`.
+    static func spansMultipleOrgs(_ items: [PullRequestItem]) -> Bool {
+        Set(items.compactMap(\.organization)).count > 1
+    }
+
+    /// `project`, or `org/project` when the rows span more than one org. nil
+    /// when the row names no project.
+    static func projectLabel(_ item: PullRequestItem, multipleOrgs: Bool) -> String? {
+        guard let project = item.project, !project.isEmpty else { return nil }
+        guard multipleOrgs, let org = item.organization, !org.isEmpty else { return project }
+        return "\(org)/\(project)"
     }
 }
 
@@ -349,8 +386,29 @@ struct PRRoleTotals: Equatable {
         authoredTotal: 0, reviewingTotal: 0,
         authoredCapped: false, reviewingCapped: false, items: []
     )
-}
 
+    /// Merge several Azure accounts' totals into the one the snapshot builder
+    /// takes. Counts are unions; the row list is concatenated (dedupe and sort
+    /// happen in `PRSnapshotBuilder`); each account's note is kept, plus a line
+    /// naming the bound accounts that did not contribute.
+    static func merged(_ parts: [PRRoleTotals], failures: [AzureAccountFailure]) -> PRRoleTotals {
+        var lines = parts.compactMap(\.note)
+        if let line = AzureProjectNote.compose(
+            failures: failures.map { .init(project: $0.name, outcome: $0.outcome) },
+            source: .prboxAzure
+        ) {
+            lines.append(line)
+        }
+        return PRRoleTotals(
+            authoredTotal: parts.reduce(0) { $0 + $1.authoredTotal },
+            reviewingTotal: parts.reduce(0) { $0 + $1.reviewingTotal },
+            authoredCapped: parts.contains { $0.authoredCapped },
+            reviewingCapped: parts.contains { $0.reviewingCapped },
+            items: parts.flatMap(\.items),
+            note: lines.isEmpty ? nil : lines.joined(separator: " · ")
+        )
+    }
+}
 enum GitHubPRParser {
     static func parse(_ data: Data, role: PRRole) -> [PullRequestItem]? {
         parseResult(data, role: role)?.items
