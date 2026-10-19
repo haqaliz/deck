@@ -39,6 +39,11 @@ native colors, corners and materials, at three sizes each.
 <img src="docs/screenshots/A5.png" width="560" alt="Deck widgets" />
 <img src="docs/screenshots/A6.png" width="560" alt="Deck widgets" />
 
+<img src="docs/screenshots/A7.png" width="560" alt="Deck Search — listening ports" />
+<img src="docs/screenshots/A8.png" width="560" alt="Deck Search — world clocks" />
+
+<img src="docs/screenshots/A9.png" width="560" alt="Deck Search — markets" />
+
 </div>
 
 ---

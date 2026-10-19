@@ -188,6 +188,18 @@ h2 {
   display: block;
 }
 
+/* A single Search panel, shown inside the Search section. */
+.search-shot { margin: 28px 0 0; }
+
+.search-shot img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+
 /* Sections --------------------------------------------------------------- */
 
 .section { padding: 56px 0; }

@@ -26,7 +26,7 @@ cp -R "$repo_root/site/." "$out/"
 
 # Assets, from their single home in the repo.
 cp "$repo_root/docs/deck.svg" "$out/assets/deck.svg"
-for shot in A1 A3 A5; do
+for shot in A1 A3 A5 A8; do
   cp "$repo_root/docs/screenshots/$shot.png" "$out/assets/$shot.png"
 done
 
