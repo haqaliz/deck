@@ -981,7 +981,7 @@ pick the next item with `deck-next`.
       and a gallery re-add (no extension change).
 - [x] **Azure DevOps multi-org** — one slot bound to several accounts, for
       **both** TaskBox and PRBox (each listed it as an open follow-up). Shipped
-      2026-10-19 (`docs/planning/azure-multi-org/`).
+      2026-10-19 as v1.56 (`docs/planning/azure-multi-org/`).
       **A blocker found while interviewing rewrote the design.** The handoff
       proposed an *organization list on the account*; checking the Microsoft
       docs (updated 2026-09-21) showed that cannot work: a PAT is created
