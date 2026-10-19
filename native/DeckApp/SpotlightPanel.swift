@@ -118,13 +118,25 @@ final class SpotlightViewModel: ObservableObject {
 /// behind `#if compiler(>=6.2)` as well because `glassEffect` only exists in the
 /// macOS 26 SDK — a toolchain built before it (an older CI runner image) must
 /// still compile, and simply gets the material.
+/// The panel's corner radius, in one place because the **window is clipped to
+/// it too** — a mismatch between the two shows as a rectangular edge around the
+/// pill.
+enum SearchPanelShape {
+    /// Glass reads best with a generous, concentric curve; the older material
+    /// with a tighter one.
+    static var cornerRadius: CGFloat {
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) { return 24 }
+        #endif
+        return 14
+    }
+}
+
 struct SearchPanelSurface: ViewModifier {
     func body(content: Content) -> some View {
         #if compiler(>=6.2)
         if #available(macOS 26, *) {
-            // A larger radius than the old card: glass reads best with generous,
-            // concentric curves.
-            content.glassEffect(.regular, in: .rect(cornerRadius: 24))
+            content.glassEffect(.regular, in: .rect(cornerRadius: SearchPanelShape.cornerRadius))
         } else {
             legacy(content)
         }
@@ -134,7 +146,10 @@ struct SearchPanelSurface: ViewModifier {
     }
 
     private func legacy(_ content: Content) -> some View {
-        content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        content.background(
+            .regularMaterial,
+            in: RoundedRectangle(cornerRadius: SearchPanelShape.cornerRadius, style: .continuous)
+        )
     }
 }
 
@@ -281,7 +296,20 @@ final class SpotlightController {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.isReleasedWhenClosed = false
+        // Draggable by its background (the padding around the field and the
+        // list). The text field and the rows still take their own clicks; only
+        // a drag on the bare background moves the window. It re-centres on the
+        // next open — `position()` — which is the Spotlight convention.
+        panel.isMovableByWindowBackground = true
         panel.contentView = host
+        // Clip the whole window — the content *and* any Liquid Glass backdrop —
+        // to the same rounded shape the surface draws. Without this the window's
+        // backing stays rectangular, the glass samples the desktop over a square
+        // region, and an unrounded edge (and shadow) shows around the pill.
+        host.wantsLayer = true
+        host.layer?.cornerRadius = SearchPanelShape.cornerRadius
+        host.layer?.cornerCurve = .continuous
+        host.layer?.masksToBounds = true
         panel.onResignKey = { [weak self] in self?.hide() }
         panel.onCancel = { [weak self] in self?.hide() }
 
