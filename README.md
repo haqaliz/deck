@@ -43,6 +43,15 @@ native colors, corners and materials, at three sizes each.
 <img src="docs/screenshots/A8.png" width="560" alt="Deck Search — world clocks" />
 
 <img src="docs/screenshots/A9.png" width="560" alt="Deck Search — markets" />
+<img src="docs/screenshots/A10.png" width="560" alt="Deck Search — opencode sessions" />
+
+<img src="docs/screenshots/A11.png" width="560" alt="Deck Search — CI builds" />
+<img src="docs/screenshots/A12.png" width="560" alt="Deck Search — work items" />
+
+<img src="docs/screenshots/A13.png" width="560" alt="Deck Search — pull requests" />
+<img src="docs/screenshots/A14.png" width="560" alt="Deck Search — commits" />
+
+<img src="docs/screenshots/A15.png" width="560" alt="Deck Search — calendar" />
 
 </div>
 
