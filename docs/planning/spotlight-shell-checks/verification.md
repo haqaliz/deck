@@ -32,14 +32,19 @@ proved before any panel result was trusted.)
 | — | Agent liveness across a relaunch (`LegacyAgentCleanup` guard) | auto | **PASS** |
 | C5a | `quit` with tray-only **ON** is vetoed | auto (AppleScript stand-in) | **PASS** |
 | C5b | `quit` with tray-only **OFF** terminates | auto (AppleScript stand-in) | **PASS** |
-| C1 | Open Deck at login (toggle / Login Items row / veto note) | **human** | pending |
-| C3 | Click-away dismissal with a real mouse | **human** | pending |
-| C4h | Panel visibly over a full-screen app, and on a second Space | **human** | pending |
-| C5h | The **real Dock menu** → Quit, both tray-only states | **human** | pending |
-| C2h | A true WidgetKit gallery click (not the `open -a` stand-in) | **human** | pending |
+| C1 | Open Deck at login (toggle / Login Items row / veto note) | **human** | PASS (owner) |
+| C3 | Click-away dismissal with a real mouse | **human** | PASS (owner) |
+| C4h | Panel visibly over a full-screen app, and on a second Space | **human** | PASS (owner) |
+| C5h | The **real Dock menu** → Quit, both tray-only states | **human** | PASS (owner) |
+| C2h | A true WidgetKit gallery click (not the `open -a` stand-in) | **human** | PASS (owner) |
 
 No product defect was found. Phase 4 (fixes) is therefore skipped, by design
 (a stated, acceptable outcome).
+
+**2026-10-21 — the human half is closed.** The owner ran C1, C3, C4h, C5h and
+C2h on the installed v1.57 build; all passed and no defect was filed (#79).
+This is an owner attestation, not a recorded run — unlike the automated half
+above, there is no log to cite.
 
 ## Raw evidence (automated)
 

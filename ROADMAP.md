@@ -476,10 +476,12 @@ remain here.
 - [x] **Screenshot pipeline** — `scripts/demo-data.sh` sanitizes the snapshots
       in place so the widgets can be captured without publishing real calendar
       entries, work items, clipboard contents or repo paths.
-- [ ] **Verify on a second Mac.** The one unproven assumption in the whole free
+- [x] **Verify on a second Mac.** The one unproven assumption in the whole free
       distribution path: that `pluginkit` registers a development-signed
       extension on a machine outside the signing team. Test before announcing
-      anywhere.
+      anywhere. **Owner ran it 2026-10-21** on a Mac outside the signing team —
+      the extension registered and the widgets rendered. Attested, not
+      automated (#73).
 - [x] **Hardened runtime, landed early** — shipped v1.41, 2026-09-06
       (`docs/planning/hardened-runtime-preflight/`). `ENABLE_HARDENED_RUNTIME`
       was `NO` on DeckApp and DeckWidgets and **absent entirely on DeckAgent**,
@@ -1013,13 +1015,15 @@ pick the next item with `deck-next`.
       **Not measured, and said so on purpose:** this org has one organization, so
       the whole feature is unit-tested only (1720 tests). The live two-org run is
       the recorded follow-up below.
-- [ ] **Azure multi-org: the live two-org run** — a second organization and PAT,
+- [x] **Azure multi-org: the live two-org run** — a second organization and PAT,
       so the merged face is seen against real data rather than fixtures. Unit
-      tests are the whole surface on this machine
-      (`docs/planning/azure-multi-org/prd.md`, §9).
-- [ ] **Keychain: exercise the locked-keychain path** on a scratch account —
+      tests were the whole surface on this machine
+      (`docs/planning/azure-multi-org/prd.md`, §9). **Owner ran it 2026-10-21**
+      against a second org; both orgs merge in one list (#74).
+- [x] **Keychain: exercise the locked-keychain path** on a scratch account —
       the one designed-and-unit-tested error path never exercised against a
-      genuinely locked keychain.
+      genuinely locked keychain. **Owner ran it 2026-10-21** — unavailable while
+      locked, token intact, data returns on unlock (#75).
 - [x] **Credentials: remove the legacy per-slot fallback** — the one-release
       courtesy from the credentials entry, overdue since v1.30 shipped. Shipped
       2026-10-12 (`docs/planning/credentials-legacy-fallback/`). The removal is
@@ -1035,7 +1039,9 @@ pick the next item with `deck-next`.
 ### M9 — Developer ID release (the last milestone)
 
 Deferred from M7 by decision on 2026-09-12: everything gated on the paid
-Apple Developer Program, shipped as one release. It has a step-by-step
+Apple Developer Program, shipped as one release. **Owner deferral 2026-10-21:
+not buying the program for now** — the four items below stay open and nothing
+in this milestone ships until that changes. The 2027-08-09 expiry cliff stands. It has a step-by-step
 runbook: [`docs/planning/notarization/runbook.md`](docs/planning/notarization/runbook.md) —
 enrollment choice, certificate, project settings, the two-pass notarize/staple
 in CI, the verification gates, and what the identity change resets.
@@ -1159,7 +1165,7 @@ ID gate.
       non-frontmost Deck as a side effect of typing. `HostEventSearch.events` no
       longer prompts; the toggle does. Read cost of a broad query was not
       separately measured.
-- [ ] The shell checks never run: "Open Deck at login", widget-URL clicks with
+- [x] The shell checks never run: "Open Deck at login", widget-URL clicks with
       Deck running/stopped, click-away dismissal, the panel over a full-screen
       app, the Dock menu's own Quit. **Automated half verified 2026-10-13**
       (`docs/planning/spotlight-shell-checks/`): the committed probe harness
@@ -1168,9 +1174,12 @@ ID gate.
       agent liveness across a relaunch, and the quit semantics (tray-only veto /
       tray-only exit). No product defect; the human half (login-item veto, real
       click-away, full-screen, the real Dock menu) is a numbered checklist in
-      that doc's `verification.md`.
-- [ ] Two unexplained oddities: the settings window once failed to show; an
-      examples page once opened without a click. Neither reproduced.
+      that doc's `verification.md`. **Human half run 2026-10-21** on the
+      installed v1.57 build: C1, C3, C4h, C5h and C2h all passed, no defect
+      filed (#79).
+- [x] Two unexplained oddities: the settings window once failed to show; an
+      examples page once opened without a click. Neither reproduced, including
+      through the 2026-10-21 shell pass — closed as unreproducible (#80).
 
 **Design (decided 2026-10-10; as built, see the PRDs under `docs/planning/spotlight-*`):**
 - *Federated providers.* Each widget gets a small `SearchProvider`; the panel
