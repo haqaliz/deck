@@ -1,31 +1,25 @@
-# azure-multi-org (inline brief)
+# devbox-process-hide-toggle (inline brief)
 
-Source: `dbf feat azure-multi-org`, handed off by `deck-next` (2026-10-18).
+Source: `dbf task 72`, from the ROADMAP M6 open item (2026-10-21).
 
 ## Brief
 
-One Azure DevOps account should span **more than one organization**, so TaskBox
-and PRBox can pull from two orgs in one list. This is the recorded "natural next
-slice" from `docs/planning/azure-multi-project/prd.md:185-187` (where multi-org
-was a deliberate non-goal) and the last surviving follow-up in that family —
-still open in `ROADMAP.md:165` (TaskBox), `:212` (PRBox) and `:433`
-(azure-multi-project). Every sibling has shipped: multi-project (`:401`), the
-five→eight cap (`:907`), review state (`:194`), custom WIQL (`:926`) and presets
-(`:957`).
+DevBox's open-ports card shows system processes (`rapportd`, `ControlCenter`…)
+unfiltered; the top-N cap limits the count but not the noise. Add a user-editable
+hide list so those rows can be removed.
 
-## Scope to settle in the PRD
+Deferred in `docs/planning/devbox/prd.md:106` as "a fuzzy heuristic" — the design
+problem is the matching rule, not the feature.
 
-The obvious design was **declined**, so the PRD must choose a mechanism:
+## Scope shape (from the issue)
 
-- `azure-multi-project/prd.md:186` — *"a slot that binds several accounts … was
-  interviewed and deliberately not chosen."*
-- Candidate designs to weigh: (A) an organization list on the account,
-  symmetric to the project list that shipped; (B) org→projects groups (each org
-  carries its own project list); (C) the declined multi-account slot.
+- DevBox settings: a hide list, default empty (no change for existing users).
+- Filter at render time, not in the agent snapshot — the snapshot stays complete.
+- Exact `command` match, case-insensitive; no fuzzy substring.
 
-## Caveat from the recommender
+## Done when
 
-This org has **one** Azure organization, so the work is unit-testable only —
-the live two-org run is a recorded follow-up, exactly as the team picker's was
-(`ROADMAP.md:975-977`). Reuse the accounts shell and both widgets; do not invent
-a new data path.
+Editable in DevBox settings, hidden rows disappear at every size, tests cover the
+matcher, ROADMAP item checked.
+
+Issue: https://github.com/haqaliz/deck/issues/72
