@@ -433,8 +433,12 @@ Deferred behind the new widgets by decision on 2026-08-22.
       **Open follow-ups:** review state / approval counts. *(Multi-org shipped
       2026-10-19 — the "slot that binds several accounts" this entry predicted —
       see M8; the cap was raised to eight 2026-10-04, see M8.)*
-- [ ] **DevBox process hide toggle** — deferred as a fuzzy heuristic
-      (`docs/planning/devbox/prd.md:106`).
+- [x] **DevBox process hide toggle** — per-widget list of command names whose
+      port rows are not drawn. Exact, case-insensitive match: the substring trap
+      the original deferral worried about is pinned by tests (`node` does not
+      hide `node_exporter`). Filtered at render time, so the agent snapshot
+      stays complete; the PORTS count follows the visible rows. Shipped
+      2026-10-21 (`docs/planning/devbox-process-hide-toggle/`, #72).
 
 ### M7 — Launch readiness (distribution, not features)
 

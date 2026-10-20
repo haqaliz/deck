@@ -104,6 +104,8 @@ sampling runs only in the unsandboxed host/agent (the `ProcessSnapshot` /
 - Ports: TCP LISTEN only; dedup by command+name; sorted by port ascending.
 - System processes (rapportd, ControlCenter…) shown unfiltered in v1 — top-N
   cap limits noise; a hide toggle is a fuzzy heuristic, deferred.
+  **Resolved 2026-10-21 (#72):** shipped as an exact, case-insensitive command
+  list — no fuzzy matching — via `devbox-process-hide-toggle`.
 - Containers: `docker ps` (name/image/status) + `docker stats` (CPU/mem%).
 - No chart; list card only.
 - Tests via scratch SwiftPM package, ported into `Shared/` pre-merge.
