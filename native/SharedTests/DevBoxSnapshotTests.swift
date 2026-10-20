@@ -180,6 +180,46 @@ final class DockerParserPercentTests: XCTestCase {
     }
 }
 
+final class DevBoxCommandFilterTests: XCTestCase {
+    private func hiding(_ commands: [String]) -> DevBoxSettings {
+        var settings = DevBoxSettings()
+        settings.hiddenCommands = commands
+        return settings
+    }
+
+    func testEmptyListHidesNothing() {
+        XCTAssertFalse(hiding([]).hides(command: "Spotify"))
+    }
+
+    func testExactMatchHides() {
+        XCTAssertTrue(hiding(["Spotify"]).hides(command: "Spotify"))
+    }
+
+    func testMatchIsCaseInsensitive() {
+        XCTAssertTrue(hiding(["Spotify"]).hides(command: "spotify"))
+        XCTAssertTrue(hiding(["spotify"]).hides(command: "Spotify"))
+    }
+
+    func testStrayWhitespaceIsTolerated() {
+        // Hand-edited settings.json must not need exact spacing.
+        XCTAssertTrue(hiding(["  Spotify "]).hides(command: "Spotify"))
+        XCTAssertTrue(hiding(["Spotify"]).hides(command: " spotify\n"))
+    }
+
+    func testSubstringDoesNotHide() {
+        // The fuzzy-heuristic trap this feature was deferred over.
+        XCTAssertFalse(hiding(["node"]).hides(command: "node_exporter"))
+        XCTAssertFalse(hiding(["node_exporter"]).hides(command: "node"))
+        XCTAssertFalse(hiding(["pot"]).hides(command: "Spotify"))
+    }
+
+    func testEmptyEntryHidesNothing() {
+        // A trailing comma in the settings field parses to no entry; it must
+        // not become a wildcard.
+        XCTAssertFalse(hiding([""]).hides(command: "Spotify"))
+    }
+}
+
 final class DevBoxFormattersTests: XCTestCase {
     func testPortLabel() {
         XCTAssertEqual(Formatters.portLabel(host: "127.0.0.1", port: 8080), "127.0.0.1:8080")

@@ -58,7 +58,7 @@ struct DevBoxProvider: TimelineProvider {
         return DevBoxEntry(
             date: .now,
             available: true,
-            ports: snapshot.ports,
+            ports: snapshot.ports.filter { !settings.hides(command: $0.command) },
             containers: snapshot.containers,
             dockerState: snapshot.dockerState,
             settings: settings

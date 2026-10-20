@@ -625,6 +625,7 @@ struct DevBoxSettings: Codable, Equatable {
     var containerCount = 5
     var portColor = RGBA.systemTeal
     var containerColor = RGBA.systemMint
+    var hiddenCommands: [String] = []
 
     init() {}
 
@@ -636,6 +637,18 @@ struct DevBoxSettings: Codable, Equatable {
         containerCount = try c.decodeIfPresent(Int.self, forKey: .containerCount) ?? 5
         portColor = try c.decodeIfPresent(RGBA.self, forKey: .portColor) ?? RGBA.systemTeal
         containerColor = try c.decodeIfPresent(RGBA.self, forKey: .containerColor) ?? RGBA.systemMint
+        hiddenCommands = try c.decodeIfPresent([String].self, forKey: .hiddenCommands) ?? []
+    }
+
+    /// Exact, case-insensitive command match. Substring matching would hide
+    /// `node_exporter` when the user typed `node` — the fuzzy failure this
+    /// feature was deferred over (docs/planning/devbox/prd.md:106).
+    func hides(command: String) -> Bool {
+        let name = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        return hiddenCommands.contains {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare(name) == .orderedSame
+        }
     }
 }
 
