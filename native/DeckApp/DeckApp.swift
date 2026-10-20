@@ -2139,6 +2139,7 @@ private struct GitBoxSettingsView: View {
 
 private struct DevBoxSettingsView: View {
     @Binding var settings: DevBoxSettings
+    @State private var newCommand = ""
 
     var body: some View {
         Form {
@@ -2148,6 +2149,30 @@ private struct DevBoxSettingsView: View {
                     .disabled(!settings.showPorts)
                 ColorPicker("Port color", selection: $settings.portColor.color)
                     .disabled(!settings.showPorts)
+            }
+            Section("Hidden ports") {
+                ForEach(settings.hiddenCommands, id: \.self) { command in
+                    HStack {
+                        Text(command)
+                        Spacer()
+                        Button {
+                            settings.hiddenCommands.removeAll { $0 == command }
+                        } label: {
+                            Image(systemName: "minus.circle")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Show \(command) again")
+                    }
+                }
+                HStack {
+                    TextField("Command name", text: $newCommand)
+                        .onSubmit(addCommand)
+                    Button("Add", action: addCommand)
+                        .disabled(trimmedNewCommand.isEmpty)
+                }
+                Text("Hides the port row whose command matches exactly (case-insensitive). Substrings do not match.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Containers") {
                 Toggle("Show containers", isOn: $settings.showContainers)
@@ -2159,6 +2184,23 @@ private struct DevBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+    }
+
+    private var trimmedNewCommand: String {
+        newCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func addCommand() {
+        let name = trimmedNewCommand
+        guard !name.isEmpty else { return }
+        // Case-insensitive duplicate check, so the list cannot hold two entries
+        // that hide the same command.
+        guard !settings.hiddenCommands.contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) else {
+            newCommand = ""
+            return
+        }
+        settings.hiddenCommands.append(name)
+        newCommand = ""
     }
 }
 

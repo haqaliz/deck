@@ -188,6 +188,23 @@ final class DevBoxSettingsDecodeTests: XCTestCase {
         let s = try decode(#"{}"#, as: DevBoxSettings.self)
         XCTAssertEqual(s, DevBoxSettings())
     }
+
+    func testHiddenCommandsDefaultEmpty() throws {
+        // Pre-hide-toggle settings.json must load, not reset every setting.
+        let s = try decode(#"{"showPorts":false}"#, as: DevBoxSettings.self)
+        XCTAssertEqual(s.hiddenCommands, [])
+        XCTAssertFalse(s.showPorts)
+    }
+
+    func testHiddenCommandsDecodeExplicit() throws {
+        let s = try decode(#"{"hiddenCommands":["Spotify","rapportd"]}"#, as: DevBoxSettings.self)
+        XCTAssertEqual(s.hiddenCommands, ["Spotify", "rapportd"])
+    }
+
+    func testPartialHiddenCommandsEntryKeepsDefaults() throws {
+        let s = try decode(#"{"hiddenCommands":null}"#, as: DevBoxSettings.self)
+        XCTAssertEqual(s.hiddenCommands, [])
+    }
 }
 
 final class LiveBoxSettingsDecodeTests: XCTestCase {
