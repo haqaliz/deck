@@ -19,7 +19,8 @@
 # Data/SystemData/com.apple.chrono/timelines/<Kind>/, and it cannot create that
 # file, so it fails before ever asking the extension to render.
 #
-# Cause: `rm -rf ~/Library/Containers/com.deck.app.widgets` deletes the
+# Cause: `rm -rf` on the widget container (io.github.haqaliz.deck.widgets;
+# com.deck.app.widgets before the rename) deletes the
 # directory tree but CANNOT delete .com.apple.containermanagerd.metadata.plist
 # (SIP-protected; it fails with "Operation not permitted"). Because that plist
 # survives, containermanagerd still considers the container provisioned and

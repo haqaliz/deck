@@ -8,7 +8,7 @@
 # for every timeline reload, so no rendered timeline is ever archived.
 #
 # Cause: dev builds (native/build*, .claude/worktrees/*/native/build*) register
-# their own copy of com.deck.app / com.deck.app.widgets with LaunchServices.
+# their own copy of io.github.haqaliz.deck / .widgets with LaunchServices.
 # Once several versions — or bundles whose worktree has since been deleted —
 # are registered, WidgetKit resolves the wrong bundle and rejects every render.
 #
