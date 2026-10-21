@@ -808,4 +808,28 @@ final class LegacyAgentCleanupTests: XCTestCase {
             ["com.deck.agent"]
         )
     }
+
+    /// Before the rename the legacy label IS the live one: unregistering it
+    /// would take the running agents down (the v1.33 bug, with a different
+    /// call). This guard is what makes `unregisterLegacy()` safe to call
+    /// unconditionally at launch.
+    func testLegacyUnregisterIsRefusedBeforeTheRename() {
+        XCTAssertFalse(
+            LegacyAgentCleanup.shouldUnregisterLegacy(
+                current: "com.deck.agent",
+                legacy: "com.deck.agent"
+            )
+        )
+    }
+
+    /// After the rename the old records are orphans and must be flipped to
+    /// [disabled, allowed]; unregister is the only handle on them.
+    func testLegacyUnregisterRunsAfterTheRename() {
+        XCTAssertTrue(
+            LegacyAgentCleanup.shouldUnregisterLegacy(
+                current: "io.github.haqaliz.deck.agent",
+                legacy: "com.deck.agent"
+            )
+        )
+    }
 }

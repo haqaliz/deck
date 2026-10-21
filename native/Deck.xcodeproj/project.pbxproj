@@ -203,6 +203,7 @@
 		933A186B8DE245D2F0822E0F /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		9470434E0154F3EE435380FF /* PRSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34BF9735A3D4E0752938A876 /* PRSearchTests.swift */; };
 		94F97F3C03EB1B33F5792A6C /* DevBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8410285538D08E9259413910 /* DevBoxWidget.swift */; };
+		95A63B77D3076E117970F673 /* io.github.haqaliz.deck.agent.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4D8E3592AC8B76241F10A569 /* io.github.haqaliz.deck.agent.plist */; };
 		95C0179C1B5783C2DE56F085 /* SpotlightHotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B249B03D306ADA906175DDD /* SpotlightHotKey.swift */; };
 		96361F53D4F188186ADAE3BA /* CredentialsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */; };
 		9679FDE5EC8B876A8C611B2D /* ContainerMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */; };
@@ -361,6 +362,7 @@
 		F82770721B16E22EF5A56574 /* AzureAccountBindingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50CFC898B80244E125DCA46 /* AzureAccountBindingTests.swift */; };
 		F8D0B9E76E31D7928A486CAA /* wallexMarkets.json in Resources */ = {isa = PBXBuildFile; fileRef = D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */; };
 		FA798EC3517F9FDFD10FB9FC /* WiqlPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */; };
+		FB1FC7873FF13FDAA4057C27 /* io.github.haqaliz.deck.agent.processes.plist in Resources */ = {isa = PBXBuildFile; fileRef = A649844DF4BE052BECEF728B /* io.github.haqaliz.deck.agent.processes.plist */; };
 		FBD849BD3B656D44706F28F6 /* DeckLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E922A862E405B58537BA49 /* DeckLinkTests.swift */; };
 		FC125295397F417AA47379E3 /* ShipBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CC5953EE5887D17D256C9A /* ShipBoxSnapshot.swift */; };
 		FC5D26AEE58F54EA84894285 /* AgentLivenessCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B023DC10E49885E273424 /* AgentLivenessCopy.swift */; };
@@ -461,6 +463,7 @@
 		46BDADCC964121FC7E1ED6C7 /* SystemMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetrics.swift; sourceTree = "<group>"; };
 		4ACF48492273E3887DF5D838 /* BatteryCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryCoreTests.swift; sourceTree = "<group>"; };
 		4B2567F4523D6D35FD0252F9 /* MenuBarIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = MenuBarIcon.png; sourceTree = "<group>"; };
+		4D8E3592AC8B76241F10A569 /* io.github.haqaliz.deck.agent.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = io.github.haqaliz.deck.agent.plist; sourceTree = "<group>"; };
 		4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiqlPreset.swift; sourceTree = "<group>"; };
 		5089372A785C079676513337 /* TaskBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBoxSnapshot.swift; sourceTree = "<group>"; };
 		50A8922BFDCE56FEEAFDE601 /* coinGeckoMarkets.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = coinGeckoMarkets.json; sourceTree = "<group>"; };
@@ -528,6 +531,7 @@
 		9F6A169F61494E1514F05783 /* CommitSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitSearchTests.swift; sourceTree = "<group>"; };
 		9F939C5C1255B0A85CA33D70 /* azure_connectiondata.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = azure_connectiondata.json; sourceTree = "<group>"; };
 		9FE2D7379A13510C5A7338BA /* RefreshPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshPolicies.swift; sourceTree = "<group>"; };
+		A649844DF4BE052BECEF728B /* io.github.haqaliz.deck.agent.processes.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = io.github.haqaliz.deck.agent.processes.plist; sourceTree = "<group>"; };
 		A7F059BC77B65DAFC1FC3A3A /* TaskBoxSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBoxSnapshotTests.swift; sourceTree = "<group>"; };
 		AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxWidget.swift; sourceTree = "<group>"; };
 		AB175501853DAE0EDDFA4477 /* CredentialsCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialsCopy.swift; sourceTree = "<group>"; };
@@ -831,6 +835,8 @@
 			children = (
 				9F1A60E3DD45C0E9455E6109 /* com.deck.agent.plist */,
 				E34D57F6804ADB7CB6777F6D /* com.deck.agent.processes.plist */,
+				4D8E3592AC8B76241F10A569 /* io.github.haqaliz.deck.agent.plist */,
+				A649844DF4BE052BECEF728B /* io.github.haqaliz.deck.agent.processes.plist */,
 			);
 			path = LaunchAgents;
 			sourceTree = "<group>";
@@ -1035,6 +1041,8 @@
 				5401D5B23B3A53F8A2031284 /* MenuBarIcon.png in Resources */,
 				46C2D6804C4116B30E078860 /* com.deck.agent.plist in Resources */,
 				E78150B6C51925B5F4A27D11 /* com.deck.agent.processes.plist in Resources */,
+				95A63B77D3076E117970F673 /* io.github.haqaliz.deck.agent.plist in Resources */,
+				FB1FC7873FF13FDAA4057C27 /* io.github.haqaliz.deck.agent.processes.plist in Resources */,
 				BFA88F4BF6B1007CC6725C4B /* provider-azure-dark.pdf in Resources */,
 				C67AE6C1B7CEE4603B00F994 /* provider-azure-light.pdf in Resources */,
 				F7F3E55580FB2E9464402615 /* provider-github-dark.pdf in Resources */,
@@ -1097,7 +1105,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Clear first. A plain mkdir+cp leaves plists from a previous build\n# in place, so an incremental build across a rename ships BOTH\n# generations, sealed into the signature with nothing complaining.\nrm -rf \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents\"\nmkdir -p \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.processes.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\n";
+			shellScript = "# Clear first. A plain mkdir+cp leaves plists from a previous build\n# in place, so an incremental build across a rename ships BOTH\n# generations, sealed into the signature with nothing complaining.\nrm -rf \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents\"\nmkdir -p \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/io.github.haqaliz.deck.agent.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/io.github.haqaliz.deck.agent.processes.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\n# Pre-rename plists, for exactly one release: they are the only handle\n# on the orphaned BTM records. Delete both lines with the files.\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\ncp \"$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.processes.plist\" \"$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/\"\n";
 		};
 		EE7234FDF9F26715A32519B1 /* Embed DeckAgent */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -1509,7 +1517,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = com.deck.app;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.haqaliz.deck;
 				PRODUCT_NAME = Deck;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.10;
@@ -1533,7 +1541,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = com.deck.DeckAgent;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.haqaliz.deck.agent;
 				PRODUCT_NAME = DeckAgent;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.10;
@@ -1558,7 +1566,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = com.deck.DeckAgent;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.haqaliz.deck.agent;
 				PRODUCT_NAME = DeckAgent;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.10;
@@ -1580,7 +1588,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = com.deck.app.widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.haqaliz.deck.widgets;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.10;
@@ -1601,7 +1609,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = com.deck.app.widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.haqaliz.deck.widgets;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.10;
@@ -1625,7 +1633,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = com.deck.app;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.haqaliz.deck;
 				PRODUCT_NAME = Deck;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.10;
@@ -1648,7 +1656,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = com.deck.sharedtests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.haqaliz.deck.sharedtests;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.10;
 			};
@@ -1733,7 +1741,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "$(inherited) -lsqlite3";
-				PRODUCT_BUNDLE_IDENTIFIER = com.deck.sharedtests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.haqaliz.deck.sharedtests;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.10;
 			};

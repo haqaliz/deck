@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.deck.agent</string>
+	<string>io.github.haqaliz.deck.agent</string>
 	<key>BundleProgram</key>
 	<string>Contents/MacOS/DeckAgent</string>
 	<key>RunAtLoad</key>

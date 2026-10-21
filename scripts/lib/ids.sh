@@ -7,9 +7,9 @@
 # Source it from a script in scripts/:
 #   source "$(dirname "${BASH_SOURCE[0]}")/lib/ids.sh"
 
-DECK_APP_ID="com.deck.app"
+DECK_APP_ID="io.github.haqaliz.deck"
 DECK_WIDGETS_ID="${DECK_APP_ID}.widgets"
-DECK_AGENT_LABEL="com.deck.agent"
+DECK_AGENT_LABEL="io.github.haqaliz.deck.agent"
 DECK_FAST_AGENT_LABEL="${DECK_AGENT_LABEL}.processes"
 
 # The pre-rename ids. Permanent, not "the previous values": they name a

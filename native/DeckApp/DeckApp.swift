@@ -642,6 +642,10 @@ struct ContentView: View {
     /// toggle off; one they enabled there flips it back on.
     private func reconcileAgents() {
         legacyCleanup()
+        // The renamed app re-parents the old BTM records (four DeckAgent rows,
+        // two unrunnable). Only the old plists — shipped for one release — give
+        // them a handle. No-op before the rename.
+        AgentService.unregisterLegacy()
         try? FileManager.default.createDirectory(
             at: logDirectory,
             withIntermediateDirectories: true,
@@ -1091,7 +1095,7 @@ private struct GeneralSettingsView: View {
                 }
                 Text(agentsRemoved
                      ? "Removed. Widgets keep their last data but stop refreshing."
-                     : "Unregisters com.deck.agent and com.deck.agent.processes from login items.")
+                     : "Unregisters the two background agents from login items.")
                     .font(.caption)
                     .foregroundStyle(agentsRemoved ? .green : .secondary)
 

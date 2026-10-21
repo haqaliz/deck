@@ -19,9 +19,9 @@ import Foundation
 /// `docs/planning/bundle-identifier/` for what a change costs and what was
 /// measured.
 enum DeckBundle {
-    /// The host app. `com.deck.app` today; see `Legacy` for why the old value
-    /// must outlive the rename.
-    static let appID = "com.deck.app"
+    /// The host app. `io.github.haqaliz.deck`; see `Legacy` for why the old
+    /// value must outlive the rename.
+    static let appID = "io.github.haqaliz.deck"
 
     /// The widget extension — and therefore the sandbox container that holds
     /// `settings.json` and every snapshot (`DeckSettings.containerDirectory`).
@@ -29,13 +29,14 @@ enum DeckBundle {
 
     /// The 60s agent: its launchd label, its `SMAppService` plist basename, and
     /// its OSLog subsystem.
-    static let agentLabel = "com.deck.agent"
+    static let agentLabel = "io.github.haqaliz.deck.agent"
 
     /// The fast process agent (`DECK_AGENT_ROLE=processes`).
     static let fastAgentLabel = agentLabel + ".processes"
 
-    /// `log show --predicate 'subsystem == "com.deck.agent"'` is the documented
-    /// diagnostic path, so this tracks the label rather than standing alone.
+    /// `log show --predicate 'subsystem == "io.github.haqaliz.deck.agent"'` is the
+    /// documented diagnostic path, so this tracks the label rather than
+    /// standing alone.
     static let logSubsystem = agentLabel
 
     /// Identifiers that named things now on users' disks and must never change.

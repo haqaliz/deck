@@ -387,4 +387,11 @@ enum LegacyAgentCleanup {
     ) -> [String] {
         candidates.filter(plistExists)
     }
+
+    /// On the renamed app the legacy labels name the *pre-rename* agents and
+    /// their orphaned BTM records must be unregistered. Before the rename they
+    /// ARE the live agents — unregistering them would stop background refresh.
+    static func shouldUnregisterLegacy(current: String, legacy: String) -> Bool {
+        current != legacy
+    }
 }
