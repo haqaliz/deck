@@ -1103,6 +1103,15 @@ in CI, the verification gates, and what the identity change resets.
       over the new leaves two BTM app records claiming one URL and launchd
       refuses both jobs; the in-app toggle, `kickstart` and restarting `smd` all
       fail, and only a logout/login repairs it.
+      **Applied 2026-10-21 (#77):** with M9 deferred indefinitely there is no
+      notarization release left to ride, and no users to migrate, so the flip no
+      longer waits. The identifiers, plists, legacy-unregister courtesy and
+      distribution docs are in the change; the item stays unchecked until the
+      release gate below passes on an installed copy.
+      **Release gate:** install the renamed build, re-add all fourteen widgets,
+      re-grant TCC, confirm `settings.json` arrived in the new container and
+      `processes.json` advances there, and that the four BTM records are two
+      `[enabled, allowed]` plus two `[disabled, allowed]`.
 - [ ] **Sparkle auto-update.** Pointless before notarization (the update would
       be Gatekeeper-blocked too), necessary immediately after.
 

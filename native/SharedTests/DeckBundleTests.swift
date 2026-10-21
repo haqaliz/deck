@@ -137,4 +137,21 @@ final class DeckBundleTests: XCTestCase {
             XCTAssertEqual(plist?["Label"] as? String, label, "Label drifted in \(label).plist")
         }
     }
+
+    /// The one-release courtesy (flip-runbook Step 2): the pre-rename plists
+    /// must ship beside the new ones, or the orphaned BTM records have no
+    /// handle and Login Items keeps four DeckAgent rows, two unrunnable.
+    func testLegacyLaunchAgentPlistsShipForOneRelease() throws {
+        for label in [DeckBundle.Legacy.agentLabel, DeckBundle.Legacy.fastAgentLabel] {
+            let url = nativeDir.appendingPathComponent("DeckApp/LaunchAgents/\(label).plist")
+            XCTAssertTrue(
+                FileManager.default.fileExists(atPath: url.path),
+                "missing pre-rename LaunchAgent plist for \(label) (drop only in the release after the flip)"
+            )
+            let plist = try PropertyListSerialization.propertyList(
+                from: Data(contentsOf: url), format: nil
+            ) as? [String: Any]
+            XCTAssertEqual(plist?["Label"] as? String, label)
+        }
+    }
 }

@@ -78,9 +78,9 @@ Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
    *accessory* power sources — see the SPI note below.
 2. **Sandbox-blocked, agent-pumped** — the widget sandbox forbids subprocesses
    and reading other apps' data (opencode DB, `ps`/process info, `git log`).
-   The unsandboxed `DeckAgent` (LaunchAgent `com.deck.agent`, every 60s) reads
+   The unsandboxed `DeckAgent` (LaunchAgent `io.github.haqaliz.deck.agent`, every 60s) reads
    those and writes snapshots into the widget's container:
-   `~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox,taskbox,calbox,prbox}.json`
+   `~/Library/Containers/io.github.haqaliz.deck.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox,taskbox,calbox,prbox}.json`
    The widgets render the snapshots.
 
 **Credentials are records, not widget properties.** A `CredentialAccount`
@@ -129,13 +129,13 @@ xcodebuild -project native/Deck.xcodeproj -scheme DeckApp -configuration Release
 # install
 cp -R native/build.noindex/Build/Products/Release/Deck.app /Applications/
 open /Applications/Deck.app                    # installs the LaunchAgent, refreshes data
-pluginkit -m -i com.deck.app.widgets           # verify the extension registered
+pluginkit -m -i io.github.haqaliz.deck.widgets  # verify the extension registered
 ```
 
 The two background agents are registered with `SMAppService` from plists in
 the signed bundle (`Contents/Library/LaunchAgents/`, `BundleProgram` relative
 addressing); they show up under System Settings → General → Login Items. Manual
-fallback: `launchctl bootout gui/$(id -u)/com.deck.agent` (and
+fallback: `launchctl bootout gui/$(id -u)/io.github.haqaliz.deck.agent` (and
 `.processes`), plus remove any legacy `~/Library/LaunchAgents/*.plist`
 (pre-SMAppService installs). Registration only works from an approved
 location — dev builds in `build.noindex` cannot register; verify through the
@@ -684,7 +684,7 @@ Do not delete the container; see the trap below.
   rendering as placeholders.
 - Build only into `native/build.noindex` (the `.noindex` suffix keeps Spotlight,
   and therefore LaunchServices, from registering throwaway dev copies of
-  `com.deck.app`). A registered dev copy — especially one whose worktree was
+  `io.github.haqaliz.deck`). A registered dev copy — especially one whose worktree was
   later deleted — makes WidgetKit resolve the wrong bundle and reject every
   render: chronod logs `bundleStubNotSupported` / "Bundle version did not
   match", and every widget falls back to its placeholder (text as grey blocks,

@@ -136,7 +136,7 @@ rm -rf /Applications/Deck.app
 cp -R native/build.noindex/Build/Products/Release/Deck.app /Applications/
 open /Applications/Deck.app            # first run installs the refresh agent
 scripts/lsclean.sh                     # required after every release build
-pluginkit -m -i com.deck.app.widgets   # verify the extension registered
+pluginkit -m -i io.github.haqaliz.deck.widgets   # verify the extension registered
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
@@ -160,7 +160,7 @@ GitBox repo paths + scan depth. Changes apply to the widgets immediately.
   `ProcessInfo.thermalState` (a coarse pressure level, not a temperature: macOS
   exposes no fan speed or degrees without private SMC access); the top-process rows come from the background agent (ps) and
   refresh at your "Process refresh" interval (5–60s, default 15s — the widget
-  tick and the fast process agent `com.deck.agent.processes` follow it).
+  tick and the fast process agent `io.github.haqaliz.deck.agent.processes` follow it).
 - **NetBox** reads only the interface you pin in settings (default: automatic
   "most active" pick — pinning falls back to automatic while that interface is
   offline). Rates past your warn/alarm thresholds (MB/s, NetBox tab) turn
@@ -347,10 +347,10 @@ one source.
   ShipBox, TaskBox, CalBox, PRBox, MarketBox): the widget
   sandbox forbids subprocesses and reading other apps' data, so a silent CLI
   (`DeckAgent`, embedded in the app) runs every 60s via a launch agent
-  (`com.deck.agent`, registered with SMAppService — see it under System
+  (`io.github.haqaliz.deck.agent`, registered with SMAppService — see it under System
   Settings → General → Login Items) and writes snapshots the widgets render.
   The top-process snapshot is sampled faster by a dedicated agent
-  (`com.deck.agent.processes`, configured interval, default 15s).
+  (`io.github.haqaliz.deck.agent.processes`, configured interval, default 15s).
   ClipBox captures the pasteboard on each tick — consecutive copies within a
   minute collapse to the newest.
 - Everything refreshes on a ~60s cadence (WidgetKit throttles faster requests
@@ -383,7 +383,10 @@ crash reporting, and no Deck server — the project has no backend at all. The
 other eight widgets never touch the network.
 
 **What stays on disk:** every snapshot lives in the widget's own container at
-`~/Library/Containers/com.deck.app.widgets/Data/Library/Application Support/Deck/`.
+`~/Library/Containers/io.github.haqaliz.deck.widgets/Data/Library/Application Support/Deck/`.
+An upgrade from a pre-rename build keeps its settings and snapshots in the old
+container: they are migrated on first launch and the old container is never
+touched.
 Calendar events, work items, clipboard history, commit counts and process lists
 are written there and read by the widgets. Nothing is uploaded.
 
@@ -445,7 +448,7 @@ token.
 ## Troubleshooting
 
 **Every widget shows grey placeholder blocks instead of text** (charts still
-draw, all sizes affected). LaunchServices is resolving `com.deck.app` to a
+draw, all sizes affected). LaunchServices is resolving `io.github.haqaliz.deck` to a
 stale dev build — chronod rejects every render with `bundleStubNotSupported` /
 "Bundle version did not match". Run:
 
@@ -482,7 +485,7 @@ print` can find the job while it is failing to spawn on every tick. The reliable
 check is the fast agent's own output:
 
 ```bash
-cd ~/Library/Containers/com.deck.app.widgets/Data/Library/Application\ Support/Deck
+cd ~/Library/Containers/io.github.haqaliz.deck.widgets/Data/Library/Application\ Support/Deck
 stat -f '%N %Sm' processes.json agent-heartbeat.json
 ```
 
@@ -496,7 +499,7 @@ so a fresh one proves only that Deck was open.
 **"Refresh in background" is on but nothing is running.** A registration record
 and a loaded job are two different things: `sfltool dumpbtm | grep -A8 DeckAgent`
 can report `[enabled, allowed]` while
-`launchctl print gui/$(id -u)/com.deck.agent.processes` answers
+`launchctl print gui/$(id -u)/io.github.haqaliz.deck.agent.processes` answers
 `Could not find service`. Deck detects this and says so under the toggle —
 which stays on, because the registration really is what you asked for. Recovery
 is the **Restart agents** button, or to switch **Refresh in background**
@@ -522,8 +525,13 @@ By hand, if you prefer (also removes the pre-SMAppService plists, for installs
 older than this one):
 
 ```bash
+launchctl bootout gui/$(id -u)/io.github.haqaliz.deck.agent
+launchctl bootout gui/$(id -u)/io.github.haqaliz.deck.agent.processes
+# pre-rename agents, present only on installs that predate the rename
 launchctl bootout gui/$(id -u)/com.deck.agent
 launchctl bootout gui/$(id -u)/com.deck.agent.processes
+rm -f ~/Library/LaunchAgents/io.github.haqaliz.deck.agent.plist
+rm -f ~/Library/LaunchAgents/io.github.haqaliz.deck.agent.processes.plist
 rm -f ~/Library/LaunchAgents/com.deck.agent.plist
 rm -f ~/Library/LaunchAgents/com.deck.agent.processes.plist
 rm -rf /Applications/Deck.app

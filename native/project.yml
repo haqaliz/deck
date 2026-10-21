@@ -1,6 +1,6 @@
 name: Deck
 options:
-  bundleIdPrefix: com.deck
+  bundleIdPrefix: io.github.haqaliz
   deploymentTarget:
     macOS: "15.0"
   createIntermediateGroups: true
@@ -29,6 +29,10 @@ targets:
           # generations, sealed into the signature with nothing complaining.
           rm -rf "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents"
           mkdir -p "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents"
+          cp "$SRCROOT/DeckApp/LaunchAgents/io.github.haqaliz.deck.agent.plist" "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/"
+          cp "$SRCROOT/DeckApp/LaunchAgents/io.github.haqaliz.deck.agent.processes.plist" "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/"
+          # Pre-rename plists, for exactly one release: they are the only handle
+          # on the orphaned BTM records. Delete both lines with the files.
           cp "$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.plist" "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/"
           cp "$SRCROOT/DeckApp/LaunchAgents/com.deck.agent.processes.plist" "$BUILT_PRODUCTS_DIR/Deck.app/Contents/Library/LaunchAgents/"
     info:
@@ -43,7 +47,7 @@ targets:
         NSCalendarsFullAccessUsageDescription: "Deck reads your calendar to show your next event in the CalBox widget."
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.deck.app
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.haqaliz.deck
         PRODUCT_NAME: Deck
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
@@ -80,7 +84,7 @@ targets:
         LSMinimumSystemVersion: "15.0"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.deck.app.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.haqaliz.deck.widgets
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
         DEVELOPMENT_TEAM: K6X49DG8VF
@@ -108,7 +112,7 @@ targets:
     info:
       path: DeckAgent/Info.plist
       properties:
-        CFBundleIdentifier: com.deck.agent
+        CFBundleIdentifier: io.github.haqaliz.deck.agent
         CFBundleName: DeckAgent
         CFBundleExecutable: DeckAgent
         CFBundleShortVersionString: "1.57"
@@ -117,6 +121,9 @@ targets:
     settings:
       base:
         PRODUCT_NAME: DeckAgent
+        # Without this xcodegen synthesises <prefix>.DeckAgent for the build
+        # product, a second identifier waiting to be read by mistake.
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.haqaliz.deck.agent
         GENERATE_INFOPLIST_FILE: NO
         CREATE_INFOPLIST_SECTION_IN_BINARY: YES
         CODE_SIGN_STYLE: Automatic
@@ -143,7 +150,7 @@ targets:
       - SharedTests/Fixtures
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.deck.sharedtests
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.haqaliz.deck.sharedtests
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
         DEVELOPMENT_TEAM: K6X49DG8VF

@@ -56,4 +56,32 @@ enum AgentService {
             try? agent.service.unregister()
         }
     }
+
+    /// The pre-rename agents, shipped for exactly one release. `unregister()`
+    /// flips their orphaned BTM records to [disabled, allowed] — it cannot
+    /// delete them, and without the old plists in the bundle there is no handle
+    /// at all (flip-runbook Step 2).
+    static let legacy = [
+        Agent(
+            service: .agent(plistName: "\(DeckBundle.Legacy.agentLabel).plist"),
+            label: DeckBundle.Legacy.agentLabel
+        ),
+        Agent(
+            service: .agent(plistName: "\(DeckBundle.Legacy.fastAgentLabel).plist"),
+            label: DeckBundle.Legacy.fastAgentLabel
+        ),
+    ]
+
+    /// Run at launch, after the current agents are registered: the renamed app
+    /// re-parents the old records, leaving four DeckAgent rows — two of which
+    /// can never run. A no-op before the rename.
+    static func unregisterLegacy() {
+        guard LegacyAgentCleanup.shouldUnregisterLegacy(
+            current: DeckBundle.agentLabel,
+            legacy: DeckBundle.Legacy.agentLabel
+        ) else { return }
+        for agent in legacy {
+            try? agent.service.unregister()
+        }
+    }
 }

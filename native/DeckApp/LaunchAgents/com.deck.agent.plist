@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Pre-rename plist, shipped for exactly one release so the orphaned BTM
+	     records have a handle to unregister() (bundle-identifier flip runbook,
+	     Step 2). Delete this file and the legacy unregister call in the next
+	     release. -->
 	<key>Label</key>
 	<string>com.deck.agent</string>
 	<key>BundleProgram</key>
