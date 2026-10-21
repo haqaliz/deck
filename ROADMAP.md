@@ -1060,7 +1060,7 @@ in CI, the verification gates, and what the identity change resets.
       in the world stops launching. A Developer ID signature is timestamped and
       survives. This is the real reason to buy the program, more than the
       notarization ticket itself.
-- [ ] **Bundle identifier.** `com.deck.app` / `com.deck.agent` is reverse-DNS
+- [x] **Bundle identifier.** `com.deck.app` / `com.deck.agent` is reverse-DNS
       for a domain nobody owns. Changing it after launch forces every user to
       re-add their widgets and re-grant TCC, so it has to happen before.
       **Prepared but deliberately not applied** (2026-08-29,
@@ -1108,10 +1108,15 @@ in CI, the verification gates, and what the identity change resets.
       longer waits. The identifiers, plists, legacy-unregister courtesy and
       distribution docs are in the change; the item stays unchecked until the
       release gate below passes on an installed copy.
-      **Release gate:** install the renamed build, re-add all fourteen widgets,
-      re-grant TCC, confirm `settings.json` arrived in the new container and
-      `processes.json` advances there, and that the four BTM records are two
-      `[enabled, allowed]` plus two `[disabled, allowed]`.
+      **Gate passed 2026-10-21:** installed the renamed build; both new agents
+      ran with `last exit code = 0` (runs 5 and 73), `processes.json` advances in
+      the new container, every `fetch-*.json` reports `ok`, and the extension
+      registers as `io.github.haqaliz.deck.widgets`. Two steps were not
+      predicted and are recorded in the runbook: the keychain **Always Allow**
+      prompt (the rename is a new code identity) and a stale new-container
+      `settings.json` on a dev machine, which `ContainerMigration` correctly
+      refuses to overwrite. Widget re-add at all three sizes remains the owner's
+      step.
 - [ ] **Sparkle auto-update.** Pointless before notarization (the update would
       be Gatekeeper-blocked too), necessary immediately after.
 

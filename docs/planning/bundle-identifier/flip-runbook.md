@@ -1,10 +1,10 @@
 # Flip runbook — `com.deck.*` → `io.github.haqaliz.deck*`
 
-**Status: prepared, not applied.** Everything in `docs/planning/bundle-identifier/`
-except this file has shipped; the identifiers themselves are unchanged. By the
-sequencing decision of 2026-08-28 the flip rides the **notarization release**
-(`docs/planning/notarization/runbook.md` Step 6) so users pay one round of
-re-adding widgets and re-granting TCC rather than two.
+**Status: applied 2026-10-21 (#77).** The sequencing decision of 2026-08-28 was
+to ride the **notarization release** (`docs/planning/notarization/runbook.md`
+Step 6) so users would re-add widgets and re-grant TCC once. M9 is deferred
+indefinitely with no users, so the flip was done now instead. Everything else in
+this directory shipped earlier; this file is the record of how the flip ran.
 
 Run this top to bottom in one release. Do not land it piecemeal.
 
@@ -157,6 +157,27 @@ plists and bundles from the previous identity.
       `DeckBundle.Legacy`, `scripts/lib/ids.sh`'s legacy block, the one-release
       plists, and comments that deliberately quote history.
 - [ ] `scripts/lsclean.sh` after the build, as always.
+
+## What the 2026-10-21 run added
+
+Two things this runbook did not predict, both verified on the installed build:
+
+- **The keychain prompts.** A bundle-id change changes the app's code identity,
+  so macOS asks *"Deck wants to use your confidential information stored in
+  `com.deck.app`"* — once per stored item, up to one per account — with a
+  default that denies. Nothing proceeds until **Always Allow** is clicked: the
+  settings window's `onAppear` (which registers the agents) is what triggers the
+  read, so a denied or ignored prompt looks exactly like a launch failure — no
+  window, no tray, no agents. After approval the **agent's** reads work too
+  (`fetch-taskbox.json`, `fetch-prbox*.json` and `fetch-shipbox.json` all report
+  `ok`), so the ACL grant covers the embedded binary as well.
+- **A pre-existing new container blocks migration.** `ContainerMigration`
+  never overwrites, so a `settings.json` left in
+  `…/io.github.haqaliz.deck.widgets` by the August probe was kept and the live
+  settings stayed in the old container. Real users cannot hit this (their new
+  container does not exist), but a dev machine that ran the probe can; recovery
+  is to restore a backup of the old `settings.json` into the new container with
+  the app quit.
 
 ## Rollback
 
