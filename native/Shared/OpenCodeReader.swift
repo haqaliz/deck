@@ -30,11 +30,12 @@ enum OpenCodeReader {
     /// Builds the snapshot from an already-opened DB handle (readable by
     /// tests against an in-memory fixture DB).
     static func load(from db: OpaquePointer) -> OpenCodeSnapshot? {
-        guard
-            let today = rows(db, todaySQL).first,
-            let todayInput = today.int64("input"),
-            let todayOutput = today.int64("output")
-        else { return nil }
+        guard let today = rows(db, todaySQL).first else { return nil }
+        // Zero sessions in the last 24h is a valid empty day, not an
+        // unreadable DB: COUNT(*) is 0 and the SUMs are NULL. Treating the
+        // NULLs as absence used to hide the whole widget on an idle day.
+        let todayInput = today.int64("input") ?? 0
+        let todayOutput = today.int64("output") ?? 0
 
         let totals = rows(db, totalsSQL).first
 

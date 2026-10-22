@@ -215,14 +215,21 @@ final class OpenCodeSQLTests: XCTestCase {
         XCTAssertNil(OpenCodeReader.load(from: db!))
     }
 
-    func testDBWithOnlyOldRowsReturnsNil() throws {
+    func testDBWithOnlyOldRowsStillReturnsSnapshot() throws {
         var db: OpaquePointer?
         XCTAssertEqual(sqlite3_open(":memory:", &db), SQLITE_OK)
         defer { sqlite3_close(db) }
         exec(db!, "CREATE TABLE session (time_created INTEGER, tokens_input INTEGER, tokens_output INTEGER, cost REAL, model TEXT, title TEXT)")
         let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
         insertSession(db!, time: nowMs - 30 * 86_400_000, input: 1, output: 1, cost: 0.1, model: "m")
-        XCTAssertNil(OpenCodeReader.load(from: db!))
+        // An idle today is not a missing database: the snapshot still carries
+        // the all-time totals and models.
+        let snapshot = try XCTUnwrap(OpenCodeReader.load(from: db!))
+        XCTAssertEqual(snapshot.input, 0)
+        XCTAssertEqual(snapshot.output, 0)
+        XCTAssertEqual(snapshot.totalInput, 1)
+        XCTAssertEqual(snapshot.totalOutput, 1)
+        XCTAssertEqual(snapshot.totalCost, 0.1, accuracy: 0.0001)
     }
 }
 
