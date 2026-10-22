@@ -371,21 +371,22 @@ struct OpenBoxWidgetEntryView: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            limitRow("ROLLING", usage.fiveHour, compact: compact)
-            limitRow("WEEKLY", usage.week, compact: compact)
-            limitRow("MONTHLY", usage.month, compact: compact)
+            limitRow("ROLLING", short: "RLN", usage.fiveHour, compact: compact)
+            limitRow("WEEKLY", short: "WKL", usage.week, compact: compact)
+            limitRow("MONTHLY", short: "MNT", usage.month, compact: compact)
         }
     }
 
     @ViewBuilder
-    private func limitRow(_ title: String, _ meter: OpenBoxUsage.Meter?, compact: Bool = false) -> some View {
+    private func limitRow(_ title: String, short: String, _ meter: OpenBoxUsage.Meter?, compact: Bool = false) -> some View {
         if let meter {
             HStack(spacing: compact ? 4 : 6) {
-                Text(title)
+                Text(compact ? short : title)
                     .font(.system(size: compact ? 8 : 9, weight: .bold, design: .rounded))
                     .foregroundStyle(.secondary)
                     .tracking(0.5)
-                    .frame(width: compact ? 38 : 46, alignment: .leading)
+                    .lineLimit(1)
+                    .frame(width: compact ? 24 : 54, alignment: .leading)
                 GeometryReader { proxy in
                     ZStack(alignment: .leading) {
                         Capsule()
