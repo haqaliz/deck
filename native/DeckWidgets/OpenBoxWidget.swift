@@ -27,6 +27,7 @@ struct OpenBoxEntry: TimelineEntry {
     let totalInput: Int64
     let totalOutput: Int64
     let totalCost: Double
+    let limits: OpenBoxUsage?
     let settings: OpenBoxSettings
 }
 
@@ -77,8 +78,38 @@ struct OpenBoxProvider: TimelineProvider {
             totalInput: 48_000_000,
             totalOutput: 6_100_000,
             totalCost: 9.84,
-            settings: OpenBoxSettings()
+            limits: placeholderLimits(now: .now),
+            settings: placeholderSettings
         )
+    }
+
+    private func placeholderLimits(now: Date) -> OpenBoxUsage {
+        OpenBoxUsage(
+            writtenAt: now,
+            product: "go",
+            cancelAtPeriodEnd: false,
+            fiveHour: .init(
+                usedMicroCents: 6_639_170,
+                limitMicroCents: 1_200_000_000,
+                resetsAt: now.addingTimeInterval(4 * 3_600)
+            ),
+            week: .init(
+                usedMicroCents: 849_821_991,
+                limitMicroCents: 3_000_000_000,
+                resetsAt: now.addingTimeInterval(3 * 86_400 + 9 * 3_600)
+            ),
+            month: .init(
+                usedMicroCents: 5_078_102_976,
+                limitMicroCents: 6_000_000_000,
+                resetsAt: now.addingTimeInterval(4 * 86_400 + 21 * 3_600)
+            )
+        )
+    }
+
+    private var placeholderSettings: OpenBoxSettings {
+        var settings = OpenBoxSettings()
+        settings.showLimits = true
+        return settings
     }
 
     func getSnapshot(in context: Context, completion: @escaping (OpenBoxEntry) -> Void) {
@@ -93,6 +124,7 @@ struct OpenBoxProvider: TimelineProvider {
 
     private func makeEntry() -> OpenBoxEntry {
         let snapshot = OpenCodeSnapshotStore.load()
+        let limits = OpenBoxUsageStore.load()
         openboxLog.info("snapshot found=\(snapshot != nil) path=\(OpenCodeSnapshotStore.fileURL.path) home=\(FileManager.default.homeDirectoryForCurrentUser.path)")
         let now = Date()
         let allSettings = DeckSettings.load()
@@ -131,6 +163,7 @@ struct OpenBoxProvider: TimelineProvider {
                 totalInput: 0,
                 totalOutput: 0,
                 totalCost: 0,
+                limits: limits,
                 settings: openboxSettings
             )
         }
@@ -153,6 +186,7 @@ struct OpenBoxProvider: TimelineProvider {
             totalInput: snapshot.totalInput,
             totalOutput: snapshot.totalOutput,
             totalCost: snapshot.totalCost,
+            limits: limits,
             settings: settings
         )
     }
@@ -168,7 +202,7 @@ struct OpenBoxWidget: Widget {
             OpenBoxWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("OpenBox")
-        .description("Today's opencode tokens and cost with a 14-day chart and top models.")
+        .description("Today's opencode tokens and cost with a 14-day chart, top models and Go usage limits.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -292,6 +326,11 @@ struct OpenBoxWidgetEntryView: View {
             .font(.system(size: 12, weight: .semibold, design: .rounded))
             .monospacedDigit()
 
+            if limitsVisible, let usage = entry.limits {
+                limitsSection(usage)
+                    .padding(.top, 2)
+            }
+
             if entry.settings.showChart && !entry.daily.isEmpty {
                 if entry.settings.showCostChart && !entry.costDaily.isEmpty {
                     costChart
@@ -323,6 +362,11 @@ struct OpenBoxWidgetEntryView: View {
             }
             .font(.system(size: 12, weight: .semibold, design: .rounded))
             .monospacedDigit()
+
+            if limitsVisible, let usage = entry.limits {
+                limitsSection(usage)
+                    .padding(.top, 2)
+            }
 
             if entry.settings.showChart && !entry.daily.isEmpty {
                 if entry.settings.showCostChart && !entry.costDaily.isEmpty {
@@ -364,6 +408,72 @@ struct OpenBoxWidgetEntryView: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
+    }
+
+    /// The same three meters the Console Go page shows, from
+    /// `openbox-usage.json`. Limits and remaining are the server's numbers;
+    /// the bar is used/limit.
+    private func limitsSection(_ usage: OpenBoxUsage) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 5) {
+                Text("LIMITS")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .tracking(1)
+                Text(usage.productLabel)
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                Spacer(minLength: 0)
+                if entry.date.timeIntervalSince(usage.writtenAt) > 10 * 60 {
+                    Text("as of \(timeString(usage.writtenAt))")
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            limitRow("ROLLING", usage.fiveHour)
+            limitRow("WEEKLY", usage.week)
+            limitRow("MONTHLY", usage.month)
+        }
+    }
+
+    @ViewBuilder
+    private func limitRow(_ title: String, _ meter: OpenBoxUsage.Meter?) -> some View {
+        if let meter {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .tracking(0.5)
+                    .frame(width: 46, alignment: .leading)
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.secondary.opacity(0.22))
+                        Capsule()
+                            .fill(limitTint(meter.percent))
+                            .frame(width: max(2, proxy.size.width * min(meter.percent / 100, 1)))
+                    }
+                }
+                .frame(height: 5)
+                Text(meter.percentText)
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(limitTint(meter.percent))
+                    .frame(width: 34, alignment: .trailing)
+                Text("\(OpenBoxUsageFormatters.money(meter.remainingMicroCents)) left of \(OpenBoxUsageFormatters.money(meter.limitMicroCents))")
+                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    /// The Console's meter tones: over 95% is danger, 70% and up is warning.
+    private func limitTint(_ percent: Double) -> Color {
+        if percent > 95 { return .red }
+        if percent >= 70 { return .orange }
+        return .green
     }
 
     private var modelsList: some View {
@@ -469,6 +579,16 @@ struct OpenBoxWidgetEntryView: View {
         }
     }
 
+    private var limitsVisible: Bool {
+        entry.settings.showLimits && entry.limits?.hasMeters == true
+    }
+
+    /// Medium shares its height with the limits section; a full chart would
+    /// push the third meter out of the card.
+    private var chartHeight: CGFloat {
+        family == .systemMedium ? (limitsVisible ? 40 : 62) : 56
+    }
+
     private var chart: some View {
         Chart(Array(entry.daily.enumerated()), id: \.offset) { index, day in
             LineMark(
@@ -491,7 +611,7 @@ struct OpenBoxWidgetEntryView: View {
         }
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
-        .frame(height: family == .systemMedium ? 62 : 56)
+        .frame(height: chartHeight)
     }
 
     private var costChart: some View {
@@ -513,7 +633,7 @@ struct OpenBoxWidgetEntryView: View {
             domain: series.map(\.model),
             range: colors
         )
-        .frame(height: family == .systemMedium ? 62 : 56)
+        .frame(height: chartHeight)
     }
 
     private var costLegend: some View {

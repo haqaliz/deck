@@ -1993,6 +1993,18 @@ private struct OpenBoxSettingsView: View {
                 ColorPicker("COST color", selection: $settings.costColor.color)
                     .disabled(!settings.showChart)
             }
+            Section("Usage limits") {
+                Toggle("Show Go usage limits", isOn: $settings.showLimits)
+                    .disabled(accountID == nil)
+                Text("Shows the same rolling, weekly and monthly meters as the OpenCode Go page. Uses the selected opencode account's key; local mode only.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if accountID == nil {
+                    Text("Select an opencode account above to read usage.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
             Section("Models") {
                 Toggle("Show top models", isOn: $settings.showModels)
                 Stepper("Models: \(settings.modelCount)", value: $settings.modelCount, in: 1...3)

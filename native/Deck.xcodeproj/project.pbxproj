@@ -7,12 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		001BE4AF296B9815DD2E3032 /* OpenBoxUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8925B941F47E2A954661C6B4 /* OpenBoxUsage.swift */; };
 		002E0EC3864755B908E7E4A6 /* SpotlightCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75DD62878DBB50EF44C4B91D /* SpotlightCoreTests.swift */; };
 		01BB25D086A5451976DCC54A /* azure_prs_votes.json in Resources */ = {isa = PBXBuildFile; fileRef = F52085AAB762F8008E810AAA /* azure_prs_votes.json */; };
 		0290329D15876DE5404ED4A4 /* MarketSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC00CBF5141C5F2E40A0259A /* MarketSearchTests.swift */; };
 		040008B05A868C15640EA43C /* ProcessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26305B65B2FB7B12A30AB759 /* ProcessSnapshot.swift */; };
 		06482CCF82A9FBAFF325B4DD /* RemoteSearchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BB1D8EA2DE70705DE12154 /* RemoteSearchPolicy.swift */; };
 		083C985F3385B0284185DA2A /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F06724D8333A9A74C4156DB6 /* SmokeTests.swift */; };
+		086F1F609820EF04E84CF539 /* OpenBoxUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8925B941F47E2A954661C6B4 /* OpenBoxUsage.swift */; };
 		09092463B54E5E76973919A0 /* CredentialAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812063688CE39D11189608C8 /* CredentialAccount.swift */; };
 		09329B3069A91E89137EDABC /* SpotlightRemoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16CB07AB687AD7FAEFF7529C /* SpotlightRemoteModelTests.swift */; };
 		0A951556D9FDE10F29C3A1EB /* PRBoxReviewStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94F22FC7144344D976F92FEC /* PRBoxReviewStateTests.swift */; };
@@ -20,6 +22,7 @@
 		0CCA2FD72913340759E87FC0 /* AgentHeartbeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69882E34EC81D79A1C21CA9C /* AgentHeartbeat.swift */; };
 		0D92FA03A401FBF07703028E /* ToolCountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB758AD8CEBCC06A3CB4E375 /* ToolCountTests.swift */; };
 		0DE41A9E5EECEACD13532D4F /* GitBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D3D0C3049229A6C6EB53A0 /* GitBoxWidget.swift */; };
+		0E3DF5BB52DE61DDC63E28B4 /* OpenBoxUsageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 196AEF3F1CE410C025603C81 /* OpenBoxUsageLoader.swift */; };
 		0EB43DC3000E365E99A16A34 /* AccessoryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420094A8B06783D875A8DCC6 /* AccessoryCore.swift */; };
 		0EFEAD2186B06EE9B040D282 /* EventSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00B1605BE2B257CBAFBB68 /* EventSearch.swift */; };
 		0F55B8AABAD021045DCA52BF /* PRSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7688FCF0670049554AEC3F8 /* PRSearch.swift */; };
@@ -86,6 +89,7 @@
 		39DA22900FC1560C2B18F53A /* ClockBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BC4E56B20EB2802E1693F9 /* ClockBoxCore.swift */; };
 		3AA9C73435EBD0321C2BC3A3 /* CredentialAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812063688CE39D11189608C8 /* CredentialAccount.swift */; };
 		3B5B4D3223749E809A021C84 /* ClockBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE6F81AC92843797BDE21B3A /* ClockBoxTests.swift */; };
+		3B934AA5F5E96B04BDBB6B23 /* OpenBoxUsageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 196AEF3F1CE410C025603C81 /* OpenBoxUsageLoader.swift */; };
 		3BCA007992ED90A3706DAF97 /* CredentialsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A2FD7D2132108D216A69FD /* CredentialsMigration.swift */; };
 		3C7E54B6327A16A878BE85A4 /* yahoo_chart_gspc.json in Resources */ = {isa = PBXBuildFile; fileRef = DA30E2EBBF22779F78EA3E3D /* yahoo_chart_gspc.json */; };
 		3D2D11CA3FAADA3275D66E63 /* CalBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EFF6A8982E5B3F9323580 /* CalBoxSnapshot.swift */; };
@@ -96,6 +100,7 @@
 		3F9D2C27AE013737B357EA4D /* ProcessSnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F9A2BE880D6B8AC816E938 /* ProcessSnapshotStoreTests.swift */; };
 		3FDD64990B3C6288B15ACEEA /* TrayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33023F59AC01FA5D74ED0FD3 /* TrayController.swift */; };
 		40482A521AFB8F5BF69F9B7F /* WiqlPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */; };
+		41834CD18690E0452F55A641 /* OpenBoxUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8925B941F47E2A954661C6B4 /* OpenBoxUsage.swift */; };
 		41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D280CAAAC227082564309914 /* OpenCodeReader.swift */; };
 		43222AFDC10A1829EE888C3E /* NetBoxCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */; };
 		43C94E87B1444FE3968131A8 /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
@@ -122,6 +127,7 @@
 		521563BE27A22F82C519B653 /* MarketSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC479766830152EFA098CD42 /* MarketSearch.swift */; };
 		5310A1B92B3CCF57C291D6F4 /* SystemMetricsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1940C4E4D057B5015A74C78 /* SystemMetricsCore.swift */; };
 		53A3ACA2828F583079788A03 /* DeckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4579B6A4090AF6AC6171BE4A /* DeckSettings.swift */; };
+		53BFF27940692280FC2650FD /* OpenBoxUsageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09A481428E39D97E9B0CDAAB /* OpenBoxUsageTests.swift */; };
 		5401D5B23B3A53F8A2031284 /* MenuBarIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B2567F4523D6D35FD0252F9 /* MenuBarIcon.png */; };
 		548204C93BD21E6C4604C15D /* CredentialsCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3A345B4B584E4F2C596FABB /* CredentialsCopyTests.swift */; };
 		54B1F45AED650BAB57FF2A53 /* BatteryCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D4EF12CD67AF3DAD998D1C /* BatteryCore.swift */; };
@@ -213,8 +219,10 @@
 		97918506ABC4C75EC3F7F5D2 /* AzureAccountProjectsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1025AA738F2EC2637AA2C /* AzureAccountProjectsTests.swift */; };
 		97A4B82046694420FB236D6F /* WiqlClause.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE170E54FD1094990464C7C7 /* WiqlClause.swift */; };
 		99C485D084282BAF9BDD5AA3 /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
+		9B029947313A0E01B2D2171B /* OpenBoxUsageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 196AEF3F1CE410C025603C81 /* OpenBoxUsageLoader.swift */; };
 		9C8C825172CFF975DC780344 /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
 		9DBCB73513BAF9149ADC7DE9 /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
+		A195285A57C67EEF24391B3C /* OpenBoxUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8925B941F47E2A954661C6B4 /* OpenBoxUsage.swift */; };
 		A2164B9753715BCDAD46118B /* TaskBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5089372A785C079676513337 /* TaskBoxSnapshot.swift */; };
 		A294B651E89A3EFD457D2E9A /* SpotlightShortcutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62EE74D383BD7763C746C21D /* SpotlightShortcutTests.swift */; };
 		A2EE3F352DA2E30CB3F4E017 /* PRBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */; };
@@ -263,6 +271,7 @@
 		BFA88F4BF6B1007CC6725C4B /* provider-azure-dark.pdf in Resources */ = {isa = PBXBuildFile; fileRef = CE8FC52B15143ACCE8231B27 /* provider-azure-dark.pdf */; };
 		BFD1028CDBFBB49E951CB781 /* DeckSettingsSecretsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A30EA93126D172F0FB1035 /* DeckSettingsSecretsTests.swift */; };
 		C1880C6DD5759D69ACFFE48B /* FetchStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38F2902EF0F4B804DB8942F /* FetchStatus.swift */; };
+		C18AA66D711B18B6866E29A2 /* OpenBoxUsageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 196AEF3F1CE410C025603C81 /* OpenBoxUsageLoader.swift */; };
 		C254D130C2B2BC1A0A51D392 /* TaskSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A369FDC60ED3282601EAD50 /* TaskSearchTests.swift */; };
 		C25CF03F42EF2643976A9291 /* NetBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */; };
 		C2697957F8E3A81F07B6342B /* AzureDevOpsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4411D284A107CD9A7AA76 /* AzureDevOpsLoader.swift */; };
@@ -403,6 +412,7 @@
 /* Begin PBXFileReference section */
 		0585C32AAC7447F9B5BF2382 /* OpenBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxWidget.swift; sourceTree = "<group>"; };
 		06AF8FD38B50F85E08C4FFAE /* LiveBoxDiskCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBoxDiskCoreTests.swift; sourceTree = "<group>"; };
+		09A481428E39D97E9B0CDAAB /* OpenBoxUsageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxUsageTests.swift; sourceTree = "<group>"; };
 		09B5B2A03A188988B4CEEC9B /* coingecko_search_pepe.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = coingecko_search_pepe.json; sourceTree = "<group>"; };
 		0B1C0AF14499F4FB8A1FD425 /* DevBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxSnapshot.swift; sourceTree = "<group>"; };
 		0B249B03D306ADA906175DDD /* SpotlightHotKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightHotKey.swift; sourceTree = "<group>"; };
@@ -416,6 +426,7 @@
 		16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxSessionCoreTests.swift; sourceTree = "<group>"; };
 		18EE64808F946286621C3207 /* RemoteOpenCodeSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOpenCodeSyncTests.swift; sourceTree = "<group>"; };
 		18EF2396379B0F42526EE9FB /* NetBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxWidget.swift; sourceTree = "<group>"; };
+		196AEF3F1CE410C025603C81 /* OpenBoxUsageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxUsageLoader.swift; sourceTree = "<group>"; };
 		1A369FDC60ED3282601EAD50 /* TaskSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSearchTests.swift; sourceTree = "<group>"; };
 		1AD46890DC73D8196846F990 /* CoinSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinSearch.swift; sourceTree = "<group>"; };
 		1CCE1798F8806BCF683BFBD8 /* DeckKeychainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychainTests.swift; sourceTree = "<group>"; };
@@ -512,6 +523,7 @@
 		873043B93448D9154A158983 /* MarketTickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketTickerTests.swift; sourceTree = "<group>"; };
 		876C7A7A07443866A6D9EDEF /* EventSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventSearchTests.swift; sourceTree = "<group>"; };
 		87B96F825FC76E1267D5ACCC /* DeckBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckBundle.swift; sourceTree = "<group>"; };
+		8925B941F47E2A954661C6B4 /* OpenBoxUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBoxUsage.swift; sourceTree = "<group>"; };
 		8A65C138AE7B19D0B2C72F03 /* CredentialsWidgetReadsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialsWidgetReadsTests.swift; sourceTree = "<group>"; };
 		8B05E2B90DFEDC2F8CC1804F /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		8D9ED1410532D72412810AE4 /* CredentialKindSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialKindSearchTests.swift; sourceTree = "<group>"; };
@@ -679,6 +691,8 @@
 				DC479766830152EFA098CD42 /* MarketSearch.swift */,
 				C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */,
 				F683329582EEB5BFC1EC55D8 /* OpenBoxCore.swift */,
+				8925B941F47E2A954661C6B4 /* OpenBoxUsage.swift */,
+				196AEF3F1CE410C025603C81 /* OpenBoxUsageLoader.swift */,
 				D280CAAAC227082564309914 /* OpenCodeReader.swift */,
 				1E33C2EB5A54B432C0FAE491 /* OpenCodeSnapshot.swift */,
 				C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */,
@@ -757,6 +771,7 @@
 				AB5D404AFC4595E7762FE03F /* NetBoxCoreTests.swift */,
 				C19DD6F914F8A2B49C353A40 /* NetBoxThresholdTests.swift */,
 				16EC5A63E833C7B7FF7A89C1 /* OpenBoxSessionCoreTests.swift */,
+				09A481428E39D97E9B0CDAAB /* OpenBoxUsageTests.swift */,
 				CDCDF595C9F33209EE422738 /* OpenCodeSQLTests.swift */,
 				C46F38858426CA0E8C705B6F /* PRBoxAzureTests.swift */,
 				77088C4EE6AAF5F06DCA7953 /* PRBoxChipTests.swift */,
@@ -1175,6 +1190,8 @@
 				519062F60924DCB8663544C7 /* NetBoxCore.swift in Sources */,
 				96B73870192265B41638143C /* NetBoxWidget.swift in Sources */,
 				DD3E61D42DB4A46DB5C256BF /* OpenBoxCore.swift in Sources */,
+				086F1F609820EF04E84CF539 /* OpenBoxUsage.swift in Sources */,
+				0E3DF5BB52DE61DDC63E28B4 /* OpenBoxUsageLoader.swift in Sources */,
 				27DC4BBF55405C8CFB193051 /* OpenBoxWidget.swift in Sources */,
 				181D20A2D1C49B8ECF82CFFA /* OpenCodeReader.swift in Sources */,
 				A5E22A6827149E7194FB4E64 /* OpenCodeSnapshot.swift in Sources */,
@@ -1291,6 +1308,9 @@
 				B65A51E1C663EA52C4B95C29 /* NetBoxThresholdTests.swift in Sources */,
 				A366F0122DCFF1970B2158B5 /* OpenBoxCore.swift in Sources */,
 				86444246D4788784A28FBA68 /* OpenBoxSessionCoreTests.swift in Sources */,
+				001BE4AF296B9815DD2E3032 /* OpenBoxUsage.swift in Sources */,
+				C18AA66D711B18B6866E29A2 /* OpenBoxUsageLoader.swift in Sources */,
+				53BFF27940692280FC2650FD /* OpenBoxUsageTests.swift in Sources */,
 				3731452DDEEE62491DBC4FD7 /* OpenCodeReader.swift in Sources */,
 				F7C61B7366E45966CD60DCB8 /* OpenCodeSQLTests.swift in Sources */,
 				3256C001A7523B07D0D86C89 /* OpenCodeSnapshot.swift in Sources */,
@@ -1394,6 +1414,8 @@
 				E434D6F1F2AAB0692FE40CC0 /* MarketSearch.swift in Sources */,
 				47A9B9675547988F1A1C1786 /* NetBoxCore.swift in Sources */,
 				CB137C6731146B546A106840 /* OpenBoxCore.swift in Sources */,
+				A195285A57C67EEF24391B3C /* OpenBoxUsage.swift in Sources */,
+				9B029947313A0E01B2D2171B /* OpenBoxUsageLoader.swift in Sources */,
 				38CA6F050AB3377F30390895 /* OpenCodeReader.swift in Sources */,
 				15CCE1F1990F6F1752436B34 /* OpenCodeSnapshot.swift in Sources */,
 				A2EE3F352DA2E30CB3F4E017 /* PRBoxSnapshot.swift in Sources */,
@@ -1458,6 +1480,8 @@
 				B392425E7222C693069B50F2 /* MarketSearch.swift in Sources */,
 				C25CF03F42EF2643976A9291 /* NetBoxCore.swift in Sources */,
 				73AC55C40799B7FACDF0B935 /* OpenBoxCore.swift in Sources */,
+				41834CD18690E0452F55A641 /* OpenBoxUsage.swift in Sources */,
+				3B934AA5F5E96B04BDBB6B23 /* OpenBoxUsageLoader.swift in Sources */,
 				41B756E5F4B339081664AEB4 /* OpenCodeReader.swift in Sources */,
 				2D03E1C6AEAD755CE49CF9FD /* OpenCodeSnapshot.swift in Sources */,
 				105CA43FD678593FF0D25014 /* PRBoxSnapshot.swift in Sources */,

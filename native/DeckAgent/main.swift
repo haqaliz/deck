@@ -144,6 +144,26 @@ Task {
         agentLog.info("failed opencode snapshot (unavailable or no token)")
     }
 
+    // Go usage limits: the same meters the Console Go page renders. The token
+    // is the selected opencode account's key; in remote mode that key is the
+    // server password, not a Console key, so limits stay local-mode only.
+    if settings.openbox.showLimits, !settings.openBoxUsesRemoteServer,
+       let token = settings.credential(for: .openbox)?.token, !token.isEmpty {
+        do {
+            OpenBoxUsageStore.save(try await OpenBoxUsageLoader.load(token: token))
+            agentLog.info("written openbox usage snapshot")
+        } catch OpenBoxUsageLoader.LoadError.noSubscription {
+            OpenBoxUsageStore.delete()
+            agentLog.info("cleared openbox usage (no subscription)")
+        } catch {
+            // Keep the last good file: a transient 401/network failure must not
+            // blank the section. The widget marks it stale by writtenAt.
+            agentLog.info("failed openbox usage fetch (\(String(describing: error), privacy: .public))")
+        }
+    } else {
+        OpenBoxUsageStore.delete()
+    }
+
     if let gitbox = HostGitBoxSampler.snapshot(
         paths: settings.gitbox.repoPaths,
         scanDepth: settings.gitbox.scanDepth

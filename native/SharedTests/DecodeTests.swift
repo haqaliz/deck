@@ -33,6 +33,11 @@ final class OpenBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.sessionCount, 5)
     }
 
+    func testLimitsDefaultOffAndDecodeOn() throws {
+        XCTAssertFalse(try decode(#"{}"#, as: OpenBoxSettings.self).showLimits)
+        XCTAssertTrue(try decode(#"{"showLimits":true}"#, as: OpenBoxSettings.self).showLimits)
+    }
+
     func testFullFixtureDecodesExactValues() throws {
         let json = """
         {"token":"t","serverURL":"http://h:4096","refreshInterval":5,"showChart":false,"showCostChart":true,"showModels":false,"showTools":false,"toolCount":7,"modelCount":2,
