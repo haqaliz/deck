@@ -9,12 +9,11 @@ private func decode<T: Decodable>(_ json: String, as _: T.Type) throws -> T {
 
 final class OpenBoxSettingsDecodeTests: XCTestCase {
     func testMissingKeysFallBackToDefaults() throws {
-        let s = try decode(#"{"token":"abc","refreshInterval":30,"showChart":false}"#, as: OpenBoxSettings.self)
+        let s = try decode(#"{"token":"abc","refreshInterval":30,"showModels":false}"#, as: OpenBoxSettings.self)
         XCTAssertEqual(s.token, "abc")
         XCTAssertNil(s.serverURL)
         XCTAssertEqual(s.refreshInterval, 30)
-        XCTAssertFalse(s.showChart)
-        XCTAssertTrue(s.showModels)
+        XCTAssertFalse(s.showModels)
         XCTAssertEqual(s.inputColor, RGBA.systemCyan)
         XCTAssertEqual(s.outputColor, RGBA.systemGreen)
         XCTAssertEqual(s.costColor, RGBA.systemOrange)
@@ -33,14 +32,9 @@ final class OpenBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.sessionCount, 5)
     }
 
-    func testLimitsDefaultOffAndDecodeOn() throws {
-        XCTAssertFalse(try decode(#"{}"#, as: OpenBoxSettings.self).showLimits)
-        XCTAssertTrue(try decode(#"{"showLimits":true}"#, as: OpenBoxSettings.self).showLimits)
-    }
-
     func testFullFixtureDecodesExactValues() throws {
         let json = """
-        {"token":"t","serverURL":"http://h:4096","refreshInterval":5,"showChart":false,"showCostChart":true,"showModels":false,"showTools":false,"toolCount":7,"modelCount":2,
+        {"token":"t","serverURL":"http://h:4096","refreshInterval":5,"showModels":false,"showTools":false,"toolCount":7,"modelCount":2,
          "inputColor":{"red":0.1,"green":0.2,"blue":0.3,"alpha":0.4},
          "outputColor":{"red":0.5,"green":0.6,"blue":0.7,"alpha":0.8},
          "costColor":{"red":0.9,"green":0.8,"blue":0.7,"alpha":0.6}}
@@ -50,8 +44,6 @@ final class OpenBoxSettingsDecodeTests: XCTestCase {
         expected.token = "t"
         expected.serverURL = "http://h:4096"
         expected.refreshInterval = 5
-        expected.showChart = false
-        expected.showCostChart = true
         expected.showModels = false
         expected.showTools = false
         expected.toolCount = 7
@@ -68,12 +60,12 @@ final class OpenBoxSettingsDecodeTests: XCTestCase {
     }
 
     func testTypeMismatchStillThrows() {
-        XCTAssertThrowsError(try decode(#"{"showChart":"yes"}"#, as: OpenBoxSettings.self))
+        XCTAssertThrowsError(try decode(#"{"showModels":"yes"}"#, as: OpenBoxSettings.self))
     }
 
     func testUnknownKeysAreIgnored() throws {
-        let s = try decode(#"{"bogus":123,"showChart":false}"#, as: OpenBoxSettings.self)
-        XCTAssertFalse(s.showChart)
+        let s = try decode(#"{"bogus":123,"showModels":false}"#, as: OpenBoxSettings.self)
+        XCTAssertFalse(s.showModels)
         XCTAssertEqual(s.refreshInterval, 60)
     }
 
@@ -82,8 +74,6 @@ final class OpenBoxSettingsDecodeTests: XCTestCase {
         s.token = "t"
         s.serverURL = "http://h:4096"
         s.refreshInterval = 5
-        s.showChart = false
-        s.showCostChart = true
         s.showModels = true
         s.showTools = false
         s.toolCount = 2

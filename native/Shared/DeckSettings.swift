@@ -508,13 +508,9 @@ struct OpenBoxSettings: Codable, Equatable {
     /// Non-empty → remote server mode (auto-switch); empty → local DB.
     var serverURL: String?
     var refreshInterval = 60
-    var showChart = true
-    var showCostChart = false
     var showModels = true
     var showTools = false
     var showSessions = false
-    /// Go usage limits from the Console meters (large/medium only).
-    var showLimits = false
     var toolCount = 3
     var modelCount = 3
     var sessionCount = 3
@@ -534,12 +530,9 @@ struct OpenBoxSettings: Codable, Equatable {
         accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
         serverURL = try c.decodeIfPresent(String.self, forKey: .serverURL)
         refreshInterval = try c.decodeIfPresent(Int.self, forKey: .refreshInterval) ?? 60
-        showChart = try c.decodeIfPresent(Bool.self, forKey: .showChart) ?? true
-        showCostChart = try c.decodeIfPresent(Bool.self, forKey: .showCostChart) ?? false
         showModels = try c.decodeIfPresent(Bool.self, forKey: .showModels) ?? true
         showTools = try c.decodeIfPresent(Bool.self, forKey: .showTools) ?? false
         showSessions = try c.decodeIfPresent(Bool.self, forKey: .showSessions) ?? false
-        showLimits = try c.decodeIfPresent(Bool.self, forKey: .showLimits) ?? false
         toolCount = try c.decodeIfPresent(Int.self, forKey: .toolCount) ?? 3
         modelCount = try c.decodeIfPresent(Int.self, forKey: .modelCount) ?? 3
         sessionCount = try c.decodeIfPresent(Int.self, forKey: .sessionCount) ?? 3

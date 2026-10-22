@@ -1,6 +1,5 @@
 import WidgetKit
 import SwiftUI
-import Charts
 import OSLog
 
 private let openboxLog = Logger(subsystem: DeckBundle.widgetsID, category: "OpenBox")
@@ -19,10 +18,8 @@ struct OpenBoxEntry: TimelineEntry {
     let input: Int64
     let output: Int64
     let cost: Double
-    let daily: [OpenCodeSnapshot.Day]
     let models: [OpenCodeSnapshot.Model]
     let tools: [OpenCodeSnapshot.ToolCount]
-    let costDaily: [OpenCodeSnapshot.CostDay]
     let sessionList: [OpenCodeSnapshot.SessionRow]
     let totalInput: Int64
     let totalOutput: Int64
@@ -35,17 +32,7 @@ struct OpenBoxEntry: TimelineEntry {
 
 struct OpenBoxProvider: TimelineProvider {
     func placeholder(in context: Context) -> OpenBoxEntry {
-        var daily: [OpenCodeSnapshot.Day] = []
-        for i in 0..<14 {
-            daily.append(
-                OpenCodeSnapshot.Day(
-                    day: "day\(i)",
-                    input: Int64(300_000 + (i % 5) * 120_000),
-                    output: Int64(40_000 + (i % 3) * 30_000)
-                )
-            )
-        }
-        return OpenBoxEntry(
+        OpenBoxEntry(
             date: .now,
             available: true,
             writtenAt: .now,
@@ -55,7 +42,6 @@ struct OpenBoxProvider: TimelineProvider {
             input: 2_400_000,
             output: 310_000,
             cost: 0.42,
-            daily: daily,
             models: [
                 OpenCodeSnapshot.Model(model: "deepseek-v4-flash", cost: 0.21, input: 1_200_000, output: 150_000),
                 OpenCodeSnapshot.Model(model: "gpt-5.2", cost: 0.15, input: 800_000, output: 90_000),
@@ -65,21 +51,16 @@ struct OpenBoxProvider: TimelineProvider {
                 OpenCodeSnapshot.ToolCount(tool: "read", count: 4169),
                 OpenCodeSnapshot.ToolCount(tool: "edit", count: 2098),
             ],
-            costDaily: [
-                OpenCodeSnapshot.CostDay(day: "day0", model: "deepseek-v4-flash", cost: 0.21),
-                OpenCodeSnapshot.CostDay(day: "day1", model: "deepseek-v4-flash", cost: 0.15),
-                OpenCodeSnapshot.CostDay(day: "day1", model: "gpt-5.2", cost: 0.06),
-            ],
             sessionList: [
                 OpenCodeSnapshot.SessionRow(title: "ShipBox widget review", input: 380_000, output: 32_000, timeCreated: .now.addingTimeInterval(-7200)),
-                OpenCodeSnapshot.SessionRow(title: "OpenBox cost chart spike", input: 96_000, output: 11_000, timeCreated: .now.addingTimeInterval(-86_400)),
+                OpenCodeSnapshot.SessionRow(title: "OpenBox limits spike", input: 96_000, output: 11_000, timeCreated: .now.addingTimeInterval(-86_400)),
                 OpenCodeSnapshot.SessionRow(title: "Settings migration audit", input: 31_000, output: 4_000, timeCreated: .now.addingTimeInterval(-3 * 86_400)),
             ],
             totalInput: 48_000_000,
             totalOutput: 6_100_000,
             totalCost: 9.84,
             limits: placeholderLimits(now: .now),
-            settings: placeholderSettings
+            settings: OpenBoxSettings()
         )
     }
 
@@ -104,12 +85,6 @@ struct OpenBoxProvider: TimelineProvider {
                 resetsAt: now.addingTimeInterval(4 * 86_400 + 21 * 3_600)
             )
         )
-    }
-
-    private var placeholderSettings: OpenBoxSettings {
-        var settings = OpenBoxSettings()
-        settings.showLimits = true
-        return settings
     }
 
     func getSnapshot(in context: Context, completion: @escaping (OpenBoxEntry) -> Void) {
@@ -155,10 +130,8 @@ struct OpenBoxProvider: TimelineProvider {
                 input: 0,
                 output: 0,
                 cost: 0,
-                daily: [],
                 models: [],
                 tools: [],
-                costDaily: [],
                 sessionList: [],
                 totalInput: 0,
                 totalOutput: 0,
@@ -178,10 +151,8 @@ struct OpenBoxProvider: TimelineProvider {
             input: snapshot.input,
             output: snapshot.output,
             cost: snapshot.cost,
-            daily: snapshot.daily,
             models: snapshot.models,
             tools: snapshot.tools,
-            costDaily: snapshot.costDaily,
             sessionList: snapshot.sessionList,
             totalInput: snapshot.totalInput,
             totalOutput: snapshot.totalOutput,
@@ -202,7 +173,7 @@ struct OpenBoxWidget: Widget {
             OpenBoxWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("OpenBox")
-        .description("Today's opencode tokens and cost with a 14-day chart, top models and Go usage limits.")
+        .description("Today's opencode tokens and cost with Go usage limits and top models.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -284,18 +255,22 @@ struct OpenBoxWidgetEntryView: View {
     }()
 
     private var smallView: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             tokenRow(title: "IN", value: entry.input, color: entry.settings.inputColor.color)
             tokenRow(title: "OUT", value: entry.output, color: entry.settings.outputColor.color)
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(entry.settings.costColor.color)
-                        .frame(width: 7, height: 7)
-                    Text("COST")
-                        .foregroundStyle(.secondary)
-                    Text(OpenCodeFormatters.formatCost(entry.cost))
-                        .foregroundStyle(.primary)
-                }
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(entry.settings.costColor.color)
+                    .frame(width: 7, height: 7)
+                Text("COST")
+                    .foregroundStyle(.secondary)
+                Text(OpenCodeFormatters.formatCost(entry.cost))
+                    .foregroundStyle(.primary)
+            }
+            if let usage = entry.limits, usage.hasMeters {
+                limitsSection(usage, compact: true)
+                    .padding(.top, 2)
+            }
             if hasStatusLine {
                 statusLine
             }
@@ -309,35 +284,13 @@ struct OpenBoxWidgetEntryView: View {
             if hasStatusLine {
                 statusLine
             }
-            HStack(spacing: 14) {
-                tokenRow(title: "IN", value: entry.input, color: entry.settings.inputColor.color)
-                tokenRow(title: "OUT", value: entry.output, color: entry.settings.outputColor.color)
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(.orange)
-                        .frame(width: 7, height: 7)
-                    Text("COST")
-                        .foregroundStyle(.secondary)
-                    Text(OpenCodeFormatters.formatCost(entry.cost))
-                        .foregroundStyle(.primary)
-                }
-                Spacer()
-            }
-            .font(.system(size: 12, weight: .semibold, design: .rounded))
-            .monospacedDigit()
-
-            if limitsVisible, let usage = entry.limits {
+            headerRow
+            if let usage = entry.limits, usage.hasMeters {
                 limitsSection(usage)
                     .padding(.top, 2)
             }
-
-            if entry.settings.showChart && !entry.daily.isEmpty {
-                if entry.settings.showCostChart && !entry.costDaily.isEmpty {
-                    costChart
-                } else {
-                    chart
-                }
-            }
+            Spacer(minLength: 0)
+            allTimeFooter
         }
     }
 
@@ -346,78 +299,66 @@ struct OpenBoxWidgetEntryView: View {
             if hasStatusLine {
                 statusLine
             }
-            HStack(spacing: 14) {
-                tokenRow(title: "IN", value: entry.input, color: entry.settings.inputColor.color)
-                tokenRow(title: "OUT", value: entry.output, color: entry.settings.outputColor.color)
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(entry.settings.costColor.color)
-                        .frame(width: 7, height: 7)
-                    Text("COST")
-                        .foregroundStyle(.secondary)
-                    Text(OpenCodeFormatters.formatCost(entry.cost))
-                        .foregroundStyle(.primary)
-                }
-                Spacer()
-            }
-            .font(.system(size: 12, weight: .semibold, design: .rounded))
-            .monospacedDigit()
-
-            if limitsVisible, let usage = entry.limits {
+            headerRow
+            if let usage = entry.limits, usage.hasMeters {
                 limitsSection(usage)
                     .padding(.top, 2)
             }
-
-            if entry.settings.showChart && !entry.daily.isEmpty {
-                if entry.settings.showCostChart && !entry.costDaily.isEmpty {
-                    costChart
-                        .padding(.top, 6)
-                    if family == .systemLarge {
-                        costLegend
-                            .padding(.top, 4)
-                    }
-                } else {
-                    chart
-                        .padding(.top, 6)
-                }
-            }
-
             if entry.settings.showModels && !entry.models.isEmpty {
                 Divider()
                     .padding(.top, 4)
                 modelsList
             }
-
             if entry.settings.showTools && !entry.tools.isEmpty {
                 Divider()
                     .padding(.top, 4)
                 toolsList
             }
-
             if entry.settings.showSessions && !entry.sessionList.isEmpty {
                 Divider()
                     .padding(.top, 4)
                 sessionsList
             }
-
             Spacer(minLength: 0)
-
-            Text("All time: \(OpenCodeFormatters.formatTokens(entry.totalInput)) in · \(OpenCodeFormatters.formatTokens(entry.totalOutput)) out · \(OpenCodeFormatters.formatCost(entry.totalCost))")
-                .font(.system(size: 10, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
+            allTimeFooter
         }
+    }
+
+    private var headerRow: some View {
+        HStack(spacing: 14) {
+            tokenRow(title: "IN", value: entry.input, color: entry.settings.inputColor.color)
+            tokenRow(title: "OUT", value: entry.output, color: entry.settings.outputColor.color)
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(entry.settings.costColor.color)
+                    .frame(width: 7, height: 7)
+                Text("COST")
+                    .foregroundStyle(.secondary)
+                Text(OpenCodeFormatters.formatCost(entry.cost))
+                    .foregroundStyle(.primary)
+            }
+            Spacer()
+        }
+        .font(.system(size: 12, weight: .semibold, design: .rounded))
+        .monospacedDigit()
+    }
+
+    private var allTimeFooter: some View {
+        Text("All time: \(OpenCodeFormatters.formatTokens(entry.totalInput)) in · \(OpenCodeFormatters.formatTokens(entry.totalOutput)) out · \(OpenCodeFormatters.formatCost(entry.totalCost))")
+            .font(.system(size: 10, weight: .medium, design: .rounded))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
     }
 
     /// The same three meters the Console Go page shows, from
     /// `openbox-usage.json`. Limits and remaining are the server's numbers;
-    /// the bar is used/limit.
-    private func limitsSection(_ usage: OpenBoxUsage) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+    /// the bar is used/limit. Small drops the dollar text so the bars fit.
+    private func limitsSection(_ usage: OpenBoxUsage, compact: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 3 : 4) {
             HStack(spacing: 5) {
                 Text("LIMITS")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .font(.system(size: compact ? 8 : 10, weight: .bold, design: .rounded))
                     .foregroundStyle(.secondary)
                     .tracking(1)
                 Text(usage.productLabel)
@@ -430,21 +371,21 @@ struct OpenBoxWidgetEntryView: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            limitRow("ROLLING", usage.fiveHour)
-            limitRow("WEEKLY", usage.week)
-            limitRow("MONTHLY", usage.month)
+            limitRow("ROLLING", usage.fiveHour, compact: compact)
+            limitRow("WEEKLY", usage.week, compact: compact)
+            limitRow("MONTHLY", usage.month, compact: compact)
         }
     }
 
     @ViewBuilder
-    private func limitRow(_ title: String, _ meter: OpenBoxUsage.Meter?) -> some View {
+    private func limitRow(_ title: String, _ meter: OpenBoxUsage.Meter?, compact: Bool = false) -> some View {
         if let meter {
-            HStack(spacing: 6) {
+            HStack(spacing: compact ? 4 : 6) {
                 Text(title)
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(.system(size: compact ? 8 : 9, weight: .bold, design: .rounded))
                     .foregroundStyle(.secondary)
                     .tracking(0.5)
-                    .frame(width: 46, alignment: .leading)
+                    .frame(width: compact ? 38 : 46, alignment: .leading)
                 GeometryReader { proxy in
                     ZStack(alignment: .leading) {
                         Capsule()
@@ -454,17 +395,19 @@ struct OpenBoxWidgetEntryView: View {
                             .frame(width: max(2, proxy.size.width * min(meter.percent / 100, 1)))
                     }
                 }
-                .frame(height: 5)
+                .frame(height: compact ? 4 : 5)
                 Text(meter.percentText)
-                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .font(.system(size: compact ? 8 : 9, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(limitTint(meter.percent))
-                    .frame(width: 34, alignment: .trailing)
-                Text("\(OpenBoxUsageFormatters.money(meter.remainingMicroCents)) left of \(OpenBoxUsageFormatters.money(meter.limitMicroCents))")
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .frame(width: compact ? 26 : 34, alignment: .trailing)
+                if !compact {
+                    Text("\(OpenBoxUsageFormatters.money(meter.remainingMicroCents)) left of \(OpenBoxUsageFormatters.money(meter.limitMicroCents))")
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
         }
     }
@@ -577,93 +520,6 @@ struct OpenBoxWidgetEntryView: View {
                 }
             }
         }
-    }
-
-    private var limitsVisible: Bool {
-        entry.settings.showLimits && entry.limits?.hasMeters == true
-    }
-
-    /// Medium shares its height with the limits section; a full chart would
-    /// push the third meter out of the card.
-    private var chartHeight: CGFloat {
-        family == .systemMedium ? (limitsVisible ? 40 : 62) : 56
-    }
-
-    private var chart: some View {
-        Chart(Array(entry.daily.enumerated()), id: \.offset) { index, day in
-            LineMark(
-                x: .value("Day", index),
-                y: .value("Input", day.input),
-                series: .value("Metric", "Input")
-            )
-            .foregroundStyle(entry.settings.inputColor.color)
-            .lineStyle(StrokeStyle(lineWidth: 1.5))
-            .interpolationMethod(.catmullRom)
-
-            LineMark(
-                x: .value("Day", index),
-                y: .value("Output", day.output),
-                series: .value("Metric", "Output")
-            )
-            .foregroundStyle(entry.settings.outputColor.color)
-            .lineStyle(StrokeStyle(lineWidth: 1.5))
-            .interpolationMethod(.catmullRom)
-        }
-        .chartXAxis(.hidden)
-        .chartYAxis(.hidden)
-        .frame(height: chartHeight)
-    }
-
-    private var costChart: some View {
-        let series = CostSeries.buildSeries(from: entry.costDaily)
-        let colors = costSeriesColors(count: series.count)
-        let points = CostSeries.points(from: series)
-        return Chart {
-            ForEach(points) { point in
-                BarMark(
-                    x: .value("Day", point.day),
-                    y: .value("Cost", point.cost)
-                )
-                .foregroundStyle(by: .value("Model", point.model))
-            }
-        }
-        .chartXAxis(.hidden)
-        .chartYAxis(.hidden)
-        .chartForegroundStyleScale(
-            domain: series.map(\.model),
-            range: colors
-        )
-        .frame(height: chartHeight)
-    }
-
-    private var costLegend: some View {
-        let series = CostSeries.buildSeries(from: entry.costDaily)
-        let colors = costSeriesColors(count: series.count)
-        return HStack(spacing: 10) {
-            ForEach(Array(series.enumerated()), id: \.element.model) { index, s in
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(colors[index])
-                        .frame(width: 6, height: 6)
-                    Text(CostSeries.displayID(of: s.model))
-                        .font(.system(size: 9, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func costSeriesColors(count: Int) -> [Color] {
-        let palette: [Color] = [
-            entry.settings.costColor.color,
-            Color(red: 0.35, green: 0.78, blue: 0.78),
-            Color(red: 0.95, green: 0.55, blue: 0.65),
-            Color.gray,
-        ]
-        return Array(palette.prefix(count))
     }
 
     private func tokenRow(title: String, value: Int64, color: Color) -> some View {

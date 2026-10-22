@@ -1982,21 +1982,13 @@ private struct OpenBoxSettingsView: View {
                     .foregroundStyle(.secondary)
                 FetchStatusCaption(source: .opencodeRemote, clearOn: accountID ?? "")
             }
-            Section("Chart") {
-                Toggle("Show 14-day chart", isOn: $settings.showChart)
-                Toggle("Cost-per-day chart (stacked by model)", isOn: $settings.showCostChart)
-                    .disabled(!settings.showChart)
+            Section("Colors") {
                 ColorPicker("IN color", selection: $settings.inputColor.color)
-                    .disabled(!settings.showChart)
                 ColorPicker("OUT color", selection: $settings.outputColor.color)
-                    .disabled(!settings.showChart)
                 ColorPicker("COST color", selection: $settings.costColor.color)
-                    .disabled(!settings.showChart)
             }
-            Section("Usage limits") {
-                Toggle("Show Go usage limits", isOn: $settings.showLimits)
-                    .disabled(accountID == nil)
-                Text("Shows the same rolling, weekly and monthly meters as the OpenCode Go page. Uses the selected opencode account's key; local mode only.")
+            Section("Go usage limits") {
+                Text("Rolling, weekly and monthly meters from the OpenCode Go page, using the selected opencode account's key. Shown on every widget size.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if accountID == nil {

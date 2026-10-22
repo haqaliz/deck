@@ -243,7 +243,6 @@
 		AA9E91EA980B1F6E98C2FF6B /* RemoteOpenCodeAggregatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A42A231FF0304488BCEB28A /* RemoteOpenCodeAggregatorTests.swift */; };
 		AB600153AB7326FCBC557576 /* RemoteOpenCodeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E66FBB517E3DA6EDE5825BF /* RemoteOpenCodeSync.swift */; };
 		AB63AAC67E339E2D6FBAE314 /* LiveBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90C847A88B662AB506BCA8 /* LiveBoxWidget.swift */; };
-		AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */; };
 		AD4AF4B05C1E49736F84F66F /* MarketBoxCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B578BD73F0CA76AA51778225 /* MarketBoxCore.swift */; };
 		AD601492EF514E27C6515765 /* CoinSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6C7045DAE585B9A15A88920 /* CoinSearchTests.swift */; };
 		AE200A4A3ADF02142F8AEB03 /* TrayLifecyclePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B73EE38D2EDC1B6922422BD /* TrayLifecyclePolicyTests.swift */; };
@@ -510,7 +509,6 @@
 		79E814CE71C9E15746C2443A /* CalBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalBoxTests.swift; sourceTree = "<group>"; };
 		7A8F7E47D5B1EFC7E9E91DF3 /* CalBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalBoxWidget.swift; sourceTree = "<group>"; };
 		7B2DB053937C24CBB649992B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostSeriesTests.swift; sourceTree = "<group>"; };
 		7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialVerification.swift; sourceTree = "<group>"; };
 		7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxSnapshot.swift; sourceTree = "<group>"; };
 		812063688CE39D11189608C8 /* CredentialAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialAccount.swift; sourceTree = "<group>"; };
@@ -739,7 +737,6 @@
 				B6C7045DAE585B9A15A88920 /* CoinSearchTests.swift */,
 				9F6A169F61494E1514F05783 /* CommitSearchTests.swift */,
 				84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */,
-				7C52DC4D51A4785E311A78A3 /* CostSeriesTests.swift */,
 				633ED2890AE2D2C0B501102A /* CredentialAccountTests.swift */,
 				277279067EB7808B71A4759B /* CredentialGateTests.swift */,
 				8D9ED1410532D72412810AE4 /* CredentialKindSearchTests.swift */,
@@ -1256,7 +1253,6 @@
 				248A928306BBEDD1CC940882 /* CommitSearchTests.swift in Sources */,
 				E3474B20392275AF6E0E5F68 /* ContainerMigration.swift in Sources */,
 				9679FDE5EC8B876A8C611B2D /* ContainerMigrationTests.swift in Sources */,
-				AB6A2C3D255BFC48D1B1573E /* CostSeriesTests.swift in Sources */,
 				71756A3125964940AD4F060C /* CredentialAccount.swift in Sources */,
 				158161B595463B7ECDE20B50 /* CredentialAccountTests.swift in Sources */,
 				D9873960F255D965BA294750 /* CredentialGateTests.swift in Sources */,

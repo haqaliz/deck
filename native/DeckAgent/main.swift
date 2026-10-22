@@ -147,7 +147,7 @@ Task {
     // Go usage limits: the same meters the Console Go page renders. The token
     // is the selected opencode account's key; in remote mode that key is the
     // server password, not a Console key, so limits stay local-mode only.
-    if settings.openbox.showLimits, !settings.openBoxUsesRemoteServer,
+    if !settings.openBoxUsesRemoteServer,
        let token = settings.credential(for: .openbox)?.token, !token.isEmpty {
         do {
             OpenBoxUsageStore.save(try await OpenBoxUsageLoader.load(token: token))
