@@ -1,0 +1,28 @@
+{
+  "results": {
+    "A": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": { "fields": [
+            { "name": "Time", "type": "time" },
+            { "name": "Value", "type": "number", "labels": { "host": "x201", "name": "agent-a" } }
+          ] },
+          "data": { "values": [[1794865918349], [120.5]] }
+        }
+      ]
+    },
+    "C": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": { "fields": [
+            { "name": "Time", "type": "time" },
+            { "name": "Value", "type": "number", "labels": { "host": "x201", "container": "agent-a" } }
+          ] },
+          "data": { "values": [[1794865918349], [4294967296]] }
+        }
+      ]
+    }
+  }
+}

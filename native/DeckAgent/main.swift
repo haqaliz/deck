@@ -379,6 +379,60 @@ Task {
         agentLog.info("failed marketbox snapshot (\(outcome.rawValue, privacy: .public))")
     }
 
+    // LogBox: Elastic logs with the user's own read-only key. The 24h block is
+    // cached in the snapshot, so most ticks only pay for the 15m counts.
+    if credentialGates[.logboxElastic] == .unavailable {
+        agentLog.info("skipped logbox snapshot (credential unavailable)")
+    } else if case .fetch(let credentials)? = credentialGates[.logboxElastic],
+              let credential = credentials.first {
+        do {
+            let snapshot = try await LogBoxLoader.fetch(
+                credential: credential,
+                settings: settings.logbox,
+                previous: LogBoxSnapshotStore.load()
+            )
+            LogBoxSnapshotStore.save(snapshot)
+            FetchStatusStore.record(.ok, for: .logbox)
+            agentLog.info(
+                "written logbox snapshot (\(snapshot.errorSmall, privacy: .public) errors / \(snapshot.warnSmall, privacy: .public) warns)"
+            )
+        } catch {
+            let outcome = FetchClassifier.outcome(for: error)
+            FetchStatusStore.record(outcome, for: .logbox)
+            agentLog.info("failed logbox snapshot (\(outcome.rawValue, privacy: .public))")
+        }
+    } else {
+        FetchStatusStore.record(.notConfigured, for: .logbox)
+        agentLog.info("skipped logbox snapshot (not configured)")
+    }
+
+    // MetricBox: Grafana. One instant query builds the host table; the
+    // datasource is discovered from the account's own URL, never hard-coded.
+    if credentialGates[.metricboxGrafana] == .unavailable {
+        agentLog.info("skipped metricbox snapshot (credential unavailable)")
+    } else if case .fetch(let credentials)? = credentialGates[.metricboxGrafana],
+              let credential = credentials.first {
+        do {
+            let snapshot = try await MetricBoxLoader.fetch(
+                credential: credential,
+                settings: settings.metricbox,
+                previous: MetricBoxSnapshotStore.load()
+            )
+            MetricBoxSnapshotStore.save(snapshot)
+            FetchStatusStore.record(.ok, for: .metricbox)
+            agentLog.info(
+                "written metricbox snapshot (\(snapshot.hosts.count, privacy: .public) hosts, \(snapshot.firingAlerts.count, privacy: .public) alerts)"
+            )
+        } catch {
+            let outcome = FetchClassifier.outcome(for: error)
+            FetchStatusStore.record(outcome, for: .metricbox)
+            agentLog.info("failed metricbox snapshot (\(outcome.rawValue, privacy: .public))")
+        }
+    } else {
+        FetchStatusStore.record(.notConfigured, for: .metricbox)
+        agentLog.info("skipped metricbox snapshot (not configured)")
+    }
+
     let elapsed = Date().timeIntervalSince(start)
     agentLog.info("full refresh done in \(elapsed, format: .fixed(precision: 2))s")
     semaphore.signal()

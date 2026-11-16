@@ -25,6 +25,8 @@ enum FetchSource: String, Codable, CaseIterable {
     /// when no row at all could be priced, so a single source going down reads
     /// as a partial list with a note, not as a dead widget.
     case marketbox
+    /// M11. One key per widget; each account carries its own URL and token.
+    case logbox, metricbox
 }
 
 enum FetchOutcome: String, Codable {
@@ -146,6 +148,13 @@ enum FetchClassifier {
             case .transport: return .unreachable
             case .invalidPayload: return .badResponse
             }
+        case let error as InfraProviderError:
+            switch error {
+            case .notConfigured: return .notConfigured
+            case .serverError(let code): return outcome(forStatusCode: code)
+            case .transport: return .unreachable
+            case .invalidPayload: return .badResponse
+            }
         default:
             // Never accuse the user of misconfiguring something over an error
             // we don't recognise.
@@ -173,6 +182,8 @@ enum FetchStatusCopy {
             case .taskbox: return "Add org, project + PAT in settings"
             case .calbox: return "Pick a calendar in settings"
             case .marketbox: return "Add symbols in settings"
+            case .logbox: return "Pick an Elastic account in settings"
+            case .metricbox: return "Pick a Grafana account in settings"
             }
         case .authOrTarget:
             switch source {
@@ -184,6 +195,8 @@ enum FetchStatusCopy {
             case .taskbox: return "Check org, project + PAT"
             case .calbox: return "Allow calendar access"
             case .marketbox: return "Check the symbols"
+            case .logbox: return "Check the Elastic URL + key"
+            case .metricbox: return "Check the Grafana URL + token"
             }
         case .unreachable:
             switch source {
@@ -196,6 +209,8 @@ enum FetchStatusCopy {
             // No network in this path — kept only so the switch is total.
             case .calbox: return "Can't read the calendar"
             case .marketbox: return "Can't reach the price sources"
+            case .logbox: return "Can't reach Elastic"
+            case .metricbox: return "Can't reach Grafana"
             }
         case .badResponse:
             switch source {
@@ -207,6 +222,8 @@ enum FetchStatusCopy {
             case .taskbox: return "Unexpected Azure DevOps response"
             case .calbox: return "Couldn't read the calendar"
             case .marketbox: return "Unexpected market response"
+            case .logbox: return "Unexpected Elastic response"
+            case .metricbox: return "Unexpected Grafana response"
             }
         case .queryRejected:
             // Only TaskBox takes a query. Checked before the credential,
@@ -217,6 +234,8 @@ enum FetchStatusCopy {
             case .shipbox, .taskbox, .opencodeRemote:
                 return "Can't read saved credentials"
             case .prboxGitHub, .prboxAzure:
+                return "can't read saved credentials"
+            case .logbox, .metricbox:
                 return "can't read saved credentials"
             // These three have no credentials and cannot reach this state.
             case .weather, .calbox, .marketbox:
@@ -242,6 +261,8 @@ enum FetchStatusCopy {
             case .taskbox: return "Nothing is fetched until an organization, a project and a token are all set."
             case .calbox: return "Nothing is read until at least one calendar is ticked."
             case .marketbox: return "Nothing is fetched until at least one symbol is set."
+            case .logbox: return "Nothing is fetched until an Elastic account with a base URL and a read-only key is picked."
+            case .metricbox: return "Nothing is fetched until a Grafana account with a base URL and a token is picked."
             }
         case .authOrTarget:
             switch source {
@@ -261,6 +282,10 @@ enum FetchStatusCopy {
                 return "macOS is blocking calendar access. Grant it in System Settings → Privacy & Security → Calendars, for both Deck and DeckAgent."
             case .marketbox:
                 return "The price sources didn't recognise a symbol: check the ticker list (crypto symbols like BTC, fiat codes like USD or CAD, and GOLD for 1 gram of gold)."
+            case .logbox:
+                return "Elastic rejected the request: check the base URL and that the API key is valid and can read logs-manifold-*."
+            case .metricbox:
+                return "Grafana rejected the request: check the base URL and that the token is valid and can read the datasources."
             }
         case .unreachable:
             switch source {
@@ -272,6 +297,8 @@ enum FetchStatusCopy {
             case .taskbox: return "Couldn't reach dev.azure.com — offline, rate-limited, or Azure DevOps is down."
             case .calbox: return "Couldn't read the calendar store. Retrying every minute."
             case .marketbox: return "Couldn't reach a price source — offline, rate-limited, or a source is down. Retrying every minute."
+            case .logbox: return "Couldn't reach Elastic — check Tailscale, the base URL, and that the cluster is up. Retrying every minute."
+            case .metricbox: return "Couldn't reach Grafana — check the base URL and that the instance is up. Retrying every minute."
             }
         case .badResponse:
             switch source {
@@ -283,6 +310,8 @@ enum FetchStatusCopy {
             case .taskbox: return "Reached Azure DevOps, but the response couldn't be read. Retrying every minute."
             case .calbox: return "Reached the calendar store but couldn't read it. Retrying every minute."
             case .marketbox: return "Reached the price sources, but the response couldn't be read. Retrying every minute."
+            case .logbox: return "Reached Elastic, but the response couldn't be read. Retrying every minute."
+            case .metricbox: return "Reached Grafana, but the response couldn't be read. Retrying every minute."
             }
         case .queryRejected:
             return source == .taskbox
@@ -290,7 +319,7 @@ enum FetchStatusCopy {
                 : nil
         case .credentialsUnavailable:
             switch source {
-            case .shipbox, .taskbox, .opencodeRemote, .prboxGitHub, .prboxAzure:
+            case .shipbox, .taskbox, .opencodeRemote, .prboxGitHub, .prboxAzure, .logbox, .metricbox:
                 return "Deck couldn't read the saved token from your keychain — unlock your login keychain and it will retry. The token is still stored; there is nothing to paste again."
             // These three have no credentials and cannot reach this state.
             case .weather, .calbox, .marketbox:

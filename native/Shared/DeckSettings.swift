@@ -100,6 +100,8 @@ struct DeckSettings: Codable, Equatable {
     var calbox = CalBoxSettings()
     var prbox = PRBoxSettings()
     var marketbox = MarketBoxSettings()
+    var logbox = LogBoxSettings()
+    var metricbox = MetricBoxSettings()
     var spotlight = SpotlightSettings()
     /// Every credential the user has configured. Widgets reference these by id
     /// rather than each owning a token of its own.
@@ -142,6 +144,7 @@ struct DeckSettings: Codable, Equatable {
         case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
         case weatherbox, clockbox, shipbox, taskbox, calbox, prbox
         case marketbox, credentials, agentAtLogin, didShowRenameNotice
+        case logbox, metricbox
         case agentsRegisteredAt, spotlight
     }
 
@@ -181,6 +184,8 @@ struct DeckSettings: Codable, Equatable {
         calbox = try c.decodeIfPresent(CalBoxSettings.self, forKey: .calbox) ?? CalBoxSettings()
         prbox = try c.decodeIfPresent(PRBoxSettings.self, forKey: .prbox) ?? PRBoxSettings()
         marketbox = try c.decodeIfPresent(MarketBoxSettings.self, forKey: .marketbox) ?? MarketBoxSettings()
+        logbox = try c.decodeIfPresent(LogBoxSettings.self, forKey: .logbox) ?? LogBoxSettings()
+        metricbox = try c.decodeIfPresent(MetricBoxSettings.self, forKey: .metricbox) ?? MetricBoxSettings()
         spotlight = try c.decodeIfPresent(SpotlightSettings.self, forKey: .spotlight) ?? SpotlightSettings()
         credentials = try c.decodeIfPresent(CredentialsSettings.self, forKey: .credentials) ?? CredentialsSettings()
         agentAtLogin = try c.decodeIfPresent(Bool.self, forKey: .agentAtLogin) ?? true
@@ -312,6 +317,8 @@ struct DeckSettings: Codable, Equatable {
         case .taskbox: return taskbox.accountIDs
         case .prboxGitHub: return prbox.github.accountID.map { [$0] } ?? []
         case .prboxAzure: return prbox.azure.accountIDs
+        case .logboxElastic: return logbox.accountID.map { [$0] } ?? []
+        case .metricboxGrafana: return metricbox.accountID.map { [$0] } ?? []
         }
     }
 
@@ -329,6 +336,8 @@ struct DeckSettings: Codable, Equatable {
         case .taskbox: taskbox.accountIDs = list
         case .prboxGitHub: prbox.github.accountID = list.first
         case .prboxAzure: prbox.azure.accountIDs = list
+        case .logboxElastic: logbox.accountID = list.first
+        case .metricboxGrafana: metricbox.accountID = list.first
         }
     }
 
@@ -687,6 +696,117 @@ struct WeatherBoxSettings: Codable, Equatable {
         location = try c.decodeIfPresent(String.self, forKey: .location) ?? ""
         unitsFahrenheit = try c.decodeIfPresent(Bool.self, forKey: .unitsFahrenheit) ?? false
         showForecast = try c.decodeIfPresent(Bool.self, forKey: .showForecast) ?? true
+    }
+}
+
+// MARK: - M11 infra settings
+
+enum LogEnvironment: String, Codable, CaseIterable {
+    case prd, stg
+
+    var displayName: String {
+        switch self {
+        case .prd: "Production"
+        case .stg: "Staging"
+        }
+    }
+
+    var index: String { "logs-manifold-\(rawValue)" }
+}
+
+enum LogBoxFace: String, Codable, CaseIterable {
+    case prodHealth, brokenNow, singleService, mirrorDashboard
+
+    var displayName: String {
+        switch self {
+        case .prodHealth: "Prod health"
+        case .brokenNow: "What's broken"
+        case .singleService: "Single service"
+        case .mirrorDashboard: "Grafana panels"
+        }
+    }
+}
+
+enum LogTextMode: String, Codable, CaseIterable {
+    case templates, latestMessage, fullLines
+
+    var displayName: String {
+        switch self {
+        case .templates: "Templates + counts"
+        case .latestMessage: "Latest message"
+        case .fullLines: "Full log lines"
+        }
+    }
+}
+
+struct LogBoxSettings: Codable, Equatable {
+    var accountID: String?
+    var environment: LogEnvironment = .prd
+    var face: LogBoxFace = .prodHealth
+    /// Default is the privacy-safe one: templates and counts, no message text.
+    var textMode: LogTextMode = .templates
+    /// Empty means all services; used by the Single service face.
+    var service = ""
+    var smallWindowMinutes = 15
+    var largeWindowMinutes = 1440
+    var showTrend = true
+    var accentColor = RGBA.systemOrange
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
+        environment = try c.decodeIfPresent(LogEnvironment.self, forKey: .environment) ?? .prd
+        face = try c.decodeIfPresent(LogBoxFace.self, forKey: .face) ?? .prodHealth
+        textMode = try c.decodeIfPresent(LogTextMode.self, forKey: .textMode) ?? .templates
+        service = try c.decodeIfPresent(String.self, forKey: .service) ?? ""
+        smallWindowMinutes = min(max(try c.decodeIfPresent(Int.self, forKey: .smallWindowMinutes) ?? 15, 5), 1440)
+        largeWindowMinutes = min(max(try c.decodeIfPresent(Int.self, forKey: .largeWindowMinutes) ?? 1440, 15), 10080)
+        showTrend = try c.decodeIfPresent(Bool.self, forKey: .showTrend) ?? true
+        accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA.systemOrange
+    }
+}
+
+enum MetricBoxFace: String, Codable, CaseIterable {
+    case fleetHealth, singleHost, power, topAgents, alerts
+
+    var displayName: String {
+        switch self {
+        case .fleetHealth: "Fleet health"
+        case .singleHost: "Single host"
+        case .power: "Power & cost"
+        case .topAgents: "Top agents"
+        case .alerts: "Alerts"
+        }
+    }
+}
+
+struct MetricBoxSettings: Codable, Equatable {
+    var accountID: String?
+    var face: MetricBoxFace = .fleetHealth
+    /// Empty means all hosts; used by the Single host face.
+    var host = ""
+    /// Hosts hidden from the fleet face. All seven are shown by default.
+    var hiddenHosts: [String] = []
+    var smallWindowMinutes = 15
+    var largeWindowMinutes = 1440
+    /// The Power dashboard's `$price` default (USD per kWh).
+    var ratePerKWh = 0.12
+    var accentColor = RGBA.systemGreen
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
+        face = try c.decodeIfPresent(MetricBoxFace.self, forKey: .face) ?? .fleetHealth
+        host = try c.decodeIfPresent(String.self, forKey: .host) ?? ""
+        hiddenHosts = try c.decodeIfPresent([String].self, forKey: .hiddenHosts) ?? []
+        smallWindowMinutes = min(max(try c.decodeIfPresent(Int.self, forKey: .smallWindowMinutes) ?? 15, 5), 1440)
+        largeWindowMinutes = min(max(try c.decodeIfPresent(Int.self, forKey: .largeWindowMinutes) ?? 1440, 15), 10080)
+        ratePerKWh = min(max(try c.decodeIfPresent(Double.self, forKey: .ratePerKWh) ?? 0.12, 0), 100)
+        accentColor = try c.decodeIfPresent(RGBA.self, forKey: .accentColor) ?? RGBA.systemGreen
     }
 }
 

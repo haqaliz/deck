@@ -18,5 +18,7 @@ struct DeckWidgetsBundle: WidgetBundle {
         CalBoxWidget()
         PRBoxWidget()
         MarketBoxWidget()
+        LogBoxWidget()
+        MetricBoxWidget()
     }
 }

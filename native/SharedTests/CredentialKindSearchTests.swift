@@ -62,8 +62,15 @@ final class CredentialKindSearchTests: XCTestCase {
     }
 
     func testResultsKeepTheDeclaredOrderRatherThanTheQuerysOrder() {
-        // The provider list must not reshuffle as you type. "e" is in "Azure"
-        // and "opencode" but not in "GitHub".
-        XCTAssertEqual(CredentialKind.matching("e"), [.azure, .opencode])
+        // The provider list must not reshuffle as you type. "e" is in "Azure",
+        // "opencode", "Elastic" and Grafana's "metrics" alias — but not in
+        // "GitHub".
+        XCTAssertEqual(CredentialKind.matching("e"), [.azure, .opencode, .elastic, .grafana])
+    }
+
+    func testInfraProvidersAreFindableByTheirAliases() {
+        XCTAssertEqual(CredentialKind.matching("kibana"), [.elastic])
+        XCTAssertEqual(CredentialKind.matching("prometheus"), [.grafana])
+        XCTAssertEqual(CredentialKind.matching("metrics"), [.grafana])
     }
 }

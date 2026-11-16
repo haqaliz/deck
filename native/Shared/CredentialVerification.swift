@@ -28,7 +28,7 @@ extension CredentialAccount {
             .map { $0.lowercased() }
             .sorted()
             .joined(separator: ",")
-        return [token, organization, projectKey, serverURL].joined(separator: "\u{0}")
+        return [token, organization, projectKey, serverURL, baseURL, uiURL].joined(separator: "\u{0}")
     }
 
     mutating func recordVerification(_ identity: CredentialIdentity, at date: Date) {
@@ -91,6 +91,40 @@ enum AzureConnectionParser {
     }
 }
 
+enum ElasticHealthParser {
+    /// `_cluster/health` answers with the cluster name and a colour status.
+    /// Both empty is unreadable, never "verified".
+    static func parse(_ data: Data) -> (cluster: String, status: String)? {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let cluster = root["cluster_name"] as? String, !cluster.isEmpty,
+            let status = root["status"] as? String, !status.isEmpty
+        else { return nil }
+        return (cluster, status)
+    }
+}
+
+enum ElasticCountParser {
+    static func parse(_ data: Data) -> Int? {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let count = root["count"] as? Int
+        else { return nil }
+        return count
+    }
+}
+
+enum GrafanaDatasourcesParser {
+    /// A datasource list is the cheapest authenticated read: `/api/health`
+    /// answers without a token, so it cannot verify anything.
+    static func parse(_ data: Data) -> Int? {
+        guard let rows = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return nil
+        }
+        return rows.count
+    }
+}
+
 // MARK: - Probes (host only — unsandboxed)
 
 /// Verifies one account against its provider, on demand.
@@ -111,6 +145,8 @@ enum CredentialVerifier {
         case .github: return try await github(token: account.token)
         case .azure: return try await azure(account)
         case .opencode: return try await opencode(account)
+        case .elastic: return try await elastic(account)
+        case .grafana: return try await grafana(account)
         }
     }
 
@@ -180,6 +216,67 @@ enum CredentialVerifier {
             detail: count == 1 ? "1 session" : "\(count) sessions",
             azureIdentityID: nil
         )
+    }
+
+    private static func elastic(_ account: CredentialAccount) async throws -> CredentialIdentity {
+        guard let base = normalizedBase(account.baseURL) else { throw VerifyError.notConfigured }
+        let health = try await get(
+            "\(base)/_cluster/health", token: account.token, scheme: "ApiKey"
+        )
+        guard let parsed = ElasticHealthParser.parse(health) else { throw VerifyError.badResponse }
+        // The count is what proves index read access, not just cluster health.
+        // A missing or forbidden count still leaves a valid health check, so
+        // the detail degrades rather than failing the whole verification.
+        var detail = [parsed.status]
+        if let countData = try? await get(
+            "\(base)/logs-manifold-*/_count", token: account.token, scheme: "ApiKey"
+        ), let count = ElasticCountParser.parse(countData) {
+            detail.append("\(count) docs")
+        }
+        return CredentialIdentity(
+            identity: parsed.cluster,
+            detail: detail.joined(separator: " · "),
+            azureIdentityID: nil
+        )
+    }
+
+    private static func grafana(_ account: CredentialAccount) async throws -> CredentialIdentity {
+        guard let base = normalizedBase(account.baseURL) else { throw VerifyError.notConfigured }
+        let datasources = try await get(
+            "\(base)/api/datasources", token: account.token, scheme: "Bearer"
+        )
+        guard let count = GrafanaDatasourcesParser.parse(datasources) else {
+            throw VerifyError.badResponse
+        }
+        // `/api/health` is unauthenticated on this instance, so it cannot
+        // verify a token. `/api/org` is authenticated and names the org.
+        var identity = URL(string: base)?.host ?? "Grafana"
+        if let orgData = try? await get(
+            "\(base)/api/org", token: account.token, scheme: "Bearer"
+        ), let org = try? JSONSerialization.jsonObject(with: orgData) as? [String: Any],
+           let name = org["name"] as? String, !name.isEmpty {
+            identity = name
+        }
+        return CredentialIdentity(
+            identity: identity,
+            detail: count == 1 ? "1 datasource" : "\(count) datasources",
+            azureIdentityID: nil
+        )
+    }
+
+    private static func get(_ url: String, token: String, scheme: String) async throws -> Data {
+        guard let url = URL(string: url) else { throw VerifyError.badResponse }
+        var request = URLRequest(url: url)
+        request.setValue("\(scheme) \(token)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 10
+        return try await send(request).0
+    }
+
+    private static func normalizedBase(_ raw: String) -> String? {
+        var value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        while value.hasSuffix("/") { value.removeLast() }
+        guard !value.isEmpty, URL(string: value)?.host != nil else { return nil }
+        return value
     }
 
     private static func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {

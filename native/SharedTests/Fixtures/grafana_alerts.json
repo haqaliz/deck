@@ -1,0 +1,12 @@
+[
+  {
+    "labels": {
+      "alertname": "House machine not reporting",
+      "severity": "warning",
+      "host": "x204"
+    },
+    "annotations": {
+      "summary": "No metrics received for 10 minutes"
+    }
+  }
+]

@@ -48,6 +48,11 @@ enum CredentialsCopy {
             if let scope = azureScope(for: account) { return scope }
         case .opencode:
             if let host = URL(string: account.serverURL)?.host, !host.isEmpty { return host }
+        case .elastic:
+            if let host = URL(string: account.uiURL)?.host, !host.isEmpty { return host }
+            if let host = URL(string: account.baseURL)?.host, !host.isEmpty { return host }
+        case .grafana:
+            if let host = URL(string: account.baseURL)?.host, !host.isEmpty { return host }
         case .github:
             break
         }
@@ -77,6 +82,11 @@ enum CredentialsCopy {
             if let scope = azureScope(for: account) { return scope }
         case .opencode:
             if let host = URL(string: account.serverURL)?.host, !host.isEmpty { return host }
+        case .elastic:
+            if let host = URL(string: account.uiURL)?.host, !host.isEmpty { return host }
+            if let host = URL(string: account.baseURL)?.host, !host.isEmpty { return host }
+        case .grafana:
+            if let host = URL(string: account.baseURL)?.host, !host.isEmpty { return host }
         case .github:
             break
         }
@@ -137,6 +147,10 @@ enum CredentialsCopy {
         case .azure:
             if account.organization.trimmingCharacters(in: .whitespaces).isEmpty {
                 missing.append("an organization")
+            }
+        case .elastic, .grafana:
+            if account.baseURL.trimmingCharacters(in: .whitespaces).isEmpty {
+                missing.append("a base URL")
             }
         case .github:
             break
