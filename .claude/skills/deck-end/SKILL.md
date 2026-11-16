@@ -1,6 +1,6 @@
 ---
 name: deck-end
-description: Use when finishing local work on a Deck widget or feature after the PR is merged and you also need a completion report on Desktop. Triggers on "deck-end", "de", "de feat netbox", "end full".
+description: Use when finishing local work on a Deck widget or feature after the PR is merged and you also need a completion report in Projects Brain. Triggers on "deck-end", "de", "de feat netbox", "end full".
 arguments: "type id"
 ---
 
@@ -18,7 +18,7 @@ Same cleanup as `deck-end-fast`, **plus** a completion report at the end via
 3. Phase 4 — release: identical to `deck-end-fast` Phase 4 (bump project.yml →
    tag → verify → install). User-facing work ships here.
 4. Phase 5 — completion report: use `deck-report` to save a short, friendly,
-   non-technical note on Desktop (what changed, a screenshot, the PR link).
+   non-technical note in Projects Brain (what changed, a screenshot, the PR link).
 
 ## When to use full vs fast
 

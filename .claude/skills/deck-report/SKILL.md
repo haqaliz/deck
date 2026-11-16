@@ -1,6 +1,6 @@
 ---
 name: deck-report
-description: Use when a Deck unit of work (widget, feature, fix) is done and you want a brief, friendly, non-technical completion note saved on Desktop to share. Triggers on "deck-report", "dr".
+description: Use when a Deck unit of work (widget, feature, fix) is done and you want a brief, friendly, non-technical completion note saved in the Projects Brain vault to share. Triggers on "deck-report", "dr".
 allowed-tools: Read, Grep, Glob, Bash, Write
 arguments: "type id"
 ---
@@ -22,7 +22,9 @@ plain-English paragraph about what changed, plus the PR link and a screenshot
 1. Gather: the PR/commit summary, and (for widgets) a screenshot of the widget
    running (`screencapture -x /tmp/<slug>.png`).
 2. Write the note to
-   `~/Desktop/deck-<type>-<id>-<YYYYMMDD>.md`:
+   `/Users/aliz/Documents/Projects Brain/at/deck/Cards/deck-<type>-<id>-<YYYYMMDD>/deck-<type>-<id>-<YYYYMMDD>.md`:
+
+Vault rule: `mkdir -p` the card folder, add frontmatter (`project: deck`, `kind: completion`, `date`, `tags`) and `Part of [[deck]]`. Quote the path (it has a space).
    - One paragraph: what the user can now do/see.
    - "How to try it": `swift run <Widget>` (or the install path for native widgets).
    - PR link.
