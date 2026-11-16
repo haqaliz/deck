@@ -633,7 +633,7 @@ struct ContentView: View {
         case .notConfigured:
             FetchStatusStore.record(.notConfigured, for: .logbox)
         case .off:
-            FetchStatusStore.record(.ok, for: .logbox)
+            FetchStatusStore.record(.notConfigured, for: .logbox)
         }
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -662,7 +662,7 @@ struct ContentView: View {
         case .notConfigured:
             FetchStatusStore.record(.notConfigured, for: .metricbox)
         case .off:
-            FetchStatusStore.record(.ok, for: .metricbox)
+            FetchStatusStore.record(.notConfigured, for: .metricbox)
         }
         WidgetCenter.shared.reloadAllTimelines()
     }
