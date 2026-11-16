@@ -1326,11 +1326,14 @@ read-only, pasted in Settings → Credentials with the URL stored on the account
        and ROADMAP ticked.
 
 **Built 2026-11-17:** slices 1–3 are in the tree — 1,752 shared tests green,
-Debug build green, both faces registered in the extension and pumped by the
-agent on the 60s tick. Version bumped to 1.63 (63) so WidgetKit's descriptor
-cache refreshes. Slice 4 stays open until a Release build is installed and
-both real accounts are paired; the gallery, timeline refresh, deep links and
-Tailscale-offline path are unverified in the installed app.
+Debug and Release builds green, both faces registered in the extension and
+pumped by the agent on the 60s tick. Version bumped to 1.63 (63) so WidgetKit's
+descriptor cache refreshes. Installed 1.63 on 2026-11-17: `pluginkit` lists the
+extension, the binary contains both widget classes, and the agent writes
+`fetch-logbox.json` / `fetch-metricbox.json` as `notConfigured` until accounts
+are picked. Slice 4 stays open until both real accounts are paired; the gallery,
+timeline refresh, deep links and Tailscale-offline path are unverified in the
+installed app.
 
 **Decisions (2026-11-17):** two widgets, not one; LogBox first; Elastic
 queried directly with a read-only key, not through Grafana's proxy; URL on
