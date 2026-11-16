@@ -1256,6 +1256,92 @@ Order (each is its own slug, PRD → plan):
 Not searchable, on purpose: NetBox, BatBox, LiveBox and WeatherBox have
 nothing meaningful to find.
 
+### M11 — Infra visibility (planned 2026-11-17, after M10)
+
+Two widgets on two services already in daily use, both verified live before
+planning. Neither service gets Deck's admin key: both credentials are
+read-only, pasted in Settings → Credentials with the URL stored on the account.
+
+- **LogBox** — Manifold logs from Elastic: error/warn counts, 15m live, 24h
+  trend, top error templates and the last error; a row opens Kibana Discover
+  with the same filter.
+- **MetricBox** — machines from Grafana: fleet health for all seven hosts
+  (CPU, RAM, disk, last seen), with selectable faces for one host, power and
+  cost, top agents, or alerts; a row opens the matching Grafana view.
+
+**Measured 2026-11-17 (do not re-derive from memory):**
+
+- Elastic `manifold-logs` (ES 9.5.3), data streams `logs-manifold-prd` and
+  `logs-manifold-stg`. PRD last 24h: 10.58M docs — 8.70M info, 1.88M warn,
+  5,075 error. Latency: 15m errors by service ~9ms; 15m all levels ~2s; 24h
+  errors-only trend ~4.4s; last-error doc ~17ms.
+- Kibana `https://x300.tail970481.ts.net`, space `prd`, data view
+  `logs-manifold-prd`. Direct ES is `:9200` on the same host.
+- Grafana 13.2.3 at `https://monitoring.4si8analytics.com`, org Manifold.
+  Datasources: VictoriaMetrics (default), Elasticsearch PRD and STG.
+  Dashboards: `fleet-overview`, `power`, `top-agents`, `manifold-logs`.
+  Seven hosts: x201–x205, x300, x301. One alert rule ("House machine not
+  reporting"), 0 firing at planning time.
+- Grafana 24h CPU for all seven hosts: ~1.0s, 68 KB, 7×289 points; an instant
+  query returns seven frames carrying a `host` label.
+
+**Owner actions (blocking):**
+
+- [ ] Mint a **read-only** Elastic API key scoped to `logs-manifold-*`. The
+      current key (`x132`) inherits `manifold_admin` and can write/delete.
+- [ ] Mint a **Viewer** Grafana service-account token. The current one
+      (`sa-1-x132`) has the Admin role.
+- [ ] Keep x300 reachable over Tailscale for direct Elastic queries. Grafana
+      is public; Elastic is not.
+
+**Order (each is its own slug, PRD → plan):**
+
+1. [ ] **Infra credentials + settings** (`docs/planning/infra-credentials/`)
+       — `CredentialKind` `.grafana` / `.elastic`; `CredentialAccount.baseURL`
+       plus `uiURL` (Elastic queries `:9200`, links go to Kibana); slots
+       `logboxElastic` / `metricboxGrafana`; `FetchSource` `logbox` /
+       `metricbox`; keychain reuses `account.<id>.token`. Provider form with
+       URL(s), token and Test connection (Grafana `/api/health` + one-point
+       query; Elastic `_cluster/health` + a 1-minute count), and a per-widget
+       tab to pick the account. No faces yet.
+2. [ ] **LogBox** (`docs/planning/logbox/`) — loader: 15m error/warn counts and
+       top service/template every 60s; 24h trend and last error at most every
+       15 min (4.4s is too heavy per tick). Environment picked per widget (PRD
+       default, STG selectable). Face presets, default **Prod health**; also
+       What's broken now, Single service, Mirror Grafana's Manifold logs. Text
+       mode defaults to templates + counts, raw message opt-in. Kibana Discover
+       deep link with index, range and filter. Three sizes, fixture tests, live
+       probe.
+3. [ ] **MetricBox** (`docs/planning/metricbox/`) — loader: one
+       `/api/ds/query` for CPU %, RAM %, disk %, last seen, uptime and GPU;
+       instant every 60s, sparkline points capped by size. All seven hosts,
+       hideable. Face presets, default **Fleet health**; also Single host,
+       Power & cost, Top agents, Alerts. Worst-first sort; Grafana deep link
+       with `var-host` and range; the "not reporting" rule as a quiet status
+       row. Three sizes, fixture tests, live probe.
+4. [ ] **Verification + docs** (`docs/planning/infra-widgets-verify/`) —
+       installed build across sizes; failure states (Tailscale down, bad key,
+       Grafana 5xx, empty window); no secrets or raw customer data in
+       snapshots or logs; record measured latency/cadence; README widget list
+       and ROADMAP ticked.
+
+**Decisions (2026-11-17):** two widgets, not one; LogBox first; Elastic
+queried directly with a read-only key, not through Grafana's proxy; URL on
+the credential account; environment picked per widget; all seven hosts by
+default; every face selectable in settings. Defaults: Prod health,
+templates + counts, Small = 15m and medium/large = 24h, Fleet health.
+
+**Exit criteria:** both faces render live data from the real services on all
+three sizes; only read-only credentials are stored; a dead service shows a
+named failure rather than stale data as fresh; deep links open the matching
+Kibana/Grafana view; fixture tests green; no admin key on disk.
+
+**Risks:** direct Elastic needs Tailscale — offline must read as offline, not
+as "healthy"; Kibana's `prd` space and data view are fixed today, so a space
+rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
+the widget queries datasources directly and only uses dashboard UIDs for
+links; the 24h log aggregation is the slow path and must not run every 60s.
+
 ## Feature backlog (existing widgets)
 
 LiveBox:
