@@ -1,25 +1,39 @@
-# bundle-identifier (card brief)
+# M11 — Infra visibility (inline brief)
 
-Source: `dbf task 77`, from the ROADMAP M9 item (#77) after the 2026-10-21
-owner decision to stop waiting for the paid program.
+Two new Deck widgets on services already in daily use, plus the shared
+credential/settings plumbing both need.
 
-## Brief
+## LogBox (Elastic)
 
-Flip `com.deck.app` / `com.deck.agent` → `io.github.haqaliz.deck*`. Everything in
-`docs/planning/bundle-identifier/` except the flip itself has shipped: `DeckBundle`
-is the single source, every call site reads it, `ContainerMigration` carries
-settings, and `DeckBundleTests` pins the ids against `project.yml`, the generated
-plists and `scripts/lib/ids.sh`.
+- Data: `logs-manifold-prd` / `logs-manifold-stg` on `https://x300.tail970481.ts.net:9200`
+  (ES 9.5.3). Kibana at `https://x300.tail970481.ts.net` (space `prd`).
+- Direct queries with a read-only Elastic API key.
+- Face presets, default **Prod health**: error/warn counts, 15m live, 24h error
+  trend, worst service, top template, last error.
+- Text mode defaults to templates + counts; raw message opt-in.
+- Kibana Discover deep link with index, range and filter.
+- Environment picked per widget (PRD default, STG selectable).
 
-The sequencing decision of 2026-08-28 tied the flip to the notarization release
-so users would re-grant TCC once. **That release is deferred indefinitely**
-(M9, owner decision), so the flip is done now instead: with no users there is no
-migration pain, and the item stops blocking a future launch.
+## MetricBox (Grafana)
 
-## Scope
+- Data: Grafana 13.2.3 at `https://monitoring.4si8analytics.com`, org Manifold.
+  VictoriaMetrics datasource uid `P4169E866C3094E38`.
+- Seven hosts x201–x205, x300, x301; all shown by default, hideable.
+- Face presets, default **Fleet health** (CPU %, RAM %, disk %, last seen,
+  worst-first); also Single host, Power & cost, Top agents, Alerts.
+- Grafana deep link with `var-host` and range.
+- One alert rule: "House machine not reporting".
 
-`docs/planning/bundle-identifier/flip-runbook.md`, all four steps, except the
-version bump (the release commit owns that) and the installed-copy gate, which
-needs the owner's TCC re-grant.
+## Shared
 
-Issue: https://github.com/haqaliz/deck/issues/77
+- New `CredentialKind` `.elastic` and `.grafana`; URL stored on the
+  `CredentialAccount`, not the widget.
+- Settings → Credentials form: URL(s), token, Test connection.
+- Agent-pumped snapshots, 60s cadence; 24h log aggregation at most every 15m.
+- Read-only credentials. No secrets or raw customer data in snapshots.
+
+## Decisions (user, 2026-11-17)
+
+Two widgets; LogBox first; direct Elastic; URL on the credential account;
+environment per widget; all seven hosts hideable; every face selectable;
+defaults as above; Small = 15m, medium/large = 24h.

@@ -8,12 +8,16 @@ enum CredentialKind: String, Codable, CaseIterable {
     case github
     case azure
     case opencode
+    case elastic
+    case grafana
 
     var displayName: String {
         switch self {
         case .github: "GitHub"
         case .azure: "Azure DevOps"
         case .opencode: "opencode"
+        case .elastic: "Elastic"
+        case .grafana: "Grafana"
         }
     }
 
@@ -22,6 +26,8 @@ enum CredentialKind: String, Codable, CaseIterable {
         case .github: "chevron.left.forwardslash.chevron.right"
         case .azure: "square.stack.3d.up"
         case .opencode: "server.rack"
+        case .elastic: "doc.text.magnifyingglass"
+        case .grafana: "chart.line.uptrend.xyaxis"
         }
     }
 
@@ -35,6 +41,8 @@ enum CredentialKind: String, Codable, CaseIterable {
         case .github: "provider-github"
         case .azure: "provider-azure"
         case .opencode: "provider-opencode"
+        case .elastic: "provider-elastic"
+        case .grafana: "provider-grafana"
         }
     }
 
@@ -66,6 +74,8 @@ enum CredentialKind: String, Codable, CaseIterable {
         case .github: ["gh"]
         case .azure: ["ado", "vsts", "devops", "tfs"]
         case .opencode: ["oc", "sst"]
+        case .elastic: ["es", "kibana", "logs"]
+        case .grafana: ["gf", "metrics", "prometheus", "victoria"]
         }
     }
 
@@ -206,6 +216,12 @@ struct CredentialAccount: Codable, Equatable, Identifiable {
     /// opencode only. Its emptiness is what makes OpenBox read the local
     /// database instead of a remote server.
     var serverURL: String = ""
+    /// Elastic and Grafana. The API base Deck queries (Elastic: the `:9200`
+    /// endpoint; Grafana: the instance root).
+    var baseURL: String = ""
+    /// Elastic only. The Kibana root used for deep links; queries still go to
+    /// `baseURL`. Empty falls back to `baseURL`.
+    var uiURL: String = ""
 
     /// Never encoded. Hydrated from the keychain, host-side only.
     var token: String = ""
@@ -251,6 +267,8 @@ struct CredentialAccount: Codable, Equatable, Identifiable {
             projects = AzureAccountProjects.normalise([legacy])
         }
         serverURL = try c.decodeIfPresent(String.self, forKey: .serverURL) ?? ""
+        baseURL = try c.decodeIfPresent(String.self, forKey: .baseURL) ?? ""
+        uiURL = try c.decodeIfPresent(String.self, forKey: .uiURL) ?? ""
         verifiedIdentity = try c.decodeIfPresent(String.self, forKey: .verifiedIdentity)
         azureIdentityID = try c.decodeIfPresent(String.self, forKey: .azureIdentityID)
         verifiedAt = try c.decodeIfPresent(Date.self, forKey: .verifiedAt)
@@ -268,6 +286,8 @@ struct CredentialAccount: Codable, Equatable, Identifiable {
         // from a dead field after the new control has taken over.
         try c.encode(projects, forKey: .projects)
         try c.encode(serverURL, forKey: .serverURL)
+        try c.encode(baseURL, forKey: .baseURL)
+        try c.encode(uiURL, forKey: .uiURL)
         try c.encodeIfPresent(verifiedIdentity, forKey: .verifiedIdentity)
         try c.encodeIfPresent(azureIdentityID, forKey: .azureIdentityID)
         try c.encodeIfPresent(verifiedAt, forKey: .verifiedAt)
@@ -276,6 +296,7 @@ struct CredentialAccount: Codable, Equatable, Identifiable {
 
     private enum CodingKeys: String, CodingKey {
         case id, kind, label, organization, project, projects, serverURL
+        case baseURL, uiURL
         case verifiedIdentity, azureIdentityID, verifiedAt
     }
 }
@@ -315,12 +336,16 @@ enum CredentialSlot: String, CaseIterable {
     case taskbox
     case prboxGitHub
     case prboxAzure
+    case logboxElastic
+    case metricboxGrafana
 
     var kind: CredentialKind {
         switch self {
         case .openbox: .opencode
         case .shipbox, .prboxGitHub: .github
         case .taskbox, .prboxAzure: .azure
+        case .logboxElastic: .elastic
+        case .metricboxGrafana: .grafana
         }
     }
 
@@ -333,6 +358,8 @@ enum CredentialSlot: String, CaseIterable {
         case .taskbox: .taskbox
         case .prboxGitHub: .prboxGitHub
         case .prboxAzure: .prboxAzure
+        case .logboxElastic: .logbox
+        case .metricboxGrafana: .metricbox
         }
     }
 
@@ -345,18 +372,22 @@ enum CredentialSlot: String, CaseIterable {
         case .shipbox: "ShipBox"
         case .taskbox: "TaskBox"
         case .prboxGitHub, .prboxAzure: "PRBox"
+        case .logboxElastic: "LogBox"
+        case .metricboxGrafana: "MetricBox"
         }
     }
 
     /// The pre-accounts credential this slot used to own. Read exactly once,
-    /// by the migration; nothing else should reach for it.
-    var legacySecret: DeckSecret {
+    /// by the migration; nothing else should reach for it. The two infra slots
+    /// were born after accounts, so they have none.
+    var legacySecret: DeckSecret? {
         switch self {
         case .openbox: .openboxToken
         case .shipbox: .shipboxToken
         case .taskbox: .taskboxToken
         case .prboxGitHub: .prboxGitHubToken
         case .prboxAzure: .prboxAzureToken
+        case .logboxElastic, .metricboxGrafana: nil
         }
     }
 
@@ -368,6 +399,8 @@ enum CredentialSlot: String, CaseIterable {
         case .taskbox: "TaskBox"
         case .prboxGitHub: "PRBox (GitHub)"
         case .prboxAzure: "PRBox (Azure DevOps)"
+        case .logboxElastic: "LogBox"
+        case .metricboxGrafana: "MetricBox"
         }
     }
 }

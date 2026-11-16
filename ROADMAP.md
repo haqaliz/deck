@@ -1,7 +1,7 @@
 # Deck Roadmap
 
 Small, beautiful macOS desktop widgets that behave like native ones. The
-product value is **one WidgetKit extension** (fourteen widgets in the Widget
+product value is **one WidgetKit extension** (sixteen widgets in the Widget
 Center) plus **one metric story per widget**. New widgets reuse the widget
 shell and only add a data source + a layout.
 
@@ -1256,7 +1256,7 @@ Order (each is its own slug, PRD → plan):
 Not searchable, on purpose: NetBox, BatBox, LiveBox and WeatherBox have
 nothing meaningful to find.
 
-### M11 — Infra visibility (planned 2026-11-17, after M10)
+### M11 — Infra visibility (built 2026-11-17; installed verification pending)
 
 Two widgets on two services already in daily use, both verified live before
 planning. Neither service gets Deck's admin key: both credentials are
@@ -1285,18 +1285,18 @@ read-only, pasted in Settings → Credentials with the URL stored on the account
 - Grafana 24h CPU for all seven hosts: ~1.0s, 68 KB, 7×289 points; an instant
   query returns seven frames carrying a `host` label.
 
-**Owner actions (blocking):**
+**Owner actions:**
 
-- [ ] Mint a **read-only** Elastic API key scoped to `logs-manifold-*`. The
-      current key (`x132`) inherits `manifold_admin` and can write/delete.
-- [ ] Mint a **Viewer** Grafana service-account token. The current one
-      (`sa-1-x132`) has the Admin role.
+- [x] Owner accepted the current keys on 2026-11-17 for this build. Rotating
+      both to read-only remains recommended: the Elastic key (`x132`) inherits
+      `manifold_admin`, and the Grafana service account (`sa-1-x132`) has the
+      Admin role.
 - [ ] Keep x300 reachable over Tailscale for direct Elastic queries. Grafana
       is public; Elastic is not.
 
-**Order (each is its own slug, PRD → plan):**
+**Order (one slug, `docs/planning/infra-visibility/`, PRD → plan):**
 
-1. [ ] **Infra credentials + settings** (`docs/planning/infra-credentials/`)
+1. [x] **Infra credentials + settings** (`docs/planning/infra-visibility/`)
        — `CredentialKind` `.grafana` / `.elastic`; `CredentialAccount.baseURL`
        plus `uiURL` (Elastic queries `:9200`, links go to Kibana); slots
        `logboxElastic` / `metricboxGrafana`; `FetchSource` `logbox` /
@@ -1304,7 +1304,7 @@ read-only, pasted in Settings → Credentials with the URL stored on the account
        URL(s), token and Test connection (Grafana `/api/health` + one-point
        query; Elastic `_cluster/health` + a 1-minute count), and a per-widget
        tab to pick the account. No faces yet.
-2. [ ] **LogBox** (`docs/planning/logbox/`) — loader: 15m error/warn counts and
+2. [x] **LogBox** (`docs/planning/infra-visibility/`) — loader: 15m error/warn counts and
        top service/template every 60s; 24h trend and last error at most every
        15 min (4.4s is too heavy per tick). Environment picked per widget (PRD
        default, STG selectable). Face presets, default **Prod health**; also
@@ -1312,18 +1312,25 @@ read-only, pasted in Settings → Credentials with the URL stored on the account
        mode defaults to templates + counts, raw message opt-in. Kibana Discover
        deep link with index, range and filter. Three sizes, fixture tests, live
        probe.
-3. [ ] **MetricBox** (`docs/planning/metricbox/`) — loader: one
+3. [x] **MetricBox** (`docs/planning/infra-visibility/`) — loader: one
        `/api/ds/query` for CPU %, RAM %, disk %, last seen, uptime and GPU;
        instant every 60s, sparkline points capped by size. All seven hosts,
        hideable. Face presets, default **Fleet health**; also Single host,
        Power & cost, Top agents, Alerts. Worst-first sort; Grafana deep link
        with `var-host` and range; the "not reporting" rule as a quiet status
        row. Three sizes, fixture tests, live probe.
-4. [ ] **Verification + docs** (`docs/planning/infra-widgets-verify/`) —
+4. [ ] **Verification + docs** (`docs/planning/infra-visibility/`) —
        installed build across sizes; failure states (Tailscale down, bad key,
        Grafana 5xx, empty window); no secrets or raw customer data in
        snapshots or logs; record measured latency/cadence; README widget list
        and ROADMAP ticked.
+
+**Built 2026-11-17:** slices 1–3 are in the tree — 1,752 shared tests green,
+Debug build green, both faces registered in the extension and pumped by the
+agent on the 60s tick. Version bumped to 1.63 (63) so WidgetKit's descriptor
+cache refreshes. Slice 4 stays open until a Release build is installed and
+both real accounts are paired; the gallery, timeline refresh, deep links and
+Tailscale-offline path are unverified in the installed app.
 
 **Decisions (2026-11-17):** two widgets, not one; LogBox first; Elastic
 queried directly with a read-only key, not through Grafana's proxy; URL on

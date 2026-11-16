@@ -1,0 +1,17 @@
+{
+  "hits": {
+    "hits": [
+      {
+        "_source": {
+          "@timestamp": "2026-11-16T21:35:55.610Z",
+          "message": "Exception in executing GetRawGpsAsync Method",
+          "service": { "name": "jobrunner" },
+          "log": { "level": "error" },
+          "manifold": {
+            "message_template": "Exception in executing GetRawGpsAsync Method for time window starting 11/15/2026"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -14,6 +14,8 @@ struct ResolvedCredential: Equatable {
     /// `AzureAccountProjects.maxProjects` projects in its organization.
     var projects: [String] = []
     var serverURL: String = ""
+    var baseURL: String = ""
+    var uiURL: String = ""
 }
 
 extension DeckSettings {
@@ -34,7 +36,9 @@ extension DeckSettings {
             token: account.token,
             organization: account.organization,
             projects: account.projects,
-            serverURL: account.serverURL
+            serverURL: account.serverURL,
+            baseURL: account.baseURL,
+            uiURL: account.uiURL
         )
     }
 
@@ -65,6 +69,8 @@ extension DeckSettings {
                 organization: prbox.azure.organization,
                 projects: AzureAccountProjects.normalise([prbox.azure.project])
             )
+        case .logboxElastic, .metricboxGrafana:
+            return ResolvedCredential(token: "")
         }
     }
 }
@@ -150,8 +156,18 @@ extension DeckSettings {
             guard !unavailable.contains(account.id) else { return nil }
             guard !account.token.isEmpty else { return nil }
             guard slot.kind == .azure else {
-                return ResolvedCredential(id: account.id, token: account.token,
-                                          serverURL: account.serverURL)
+                // The two infra providers are useless without an endpoint; a
+                // bound account with no URL is not resolved, and the gate says
+                // notConfigured rather than letting the loader fail later.
+                if (slot.kind == .elastic || slot.kind == .grafana),
+                   account.baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    return nil
+                }
+                return ResolvedCredential(
+                    id: account.id, token: account.token,
+                    serverURL: account.serverURL,
+                    baseURL: account.baseURL, uiURL: account.uiURL
+                )
             }
             let organization = account.organization.trimmingCharacters(in: .whitespacesAndNewlines)
             // The last gate before a loader: a duplicate here would double every
@@ -248,6 +264,8 @@ enum CredentialsMigration {
             account.organization = fields.organization
             account.projects = fields.projects
             account.serverURL = fields.serverURL
+            account.baseURL = fields.baseURL
+            account.uiURL = fields.uiURL
 
             guard write(account.id, account.token) == errSecSuccess,
                   readBack(account.id) == .found(account.token)
@@ -266,9 +284,10 @@ enum CredentialsMigration {
             settings.setAccountID(id, for: slot)
         }
         for slot in migrated {
-            settings.setSecret("", for: slot.legacySecret)
+            guard let legacySecret = slot.legacySecret else { continue }
+            settings.setSecret("", for: legacySecret)
             clearMovedFields(of: slot, in: &settings)
-            _ = deleteLegacy(slot.legacySecret)
+            _ = deleteLegacy(legacySecret)
         }
         return true
     }
@@ -294,6 +313,8 @@ enum CredentialsMigration {
             settings.prbox.azure.enabled = false
             settings.prbox.azure.organization = ""
             settings.prbox.azure.project = ""
+        case .logboxElastic, .metricboxGrafana:
+            break
         }
     }
 
@@ -306,7 +327,7 @@ enum CredentialsMigration {
         switch slot {
         case .prboxGitHub: return settings.prbox.github.enabled
         case .prboxAzure: return settings.prbox.azure.enabled
-        case .openbox, .shipbox, .taskbox: return true
+        case .openbox, .shipbox, .taskbox, .logboxElastic, .metricboxGrafana: return true
         }
     }
 
@@ -315,6 +336,8 @@ enum CredentialsMigration {
             && account.organization == fields.organization
             && account.projects == fields.projects
             && account.serverURL == fields.serverURL
+            && account.baseURL == fields.baseURL
+            && account.uiURL == fields.uiURL
     }
 
     /// Name it after whatever identifies it, then disambiguate. All of this is
@@ -330,6 +353,10 @@ enum CredentialsMigration {
             base = account.organization
         case .opencode:
             base = URL(string: account.serverURL)?.host ?? ""
+        case .elastic:
+            base = URL(string: account.uiURL)?.host ?? URL(string: account.baseURL)?.host ?? ""
+        case .grafana:
+            base = URL(string: account.baseURL)?.host ?? ""
         case .github:
             base = ""
         }

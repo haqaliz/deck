@@ -75,8 +75,10 @@ native colors, corners and materials, at three sizes each.
 | **CalBox** | two sections, TODAY and TOMORROW (click an event with a video call to join it), from every calendar macOS syncs (Google, iCloud, Exchange, CalDAV); each section shows/hides and sizes independently |
 | **PRBox** | your open pull requests and the ones awaiting your review, mixed from GitHub and Azure DevOps (up to eight projects across up to four organizations) in one queue: counts, provider-tagged rows, drafts marked, per-row review state (approved / changes requested), click a row to open the PR; a failed fetch names the provider |
 | **MarketBox** | live prices for your tickers — crypto (with 24h change), fiat like USD/CAD, gold per gram, and US stocks and indices (with day change), searchable live in the picker — all priced in the display currency you pick (USD, IRR or IRT/Toman, converted at the free-market rate) |
+| **LogBox** | Manifold logs from Elastic: error and warning counts, 24h error trend, worst service and top template; optional single-service and raw-message modes; click a row to open Kibana with the same filter |
+| **MetricBox** | machines from Grafana: fleet health (CPU/RAM/disk per host, silent machines first), single-host detail with a 24h CPU sparkline, power and monthly cost, top agents, or firing alerts; click through to the matching Grafana view |
 
-All fourteen come in **small / medium / large** sizes.
+All sixteen come in **small / medium / large** sizes.
 
 ## Install
 
@@ -344,7 +346,7 @@ one source.
 - **Self-sampled widgets** (LiveBox/NetBox/BatBox) read mach, getifaddrs and
   IOKit directly inside the widget — no other process needed.
 - **Agent-pumped data** (OpenBox, process list, GitBox, ClipBox, weather,
-  ShipBox, TaskBox, CalBox, PRBox, MarketBox): the widget
+  ShipBox, TaskBox, CalBox, PRBox, MarketBox, LogBox, MetricBox): the widget
   sandbox forbids subprocesses and reading other apps' data, so a silent CLI
   (`DeckAgent`, embedded in the app) runs every 60s via a launch agent
   (`io.github.haqaliz.deck.agent`, registered with SMAppService — see it under System
@@ -372,6 +374,8 @@ Deck reads personal data, so here is exactly what happens to it.
 | Search → Markets | the text you type after `mkt ` (no token) | `api.coingecko.com`, `query1.finance.yahoo.com` |
 | OpenBox (remote mode only) | your token | the `opencode serve` URL you set |
 | MarketBox | the coins you picked (e.g. `bitcoin`) and the stocks/indices you picked (e.g. `^GSPC`), plus what you type in the ticker search | `api.coingecko.com`, `api.gold-api.com`, `api.wallex.ir`, `open.er-api.com`, `query1.finance.yahoo.com` |
+| LogBox | your read-only Elastic API key, and the log queries (counts, templates, and the last five errors in raw modes) | the Elasticsearch URL you set |
+| MetricBox | your Grafana token, and the PromQL host/container queries | the Grafana URL you set |
 
 MarketBox sends only the coins you picked — no tokens, no identity, and it never
 sends anything on behalf of a row's price. The ticker search sends what you type

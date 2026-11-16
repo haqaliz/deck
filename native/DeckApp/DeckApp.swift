@@ -345,6 +345,18 @@ struct ContentView: View {
                 onManage: { selection = .credentials }
             )
             case .marketbox: MarketBoxSettingsView(settings: $settings.marketbox)
+            case .logbox: LogBoxSettingsView(
+                settings: $settings.logbox,
+                accountID: $settings.logbox.accountID,
+                accounts: settings.credentials.accounts,
+                onManage: { selection = .credentials }
+            )
+            case .metricbox: MetricBoxSettingsView(
+                settings: $settings.metricbox,
+                accountID: $settings.metricbox.accountID,
+                accounts: settings.credentials.accounts,
+                onManage: { selection = .credentials }
+            )
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -363,6 +375,8 @@ struct ContentView: View {
             Task { await refreshCalBox() }
             Task { await refreshPRBox() }
             Task { await refreshMarketBox() }
+            Task { await refreshLogBox() }
+            Task { await refreshMetricBox() }
             timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
                 // Cheap (one small file decode), and it means the notice
                 // appears — and clears after a repair — while the user is
@@ -378,6 +392,8 @@ struct ContentView: View {
                 Task { await refreshCalBox() }
                 Task { await refreshPRBox() }
                 Task { await refreshMarketBox() }
+                Task { await refreshLogBox() }
+                Task { await refreshMetricBox() }
             }
             WidgetCenter.shared.reloadAllTimelines()
             toolbarSweepTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
@@ -589,6 +605,65 @@ struct ContentView: View {
         }
         ShipBoxSnapshotStore.save(snapshot)
         FetchStatusStore.record(.ok, for: .shipbox)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Fetch Elastic logs (host is unsandboxed) for the LogBox widget. Mirrors
+    /// the agent's tick exactly, including the snapshot cache the loader keeps.
+    private func refreshLogBox() async {
+        switch gate(.logboxElastic) {
+        case .unavailable:
+            FetchStatusStore.record(.credentialsUnavailable, for: .logbox)
+        case .fetch(let credentials):
+            guard let credential = credentials.first else {
+                FetchStatusStore.record(.notConfigured, for: .logbox)
+                break
+            }
+            do {
+                let snapshot = try await LogBoxLoader.fetch(
+                    credential: credential,
+                    settings: settings.logbox,
+                    previous: LogBoxSnapshotStore.load()
+                )
+                LogBoxSnapshotStore.save(snapshot)
+                FetchStatusStore.record(.ok, for: .logbox)
+            } catch {
+                FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .logbox)
+            }
+        case .notConfigured:
+            FetchStatusStore.record(.notConfigured, for: .logbox)
+        case .off:
+            FetchStatusStore.record(.ok, for: .logbox)
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Fetch Grafana machine metrics (host is unsandboxed) for MetricBox.
+    private func refreshMetricBox() async {
+        switch gate(.metricboxGrafana) {
+        case .unavailable:
+            FetchStatusStore.record(.credentialsUnavailable, for: .metricbox)
+        case .fetch(let credentials):
+            guard let credential = credentials.first else {
+                FetchStatusStore.record(.notConfigured, for: .metricbox)
+                break
+            }
+            do {
+                let snapshot = try await MetricBoxLoader.fetch(
+                    credential: credential,
+                    settings: settings.metricbox,
+                    previous: MetricBoxSnapshotStore.load()
+                )
+                MetricBoxSnapshotStore.save(snapshot)
+                FetchStatusStore.record(.ok, for: .metricbox)
+            } catch {
+                FetchStatusStore.record(FetchClassifier.outcome(for: error), for: .metricbox)
+            }
+        case .notConfigured:
+            FetchStatusStore.record(.notConfigured, for: .metricbox)
+        case .off:
+            FetchStatusStore.record(.ok, for: .metricbox)
+        }
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -956,6 +1031,7 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
     case general, spotlight, credentials
     case livebox, openbox, netbox, batbox, gitbox, devbox, clipbox
     case weatherbox, clockbox, shipbox, taskbox, calbox, prbox, marketbox
+    case logbox, metricbox
 
     var id: String { rawValue }
 
@@ -978,6 +1054,8 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .calbox: "CalBox"
         case .prbox: "PRBox"
         case .marketbox: "MarketBox"
+        case .logbox: "LogBox"
+        case .metricbox: "MetricBox"
         }
     }
 
@@ -1000,6 +1078,8 @@ private enum DeckWidget: String, CaseIterable, Identifiable {
         case .calbox: "calendar"
         case .prbox: "arrow.triangle.pull"
         case .marketbox: "chart.line.uptrend.xyaxis"
+        case .logbox: "doc.text.magnifyingglass"
+        case .metricbox: "server.rack"
         }
     }
 }
@@ -1730,11 +1810,22 @@ private struct CredentialsSettingsView: View {
                     case .opencode:
                         TextField("Server URL (opencode serve, e.g. http://host:4096)",
                                   text: field(account.id, \.serverURL))
+                    case .elastic:
+                        TextField("Elasticsearch URL (e.g. https://host:9200)",
+                                  text: field(account.id, \.baseURL))
+                        TextField("Kibana URL (optional, for links)",
+                                  text: field(account.id, \.uiURL))
+                    case .grafana:
+                        TextField("Grafana URL (e.g. https://grafana.example.com)",
+                                  text: field(account.id, \.baseURL))
                     case .github:
                         EmptyView()
                     }
                     AccountSecretField(
-                        title: account.kind == .azure ? "Personal access token" : "Token",
+                        title: account.kind == .azure ? "Personal access token"
+                            : account.kind == .elastic ? "Read-only API key"
+                            : account.kind == .grafana ? "Service account token"
+                            : "Token",
                         accountID: account.id,
                         value: field(account.id, \.token),
                         onCommit: onSecretCommitted
@@ -3367,5 +3458,192 @@ private struct AddTickerSheet: View {
         default:
             status = .failed
         }
+    }
+}
+
+// MARK: - M11 infra settings
+
+private struct LogBoxSettingsView: View {
+    @Binding var settings: LogBoxSettings
+    @Binding var accountID: String?
+    let accounts: [CredentialAccount]
+    var onManage: () -> Void = {}
+
+    var body: some View {
+        Form {
+            Section("Elastic") {
+                AccountPicker(
+                    kind: .elastic, accounts: accounts,
+                    accountID: $accountID, onManage: onManage
+                )
+                Text("Queried directly. The account carries the Elasticsearch URL (e.g. https://host:9200) and an optional Kibana URL for links. A read-only key scoped to logs-manifold-* is enough.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                FetchStatusCaption(
+                    source: .logbox,
+                    clearOn: "\(accountID ?? "")\u{0}\(settings.environment.rawValue)"
+                )
+            }
+
+            Section("Environment") {
+                Picker("Logs", selection: $settings.environment) {
+                    ForEach(LogEnvironment.allCases, id: \.self) { environment in
+                        Text(environment.displayName).tag(environment)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            Section("Face") {
+                Picker("Show", selection: $settings.face) {
+                    ForEach(LogBoxFace.allCases, id: \.self) { face in
+                        Text(face.displayName).tag(face)
+                    }
+                }
+                if settings.face == .singleService {
+                    TextField("Service (e.g. jobrunner)", text: $settings.service)
+                    Text("Every query is narrowed to this service. Leave it empty to watch all of them.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Toggle("Show 24h trend", isOn: $settings.showTrend)
+            }
+
+            Section("Text") {
+                Picker("Log content", selection: $settings.textMode) {
+                    ForEach(LogTextMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                Text("Templates keep customer data, IDs and URLs off the desktop. Raw modes fetch up to five recent errors from Elastic and store them in the widget container.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Windows") {
+                Stepper(
+                    "Small: \(settings.smallWindowMinutes)m",
+                    value: $settings.smallWindowMinutes, in: 5...120, step: 5
+                )
+                Stepper(
+                    "Large: \(settings.largeWindowMinutes / 60)h",
+                    value: $settings.largeWindowMinutes, in: 60...10_080, step: 60
+                )
+                Text("The 15m counts refresh every minute; the large trend refreshes at most every 15 minutes because it costs seconds, not milliseconds.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Color") {
+                ColorPicker("Accent", selection: $settings.accentColor.color)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+}
+
+private struct MetricBoxSettingsView: View {
+    @Binding var settings: MetricBoxSettings
+    @Binding var accountID: String?
+    let accounts: [CredentialAccount]
+    var onManage: () -> Void = {}
+
+    private var knownHosts: [String] {
+        MetricBoxSnapshotStore.load()?.hosts.map(\.host).sorted()
+            ?? ["x201", "x202", "x203", "x204", "x205", "x300", "x301"]
+    }
+
+    var body: some View {
+        Form {
+            Section("Grafana") {
+                AccountPicker(
+                    kind: .grafana, accounts: accounts,
+                    accountID: $accountID, onManage: onManage
+                )
+                Text("The account carries the Grafana URL. Deck discovers the default Prometheus datasource and queries it directly; a Viewer token is enough.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                FetchStatusCaption(source: .metricbox, clearOn: accountID ?? "")
+            }
+
+            Section("Face") {
+                Picker("Show", selection: $settings.face) {
+                    ForEach(MetricBoxFace.allCases, id: \.self) { face in
+                        Text(face.displayName).tag(face)
+                    }
+                }
+                if settings.face == .singleHost {
+                    Picker("Host", selection: $settings.host) {
+                        Text("Worst first").tag("")
+                        ForEach(knownHosts, id: \.self) { host in
+                            Text(host).tag(host)
+                        }
+                        if !settings.host.isEmpty && !knownHosts.contains(settings.host) {
+                            Text(settings.host).tag(settings.host)
+                        }
+                    }
+                }
+            }
+
+            if settings.face == .fleetHealth {
+                Section("Hosts") {
+                    ForEach(knownHosts, id: \.self) { host in
+                        Toggle(host, isOn: visibleBinding(host))
+                    }
+                    Text("All seven are shown by default. A hidden host is also skipped on the power face.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if settings.face == .power {
+                Section("Power") {
+                    HStack {
+                        Text("Rate")
+                        Spacer()
+                        TextField("USD/kWh", value: $settings.ratePerKWh, format: .number)
+                            .frame(width: 80)
+                            .multilineTextAlignment(.trailing)
+                        Text("USD/kWh")
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("Matches the Power dashboard's default of 0.12. Monthly cost = 24h kWh × 30 × rate.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Windows") {
+                Stepper(
+                    "Small: \(settings.smallWindowMinutes)m",
+                    value: $settings.smallWindowMinutes, in: 5...120, step: 5
+                )
+                Stepper(
+                    "Large: \(settings.largeWindowMinutes / 60)h",
+                    value: $settings.largeWindowMinutes, in: 60...10_080, step: 60
+                )
+            }
+
+            Section("Color") {
+                ColorPicker("Accent", selection: $settings.accentColor.color)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 4)
+    }
+
+    private func visibleBinding(_ host: String) -> Binding<Bool> {
+        Binding(
+            get: { !settings.hiddenHosts.contains(host) },
+            set: { visible in
+                if visible {
+                    settings.hiddenHosts.removeAll { $0 == host }
+                } else if !settings.hiddenHosts.contains(host) {
+                    settings.hiddenHosts.append(host)
+                }
+            }
+        )
     }
 }

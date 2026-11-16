@@ -1,0 +1,20 @@
+{
+  "aggregations": {
+    "error": {
+      "doc_count": 33,
+      "services": {
+        "buckets": [
+          { "key": "jobrunner", "doc_count": 32 },
+          { "key": "eventprocessor-worker", "doc_count": 1 }
+        ]
+      },
+      "templates": {
+        "buckets": [
+          { "key": "PBI7794: connection {ConnectionId} refused to absorb-and-delete {Count}", "doc_count": 24 },
+          { "key": "Feed drain failed for connection {ConnectionId} {Type}", "doc_count": 11 }
+        ]
+      }
+    },
+    "warn": { "doc_count": 36651 }
+  }
+}

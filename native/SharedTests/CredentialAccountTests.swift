@@ -130,6 +130,8 @@ final class CredentialAccountTests: XCTestCase {
         XCTAssertEqual(CredentialSlot.taskbox.kind, .azure)
         XCTAssertEqual(CredentialSlot.prboxGitHub.kind, .github)
         XCTAssertEqual(CredentialSlot.prboxAzure.kind, .azure)
+        XCTAssertEqual(CredentialSlot.logboxElastic.kind, .elastic)
+        XCTAssertEqual(CredentialSlot.metricboxGrafana.kind, .grafana)
     }
 
     func testEverySlotMapsToTheFetchSourceItsWidgetAlreadyReports() {
@@ -140,10 +142,16 @@ final class CredentialAccountTests: XCTestCase {
         XCTAssertEqual(CredentialSlot.taskbox.source, .taskbox)
         XCTAssertEqual(CredentialSlot.prboxGitHub.source, .prboxGitHub)
         XCTAssertEqual(CredentialSlot.prboxAzure.source, .prboxAzure)
+        XCTAssertEqual(CredentialSlot.logboxElastic.source, .logbox)
+        XCTAssertEqual(CredentialSlot.metricboxGrafana.source, .metricbox)
     }
 
-    func testSlotsCoverTheFiveLegacySecretsAndNoMore() {
-        XCTAssertEqual(CredentialSlot.allCases.count, DeckSecret.allCases.count)
+    func testEveryLegacySlotHasASecretAndTheInfraSlotsDoNot() {
+        let legacy = CredentialSlot.allCases.filter { $0.legacySecret != nil }
+        XCTAssertEqual(legacy.count, DeckSecret.allCases.count)
+        XCTAssertEqual(Set(legacy.compactMap(\.legacySecret)), Set(DeckSecret.allCases))
+        XCTAssertNil(CredentialSlot.logboxElastic.legacySecret)
+        XCTAssertNil(CredentialSlot.metricboxGrafana.legacySecret)
     }
 
     func testSlotDisplayNamesAreTheWidgetNamesTheDeleteDialogWillShow() {
@@ -152,5 +160,7 @@ final class CredentialAccountTests: XCTestCase {
         XCTAssertEqual(CredentialSlot.taskbox.displayName, "TaskBox")
         XCTAssertEqual(CredentialSlot.prboxGitHub.displayName, "PRBox (GitHub)")
         XCTAssertEqual(CredentialSlot.prboxAzure.displayName, "PRBox (Azure DevOps)")
+        XCTAssertEqual(CredentialSlot.logboxElastic.displayName, "LogBox")
+        XCTAssertEqual(CredentialSlot.metricboxGrafana.displayName, "MetricBox")
     }
 }

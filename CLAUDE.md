@@ -53,8 +53,18 @@ have access to and shows nothing until it is opened.
   **picked, never typed**, from a live CoinGecko search in the settings tab —
   settings store the coin's id, so the agent resolves nothing at fetch time; no
   charts in the face (see the Swift Charts trap).
+- **LogBox** — Manifold logs from Elastic: error/warn counts, a 15m live window
+  and a 24h trend, worst service and top template; optional single-service and
+  raw-message modes. Queries Elastic directly with a read-only key; rows open
+  Kibana Discover with the same filter. The 24h block is cached for 15 minutes
+  because it costs seconds, not milliseconds.
+- **MetricBox** — machines from Grafana: fleet health (CPU/RAM/disk per host,
+  silent machines first), single-host detail with a 24h CPU sparkline, power and
+  estimated monthly cost, top agents, or firing alerts. It discovers the default
+  Prometheus datasource from `/api/datasources` rather than hard-coding a UID.
+  Both widgets carry their URL on the credential account, not in the widget.
 
-All fourteen ship in one WidgetKit extension: `Deck.app` (host + settings window
+All sixteen ship in one WidgetKit extension: `Deck.app` (host + settings window
 + menu-bar item + Search panel) → `DeckWidgets.appex`.
 
 ## Architecture
@@ -65,7 +75,7 @@ targets:
 ```
 DeckApp/        # host app: settings window (tabs per widget), agent installer,
                 #   menu-bar item, global shortcut, Search panel and its sources
-DeckWidgets/    # WidgetKit extension: 13 widgets + Loaders/ (mach, getifaddrs, IOKit)
+DeckWidgets/    # WidgetKit extension: 16 widgets + Loaders/ (mach, getifaddrs, IOKit)
 DeckAgent/      # silent CLI: refreshes sandbox-blocked data snapshots, then exits
 Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
 ```
@@ -80,14 +90,16 @@ Shared/         # DeckSettings (Codable), snapshots + stores, host-only samplers
    and reading other apps' data (opencode DB, `ps`/process info, `git log`).
    The unsandboxed `DeckAgent` (LaunchAgent `io.github.haqaliz.deck.agent`, every 60s) reads
    those and writes snapshots into the widget's container:
-   `~/Library/Containers/io.github.haqaliz.deck.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox,taskbox,calbox,prbox}.json`
+   `~/Library/Containers/io.github.haqaliz.deck.widgets/Data/Library/Application Support/Deck/{opencode,processes,gitbox,clipbox,taskbox,calbox,prbox,logbox,metricbox}.json`
    The widgets render the snapshots.
 
 **Credentials are records, not widget properties.** A `CredentialAccount`
 (`Shared/CredentialAccount.swift`) has a kind (github/azure/opencode), a label,
 and whatever identifies the connection — Azure org + project, opencode server
-URL. Widgets reference one by id through a `CredentialSlot` (`openbox`,
-`shipbox`, `taskbox`, `prboxGitHub`, `prboxAzure`), each of which knows its
+URL, Elasticsearch/Kibana URLs, Grafana URL. Widgets reference one by id
+through a `CredentialSlot` (`openbox`,
+`shipbox`, `taskbox`, `prboxGitHub`, `prboxAzure`, `logboxElastic`,
+`metricboxGrafana`), each of which knows its
 kind and its `FetchSource`. The two **Azure** slots bind a *list* of ids (up to
 four accounts, one organization each — see the PAT trap below); the other three
 bind one. The keychain item is `account.<id>.token`; the id is generated once

@@ -1,0 +1,26 @@
+{
+  "aggregations": {
+    "error": {
+      "doc_count": 5077,
+      "services": {
+        "buckets": [
+          { "key": "jobrunner", "doc_count": 4203 },
+          { "key": "eventprocessor-worker", "doc_count": 635 }
+        ]
+      },
+      "templates": {
+        "buckets": [
+          { "key": "PBI7794: connection {ConnectionId} refused to absorb-and-delete {Count}", "doc_count": 1331 }
+        ]
+      },
+      "trend": {
+        "buckets": [
+          { "key_as_string": "2026-11-16T22:00:00.000Z", "doc_count": 12 },
+          { "key_as_string": "2026-11-16T22:30:00.000Z", "doc_count": 0 },
+          { "key_as_string": "2026-11-16T23:00:00.000Z", "doc_count": 7 }
+        ]
+      }
+    },
+    "warn": { "doc_count": 1876801 }
+  }
+}
