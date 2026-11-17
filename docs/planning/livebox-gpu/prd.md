@@ -1,6 +1,6 @@
 # LiveBox GPU usage (PRD)
 
-**Status:** built and probe-verified 2026-11-17; release v1.65 pending.
+**Status:** shipped in v1.65 (2026-11-17); see `verification.md`.
 **Source:** `ROADMAP.md` feature backlog (Apple Silicon GPU/ANE), GitHub issue #81.
 
 ## Problem
