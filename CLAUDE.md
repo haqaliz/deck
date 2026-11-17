@@ -169,7 +169,10 @@ scripts/soak.sh             # long-running sanity loop over the snapshots
 
 Reinstalling: replace **only** the app bundle —
 `rm -rf /Applications/Deck.app && cp -R native/build.noindex/Build/Products/Release/Deck.app /Applications/`.
-Do not delete the container; see the trap below.
+Do not delete the container; see the trap below. **Replacing the bundle does not replace a running process** —
+`killall Deck` and relaunch before testing, or the old binary keeps running
+from the deleted path while every version check on disk says the new one is
+installed.
 
 ## Signing & install notes
 
