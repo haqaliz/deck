@@ -1256,7 +1256,7 @@ Order (each is its own slug, PRD → plan):
 Not searchable, on purpose: NetBox, BatBox, LiveBox and WeatherBox have
 nothing meaningful to find.
 
-### M11 — Infra visibility (DONE 2026-11-17)
+### M11 — Infra visibility (DONE 2026-11-17, shipped in v1.64)
 
 Two widgets on two services already in daily use, both verified live before
 planning. Neither service gets Deck's admin key: both credentials are

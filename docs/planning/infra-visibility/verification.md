@@ -1,6 +1,6 @@
 # M11 — verification
 
-**Owner-confirmed on the installed 1.64 build, 2026-11-17.**
+**Shipped in v1.64 (2026-11-17). Owner-confirmed on the installed 1.64 build.**
 
 ## Checked
 
