@@ -13,6 +13,9 @@ WidgetKit widget. The one floating surface is the **Search panel**
 have access to and shows nothing until it is opened.
 
 - **LiveBox** — system monitor: live CPU / MEM / DISK chart + top processes.
+  GPU utilization (Apple Silicon IOAccelerator counters, no root) is a fourth
+  metric row; it hides when the system exposes no counter. ANE has no public
+  API and is not shown.
 - **OpenBox** — opencode usage: today's in/out tokens + cost, 14-day chart,
   top models (parsed from the opencode DB).
 - **NetBox** — network monitor: per-interface up/down rates + history,

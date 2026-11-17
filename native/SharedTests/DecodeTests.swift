@@ -219,9 +219,12 @@ final class LiveBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.memAlarmThreshold, 90)
         XCTAssertEqual(s.diskWarnThreshold, 80)
         XCTAssertEqual(s.diskAlarmThreshold, 90)
+        XCTAssertEqual(s.gpuWarnThreshold, 80)
+        XCTAssertEqual(s.gpuAlarmThreshold, 90)
+        XCTAssertTrue(s.showGPU)
     }
 
-    func testLegacyPairMigratesToAllThreeMetrics() throws {
+    func testLegacyPairMigratesToAllFourMetrics() throws {
         // settings-schema migration (ROADMAP.md:56): old warn/alarm pair is
         // inherited by every metric when no per-metric key is present.
         let s = try decode(#"{"warnThreshold":85,"alarmThreshold":92}"#, as: LiveBoxSettings.self)
@@ -231,11 +234,13 @@ final class LiveBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.memAlarmThreshold, 92)
         XCTAssertEqual(s.diskWarnThreshold, 85)
         XCTAssertEqual(s.diskAlarmThreshold, 92)
+        XCTAssertEqual(s.gpuWarnThreshold, 85)
+        XCTAssertEqual(s.gpuAlarmThreshold, 92)
     }
 
     func testPerMetricKeysRoundTrip() throws {
         let s = try decode(
-            #"{"showThresholdColors":false,"cpuWarnThreshold":70,"cpuAlarmThreshold":95,"memWarnThreshold":60,"memAlarmThreshold":85,"diskWarnThreshold":50,"diskAlarmThreshold":80}"#,
+            #"{"showThresholdColors":false,"cpuWarnThreshold":70,"cpuAlarmThreshold":95,"memWarnThreshold":60,"memAlarmThreshold":85,"diskWarnThreshold":50,"diskAlarmThreshold":80,"gpuWarnThreshold":40,"gpuAlarmThreshold":70}"#,
             as: LiveBoxSettings.self
         )
         XCTAssertFalse(s.showThresholdColors)
@@ -245,6 +250,8 @@ final class LiveBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(s.memAlarmThreshold, 85)
         XCTAssertEqual(s.diskWarnThreshold, 50)
         XCTAssertEqual(s.diskAlarmThreshold, 80)
+        XCTAssertEqual(s.gpuWarnThreshold, 40)
+        XCTAssertEqual(s.gpuAlarmThreshold, 70)
     }
 
     func testMixedKeysKeepPresentFallBackLegacy() throws {
@@ -272,6 +279,8 @@ final class LiveBoxSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(object["cpuWarnThreshold"] as? Int, 55)
         XCTAssertEqual(object["memAlarmThreshold"] as? Int, 88)
         XCTAssertEqual(object["diskWarnThreshold"] as? Int, 80)
+        XCTAssertEqual(object["gpuWarnThreshold"] as? Int, 80)
+        XCTAssertEqual(object["showGPU"] as? Bool, true)
     }
 
     func testExistingKeysStillDecodeAndEncode() throws {

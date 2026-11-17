@@ -1362,8 +1362,11 @@ LiveBox:
 - [x] Per-core CPU lines (first 8 cores) or per-core selection
 - [x] Thermal state row (`ProcessInfo.thermalState`: nominal/fair/serious/
       critical; amber at serious, red at critical; off by default)
-- [ ] Apple Silicon GPU/ANE usage — blocked: no public API
-      (`docs/planning/livebox-per-core-cpu/prd.md:94`)
+- [x] Apple Silicon GPU usage — IOAccelerator `PerformanceStatistics`
+      (`Device Utilization %`), read without root; the row hides when the key is
+      absent. Shipped in v1.65.
+- [ ] ANE usage — blocked: no public API; `powermetrics` is root-only and
+      `IOReport` is private. Recorded as not shippable, not silently dropped.
 - [x] Disk per-volume (multiple mounts, internal + external)
 - [x] Threshold coloring (amber/red when a value crosses warn/alarm thresholds)
 - [x] Per-metric threshold pairs (CPU/MEM/DISK each have their own warn + alarm)

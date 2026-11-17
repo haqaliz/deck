@@ -413,6 +413,9 @@ struct LiveBoxSettings: Codable, Equatable {
     var showCPU = true
     var showMEM = true
     var showDisk = true
+    /// Apple Silicon GPU utilization from IOAccelerator. The row hides itself
+    /// when macOS exposes no counter, so this can stay on by default.
+    var showGPU = true
     var showPerVolumeDisk = true
     /// Thermal pressure row — opt-in so existing widgets don't gain a row.
     var showThermal = false
@@ -424,6 +427,7 @@ struct LiveBoxSettings: Codable, Equatable {
     var cpuColor = RGBA.systemGreen
     var memColor = RGBA.systemCyan
     var diskColor = RGBA.systemOrange
+    var gpuColor = RGBA.systemPurple
     var showThresholdColors = true
     var cpuWarnThreshold = 80
     var cpuAlarmThreshold = 90
@@ -431,6 +435,8 @@ struct LiveBoxSettings: Codable, Equatable {
     var memAlarmThreshold = 90
     var diskWarnThreshold = 80
     var diskAlarmThreshold = 90
+    var gpuWarnThreshold = 80
+    var gpuAlarmThreshold = 90
 
     /// Tolerant decode: missing keys keep the defaults instead of throwing
     /// (the synthesized decoder throws, which would reset every setting via
@@ -442,11 +448,11 @@ struct LiveBoxSettings: Codable, Equatable {
     /// container for the migration fallback, never stored, so the synthesized
     /// encoder writes only the six per-metric keys (one-way migration).
     enum CodingKeys: String, CodingKey {
-        case showChart, showCPU, showMEM, showDisk, showPerVolumeDisk, showThermal
+        case showChart, showCPU, showMEM, showDisk, showGPU, showPerVolumeDisk, showThermal
         case showProcesses, showPerCoreCores, processCount, processRefreshInterval
-        case cpuColor, memColor, diskColor, showThresholdColors
+        case cpuColor, memColor, diskColor, gpuColor, showThresholdColors
         case cpuWarnThreshold, cpuAlarmThreshold, memWarnThreshold, memAlarmThreshold
-        case diskWarnThreshold, diskAlarmThreshold
+        case diskWarnThreshold, diskAlarmThreshold, gpuWarnThreshold, gpuAlarmThreshold
         case warnThreshold, alarmThreshold
     }
 
@@ -456,6 +462,7 @@ struct LiveBoxSettings: Codable, Equatable {
         showCPU = try c.decodeIfPresent(Bool.self, forKey: .showCPU) ?? true
         showMEM = try c.decodeIfPresent(Bool.self, forKey: .showMEM) ?? true
         showDisk = try c.decodeIfPresent(Bool.self, forKey: .showDisk) ?? true
+        showGPU = try c.decodeIfPresent(Bool.self, forKey: .showGPU) ?? true
         showPerVolumeDisk = try c.decodeIfPresent(Bool.self, forKey: .showPerVolumeDisk) ?? true
         showThermal = try c.decodeIfPresent(Bool.self, forKey: .showThermal) ?? false
         showProcesses = try c.decodeIfPresent(Bool.self, forKey: .showProcesses) ?? true
@@ -465,6 +472,7 @@ struct LiveBoxSettings: Codable, Equatable {
         cpuColor = try c.decodeIfPresent(RGBA.self, forKey: .cpuColor) ?? RGBA.systemGreen
         memColor = try c.decodeIfPresent(RGBA.self, forKey: .memColor) ?? RGBA.systemCyan
         diskColor = try c.decodeIfPresent(RGBA.self, forKey: .diskColor) ?? RGBA.systemOrange
+        gpuColor = try c.decodeIfPresent(RGBA.self, forKey: .gpuColor) ?? RGBA.systemPurple
         showThresholdColors = try c.decodeIfPresent(Bool.self, forKey: .showThresholdColors) ?? true
         // Per-metric keys with a legacy-pair fallback (settings-schema migration,
         // ROADMAP.md:56): a per-metric key wins, else the old shared pair, else 80/90.
@@ -480,6 +488,10 @@ struct LiveBoxSettings: Codable, Equatable {
             ?? c.decodeIfPresent(Int.self, forKey: .warnThreshold) ?? 80
         diskAlarmThreshold = try c.decodeIfPresent(Int.self, forKey: .diskAlarmThreshold)
             ?? c.decodeIfPresent(Int.self, forKey: .alarmThreshold) ?? 90
+        gpuWarnThreshold = try c.decodeIfPresent(Int.self, forKey: .gpuWarnThreshold)
+            ?? c.decodeIfPresent(Int.self, forKey: .warnThreshold) ?? 80
+        gpuAlarmThreshold = try c.decodeIfPresent(Int.self, forKey: .gpuAlarmThreshold)
+            ?? c.decodeIfPresent(Int.self, forKey: .alarmThreshold) ?? 90
     }
 
     /// Writes only the six per-metric keys — the legacy pair is decode-only, so
@@ -490,6 +502,7 @@ struct LiveBoxSettings: Codable, Equatable {
         try c.encode(showCPU, forKey: .showCPU)
         try c.encode(showMEM, forKey: .showMEM)
         try c.encode(showDisk, forKey: .showDisk)
+        try c.encode(showGPU, forKey: .showGPU)
         try c.encode(showPerVolumeDisk, forKey: .showPerVolumeDisk)
         try c.encode(showThermal, forKey: .showThermal)
         try c.encode(showProcesses, forKey: .showProcesses)
@@ -499,6 +512,7 @@ struct LiveBoxSettings: Codable, Equatable {
         try c.encode(cpuColor, forKey: .cpuColor)
         try c.encode(memColor, forKey: .memColor)
         try c.encode(diskColor, forKey: .diskColor)
+        try c.encode(gpuColor, forKey: .gpuColor)
         try c.encode(showThresholdColors, forKey: .showThresholdColors)
         try c.encode(cpuWarnThreshold, forKey: .cpuWarnThreshold)
         try c.encode(cpuAlarmThreshold, forKey: .cpuAlarmThreshold)
@@ -506,6 +520,8 @@ struct LiveBoxSettings: Codable, Equatable {
         try c.encode(memAlarmThreshold, forKey: .memAlarmThreshold)
         try c.encode(diskWarnThreshold, forKey: .diskWarnThreshold)
         try c.encode(diskAlarmThreshold, forKey: .diskAlarmThreshold)
+        try c.encode(gpuWarnThreshold, forKey: .gpuWarnThreshold)
+        try c.encode(gpuAlarmThreshold, forKey: .gpuAlarmThreshold)
     }
 }
 
