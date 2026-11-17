@@ -77,7 +77,7 @@ writes of any kind, or raw log browsing beyond the newest five errors.
 |---|---|
 | Prod health (default) | error/warn counts for the small window, 24h error trend, worst service |
 | What's broken | top error templates, newest error time |
-| Single service | all queries narrowed to the service in settings |
+| Single service | all queries narrowed to the service picked from the live 24h `service.name` list |
 | Grafana panels | services plus the trend, mirroring the Manifold logs dashboard |
 
 Text modes: templates + counts (default), latest message, full log lines (five).
@@ -87,7 +87,7 @@ Rows link to Kibana Discover with the environment index, time range and filter.
 
 | Face | Content |
 |---|---|
-| Fleet health (default) | every visible host, silent first then busiest: CPU/RAM/disk; GPU and watts on large |
+| Fleet health (default) | every visible host, silent first then busiest: configurable CPU/RAM/disk columns; GPU and watts on large |
 | Single host | CPU/RAM/disk, GPU/VRAM/temperature, uptime, 24h CPU sparkline |
 | Power & cost | current watts, 24h kWh, monthly estimate (rate default 0.12 USD/kWh) |
 | Top agents | containers ranked by VRAM, GPU, CPU |

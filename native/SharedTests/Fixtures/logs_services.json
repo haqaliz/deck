@@ -1,0 +1,11 @@
+{
+  "aggregations": {
+    "services": {
+      "buckets": [
+        { "key": "eventprocessor-worker", "doc_count": 6793324 },
+        { "key": "jobrunner", "doc_count": 1153829 },
+        { "key": "nginx", "doc_count": 59694 }
+      ]
+    }
+  }
+}

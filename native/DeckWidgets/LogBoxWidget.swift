@@ -361,9 +361,6 @@ struct LogBoxWidgetEntryView: View {
                     .foregroundStyle(.tertiary)
             }
             Spacer(minLength: 0)
-            Text("Kibana")
-                .font(.system(size: 9, weight: .medium, design: .rounded))
-                .foregroundStyle(.tertiary)
         }
     }
 
