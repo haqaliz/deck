@@ -1,5 +1,12 @@
 import Foundation
 import Darwin
+import IOKit
+import OSLog
+
+private let gpuLog = Logger(subsystem: DeckBundle.widgetsID, category: "LiveBox")
+/// One line per widget process: enough to diagnose a missing GPU row without
+/// logging every 15s render.
+private var gpuProbeLogged = false
 
 // MARK: - CPU
 //
@@ -94,6 +101,48 @@ func memoryUsagePercent() -> Double {
     let total = ProcessInfo.processInfo.physicalMemory
     guard total > 0 else { return 0 }
     return Double(used) / Double(total) * 100.0
+}
+
+// MARK: - GPU
+//
+// There is no public Metal API for system-wide GPU utilization. The
+// IOAccelerator registry property is the source every Mac system monitor uses
+// and needs no root; it is undocumented, so the row hides when the key is
+// absent instead of reporting a made-up 0%.
+//
+// ANE is deliberately not here: `powermetrics` requires superuser and the only
+// other source (IOReport) is a private framework.
+
+func gpuUsagePercent() -> Double? {
+    var iterator: io_iterator_t = 0
+    guard IOServiceGetMatchingServices(
+        kIOMainPortDefault,
+        IOServiceMatching("IOAccelerator"),
+        &iterator
+    ) == KERN_SUCCESS else { return nil }
+    defer { IOObjectRelease(iterator) }
+
+    while case let service = IOIteratorNext(iterator), service != 0 {
+        defer { IOObjectRelease(service) }
+        guard let properties = IORegistryEntryCreateCFProperty(
+            service,
+            "PerformanceStatistics" as CFString,
+            kCFAllocatorDefault,
+            0
+        )?.takeRetainedValue() as? [String: Any] else { continue }
+        if let usage = GPUStatsParser.utilization(from: properties) {
+            if !gpuProbeLogged {
+                gpuLog.debug("gpu counter available")
+                gpuProbeLogged = true
+            }
+            return usage
+        }
+    }
+    if !gpuProbeLogged {
+        gpuLog.debug("gpu counter unavailable")
+        gpuProbeLogged = true
+    }
+    return nil
 }
 
 // MARK: - Disk

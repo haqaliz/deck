@@ -63,7 +63,7 @@ enum LiveBoxSampler {
     private static var previousTicks: CpuTicks?
     private static var previousPerCoreTicks: [CpuTicks]?
 
-    static func sample() -> (cpu: Double, mem: Double, disk: Double, perCore: [Double]) {
+    static func sample() -> (cpu: Double, mem: Double, disk: Double, perCore: [Double], gpu: Double?) {
         let perCoreTicks = CpuTicks.sampleAll()
         let aggregate = perCoreTicks.reduce(into: CpuTicks()) { acc, t in
             acc.user += t.user
@@ -75,7 +75,7 @@ enum LiveBoxSampler {
         previousTicks = aggregate
         let perCore = perCoreUsagePercents(previous: previousPerCoreTicks ?? [], current: perCoreTicks)
         previousPerCoreTicks = perCoreTicks
-        return (cpu, memoryUsagePercent(), diskUsagePercent(), perCore)
+        return (cpu, memoryUsagePercent(), diskUsagePercent(), perCore, gpuUsagePercent())
     }
 
     static func processes(mode: String, interval: Int) -> [TopProcess] {
@@ -99,8 +99,10 @@ enum LiveBoxSampler {
         LiveBoxDiskCore.displayable(diskVolumeSamples())
     }
 
-    static func history(appending sample: (cpu: Double, mem: Double, disk: Double, perCore: [Double]), interval: Int) -> [Sample] {
+    static func history(appending sample: (cpu: Double, mem: Double, disk: Double, perCore: [Double], gpu: Double?), interval: Int) -> [Sample] {
         var history = HistoryStore.load()
+        // GPU is a row, not a chart line: the persisted history schema stays
+        // cpu/mem/disk/perCore so an upgrade never has to migrate it.
         history.append(Sample(cpu: sample.cpu, mem: sample.mem, disk: sample.disk, perCore: sample.perCore))
         if history.count > HistoryStore.capacity(interval: interval) {
             history.removeFirst(history.count - HistoryStore.capacity(interval: interval))
@@ -187,7 +189,7 @@ struct LiveBoxWidget: Widget {
             LiveBoxWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("LiveBox")
-        .description("CPU, memory, disk usage with a live chart and top processes.")
+        .description("CPU, memory, disk and GPU usage with a live chart and top processes.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -210,6 +212,7 @@ struct LiveBoxWidgetEntryView: View {
                 cpu: sample.cpu,
                 mem: sample.mem,
                 disk: sample.disk,
+                gpu: sample.gpu,
                 thermal: LiveBoxSampler.thermal(),
                 processes: LiveBoxSampler.processes(mode: entry.processMode, interval: interval),
                 volumes: LiveBoxSampler.volumes(),
@@ -228,6 +231,7 @@ struct LiveBoxFace: View {
     let cpu: Double
     let mem: Double
     let disk: Double
+    let gpu: Double?
     let thermal: ThermalLevel
     let processes: [TopProcess]
     let volumes: [DiskVolume]
@@ -261,6 +265,9 @@ struct LiveBoxFace: View {
             if settings.showDisk {
                 metricRow(metric: .disk, title: "DISK", value: disk, color: settings.diskColor.color)
             }
+            if settings.showGPU, let gpu {
+                metricRow(metric: .gpu, title: "GPU", value: gpu, color: settings.gpuColor.color)
+            }
             if settings.showThermal {
                 thermalRow
             }
@@ -280,6 +287,9 @@ struct LiveBoxFace: View {
                 }
                 if settings.showDisk {
                     metricRow(metric: .disk, title: "DISK", value: disk, color: settings.diskColor.color)
+                }
+                if settings.showGPU, let gpu {
+                    metricRow(metric: .gpu, title: "GPU", value: gpu, color: settings.gpuColor.color)
                 }
                 Spacer()
             }
@@ -308,6 +318,9 @@ struct LiveBoxFace: View {
                 }
                 if settings.showDisk {
                     metricRow(metric: .disk, title: "DISK", value: disk, color: settings.diskColor.color)
+                }
+                if settings.showGPU, let gpu {
+                    metricRow(metric: .gpu, title: "GPU", value: gpu, color: settings.gpuColor.color)
                 }
                 Spacer()
             }

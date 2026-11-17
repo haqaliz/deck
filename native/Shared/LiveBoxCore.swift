@@ -35,6 +35,7 @@ enum LiveBoxMetric {
     case cpu
     case mem
     case disk
+    case gpu
 }
 
 enum LiveBoxThresholdTier {
@@ -51,7 +52,25 @@ enum LiveBoxThresholdTier {
         case .disk:
             warn = settings.diskWarnThreshold
             alarm = settings.diskAlarmThreshold
+        case .gpu:
+            warn = settings.gpuWarnThreshold
+            alarm = settings.gpuAlarmThreshold
         }
         return ThresholdTier.tier(value: value, warn: Double(warn), alarm: Double(alarm))
+    }
+}
+
+/// The pure half of the GPU probe. `SystemMetrics.swift` only finds the
+/// IOAccelerator service and hands its `PerformanceStatistics` dictionary here;
+/// the key rule and clamping are testable off the IOKit path.
+enum GPUStatsParser {
+    /// Apple's registry key, shared by Apple Silicon AGX accelerators and the
+    /// Intel/AMD accelerators that expose it. Missing means "no readable
+    /// counter", never 0%: a hidden row is honest, a fabricated idle GPU is not.
+    static func utilization(from stats: [String: Any]) -> Double? {
+        guard let number = stats["Device Utilization %"] as? NSNumber else { return nil }
+        let value = number.doubleValue
+        guard value.isFinite else { return nil }
+        return min(max(value, 0), 100)
     }
 }
