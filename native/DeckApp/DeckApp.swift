@@ -411,6 +411,18 @@ struct ContentView: View {
             WidgetCenter.shared.reloadAllTimelines()
             NotificationCenter.default.post(name: .deckSettingsDidSave, object: nil)
         }
+        .onChange(of: settings.logbox.accountID) { accountID in
+            // Unsetting the widget's account removes its snapshot, so the face
+            // cannot keep rendering the old account's logs.
+            guard accountID == nil else { return }
+            LogBoxSnapshotStore.clear()
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        .onChange(of: settings.metricbox.accountID) { accountID in
+            guard accountID == nil else { return }
+            MetricBoxSnapshotStore.clear()
+            WidgetCenter.shared.reloadAllTimelines()
+        }
         .onChange(of: settings.agentAtLogin) { _ in
             applyAgent()
         }
@@ -3602,14 +3614,18 @@ private struct LogBoxSettingsView: View {
     }
 
     private func loadServices() async {
-        // No account means no list, whichever face is selected.
+        // No account means no list and no cached snapshot, whichever face is
+        // selected.
         guard let credential else {
             services = []
             catalogError = nil
+            LogBoxSnapshotStore.clear()
             return
         }
         guard settings.face == .singleService else { return }
         loadingCatalog = true
+        services = []
+        catalogError = nil
         defer { loadingCatalog = false }
         do {
             services = try await LogBoxLoader.serviceCatalog(
@@ -3637,6 +3653,7 @@ private struct MetricBoxSettingsView: View {
     var onManage: () -> Void = {}
 
     @State private var hosts: [String] = []
+    @State private var loadingHosts = false
 
     private var hostTaskKey: String {
         "\(accountID ?? "")\u{0}\(credential == nil ? "waiting" : "ready")"
@@ -3662,7 +3679,11 @@ private struct MetricBoxSettingsView: View {
                     }
                 }
                 if settings.face == .singleHost {
-                    if hosts.isEmpty {
+                    if loadingHosts {
+                        Text("Loading hosts\u{2026}")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if hosts.isEmpty {
                         Text(accountID == nil
                             ? "Pick a Grafana account first; hosts load from it."
                             : "No hosts yet. Reload after the account is verified.")
@@ -3689,7 +3710,11 @@ private struct MetricBoxSettingsView: View {
 
             if settings.face == .fleetHealth {
                 Section("Hosts") {
-                    if hosts.isEmpty {
+                    if loadingHosts {
+                        Text("Loading hosts\u{2026}")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if hosts.isEmpty {
                         Text(accountID == nil
                             ? "Pick a Grafana account first; hosts load from it."
                             : "No hosts yet. Reload after the account is verified.")
@@ -3763,13 +3788,17 @@ private struct MetricBoxSettingsView: View {
     }
 
     private func reloadHosts() async {
-        // Unsetting the account clears the section immediately. A snapshot
-        // from another account must not leak its hosts in either.
+        // Unsetting the account clears the section and the on-disk snapshot;
+        // setting one always fetches first rather than showing the old list.
         guard accountID != nil, credential != nil else {
             hosts = []
+            loadingHosts = false
+            MetricBoxSnapshotStore.clear()
             return
         }
-        hosts = MetricBoxSnapshotStore.load()?.hostNames(for: accountID) ?? []
+        hosts = []
+        loadingHosts = true
+        defer { loadingHosts = false }
         await onRefresh()
         hosts = MetricBoxSnapshotStore.load()?.hostNames(for: accountID) ?? []
     }

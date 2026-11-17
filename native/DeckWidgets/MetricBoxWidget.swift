@@ -59,7 +59,14 @@ struct MetricBoxProvider: TimelineProvider {
     private func makeEntry() -> MetricBoxEntry {
         let settings = DeckSettings.load()
         let metricbox = settings.metricbox
-        let snapshot = MetricBoxSnapshotStore.load()
+        let account = settings.account(for: .metricboxGrafana)
+        let stored = account == nil ? nil : MetricBoxSnapshotStore.load()
+        // A snapshot belongs to one account. Showing it under another is worse
+        // than showing nothing until the next fetch.
+        let snapshot = stored.flatMap { candidate -> MetricBoxSnapshot? in
+            guard candidate.accountID == account?.id else { return nil }
+            return candidate
+        }
         let now = Date()
         let chip = FetchChip.text(
             source: .metricbox,
@@ -67,7 +74,6 @@ struct MetricBoxProvider: TimelineProvider {
             dataWrittenAt: snapshot?.writtenAt,
             now: now
         )
-        let account = settings.account(for: .metricboxGrafana)
 
         return MetricBoxEntry(
             date: now,
