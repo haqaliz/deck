@@ -218,4 +218,16 @@ final class InfraParserTests: XCTestCase {
         XCTAssertEqual(MetricBoxSort.monthlyCost(kwh24h: 2, ratePerKWh: 0.12) ?? 0, 7.2, accuracy: 0.001)
         XCTAssertNil(MetricBoxSort.monthlyCost(kwh24h: nil, ratePerKWh: 0.12))
     }
+
+    func testHostsOnlyComeFromTheSelectedAccount() {
+        let snapshot = MetricBoxSnapshot(
+            accountID: "account-a",
+            hosts: [MetricHost(host: "x201"), MetricHost(host: "x300")],
+            agents: [], firingAlerts: [], trendHost: nil, trendCPU: [],
+            writtenAt: Date(), note: nil
+        )
+        XCTAssertEqual(snapshot.hostNames(for: "account-a"), ["x201", "x300"])
+        XCTAssertEqual(snapshot.hostNames(for: "account-b"), [])
+        XCTAssertEqual(snapshot.hostNames(for: nil), [], "unsetting the account must empty the list")
+    }
 }

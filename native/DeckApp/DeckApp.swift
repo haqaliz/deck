@@ -3602,12 +3602,13 @@ private struct LogBoxSettingsView: View {
     }
 
     private func loadServices() async {
-        guard settings.face == .singleService else { return }
+        // No account means no list, whichever face is selected.
         guard let credential else {
             services = []
             catalogError = nil
             return
         }
+        guard settings.face == .singleService else { return }
         loadingCatalog = true
         defer { loadingCatalog = false }
         do {
@@ -3762,10 +3763,15 @@ private struct MetricBoxSettingsView: View {
     }
 
     private func reloadHosts() async {
-        hosts = MetricBoxSnapshotStore.load()?.hosts.map(\.host).sorted() ?? []
-        guard credential != nil else { return }
+        // Unsetting the account clears the section immediately. A snapshot
+        // from another account must not leak its hosts in either.
+        guard accountID != nil, credential != nil else {
+            hosts = []
+            return
+        }
+        hosts = MetricBoxSnapshotStore.load()?.hostNames(for: accountID) ?? []
         await onRefresh()
-        hosts = MetricBoxSnapshotStore.load()?.hosts.map(\.host).sorted() ?? []
+        hosts = MetricBoxSnapshotStore.load()?.hostNames(for: accountID) ?? []
     }
 
     private func visibleBinding(_ host: String) -> Binding<Bool> {
