@@ -1365,8 +1365,9 @@ LiveBox:
 - [x] Apple Silicon GPU usage — IOAccelerator `PerformanceStatistics`
       (`Device Utilization %`), read without root; the row hides when the key is
       absent. Shipped in v1.65.
-- [ ] ANE usage — blocked: no public API; `powermetrics` is root-only and
-      `IOReport` is private. Recorded as not shippable, not silently dropped.
+- [x] ANE usage feasibility — investigated 2026-11-17. **Not shippable:** no
+      public API; `powermetrics` is root-only and `IOReport` is private. No
+      privileged helper or private dependency was added. GPU shipped in v1.65.
 - [x] Disk per-volume (multiple mounts, internal + external)
 - [x] Threshold coloring (amber/red when a value crosses warn/alarm thresholds)
 - [x] Per-metric threshold pairs (CPU/MEM/DISK each have their own warn + alarm)
