@@ -36,6 +36,7 @@ struct MetricBoxProvider: TimelineProvider {
         return MetricBoxEntry(
             date: .now, available: true, stale: false, writtenAt: .now, chip: nil,
             snapshot: MetricBoxSnapshot(
+                accountID: "preview",
                 hosts: hosts, agents: [], firingAlerts: [],
                 trendHost: nil, trendCPU: [], writtenAt: .now, note: nil
             ),

@@ -1325,7 +1325,7 @@ read-only, pasted in Settings → Credentials with the URL stored on the account
        snapshots or logs; record measured latency/cadence; README widget list
        and ROADMAP ticked.
 
-**Built 2026-11-17:** slices 1–3 are in the tree — 1,752 shared tests green,
+**Built 2026-11-17:** slices 1–3 are in the tree — 1,754 shared tests green,
 Debug and Release builds green, both faces registered in the extension and
 pumped by the agent on the 60s tick. Version bumped to 1.64 (64) so WidgetKit's
 descriptor cache refreshes. Installed 1.64 on 2026-11-17: `pluginkit` lists the

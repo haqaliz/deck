@@ -54,6 +54,10 @@ struct MetricAlert: Codable, Equatable, Identifiable {
 }
 
 struct MetricBoxSnapshot: Codable, Equatable {
+    /// The account this snapshot was fetched with. The settings host list only
+    /// shows hosts from the currently selected account; a switched or cleared
+    /// account must not inherit the previous one's fleet.
+    var accountID: String
     var hosts: [MetricHost]
     var agents: [MetricAgent]
     var firingAlerts: [MetricAlert]
@@ -63,9 +67,11 @@ struct MetricBoxSnapshot: Codable, Equatable {
     var note: String?
 
     init(
-        hosts: [MetricHost], agents: [MetricAgent], firingAlerts: [MetricAlert],
-        trendHost: String?, trendCPU: [Double], writtenAt: Date, note: String?
+        accountID: String, hosts: [MetricHost], agents: [MetricAgent],
+        firingAlerts: [MetricAlert], trendHost: String?, trendCPU: [Double],
+        writtenAt: Date, note: String?
     ) {
+        self.accountID = accountID
         self.hosts = hosts
         self.agents = agents
         self.firingAlerts = firingAlerts
@@ -77,6 +83,7 @@ struct MetricBoxSnapshot: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        accountID = try c.decodeIfPresent(String.self, forKey: .accountID) ?? ""
         hosts = try c.decodeIfPresent([MetricHost].self, forKey: .hosts) ?? []
         agents = try c.decodeIfPresent([MetricAgent].self, forKey: .agents) ?? []
         firingAlerts = try c.decodeIfPresent([MetricAlert].self, forKey: .firingAlerts) ?? []
@@ -84,6 +91,14 @@ struct MetricBoxSnapshot: Codable, Equatable {
         trendCPU = try c.decodeIfPresent([Double].self, forKey: .trendCPU) ?? []
         writtenAt = try c.decodeIfPresent(Date.self, forKey: .writtenAt) ?? Date()
         note = try c.decodeIfPresent(String.self, forKey: .note)
+    }
+
+    /// Host names only when the snapshot belongs to this account. Nil and a
+    /// mismatched id both mean "show nothing", which is what unsetting the
+    /// credential must do.
+    func hostNames(for accountID: String?) -> [String] {
+        guard let accountID, accountID == self.accountID else { return [] }
+        return hosts.map(\.host).sorted()
     }
 }
 
@@ -371,6 +386,7 @@ enum MetricBoxLoader {
         }
 
         return MetricBoxSnapshot(
+            accountID: credential.id,
             hosts: hosts.values.sorted { $0.host < $1.host },
             agents: agents,
             firingAlerts: alerts,
