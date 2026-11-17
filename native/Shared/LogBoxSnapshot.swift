@@ -78,7 +78,7 @@ struct LogBoxSnapshot: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         accountID = try c.decodeIfPresent(String.self, forKey: .accountID) ?? ""
         environment = try c.decodeIfPresent(String.self, forKey: .environment)
-            ?? LogEnvironment.prd.rawValue
+            ?? LogBoxEnvironment.defaultIndex
         writtenAt = try c.decodeIfPresent(Date.self, forKey: .writtenAt) ?? Date()
         slowUpdatedAt = try c.decodeIfPresent(Date.self, forKey: .slowUpdatedAt)
         smallMinutes = try c.decodeIfPresent(Int.self, forKey: .smallMinutes) ?? 15
@@ -245,6 +245,18 @@ enum ElasticLogParser {
         return rows.compactMap { $0["key"] as? String }
     }
 
+    /// `_data_stream/logs-manifold-*` names. Nil means unreadable; an empty
+    /// list means the cluster has no matching stream.
+    static func environments(_ data: Data) -> [String]? {
+        guard
+            let root = json(data),
+            let streams = root["data_streams"] as? [[String: Any]]
+        else { return nil }
+        return streams
+            .compactMap { $0["name"] as? String }
+            .filter { $0.hasPrefix("logs-manifold-") }
+    }
+
     private static func buckets(_ value: Any?) -> [LogBoxCount] {
         guard
             let agg = value as? [String: Any],
@@ -287,7 +299,7 @@ enum LogBoxLoader {
         guard let base = InfraEndpoint.base(credential.baseURL) else {
             throw InfraProviderError.notConfigured
         }
-        let index = settings.environment.index
+        let index = LogBoxEnvironment.normalize(settings.environment)
         guard let searchURL = InfraEndpoint.url(base, "\(index)/_search") else {
             throw InfraProviderError.notConfigured
         }
@@ -308,7 +320,9 @@ enum LogBoxLoader {
 
         let now = Date()
         let sameTarget = previous?.accountID == credential.id
-            && previous?.environment == settings.environment.rawValue
+            && previous.map {
+                LogBoxEnvironment.normalize($0.environment) == index
+            } == true
         let slowFresh = sameTarget
             && now.timeIntervalSince(previous?.slowUpdatedAt ?? .distantPast) < slowRefresh
 
@@ -368,7 +382,7 @@ enum LogBoxLoader {
 
         return LogBoxSnapshot(
             accountID: credential.id,
-            environment: settings.environment.rawValue,
+            environment: index,
             writtenAt: now,
             slowUpdatedAt: slowUpdatedAt,
             smallMinutes: settings.smallWindowMinutes,
@@ -397,16 +411,35 @@ enum LogBoxLoader {
 // MARK: - Settings catalog (host only)
 
 extension LogBoxLoader {
+    /// The data streams the environment picker offers. Fetched when the tab
+    /// appears or the account changes; cleared when there is no account.
+    static func environmentCatalog(credential: ResolvedCredential) async throws -> [String] {
+        guard let base = InfraEndpoint.base(credential.baseURL) else {
+            throw InfraProviderError.notConfigured
+        }
+        guard let url = InfraEndpoint.url(base, "_data_stream/logs-manifold-*") else {
+            throw InfraProviderError.notConfigured
+        }
+        let data = try await InfraHTTP.get(
+            url, token: credential.token, scheme: "ApiKey"
+        )
+        guard let names = ElasticLogParser.environments(data) else {
+            throw InfraProviderError.invalidPayload
+        }
+        return names.sorted()
+    }
+
     /// The services the settings picker offers. One 24h terms query, run when
     /// the tab appears or the account/environment changes — never on the 60s
     /// tick, and never on every keystroke.
     static func serviceCatalog(
-        credential: ResolvedCredential, environment: LogEnvironment
+        credential: ResolvedCredential, environment: String
     ) async throws -> [String] {
         guard let base = InfraEndpoint.base(credential.baseURL) else {
             throw InfraProviderError.notConfigured
         }
-        guard let url = InfraEndpoint.url(base, "\(environment.index)/_search") else {
+        let index = LogBoxEnvironment.normalize(environment)
+        guard let url = InfraEndpoint.url(base, "\(index)/_search") else {
             throw InfraProviderError.notConfigured
         }
         let body: [String: Any] = [

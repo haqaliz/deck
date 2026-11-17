@@ -53,6 +53,20 @@ final class InfraParserTests: XCTestCase {
         XCTAssertEqual(ElasticCountParser.parse(fixture("elastic_count")), 10_581_995)
     }
 
+    func testEnvironmentCatalogReadsOnlyManifoldDataStreams() {
+        XCTAssertEqual(
+            ElasticLogParser.environments(fixture("elastic_data_streams")),
+            ["logs-manifold-prd", "logs-manifold-stg"]
+        )
+    }
+
+    func testOldEnvironmentValuesNormaliseToDataStreamNames() {
+        XCTAssertEqual(LogBoxEnvironment.normalize("prd"), "logs-manifold-prd")
+        XCTAssertEqual(LogBoxEnvironment.normalize("logs-manifold-stg"), "logs-manifold-stg")
+        XCTAssertEqual(LogBoxEnvironment.displayName("logs-manifold-prd"), "Production")
+        XCTAssertEqual(LogBoxEnvironment.displayName("logs-manifold-stg"), "Staging")
+    }
+
     // MARK: - Grafana
 
     func testQueryFramesBecomeLabelledSeries() {

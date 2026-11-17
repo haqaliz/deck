@@ -32,7 +32,9 @@ writes of any kind, or raw log browsing beyond the newest five errors.
 ### Elastic
 
 - Cluster `manifold-logs`, ES 9.5.3, data streams `logs-manifold-prd` and
-  `logs-manifold-stg`.
+  `logs-manifold-stg`. The environment picker is built from
+  `_data_stream/logs-manifold-*`, not a hard-coded enum; old `prd`/`stg`
+  settings values normalise to the data-stream names on decode.
 - Kibana `https://x300.tail970481.ts.net`, space `prd`; data view id and title
   are both `logs-manifold-prd`.
 - Direct ES at `:9200`, API-key auth (`Authorization: ApiKey …`).
@@ -107,10 +109,12 @@ single host, `var-host`.
   is reused and the note says it is unavailable only when there is none.
 - Unsetting the account clears the dynamic settings lists immediately and
   deletes the widget snapshot, so the face cannot keep rendering the old
-  account. Re-setting always runs a fresh request before the host/service list
-  is shown — never a cached one. A MetricBox snapshot is tagged with the
-  account it was fetched for, so another account's hosts or a deleted account's
-  hosts never appear in the pickers.
+  account. That includes the LogBox environment list (a live data-stream
+  lookup), the selected environment/service, and MetricBox's host selection and
+  hide list. Re-setting always runs a fresh request before the list is shown —
+  never a cached one. A MetricBox snapshot is tagged with the account it was
+  fetched for, so another account's hosts or a deleted account's hosts never
+  appear in the pickers.
 
 ## Security and privacy
 

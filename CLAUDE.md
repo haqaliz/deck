@@ -56,9 +56,10 @@ have access to and shows nothing until it is opened.
 - **LogBox** — Manifold logs from Elastic: error/warn counts, a 15m live window
   and a 24h trend, worst service and top template; optional single-service and
   raw-message modes. Queries Elastic directly with a read-only key; rows open
-  Kibana Discover with the same filter. The settings service list is a live
-  24h `service.name` query, and the 24h block is cached for 15 minutes because
-  it costs seconds, not milliseconds.
+  Kibana Discover with the same filter. The settings environment list is a
+  live `_data_stream/logs-manifold-*` lookup and the service list is a live 24h
+  `service.name` query; both clear when the account is unset. The 24h block is
+  cached for 15 minutes because it costs seconds, not milliseconds.
 - **MetricBox** — machines from Grafana: fleet health (CPU/RAM/disk per host,
   silent machines first), single-host detail with a 24h CPU sparkline, power and
   estimated monthly cost, top agents, or firing alerts. It discovers the default

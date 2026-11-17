@@ -22,7 +22,7 @@ struct LogBoxProvider: TimelineProvider {
         LogBoxEntry(
             date: .now, available: true, stale: false, writtenAt: .now, chip: nil,
             snapshot: LogBoxSnapshot(
-                accountID: "preview", environment: LogEnvironment.prd.rawValue,
+                accountID: "preview", environment: LogBoxEnvironment.defaultIndex,
                 writtenAt: .now, slowUpdatedAt: .now, smallMinutes: 15, largeMinutes: 1440,
                 errorSmall: 33, warnSmall: 36651, errorLarge: 5077, warnLarge: 1876801,
                 trend: (0..<36).map {
@@ -57,7 +57,8 @@ struct LogBoxProvider: TimelineProvider {
         // under another is worse than showing nothing until the next fetch.
         let snapshot = stored.flatMap { candidate -> LogBoxSnapshot? in
             guard candidate.accountID == account?.id,
-                  candidate.environment == logbox.environment.rawValue else { return nil }
+                  LogBoxEnvironment.normalize(candidate.environment)
+                    == LogBoxEnvironment.normalize(logbox.environment) else { return nil }
             return candidate
         }
         let now = Date()
@@ -233,7 +234,7 @@ struct LogBoxWidgetEntryView: View {
             Text("LOGBOX")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
-            Text(entry.settings.environment.displayName.uppercased())
+            Text(LogBoxEnvironment.displayName(entry.settings.environment).uppercased())
                 .font(.system(size: 9, weight: .bold, design: .rounded))
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
@@ -381,7 +382,7 @@ struct LogBoxWidgetEntryView: View {
         }
         return InfraLinks.kibanaDiscover(
             uiURL: entry.uiURL,
-            index: entry.settings.environment.index,
+            index: LogBoxEnvironment.normalize(entry.settings.environment),
             query: query,
             fromMinutes: entry.settings.largeWindowMinutes
         )

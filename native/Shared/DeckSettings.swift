@@ -701,17 +701,28 @@ struct WeatherBoxSettings: Codable, Equatable {
 
 // MARK: - M11 infra settings
 
-enum LogEnvironment: String, Codable, CaseIterable {
-    case prd, stg
+/// Elastic data streams are the environment list. It is fetched from
+/// `_data_stream/logs-manifold-*` when an account is configured and cleared
+/// when it is not, so the picker never offers an environment the cluster does
+/// not have.
+enum LogBoxEnvironment {
+    static let defaultIndex = "logs-manifold-prd"
 
-    var displayName: String {
-        switch self {
-        case .prd: "Production"
-        case .stg: "Staging"
-        }
+    static func normalize(_ raw: String) -> String {
+        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return defaultIndex }
+        return value.hasPrefix("logs-manifold-") ? value : "logs-manifold-\(value)"
     }
 
-    var index: String { "logs-manifold-\(rawValue)" }
+    static func displayName(_ index: String) -> String {
+        let suffix = normalize(index)
+            .replacingOccurrences(of: "logs-manifold-", with: "")
+        switch suffix {
+        case "prd": return "Production"
+        case "stg": return "Staging"
+        default: return suffix.uppercased()
+        }
+    }
 }
 
 enum LogBoxFace: String, Codable, CaseIterable {
@@ -741,7 +752,8 @@ enum LogTextMode: String, Codable, CaseIterable {
 
 struct LogBoxSettings: Codable, Equatable {
     var accountID: String?
-    var environment: LogEnvironment = .prd
+    /// A data-stream name (`logs-manifold-prd`), discovered from Elastic.
+    var environment: String = LogBoxEnvironment.defaultIndex
     var face: LogBoxFace = .prodHealth
     /// Default is the privacy-safe one: templates and counts, no message text.
     var textMode: LogTextMode = .templates
@@ -757,7 +769,9 @@ struct LogBoxSettings: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         accountID = try c.decodeIfPresent(String.self, forKey: .accountID)
-        environment = try c.decodeIfPresent(LogEnvironment.self, forKey: .environment) ?? .prd
+        let rawEnvironment = try c.decodeIfPresent(String.self, forKey: .environment)
+            ?? LogBoxEnvironment.defaultIndex
+        environment = LogBoxEnvironment.normalize(rawEnvironment)
         face = try c.decodeIfPresent(LogBoxFace.self, forKey: .face) ?? .prodHealth
         textMode = try c.decodeIfPresent(LogTextMode.self, forKey: .textMode) ?? .templates
         service = try c.decodeIfPresent(String.self, forKey: .service) ?? ""
