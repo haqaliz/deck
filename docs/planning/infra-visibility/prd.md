@@ -1,6 +1,6 @@
 # M11 — Infra visibility (PRD)
 
-**Status:** slices 1–3 built 2026-11-17; installed verification open.
+**Status:** shipped 2026-11-17 on Deck 1.64; owner-verified (see `verification.md`).
 **Source brief:** `docs/planning/_card/issue.md`.
 
 ## Problem
