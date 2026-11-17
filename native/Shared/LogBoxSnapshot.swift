@@ -227,6 +227,18 @@ enum ElasticLogParser {
         }
     }
 
+    /// The settings tab's service picker. Nil means the payload was unreadable;
+    /// an empty list is a valid "no services logged in the window".
+    static func serviceNames(_ data: Data) -> [String]? {
+        guard
+            let root = json(data),
+            let aggs = root["aggregations"] as? [String: Any],
+            let services = aggs["services"] as? [String: Any],
+            let rows = services["buckets"] as? [[String: Any]]
+        else { return nil }
+        return rows.compactMap { $0["key"] as? String }
+    }
+
     private static func buckets(_ value: Any?) -> [LogBoxCount] {
         guard
             let agg = value as? [String: Any],
@@ -373,5 +385,35 @@ enum LogBoxLoader {
             throw InfraProviderError.invalidPayload
         }
         return try JSONSerialization.data(withJSONObject: body)
+    }
+}
+
+// MARK: - Settings catalog (host only)
+
+extension LogBoxLoader {
+    /// The services the settings picker offers. One 24h terms query, run when
+    /// the tab appears or the account/environment changes — never on the 60s
+    /// tick, and never on every keystroke.
+    static func serviceCatalog(
+        credential: ResolvedCredential, environment: LogEnvironment
+    ) async throws -> [String] {
+        guard let base = InfraEndpoint.base(credential.baseURL) else {
+            throw InfraProviderError.notConfigured
+        }
+        guard let url = InfraEndpoint.url(base, "\(environment.index)/_search") else {
+            throw InfraProviderError.notConfigured
+        }
+        let body: [String: Any] = [
+            "size": 0,
+            "query": ["range": ["@timestamp": ["gte": "now-24h"]]],
+            "aggs": ["services": ["terms": ["field": "service.name", "size": 50]]],
+        ]
+        let data = try await InfraHTTP.post(
+            url, token: credential.token, scheme: "ApiKey", body: try encode(body)
+        )
+        guard let names = ElasticLogParser.serviceNames(data) else {
+            throw InfraProviderError.invalidPayload
+        }
+        return names.sorted()
     }
 }

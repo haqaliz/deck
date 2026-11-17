@@ -789,6 +789,13 @@ struct MetricBoxSettings: Codable, Equatable {
     var host = ""
     /// Hosts hidden from the fleet face. All seven are shown by default.
     var hiddenHosts: [String] = []
+    /// Fleet columns. The large size shows all enabled columns; the medium size
+    /// shows CPU/RAM/disk; the small size shows the first two enabled.
+    var showCPU = true
+    var showRAM = true
+    var showDisk = true
+    var showGPU = true
+    var showPower = true
     var smallWindowMinutes = 15
     var largeWindowMinutes = 1440
     /// The Power dashboard's `$price` default (USD per kWh).
@@ -803,6 +810,11 @@ struct MetricBoxSettings: Codable, Equatable {
         face = try c.decodeIfPresent(MetricBoxFace.self, forKey: .face) ?? .fleetHealth
         host = try c.decodeIfPresent(String.self, forKey: .host) ?? ""
         hiddenHosts = try c.decodeIfPresent([String].self, forKey: .hiddenHosts) ?? []
+        showCPU = try c.decodeIfPresent(Bool.self, forKey: .showCPU) ?? true
+        showRAM = try c.decodeIfPresent(Bool.self, forKey: .showRAM) ?? true
+        showDisk = try c.decodeIfPresent(Bool.self, forKey: .showDisk) ?? true
+        showGPU = try c.decodeIfPresent(Bool.self, forKey: .showGPU) ?? true
+        showPower = try c.decodeIfPresent(Bool.self, forKey: .showPower) ?? true
         smallWindowMinutes = min(max(try c.decodeIfPresent(Int.self, forKey: .smallWindowMinutes) ?? 15, 5), 1440)
         largeWindowMinutes = min(max(try c.decodeIfPresent(Int.self, forKey: .largeWindowMinutes) ?? 1440, 15), 10080)
         ratePerKWh = min(max(try c.decodeIfPresent(Double.self, forKey: .ratePerKWh) ?? 0.12, 0), 100)

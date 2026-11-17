@@ -39,6 +39,13 @@ final class InfraParserTests: XCTestCase {
         XCTAssertNotNil(lines.first?.at)
     }
 
+    func testServiceCatalogReadsTheTermsBuckets() {
+        XCTAssertEqual(
+            ElasticLogParser.serviceNames(fixture("logs_services")),
+            ["eventprocessor-worker", "jobrunner", "nginx"]
+        )
+    }
+
     func testHealthAndCountProbes() {
         let health = ElasticHealthParser.parse(fixture("elastic_health"))
         XCTAssertEqual(health?.cluster, "manifold-logs")

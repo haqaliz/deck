@@ -235,6 +235,7 @@
 		97A4B82046694420FB236D6F /* WiqlClause.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE170E54FD1094990464C7C7 /* WiqlClause.swift */; };
 		99C485D084282BAF9BDD5AA3 /* AtomicFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7073AE9469C6B027A42C9684 /* AtomicFile.swift */; };
 		9B029947313A0E01B2D2171B /* OpenBoxUsageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 196AEF3F1CE410C025603C81 /* OpenBoxUsageLoader.swift */; };
+		9C3A7486B11F8470A8CDD725 /* logs_services.json in Resources */ = {isa = PBXBuildFile; fileRef = C7018FEF5072C2DA5D4F3E7D /* logs_services.json */; };
 		9C8C825172CFF975DC780344 /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
 		9DBCB73513BAF9149ADC7DE9 /* SpotlightCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0443B39F8B521F27D7C96 /* SpotlightCore.swift */; };
 		9F08CA3FBAE1D2CCE3ED590E /* InfraSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC470994C5A3771CC00442D /* InfraSupport.swift */; };
@@ -603,6 +604,7 @@
 		C2FB85E98F34745BF95D0037 /* NetBoxCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetBoxCore.swift; sourceTree = "<group>"; };
 		C38F2902EF0F4B804DB8942F /* FetchStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchStatus.swift; sourceTree = "<group>"; };
 		C46F38858426CA0E8C705B6F /* PRBoxAzureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxAzureTests.swift; sourceTree = "<group>"; };
+		C7018FEF5072C2DA5D4F3E7D /* logs_services.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = logs_services.json; sourceTree = "<group>"; };
 		C88AF44DB6D21ECAD0230B51 /* PRBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBoxSnapshot.swift; sourceTree = "<group>"; };
 		CB348CAA59C48A66AEC08E61 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		CB9C23A9CEFF26EAC74430A5 /* DeckLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLink.swift; sourceTree = "<group>"; };
@@ -920,6 +922,7 @@
 				F03BA4EEDC61CE86FF8AFA63 /* grafana_query.json */,
 				608E71F40BC9247027BEA8C7 /* logs_fast.json */,
 				3854014D1346EF05E4E16B1C /* logs_last.json */,
+				C7018FEF5072C2DA5D4F3E7D /* logs_services.json */,
 				E71D82EBFB80E0F9F32BBCA6 /* logs_slow.json */,
 				D3AF3D2BB11E50BC3F388E07 /* wallexMarkets.json */,
 				584C732D7197A9020BC1AEF4 /* yahoo_chart_aapl.json */,
@@ -1144,6 +1147,7 @@
 				82CFD59E7E9898C76F7A710E /* grafana_query.json in Resources */,
 				4BF3C61DD0F3E768D0A052F2 /* logs_fast.json in Resources */,
 				A7D7A2EF649C1EEB0C618D80 /* logs_last.json in Resources */,
+				9C3A7486B11F8470A8CDD725 /* logs_services.json in Resources */,
 				DDC386F09B5005D63B20861E /* logs_slow.json in Resources */,
 				F8D0B9E76E31D7928A486CAA /* wallexMarkets.json in Resources */,
 				69A410AA643B0243A7ED6F82 /* yahoo_chart_aapl.json in Resources */,

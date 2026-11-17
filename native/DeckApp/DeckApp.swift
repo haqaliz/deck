@@ -349,12 +349,15 @@ struct ContentView: View {
                 settings: $settings.logbox,
                 accountID: $settings.logbox.accountID,
                 accounts: settings.credentials.accounts,
+                credential: settings.credential(for: .logboxElastic),
                 onManage: { selection = .credentials }
             )
             case .metricbox: MetricBoxSettingsView(
                 settings: $settings.metricbox,
                 accountID: $settings.metricbox.accountID,
                 accounts: settings.credentials.accounts,
+                credential: settings.credential(for: .metricboxGrafana),
+                onRefresh: { await refreshMetricBox() },
                 onManage: { selection = .credentials }
             )
             }
@@ -3467,7 +3470,19 @@ private struct LogBoxSettingsView: View {
     @Binding var settings: LogBoxSettings
     @Binding var accountID: String?
     let accounts: [CredentialAccount]
+    /// Resolved host-side; nil until the account has a token and a base URL.
+    let credential: ResolvedCredential?
     var onManage: () -> Void = {}
+
+    @State private var services: [String] = []
+    @State private var catalogError: String?
+    @State private var loadingCatalog = false
+
+    /// The account, environment or face changing makes the old list wrong;
+    /// so does the token arriving after the tab was already open.
+    private var catalogKey: String {
+        "\(accountID ?? "")\u{0}\(settings.environment.rawValue)\u{0}\(settings.face.rawValue)\u{0}\(credential == nil ? "waiting" : "ready")"
+    }
 
     var body: some View {
         Form {
@@ -3502,8 +3517,8 @@ private struct LogBoxSettingsView: View {
                     }
                 }
                 if settings.face == .singleService {
-                    TextField("Service (e.g. jobrunner)", text: $settings.service)
-                    Text("Every query is narrowed to this service. Leave it empty to watch all of them.")
+                    servicePicker
+                    Text("Every query is narrowed to this service. The list is the last 24h of `service.name` in the chosen environment.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -3541,6 +3556,71 @@ private struct LogBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+        .task(id: catalogKey) { await loadServices() }
+    }
+
+    @ViewBuilder
+    private var servicePicker: some View {
+        if loadingCatalog {
+            Text("Loading services\u{2026}")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if let catalogError {
+            Text(catalogError)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("Reload services") { Task { await loadServices() } }
+                .buttonStyle(.link)
+                .font(.caption)
+        } else if services.isEmpty {
+            Text(credential == nil
+                ? "Pick an Elastic account first; the service list loads from it."
+                : "No services in the last 24h. Check the account, then reload.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if credential != nil {
+                Button("Reload services") { Task { await loadServices() } }
+                    .buttonStyle(.link)
+                    .font(.caption)
+            }
+        } else {
+            Picker("Service", selection: $settings.service) {
+                Text("All services").tag("")
+                ForEach(services, id: \.self) { service in
+                    Text(service).tag(service)
+                }
+                // A hand-edited or since-renamed service stays selectable
+                // rather than silently snapping to "All services".
+                if !settings.service.isEmpty && !services.contains(settings.service) {
+                    Text(settings.service).tag(settings.service)
+                }
+            }
+            Button("Reload services") { Task { await loadServices() } }
+                .buttonStyle(.link)
+                .font(.caption)
+        }
+    }
+
+    private func loadServices() async {
+        guard settings.face == .singleService else { return }
+        guard let credential else {
+            services = []
+            catalogError = nil
+            return
+        }
+        loadingCatalog = true
+        defer { loadingCatalog = false }
+        do {
+            services = try await LogBoxLoader.serviceCatalog(
+                credential: credential, environment: settings.environment
+            )
+            catalogError = nil
+        } catch {
+            services = []
+            catalogError = FetchStatusCopy.hint(
+                source: .logbox, outcome: FetchClassifier.outcome(for: error)
+            )
+        }
     }
 }
 
@@ -3548,11 +3628,17 @@ private struct MetricBoxSettingsView: View {
     @Binding var settings: MetricBoxSettings
     @Binding var accountID: String?
     let accounts: [CredentialAccount]
+    /// Resolved host-side; nil until the account has a token and a base URL.
+    let credential: ResolvedCredential?
+    /// Runs the same host fetch the agent runs, so the host lists below fill in
+    /// as soon as the credential is picked instead of waiting for the next tick.
+    var onRefresh: () async -> Void = {}
     var onManage: () -> Void = {}
 
-    private var knownHosts: [String] {
-        MetricBoxSnapshotStore.load()?.hosts.map(\.host).sorted()
-            ?? ["x201", "x202", "x203", "x204", "x205", "x300", "x301"]
+    @State private var hosts: [String] = []
+
+    private var hostTaskKey: String {
+        "\(accountID ?? "")\u{0}\(credential == nil ? "waiting" : "ready")"
     }
 
     var body: some View {
@@ -3575,13 +3661,26 @@ private struct MetricBoxSettingsView: View {
                     }
                 }
                 if settings.face == .singleHost {
-                    Picker("Host", selection: $settings.host) {
-                        Text("Worst first").tag("")
-                        ForEach(knownHosts, id: \.self) { host in
-                            Text(host).tag(host)
+                    if hosts.isEmpty {
+                        Text(accountID == nil
+                            ? "Pick a Grafana account first; hosts load from it."
+                            : "No hosts yet. Reload after the account is verified.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if accountID != nil {
+                            Button("Reload hosts") { Task { await reloadHosts() } }
+                                .buttonStyle(.link)
+                                .font(.caption)
                         }
-                        if !settings.host.isEmpty && !knownHosts.contains(settings.host) {
-                            Text(settings.host).tag(settings.host)
+                    } else {
+                        Picker("Host", selection: $settings.host) {
+                            Text("Worst first").tag("")
+                            ForEach(hosts, id: \.self) { host in
+                                Text(host).tag(host)
+                            }
+                            if !settings.host.isEmpty && !hosts.contains(settings.host) {
+                                Text(settings.host).tag(settings.host)
+                            }
                         }
                     }
                 }
@@ -3589,13 +3688,40 @@ private struct MetricBoxSettingsView: View {
 
             if settings.face == .fleetHealth {
                 Section("Hosts") {
-                    ForEach(knownHosts, id: \.self) { host in
-                        Toggle(host, isOn: visibleBinding(host))
+                    if hosts.isEmpty {
+                        Text(accountID == nil
+                            ? "Pick a Grafana account first; hosts load from it."
+                            : "No hosts yet. Reload after the account is verified.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if accountID != nil {
+                            Button("Reload hosts") { Task { await reloadHosts() } }
+                                .buttonStyle(.link)
+                                .font(.caption)
+                        }
+                    } else {
+                        ForEach(hosts, id: \.self) { host in
+                            Toggle(host, isOn: visibleBinding(host))
+                        }
+                        Text("A hidden host is also skipped on the power face.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("Reload hosts") { Task { await reloadHosts() } }
+                            .buttonStyle(.link)
+                            .font(.caption)
                     }
-                    Text("All seven are shown by default. A hidden host is also skipped on the power face.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
+            }
+
+            Section("Columns") {
+                Toggle("CPU", isOn: $settings.showCPU)
+                Toggle("Memory", isOn: $settings.showRAM)
+                Toggle("Disk", isOn: $settings.showDisk)
+                Toggle("GPU", isOn: $settings.showGPU)
+                Toggle("Power", isOn: $settings.showPower)
+                Text("The fleet face shows CPU/MEM/DISK on medium and every enabled column on large. GPU and power are large-only.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             if settings.face == .power {
@@ -3632,6 +3758,14 @@ private struct MetricBoxSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.top, 4)
+        .task(id: hostTaskKey) { await reloadHosts() }
+    }
+
+    private func reloadHosts() async {
+        hosts = MetricBoxSnapshotStore.load()?.hosts.map(\.host).sorted() ?? []
+        guard credential != nil else { return }
+        await onRefresh()
+        hosts = MetricBoxSnapshotStore.load()?.hosts.map(\.host).sorted() ?? []
     }
 
     private func visibleBinding(_ host: String) -> Binding<Bool> {

@@ -170,15 +170,28 @@ struct MetricBoxWidgetEntryView: View {
                     .foregroundStyle(.red)
                 Spacer(minLength: 0)
             } else {
-                Text("C \(percent(host.cpu))")
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(pressureColor(host.cpu))
-                Spacer(minLength: 2)
-                Text("M \(percent(host.ram))")
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                if entry.settings.showCPU {
+                    Text("C \(percent(host.cpu))")
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(pressureColor(host.cpu))
+                }
+                if entry.settings.showCPU && entry.settings.showRAM {
+                    Spacer(minLength: 2)
+                }
+                if entry.settings.showRAM {
+                    Text("M \(percent(host.ram))")
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                if !entry.settings.showCPU && !entry.settings.showRAM {
+                    Text(entry.settings.showDisk ? "D \(percent(host.disk))" : "\u{2014}")
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(entry.settings.showDisk ? pressureColor(host.disk) : Color.secondary)
+                }
+                Spacer(minLength: 0)
             }
         }
     }
@@ -194,19 +207,21 @@ struct MetricBoxWidgetEntryView: View {
                     .foregroundStyle(.red)
                 Spacer(minLength: 0)
             } else {
-                metric("C", host.cpu)
-                metric("M", host.ram)
-                metric("D", host.disk)
+                if entry.settings.showCPU { metric("C", host.cpu) }
+                if entry.settings.showRAM { metric("M", host.ram) }
+                if entry.settings.showDisk { metric("D", host.disk) }
                 if detailed {
-                    if let gpu = host.gpuPercent {
-                        metric("G", gpu)
-                    } else {
-                        Text("G —")
-                            .font(.system(size: 9, weight: .medium, design: .rounded))
-                            .foregroundStyle(.tertiary)
-                            .frame(width: 40, alignment: .leading)
+                    if entry.settings.showGPU {
+                        if let gpu = host.gpuPercent {
+                            metric("G", gpu)
+                        } else {
+                            Text("G —")
+                                .font(.system(size: 9, weight: .medium, design: .rounded))
+                                .foregroundStyle(.tertiary)
+                                .frame(width: 40, alignment: .leading)
+                        }
                     }
-                    if let watts = host.totalWatts {
+                    if entry.settings.showPower, let watts = host.totalWatts {
                         Text(wattsString(watts))
                             .font(.system(size: 9, weight: .medium, design: .rounded))
                             .monospacedDigit()
@@ -460,17 +475,15 @@ struct MetricBoxWidgetEntryView: View {
         }
     }
 
+    @ViewBuilder
     private func footer(_ snapshot: MetricBoxSnapshot) -> some View {
-        HStack(spacing: 4) {
-            if let note = snapshot.note {
+        if let note = snapshot.note {
+            HStack(spacing: 4) {
                 Text(note)
                     .font(.system(size: 9, design: .rounded))
                     .foregroundStyle(.tertiary)
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
-            Text("Grafana")
-                .font(.system(size: 9, weight: .medium, design: .rounded))
-                .foregroundStyle(.tertiary)
         }
     }
 
