@@ -110,6 +110,12 @@ enum LogBoxSnapshotStore {
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         _ = AtomicFile.write(data, to: fileURL)
     }
+
+    /// Unsetting the account must not leave a snapshot the widget can render
+    /// as if it were still configured.
+    static func clear() {
+        try? FileManager.default.removeItem(at: fileURL)
+    }
 }
 
 // MARK: - Queries (pure)

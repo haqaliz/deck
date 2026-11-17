@@ -105,9 +105,12 @@ single host, `var-host`.
 - Unreadable payload → "Unexpected Elastic/Grafana response".
 - A slow 24h query failing does not blank the fast counts; the previous trend
   is reused and the note says it is unavailable only when there is none.
-- Unsetting the account clears the dynamic settings lists immediately: a
-  MetricBox snapshot is tagged with the account it was fetched for, so another
-  account's hosts or a deleted account's hosts never appear in the pickers.
+- Unsetting the account clears the dynamic settings lists immediately and
+  deletes the widget snapshot, so the face cannot keep rendering the old
+  account. Re-setting always runs a fresh request before the host/service list
+  is shown — never a cached one. A MetricBox snapshot is tagged with the
+  account it was fetched for, so another account's hosts or a deleted account's
+  hosts never appear in the pickers.
 
 ## Security and privacy
 

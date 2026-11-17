@@ -51,7 +51,15 @@ struct LogBoxProvider: TimelineProvider {
     private func makeEntry() -> LogBoxEntry {
         let settings = DeckSettings.load()
         let logbox = settings.logbox
-        let snapshot = LogBoxSnapshotStore.load()
+        let account = settings.account(for: .logboxElastic)
+        let stored = account == nil ? nil : LogBoxSnapshotStore.load()
+        // A snapshot belongs to one account and one environment. Showing it
+        // under another is worse than showing nothing until the next fetch.
+        let snapshot = stored.flatMap { candidate -> LogBoxSnapshot? in
+            guard candidate.accountID == account?.id,
+                  candidate.environment == logbox.environment.rawValue else { return nil }
+            return candidate
+        }
         let now = Date()
         let chip = FetchChip.text(
             source: .logbox,
@@ -59,7 +67,6 @@ struct LogBoxProvider: TimelineProvider {
             dataWrittenAt: snapshot?.writtenAt,
             now: now
         )
-        let account = settings.account(for: .logboxElastic)
         let uiURL = (account?.uiURL.isEmpty == false ? account?.uiURL : account?.baseURL) ?? ""
 
         return LogBoxEntry(
