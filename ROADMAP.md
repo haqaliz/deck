@@ -1325,13 +1325,16 @@ read-only, pasted in Settings → Credentials with the URL stored on the account
        snapshots or logs; record measured latency/cadence; README widget list
        and ROADMAP ticked.
 
-**Built 2026-11-17:** slices 1–3 are in the tree — 1,754 shared tests green,
+**Built 2026-11-17:** slices 1–3 are in the tree — 1,756 shared tests green,
 Debug and Release builds green, both faces registered in the extension and
 pumped by the agent on the 60s tick. Version bumped to 1.64 (64) so WidgetKit's
 descriptor cache refreshes. Installed 1.64 on 2026-11-17: `pluginkit` lists the
 extension, the binary contains both widget classes, and the agent writes
 `fetch-logbox.json` / `fetch-metricbox.json` as `notConfigured` until accounts
-are picked. Slice 4 stays open until both real accounts are paired; the gallery,
+are picked. The settings catalogs are live: environments from Elastic data
+streams, services from a 24h `service.name` query, and hosts from the Grafana
+snapshot; unsetting an account clears the list, the API-derived selections and
+the snapshot. Slice 4 stays open until both real accounts are paired; the gallery,
 timeline refresh, deep links and Tailscale-offline path are unverified in the
 installed app.
 

@@ -412,14 +412,18 @@ struct ContentView: View {
             NotificationCenter.default.post(name: .deckSettingsDidSave, object: nil)
         }
         .onChange(of: settings.logbox.accountID) { accountID in
-            // Unsetting the widget's account removes its snapshot, so the face
-            // cannot keep rendering the old account's logs.
+            // Unsetting the widget's account removes its snapshot and every
+            // selection that was built from the API (environment, service).
             guard accountID == nil else { return }
+            settings.logbox.environment = LogBoxEnvironment.defaultIndex
+            settings.logbox.service = ""
             LogBoxSnapshotStore.clear()
             WidgetCenter.shared.reloadAllTimelines()
         }
         .onChange(of: settings.metricbox.accountID) { accountID in
             guard accountID == nil else { return }
+            settings.metricbox.host = ""
+            settings.metricbox.hiddenHosts = []
             MetricBoxSnapshotStore.clear()
             WidgetCenter.shared.reloadAllTimelines()
         }
@@ -3489,11 +3493,18 @@ private struct LogBoxSettingsView: View {
     @State private var services: [String] = []
     @State private var catalogError: String?
     @State private var loadingCatalog = false
+    @State private var environments: [String] = []
+    @State private var environmentError: String?
+    @State private var loadingEnvironments = false
 
     /// The account, environment or face changing makes the old list wrong;
     /// so does the token arriving after the tab was already open.
     private var catalogKey: String {
-        "\(accountID ?? "")\u{0}\(settings.environment.rawValue)\u{0}\(settings.face.rawValue)\u{0}\(credential == nil ? "waiting" : "ready")"
+        "\(accountID ?? "")\u{0}\(settings.environment)\u{0}\(settings.face.rawValue)\u{0}\(credential == nil ? "waiting" : "ready")"
+    }
+
+    private var environmentKey: String {
+        "\(accountID ?? "")\u{0}\(credential == nil ? "waiting" : "ready")"
     }
 
     var body: some View {
@@ -3508,18 +3519,49 @@ private struct LogBoxSettingsView: View {
                     .foregroundStyle(.secondary)
                 FetchStatusCaption(
                     source: .logbox,
-                    clearOn: "\(accountID ?? "")\u{0}\(settings.environment.rawValue)"
+                    clearOn: "\(accountID ?? "")\u{0}\(settings.environment)"
                 )
             }
 
             Section("Environment") {
-                Picker("Logs", selection: $settings.environment) {
-                    ForEach(LogEnvironment.allCases, id: \.self) { environment in
-                        Text(environment.displayName).tag(environment)
+                if credential == nil {
+                    Text("Pick an Elastic account first; environments load from its data streams.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if loadingEnvironments {
+                    Text("Loading environments\u{2026}")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if let environmentError {
+                    Text(environmentError)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Reload environments") { Task { await loadEnvironments() } }
+                        .buttonStyle(.link)
+                        .font(.caption)
+                } else if environments.isEmpty {
+                    Text("No logs-manifold-* data streams found.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Reload environments") { Task { await loadEnvironments() } }
+                        .buttonStyle(.link)
+                        .font(.caption)
+                } else {
+                    Picker("Logs", selection: $settings.environment) {
+                        ForEach(environments, id: \.self) { index in
+                            Text(LogBoxEnvironment.displayName(index)).tag(index)
+                        }
+                        if !settings.environment.isEmpty && !environments.contains(settings.environment) {
+                            Text(LogBoxEnvironment.displayName(settings.environment))
+                                .tag(settings.environment)
+                        }
                     }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    Button("Reload environments") { Task { await loadEnvironments() } }
+                        .buttonStyle(.link)
+                        .font(.caption)
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
             }
 
             Section("Face") {
@@ -3569,6 +3611,7 @@ private struct LogBoxSettingsView: View {
         .formStyle(.grouped)
         .padding(.top, 4)
         .task(id: catalogKey) { await loadServices() }
+        .task(id: environmentKey) { await loadEnvironments() }
     }
 
     @ViewBuilder
@@ -3619,6 +3662,7 @@ private struct LogBoxSettingsView: View {
         guard let credential else {
             services = []
             catalogError = nil
+            settings.service = ""
             LogBoxSnapshotStore.clear()
             return
         }
@@ -3635,6 +3679,36 @@ private struct LogBoxSettingsView: View {
         } catch {
             services = []
             catalogError = FetchStatusCopy.hint(
+                source: .logbox, outcome: FetchClassifier.outcome(for: error)
+            )
+        }
+    }
+
+    private func loadEnvironments() async {
+        // Unsetting the account clears the list, the selection and the snapshot
+        // — environments are data-stream names discovered from Elastic.
+        guard let credential else {
+            environments = []
+            environmentError = nil
+            settings.environment = LogBoxEnvironment.defaultIndex
+            settings.service = ""
+            LogBoxSnapshotStore.clear()
+            return
+        }
+        loadingEnvironments = true
+        environments = []
+        environmentError = nil
+        defer { loadingEnvironments = false }
+        do {
+            environments = try await LogBoxLoader.environmentCatalog(credential: credential)
+            if environments.isEmpty {
+                environmentError = nil
+            } else if !environments.contains(settings.environment) {
+                settings.environment = environments[0]
+            }
+        } catch {
+            environments = []
+            environmentError = FetchStatusCopy.hint(
                 source: .logbox, outcome: FetchClassifier.outcome(for: error)
             )
         }
@@ -3793,6 +3867,8 @@ private struct MetricBoxSettingsView: View {
         guard accountID != nil, credential != nil else {
             hosts = []
             loadingHosts = false
+            settings.host = ""
+            settings.hiddenHosts = []
             MetricBoxSnapshotStore.clear()
             return
         }

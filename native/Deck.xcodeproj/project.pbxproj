@@ -333,6 +333,7 @@
 		D700038069A4F6268C208A5B /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		D74629484729CBEAE1664FFD /* GitBoxSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3831BE1EF476B4F1EC1BFEA9 /* GitBoxSnapshotTests.swift */; };
 		D74C6B4E08C7E9730C6BE1B4 /* BatBoxWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E3C9DA9493E820111E3F94 /* BatBoxWidget.swift */; };
+		D75A05AAB397E97F3F28B9E6 /* elastic_data_streams.json in Resources */ = {isa = PBXBuildFile; fileRef = 818ECB8B5EA803F604DF5382 /* elastic_data_streams.json */; };
 		D7FF95249D9845C32AE38FB6 /* WiqlPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDF0EE30C03907E5EDE867D /* WiqlPreset.swift */; };
 		D8AB20E98B942D621F1E842F /* GitBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A1398FCD84EBC35CF29135 /* GitBoxSnapshot.swift */; };
 		D8DE1BC7D47C480B185987C0 /* ShipBoxSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF045F6211C715FF81858003 /* ShipBoxSettingsTests.swift */; };
@@ -546,6 +547,7 @@
 		7EF5A48E03BF54FF9C68F8DD /* CredentialVerification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialVerification.swift; sourceTree = "<group>"; };
 		7FA4F73C5F75EFFCBEE42771 /* ClipBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipBoxSnapshot.swift; sourceTree = "<group>"; };
 		812063688CE39D11189608C8 /* CredentialAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialAccount.swift; sourceTree = "<group>"; };
+		818ECB8B5EA803F604DF5382 /* elastic_data_streams.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = elastic_data_streams.json; sourceTree = "<group>"; };
 		82736DC13D9569D028C763BC /* DeckKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckKeychain.swift; sourceTree = "<group>"; };
 		8410285538D08E9259413910 /* DevBoxWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevBoxWidget.swift; sourceTree = "<group>"; };
 		84CF3D1A3F8408641F7B1F4C /* ContainerMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerMigrationTests.swift; sourceTree = "<group>"; };
@@ -909,6 +911,7 @@
 				09B5B2A03A188988B4CEEC9B /* coingecko_search_pepe.json */,
 				50A8922BFDCE56FEEAFDE601 /* coinGeckoMarkets.json */,
 				0EB9AF174C2C18A3B9FEC662 /* elastic_count.json */,
+				818ECB8B5EA803F604DF5382 /* elastic_data_streams.json */,
 				3BF30A0D6305FC01A7C55655 /* elastic_health.json */,
 				CF554B40AD43EFE339212234 /* erApiLatest.json */,
 				8F194F129DDFDA60312EA5D1 /* github_pr_reviews.json */,
@@ -1134,6 +1137,7 @@
 				713B88D412C1D34D897E1B3F /* coinGeckoMarkets.json in Resources */,
 				C9AAC84C4FB2BA8669026D93 /* coingecko_search_pepe.json in Resources */,
 				9451D2B2A46CC04CF65F82C2 /* elastic_count.json in Resources */,
+				D75A05AAB397E97F3F28B9E6 /* elastic_data_streams.json in Resources */,
 				A9F39DA40E46F1FBEE8189A2 /* elastic_health.json in Resources */,
 				57F5796192299650422752B1 /* erApiLatest.json in Resources */,
 				CE062D2F4728EBFDF662CACE /* github_pr_reviews.json in Resources */,

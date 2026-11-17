@@ -1,0 +1,7 @@
+{
+  "data_streams": [
+    { "name": "logs-manifold-prd", "status": "GREEN" },
+    { "name": "logs-manifold-stg", "status": "GREEN" },
+    { "name": "unrelated-stream", "status": "GREEN" }
+  ]
+}
