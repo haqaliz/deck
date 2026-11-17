@@ -26,7 +26,7 @@ cask "deck" do
 
   url "https://github.com/haqaliz/deck/releases/download/v#{version}/Deck-v#{version}.dmg"
   name "Deck"
-  desc "Fourteen desktop widgets in one WidgetKit extension"
+  desc "Sixteen desktop widgets in one WidgetKit extension"
   homepage "https://github.com/haqaliz/deck"
 
   # WidgetKit APIs Deck relies on, and the deployment target in project.yml.

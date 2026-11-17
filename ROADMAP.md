@@ -1256,7 +1256,7 @@ Order (each is its own slug, PRD → plan):
 Not searchable, on purpose: NetBox, BatBox, LiveBox and WeatherBox have
 nothing meaningful to find.
 
-### M11 — Infra visibility (built 2026-11-17; installed verification pending)
+### M11 — Infra visibility (DONE 2026-11-17)
 
 Two widgets on two services already in daily use, both verified live before
 planning. Neither service gets Deck's admin key: both credentials are
@@ -1291,8 +1291,9 @@ read-only, pasted in Settings → Credentials with the URL stored on the account
       both to read-only remains recommended: the Elastic key (`x132`) inherits
       `manifold_admin`, and the Grafana service account (`sa-1-x132`) has the
       Admin role.
-- [ ] Keep x300 reachable over Tailscale for direct Elastic queries. Grafana
-      is public; Elastic is not.
+- [x] x300 stayed reachable over Tailscale throughout verification, and the
+      agent's direct Elastic queries worked. Grafana is public; Elastic is not,
+      so this remains a deployment requirement.
 
 **Order (one slug, `docs/planning/infra-visibility/`, PRD → plan):**
 
@@ -1319,35 +1320,35 @@ read-only, pasted in Settings → Credentials with the URL stored on the account
        Power & cost, Top agents, Alerts. Worst-first sort; Grafana deep link
        with `var-host` and range; the "not reporting" rule as a quiet status
        row. Three sizes, fixture tests, live probe.
-4. [ ] **Verification + docs** (`docs/planning/infra-visibility/`) —
+4. [x] **Verification + docs** (`docs/planning/infra-visibility/`) —
        installed build across sizes; failure states (Tailscale down, bad key,
        Grafana 5xx, empty window); no secrets or raw customer data in
-       snapshots or logs; record measured latency/cadence; README widget list
-       and ROADMAP ticked.
+       snapshots or logs; measured latency recorded. Owner-confirmed on 1.64,
+       2026-11-17 — see
+       [`verification.md`](docs/planning/infra-visibility/verification.md).
 
-**Built 2026-11-17:** slices 1–3 are in the tree — 1,756 shared tests green,
-Debug and Release builds green, both faces registered in the extension and
-pumped by the agent on the 60s tick. Version bumped to 1.64 (64) so WidgetKit's
-descriptor cache refreshes. Installed 1.64 on 2026-11-17: `pluginkit` lists the
-extension, the binary contains both widget classes, and the agent writes
-`fetch-logbox.json` / `fetch-metricbox.json` as `notConfigured` until accounts
-are picked. The settings catalogs are live: environments from Elastic data
-streams, services from a 24h `service.name` query, and hosts from the Grafana
-snapshot; unsetting an account clears the list, the API-derived selections and
-the snapshot. Slice 4 stays open until both real accounts are paired; the gallery,
-timeline refresh, deep links and Tailscale-offline path are unverified in the
-installed app.
+**Verified 2026-11-17:** 1,756 shared tests green, Debug and Release builds
+green, both faces registered in the extension and pumped by the agent on the
+60s tick. Version 1.64 (64) was installed and owner-verified: gallery, all
+faces and sizes, dynamic settings, unset/re-set clearing, deep links, failure
+states, and the secret/raw-text scan all passed. The environment list is a live
+Elastic data-stream lookup, the service list a 24h `service.name` query, and the
+host list a Grafana snapshot; unsetting an account clears the list, the
+API-derived selections and the snapshot. See
+[`verification.md`](docs/planning/infra-visibility/verification.md).
 
 **Decisions (2026-11-17):** two widgets, not one; LogBox first; Elastic
 queried directly with a read-only key, not through Grafana's proxy; URL on
-the credential account; environment picked per widget; all seven hosts by
-default; every face selectable in settings. Defaults: Prod health,
-templates + counts, Small = 15m and medium/large = 24h, Fleet health.
+the credential account; environment discovered from Elastic data streams and
+picked per widget; all seven hosts by default; every face selectable in
+settings. Defaults: Prod health, templates + counts, Small = 15m and
+medium/large = 24h, Fleet health.
 
 **Exit criteria:** both faces render live data from the real services on all
-three sizes; only read-only credentials are stored; a dead service shows a
-named failure rather than stale data as fresh; deep links open the matching
-Kibana/Grafana view; fixture tests green; no admin key on disk.
+three sizes; credentials stay in the Keychain and are never written to
+settings or snapshots (read-only rotation is recommended but not enforced);
+a dead service shows a named failure rather than stale data as fresh; deep
+links open the matching Kibana/Grafana view; fixture tests green.
 
 **Risks:** direct Elastic needs Tailscale — offline must read as offline, not
 as "healthy"; Kibana's `prd` space and data view are fixed today, so a space
