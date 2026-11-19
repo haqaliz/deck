@@ -29,6 +29,7 @@ fn main() -> gtk::glib::ExitCode {
         return gtk::glib::ExitCode::FAILURE;
     }
 
+    install_panic_hook(paths.cache_dir.clone());
     let settings = Rc::new(RefCell::new(Settings::load(&paths)));
     deck_platform::surface::set_mode(settings.borrow().surface_mode);
     let socket = paths.socket_file();
@@ -107,6 +108,13 @@ fn main() -> gtk::glib::ExitCode {
     });
 
     app.run()
+}
+
+fn install_panic_hook(cache_dir: PathBuf) {
+    std::panic::set_hook(Box::new(move |info| {
+        deck_core::diag::record(&cache_dir, "last-error.log", &format!("{info}\n"));
+        eprintln!("deck-gui: {info}");
+    }));
 }
 
 fn start_socket(path: PathBuf, tx: Sender<Command>) {

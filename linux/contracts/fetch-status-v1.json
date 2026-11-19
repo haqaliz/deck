@@ -16,7 +16,8 @@
         "unreachable",
         "badResponse",
         "credentialsUnavailable",
-        "queryRejected"
+        "queryRejected",
+        "rateLimited"
       ]
     },
     "attemptedAt": { "type": "string", "format": "date-time" }

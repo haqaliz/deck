@@ -428,6 +428,10 @@ pub fn settings_window(
         ));
     }
     surface_row(&general, settings.borrow().surface_mode, &paths, &settings);
+    if let Some(last) = deck_core::diag::read(&paths.cache_dir, "last-error.log") {
+        let line = last.lines().next().unwrap_or("unknown error");
+        general.append(&caption(&format!("Last crash: {line}")));
+    }
     notebook.append_page(&general, Some(&tab("General")));
 
     let search = page();

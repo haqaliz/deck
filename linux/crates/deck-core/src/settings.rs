@@ -12,6 +12,7 @@ use crate::paths::{write_atomic, Paths};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(default)]
 pub struct Settings {
+    #[serde(default = "default_schema_version")]
     pub schema_version: u32,
     pub autostart: bool,
     pub theme: Theme,
@@ -30,6 +31,10 @@ pub struct Settings {
     pub market: MarketBoxSettings,
     pub logbox: LogBoxSettings,
     pub metricbox: MetricBoxSettings,
+}
+
+fn default_schema_version() -> u32 {
+    1
 }
 
 impl Default for Settings {
@@ -526,6 +531,13 @@ mod tests {
             tmp,
             Paths::new(root.join("config"), root.join("data"), root.join("cache")),
         )
+    }
+
+    #[test]
+    fn a_file_without_a_schema_version_migrates_to_one() {
+        let parsed: Settings = serde_json::from_str("{}").expect("parse");
+        assert_eq!(parsed.schema_version, 1);
+        assert_eq!(parsed.surface_mode, SurfaceMode::Auto);
     }
 
     #[test]

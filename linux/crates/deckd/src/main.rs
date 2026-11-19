@@ -36,6 +36,11 @@ fn run() -> Result<(), deck_core::CoreError> {
 
     let paths = Paths::from_env();
     paths.ensure_dirs()?;
+    let cache = paths.cache_dir.clone();
+    std::panic::set_hook(Box::new(move |info| {
+        deck_core::diag::record(&cache, "deckd-last-error.log", &format!("{info}\n"));
+        eprintln!("deckd: {info}");
+    }));
     if once {
         let path = deckd::run_once(&paths)?;
         println!("deckd: wrote {}", path.display());
