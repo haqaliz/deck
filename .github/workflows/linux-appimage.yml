@@ -1,0 +1,31 @@
+name: Linux AppImage
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "linux-v*"
+
+jobs:
+  appimage:
+    runs-on: ubuntu-24.04
+    container: debian:trixie
+    steps:
+      - name: base packages
+        working-directory: .
+        run: |
+          apt-get update
+          apt-get install -y git ca-certificates curl build-essential pkg-config \
+            libgtk-4-dev libgtk4-layer-shell-dev gtk-update-icon-cache \
+            librsvg2-bin desktop-file-utils file libfuse2
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: build AppImage
+        working-directory: linux
+        run: bash packaging/build-appimage.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deck-appimage
+          path: |
+            linux/dist/deck_*.AppImage
+            linux/dist/deck_*.AppImage.sha256

@@ -30,6 +30,7 @@ fn main() -> gtk::glib::ExitCode {
     }
 
     let settings = Rc::new(RefCell::new(Settings::load(&paths)));
+    deck_platform::surface::set_mode(settings.borrow().surface_mode);
     let socket = paths.socket_file();
 
     // A second launch asks the running GUI to open Search instead of creating

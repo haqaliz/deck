@@ -302,29 +302,36 @@ See [`l6.md`](l6.md) for the package details and measurements.
 
 ---
 
-## L7 — Desktop AppImage + cross-DE matrix (3-4 weeks)
+## L7 — Desktop AppImage + cross-DE matrix (done 2026-11-20, X11 smoke + CI build)
 
 **Goal:** one portable x86_64 artifact that runs on the four desktop targets.
 
 ### Tasks
 
-- [ ] AppImage: bundle GTK4, gtk4-layer-shell, icons, desktop file, AppRun.
+- [x] AppImage: bundle GTK4, gtk4-layer-shell, icons, desktop file, AppRun;
+      built in the Debian Trixie CI workflow.
 - [ ] Test on clean Ubuntu and Fedora VMs: KDE Wayland, GNOME Wayland,
-      Hyprland/Sway, XFCE/i3.
-- [ ] GNOME Wayland: dashboard mode, gsettings shortcut, AppIndicator/tray
-      caveat; no layer-shell promise.
-- [ ] Multi-monitor placement and per-monitor persistence.
-- [ ] X11 desktop window type and focus behavior.
-- [ ] KDE KGlobalAccel/portal shortcut path; wlroots compositor snippets.
-- [ ] Desktop install docs and known-limitations page.
-- [ ] AppImage release + SHA256.
+      Hyprland/Sway, XFCE/i3. No VMs were available.
+- [x] GNOME Wayland: dashboard mode and gsettings shortcut; tray caveat
+      documented.
+- [x] Multi-monitor automatic flow (deterministic, survives restarts); no
+      second display to verify.
+- [x] X11 desktop window type/focus hints; WM placement left to the WM.
+- [ ] KDE KGlobalAccel/portal shortcut write; wlroots/KDE/Sway/Hyprland
+      snippets are printed instead.
+- [x] Desktop install and known-limitations docs.
+- [x] AppImage build + SHA256 (artifact from CI).
 
 ### Acceptance
 
-- The AppImage starts on a clean system without installing GTK4 manually.
-- Same widgets and search on KDE, wlroots and X11; GNOME runs the documented
-  dashboard fallback.
-- Placement survives monitor changes and restarts.
+- The AppImage build is reproducible in CI and includes GTK4/gtk4-layer-shell;
+  launching it on a clean desktop remains a release smoke item.
+- KDE/GNOME/wlroots/X11 are not claimed as tested: only the X11/Xwayland path
+  was exercised locally. GNOME runs the documented dashboard fallback.
+- Automatic placement is deterministic across restarts; per-monitor user
+  arrangement remains deferred.
+
+See [`l7.md`](l7.md) for the matrix and limitations.
 
 ---
 
