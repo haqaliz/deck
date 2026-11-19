@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Deck
+Comment=Desktop widgets, settings and search
+Exec=deck-gui
+Terminal=false
+X-GNOME-Autostart-enabled=true

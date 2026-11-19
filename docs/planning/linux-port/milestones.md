@@ -24,86 +24,91 @@ so each widget reuses a proven shell.
 
 ---
 
-## L0 — Feasibility spike (1 week)
+## L0 — Feasibility spike (done 2026-11-19)
 
 **Goal:** prove the three Linux unknowns before committing to a stack:
 widget placement, global shortcut, and tray on the chosen sessions.
 
+**Result:** the Pi OS target is **Trixie / labwc**, and all three pass there.
+KDE, GNOME and X11 had no machine in this environment, so their probes move to
+L7. See [`spike.md`](spike.md).
+
 ### Tasks
 
-- [ ] Pi OS Bookworm 64-bit on a Pi 4 and a Pi 5; desktop session Wayfire.
-- [ ] Build a throwaway Rust + GTK4 window. Confirm `libgtk-4-1` and
-      `libgtk-4-dev` are available from the Pi OS apt sources.
-- [ ] Try `gtk4-layer-shell`: system package first; if absent, build the C
-      library from source and link it. Record the exact dependency plan for the
-      `.deb`.
-- [ ] Place a background/bottom layer-shell window on:
-      - Pi OS Wayfire
-      - KDE Plasma Wayland
-      - Hyprland or Sway
-- [ ] Place an X11 desktop/below window on XFCE or i3.
-- [ ] Open a normal dashboard window on GNOME Wayland; record that layer-shell
-      is unavailable there.
-- [ ] Tray: `ksni` StatusNotifierItem on Pi OS panel, KDE, X11, and GNOME with
-      the AppIndicator extension. Record what appears without the extension.
-- [ ] Shortcut probes:
-      - Wayfire: add a `[command]` keybinding to `~/.config/wayfire.ini`
-      - KDE: KGlobalAccel D-Bus or the GlobalShortcuts portal
-      - GNOME: `gsettings` custom keybinding to a test command
-      - X11: `XGrabKey` from a test process
-- [ ] Measure GTK4 app RAM/CPU on Pi 4/5 idle, and with one widget surface.
-- [ ] Probe Linux GPU backends for LiveBox: AMD `gpu_busy_percent`, Intel
-      fdinfo/engine busy, NVIDIA `nvidia-smi`; record which are usable without
-      root. Pi GPU is allowed to be absent.
-- [ ] Decide: use `gtk4-layer-shell` as a system dependency, vendor it, or use
-      a Wayfire/X11 fallback.
+- [x] Pi OS Trixie 64-bit on a Pi 4B (4GB); desktop session labwc. Pi 5 was not
+      available.
+- [x] GTK4 dev packages from the Pi OS apt sources (`libgtk-4-dev`).
+- [x] `gtk4-layer-shell` 1.0.4 is packaged for Trixie; no vendoring needed
+      there. Bookworm would need a vendored build if supported later.
+- [x] Place a background/bottom and top layer-shell window on Pi OS labwc.
+- [ ] KDE Plasma Wayland, Hyprland/Sway: no machine; deferred to L7.
+- [ ] X11 desktop/below window on XFCE or i3: no machine; deferred to L7.
+- [ ] GNOME Wayland dashboard window: no machine; deferred to L7, and the
+      no-layer-shell limitation is already documented.
+- [x] Tray: `ksni` StatusNotifierItem appears in `wf-panel-pi`, which owns the
+      StatusNotifier watcher/host. KDE/X11/GNOME tray checks move to L7.
+- [x] Shortcut: labwc `rc.xml` keybind (A-F12) fired via `wtype`; `LABWC_PID`
+      is required for `labwc --reconfigure`. KDE/GNOME/X11 probes move to L7.
+- [x] Measure GTK4 idle: the bare layer window used ~95MB RSS and 0.0% CPU on
+      the Pi 4; this is a floor, not the final app.
+- [ ] Probe AMD/Intel/NVIDIA GPU backends: deferred to L3, when LiveBox is
+      ported. The Pi's VideoCore GPU is allowed to be absent.
+- [x] Decide: system `libgtk4-layer-shell0` on Trixie; vendoring only if a
+      Bookworm package is added.
 
 ### Deliverable
 
-`docs/planning/linux-port/spike.md` with a matrix of results, measurements,
-the dependency decision, and a go/no-go for the cross-DE window model.
+[`spike.md`](spike.md) with the matrix, measurements, dependency decision and
+go/no-go.
 
 ### Acceptance
 
-- A placeholder widget can be placed behind normal windows on Pi OS Wayfire and
-  KDE Wayland.
-- Search can be toggled by a shortcut on Pi OS Wayfire, KDE and X11, with a
-  documented GNOME `gsettings` equivalent.
-- Tray behaviour is known on every v1 session.
-- If any item fails, the plan records the fallback before L1 starts.
+- Pi OS labwc: layer-shell, tray and shortcut are all verified.
+- KDE/GNOME/X11: explicitly deferred to L7; the abstractions are designed but
+  not claimed as tested.
+- L1 may proceed.
+
 
 ---
 
-## L1 — Core, protocol, credentials, CI (1-2 weeks)
+## L1 — Core, protocol, credentials, CI (done 2026-11-19)
 
 **Goal:** a headless Linux app that can fetch, store and expose data safely,
 before any UI exists.
 
 ### Tasks
 
-- [ ] Create the `linux/` Cargo workspace and the five crates from
+- [x] Create the `linux/` Cargo workspace and the five crates from
       `architecture.md`.
-- [ ] `deck-core`: settings model, XDG paths, atomic writes, tolerant decode.
-- [ ] `contracts/snapshot-v1.json` and fixtures copied from the macOS
-      `native/SharedTests/Fixtures/`.
-- [ ] `deck-core::credentials`: Secret Service first, 0600 JSON fallback,
-      stable item ids, absent/failed distinction.
-- [ ] `deckd`: one 60s tick, a hello snapshot, fetch-status files, structured
-      logs, clean shutdown.
-- [ ] `deck` CLI: `--version`, `--daemon`, `--settings`, `--toggle-search`
+- [x] `deck-core`: settings model, XDG paths, atomic writes, tolerant decode.
+- [x] `contracts/snapshot-v1.json` and `fetch-status-v1.json`; payload fixtures
+      land with the parsers in L3+.
+- [x] `deck-core::credentials`: Secret Service through `secret-tool`, 0600 JSON
+      fallback, stable item ids. The Pi has no `secret-tool`, so the fallback is
+      the active path; a keyring round-trip remains a desktop check.
+- [x] `deckd`: `--once` and 60s loop, hello snapshot, fetch-status file. Plain
+      stdout for now; structured tracing moves to L2.
+- [x] `deck` CLI: `--version`, `--daemon`, `--settings`, `--toggle-search`
       (stub until the GUI exists).
-- [ ] `deck-platform` detection skeleton (`auto`, layer-shell, x11, dashboard).
-- [ ] systemd user unit file and XDG autostart entry, not enabled by default.
-- [ ] CI `linux.yml`: fmt, clippy, tests, x86_64 build; aarch64 build job.
-- [ ] Tests: settings round-trip, snapshot schema, credentials fallback,
-      no-token-in-snapshot assertion.
+- [x] `deck-platform` detection skeleton (`auto`, layer-shell, x11, dashboard).
+- [x] systemd user unit and XDG autostart entry, not enabled by default.
+- [x] CI `linux.yml`: fmt, clippy, tests, x86_64 build; aarch64 cross build.
+- [x] Tests: settings round-trip, snapshot schema, credentials fallback,
+      atomic permissions. 18 tests green on the Pi; `cargo fmt` and
+      `cargo clippy -D warnings` green; release build green.
 
 ### Acceptance
 
-- `cargo test` and `cargo clippy -D warnings` green.
+- `cargo test` and `cargo clippy -D warnings` green on the Pi.
 - `deckd` writes a snapshot in `$XDG_DATA_HOME/deck` and exits cleanly.
-- A token round-trips through Secret Service and through the 0600 fallback.
+- The 0600 fallback round-trips; Secret Service is implemented but not exercised
+  on this Pi because `secret-tool`/a keyring is absent.
 - No token appears in any snapshot or settings file.
+
+**Known limitation:** the Secret Service path is code-complete but unverified
+against a real keyring. Verify it on a desktop with GNOME Keyring/KWallet in L2
+before calling credentials fully done.
+
 
 ---
 
@@ -116,7 +121,7 @@ tray, and a search panel that opens from a shortcut.
 
 - [ ] GTK4 application, single instance over D-Bus, `deck` CLI wired.
 - [ ] `deck-platform` backends:
-      - layer-shell (Pi OS Wayfire, KDE Wayland, wlroots)
+      - layer-shell (Pi OS labwc, KDE Wayland, wlroots)
       - X11 desktop/below
       - dashboard (GNOME Wayland)
 - [ ] Widget placement model: per-monitor, anchor, margin, size, show/hide,
@@ -134,11 +139,11 @@ tray, and a search panel that opens from a shortcut.
       - GNOME `gsettings` keybinding
       - X11 grab with CLI fallback
 - [ ] GNOME dashboard mode documented and selectable.
-- [ ] Manual smoke matrix on Pi OS Wayfire, KDE, GNOME, wlroots, X11.
+- [ ] Manual smoke matrix on Pi OS labwc, KDE, GNOME, wlroots, X11.
 
 ### Acceptance
 
-- A placeholder widget sits behind windows on Pi OS Wayfire, KDE and wlroots;
+- A placeholder widget sits behind windows on Pi OS labwc, KDE and wlroots;
   an X11 desktop window on X11; a dashboard on GNOME Wayland.
 - A shortcut opens the search panel on Pi OS, KDE and X11; GNOME uses the
   documented gsettings binding.
@@ -250,7 +255,7 @@ parsers.
 
 - [ ] arm64 `.deb`: dependencies, icons, desktop entries, systemd user unit,
       autostart, uninstall rules.
-- [ ] Wayfire shortcut installer and panel/tray fallback (from L0 results).
+- [ ] labwc shortcut installer (Trixie) and panel/tray path; Wayfire installer only if Bookworm is supported later.
 - [ ] Secret Service fallback warning on first run if no keyring is present.
 - [ ] Pi 4 and Pi 5 smoke: install, first run, widgets, settings, search,
       credentials, updates, uninstall.
@@ -260,7 +265,7 @@ parsers.
 
 ### Acceptance
 
-- Fresh Pi OS Bookworm Wayfire, `apt install ./deck.deb`, launch, add widgets,
+- Fresh Pi OS Trixie labwc, `apt install ./deck.deb`, launch, add widgets,
   pair one network account, search, quit, uninstall.
 - No secret in a snapshot or log; `.deb` dependencies resolve from Pi OS.
 - Pi 4 idle overhead is acceptable and recorded in the docs.
@@ -319,7 +324,7 @@ GNOME Wayland, CalBox, ClipBox, BatBox and Flatpak.
 
 ## v1 definition of done
 
-1. Pi OS Bookworm Wayfire on Pi 4/5: `.deb` install, 13 widgets, settings,
+1. Pi OS Trixie labwc on Pi 4B (Pi 5 not available): `.deb` install, 13 widgets, settings,
    search, tray/keybinding, credentials, uninstall.
 2. Desktop AppImage on KDE Wayland, wlroots, X11; GNOME Wayland dashboard
    fallback.

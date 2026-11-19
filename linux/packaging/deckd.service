@@ -1,0 +1,13 @@
+[Unit]
+Description=Deck background sampler
+Documentation=https://github.com/haqaliz/deck
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/deckd
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

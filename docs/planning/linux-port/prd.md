@@ -26,7 +26,7 @@ thresholds, UX copy), not source code.
 | Widget model | Cross-DE always-on-desktop windows drawn by one app |
 | v1 desktops | Pi OS, KDE Plasma, GNOME, wlroots, generic X11 |
 | Pi hardware | Pi 5 / Pi 4, 64-bit |
-| Pi OS session | Bookworm Wayfire |
+| Pi OS session | Pi OS Trixie labwc (actual; Bookworm Wayfire optional) |
 | UI stack | Rust + GTK4 |
 | macOS | Keep Swift; share the JSON/API contract |
 | v1 widgets | 13: LiveBox, NetBox, DevBox, Weather, Clock, Git, Open, Ship, Task, PR, Market, Log, Metric |
@@ -75,7 +75,7 @@ thresholds, UX copy), not source code.
 
 ### Packages
 
-- Raspberry Pi OS Bookworm arm64 `.deb`.
+- Raspberry Pi OS Trixie arm64 `.deb` (Bookworm optional).
 - x86_64 AppImage for desktop distributions.
 - No Flatpak in v1: a system monitor needs host `/proc`, `/sys`, GPU and Docker
   access that a default Flatpak sandbox blocks.
@@ -85,7 +85,7 @@ thresholds, UX copy), not source code.
 
 | Platform | Widget placement | Shortcut | Tray |
 |---|---|---|---|
-| Pi OS Bookworm Wayfire | layer-shell if supported; Wayfire window rule fallback (L0) | Wayfire keybinding installer | panel support to verify in L0 |
+| Pi OS Trixie labwc | layer-shell (verified); labwc `rc.xml` keybinding | `wf-panel-pi` StatusNotifier host/watcher (verified) |
 | KDE Plasma Wayland | layer-shell | KGlobalAccel / GlobalShortcuts portal | StatusNotifierItem |
 | GNOME Wayland | **no layer-shell**: dashboard window fallback | `gsettings` custom keybinding to `deck --toggle-search` | AppIndicator extension, otherwise none |
 | wlroots (Hyprland/Sway) | layer-shell | compositor keybinding to `deck --toggle-search` | bar/StatusNotifier where present |
@@ -108,7 +108,7 @@ a Shell extension, which is explicitly out of v1.
 
 ## Success criteria
 
-1. A clean Pi OS Bookworm install from the `.deb` shows the v1 widgets on the
+1. A clean Pi OS Trixie labwc install from the `.deb` shows the v1 widgets on the
    desktop, opens Search with the installed shortcut, and exposes Settings and
    the tray.
 2. The AppImage runs on KDE Wayland, wlroots, and X11 with the same widgets and

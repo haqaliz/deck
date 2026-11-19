@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/haqaliz/deck/linux/contracts/snapshot-v1.json",
+  "title": "Deck snapshot v1",
+  "type": "object",
+  "required": ["schema_version", "source", "written_at", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "written_at": { "type": "string", "format": "date-time" },
+    "payload": {}
+  }
+}

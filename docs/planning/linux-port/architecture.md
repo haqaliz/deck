@@ -19,9 +19,9 @@ code is committed beyond the spike.
   SwiftUI.
 
 GTK4 is the choice because it is native on GNOME and available on Pi OS
-Bookworm, while still running on KDE and wlroots. `gtk4-layer-shell` packaging
-on Pi OS is an L0 question; if the library is not in Bookworm, the `.deb`
-vendors it or the affected surface falls back to a normal window.
+Trixie, while still running on KDE and wlroots. `gtk4-layer-shell` 1.0.4 is
+packaged for Trixie (verified in L0); a Bookworm build would vendor it or fall
+back to a normal window.
 
 ## Processes
 
@@ -113,7 +113,7 @@ trait WidgetSurface {
 
 Backends:
 
-1. **LayerShell** (`gtk4-layer-shell`) for Wayfire, KDE Wayland and wlroots.
+1. **LayerShell** (`gtk4-layer-shell`) for labwc, Wayfire, KDE Wayland and wlroots.
    Layer `background` or `bottom`, no keyboard focus, per-monitor anchors and
    margins.
 2. **X11** for generic X11 desktops and GNOME-on-X11. Set
@@ -124,7 +124,7 @@ Backends:
    documented GNOME fallback, not a bug.
 
 Detection order: `WAYLAND_DISPLAY` + `XDG_CURRENT_DESKTOP` → LayerShell on
-KDE/wlroots/Wayfire; → Dashboard on GNOME; `DISPLAY` without Wayland → X11.
+KDE/wlroots/labwc/Wayfire; → Dashboard on GNOME; `DISPLAY` without Wayland → X11.
 Settings expose an override (`auto`, `layer-shell`, `x11`, `dashboard`) for
 testing and unusual compositors.
 
@@ -134,7 +134,8 @@ testing and unusual compositors.
 |---|---|
 | KDE | KGlobalAccel D-Bus, or `org.freedesktop.portal.GlobalShortcuts` |
 | GNOME | `gsettings` custom keybinding to `deck --toggle-search` |
-| Wayfire | append a `[command]` binding to `~/.config/wayfire.ini` from `deck shortcut install` |
+| Wayfire (Bookworm) | append a `[command]` binding to `~/.config/wayfire.ini` from `deck shortcut install` |
+| labwc (Trixie) | merge a keybind into `~/.config/labwc/rc.xml`, then `labwc --reconfigure` with `LABWC_PID` |
 | wlroots | print the compositor config snippet; no universal file |
 | X11 | `XGrabKey` in the GUI, with the CLI command as fallback |
 
@@ -186,8 +187,8 @@ available, Settings and Search remain reachable through the shortcut and
 | Risk | Impact | Mitigation |
 |---|---|---|
 | GNOME Wayland has no layer-shell | No true desktop widgets | Dashboard fallback in v1; Shell extension explicitly out of scope |
-| Wayfire lacks layer-shell or tray support | Pi OS widget/tray design breaks | L0 probe; Wayfire window-rule fallback; keybinding instead of tray |
-| `gtk4-layer-shell` not packaged on Pi OS | `.deb` dependency problem | Vendor/build the C library, or use the Wayfire fallback |
+| labwc/Wayfire lacks layer-shell or tray support | Pi OS widget/tray design breaks | L0 verified labwc; Wayfire gets the same probe if Bookworm is supported |
+| `gtk4-layer-shell` not packaged on an older Pi OS | `.deb` dependency problem | Trixie packages 1.0.4; Bookworm would vendor it or use the Wayfire fallback |
 | GTK4 not installed/too heavy on Pi OS | Install/performance risk | L0 measures; `.deb` declares deps; Pi 4/5 only |
 | Global shortcuts on Wayland | Search shortcut not automatic | CLI `--toggle-search` everywhere; per-DE installers; manual fallback |
 | ARM64 packaging/CI | Slow or broken release | Cross-build + Pi smoke; no live tests |

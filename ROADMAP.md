@@ -1356,18 +1356,18 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (planned 2026-11-19)
+### M12 — Linux & Raspberry Pi port (in progress 2026-11-19; L0-L1 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the
 snapshot/API contract, fixtures, thresholds and UX language.
 
 **Owner decisions (2026-11-19):** cross-DE always-on-desktop windows; v1 on
-Pi OS Bookworm Wayfire, KDE Plasma, GNOME, wlroots and generic X11; Pi 5/4
-64-bit; Rust + GTK4; keep macOS Swift; 13 widgets in v1; no PiBox; defer
-CalBox and ClipBox; Deck search panel plus shortcut; Secret Service with a
-0600 fallback; Pi `.deb` plus desktop AppImage; Pi OS first; Deck's own look;
-autostart plus tray.
+Pi OS Trixie labwc (actual hardware; Bookworm Wayfire optional), KDE Plasma,
+GNOME, wlroots and generic X11; Pi 5/4 64-bit; Rust + GTK4; keep macOS Swift;
+13 widgets in v1; no PiBox; defer CalBox and ClipBox; Deck search panel plus
+shortcut; Secret Service with a 0600 fallback; Pi `.deb` plus desktop
+AppImage; Pi OS first; Deck's own look; autostart plus tray.
 
 **v1 widgets (13):** LiveBox, NetBox, DevBox, WeatherBox, ClockBox, GitBox,
 OpenBox, ShipBox, TaskBox, PRBox, MarketBox, LogBox, MetricBox.
@@ -1381,10 +1381,17 @@ v1 cannot place true desktop widgets there. GNOME gets a dashboard window, a
 Milestones (detail in
 [`docs/planning/linux-port/milestones.md`](docs/planning/linux-port/milestones.md)):
 
-- [ ] **L0 — Feasibility spike** (1w): proves layer-shell, X11 desktop windows,
-      GNOME fallback, tray, global shortcut and GTK4 on Pi OS before L1.
-- [ ] **L1 — Core, protocol, credentials, CI** (1-2w): Cargo workspace,
-      snapshot schema, Secret Service + 0600 fallback, `deckd`, tests.
+- [x] **L0 — Feasibility spike** (1w): **passed 2026-11-19** on Pi OS Trixie /
+      labwc. Layer-shell, `ksni` tray, labwc shortcut, GTK4 and the packaged
+      `gtk4-layer-shell` all verified. Evidence and the remaining cross-DE
+      matrix are in
+      [`docs/planning/linux-port/spike.md`](docs/planning/linux-port/spike.md).
+- [x] **L1 — Core, protocol, credentials, CI** (1-2w): **done 2026-11-19.**
+      `linux/` Cargo workspace, snapshot/status contract, Secret Service +
+      0600 fallback, `deckd`, `deck` CLI, session detection, systemd/autostart
+      files and `linux.yml` CI. 18 tests, fmt, clippy and release build green
+      on the Pi; the file fallback is the active credential path there because
+      `secret-tool` is absent. See [`linux/README.md`](linux/README.md).
 - [ ] **L2 — Shell** (3-4w): widget host, placement, settings, tray, autostart,
       search panel and shortcut installers.
 - [ ] **L3 — System widgets** (3-4w): LiveBox, NetBox, DevBox, Linux metrics,
@@ -1393,7 +1400,7 @@ Milestones (detail in
       PR, Market; accounts and fixtures.
 - [ ] **L5 — LogBox, MetricBox, search** (3-4w): Elastic/Grafana, dynamic
       catalogs, deep links, all ported search providers.
-- [ ] **L6 — Pi OS packaging + Pi v1** (2-3w): arm64 `.deb`, Wayfire shortcut,
+- [ ] **L6 — Pi OS packaging + Pi v1** (2-3w): arm64 `.deb`, labwc shortcut,
       Pi 4/5 smoke, install docs.
 - [ ] **L7 — Desktop AppImage + cross-DE** (3-4w): KDE/GNOME/wlroots/X11,
       GNOME dashboard fallback, multi-monitor.

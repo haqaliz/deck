@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/haqaliz/deck/linux/contracts/fetch-status-v1.json",
+  "title": "Deck fetch status v1",
+  "type": "object",
+  "required": ["source", "outcome", "attemptedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "type": "string", "minLength": 1 },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "notConfigured",
+        "authOrTarget",
+        "unreachable",
+        "badResponse",
+        "credentialsUnavailable",
+        "queryRejected"
+      ]
+    },
+    "attemptedAt": { "type": "string", "format": "date-time" }
+  }
+}

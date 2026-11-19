@@ -1,6 +1,6 @@
 # Deck Linux & Raspberry Pi port
 
-Planning artifacts for the second native app. Implementation has not started.
+Planning artifacts and the start of the second native app.
 
 - [`prd.md`](prd.md) — product scope, owner decisions, v1 widgets, platform
   limits and success criteria.
@@ -8,8 +8,11 @@ Planning artifacts for the second native app. Implementation has not started.
   snapshot contract, platform backends, credentials, packaging and risks.
 - [`milestones.md`](milestones.md) — L0-L8 with tasks, acceptance, estimates and
   the v1 definition of done.
-- `spike.md` — to be written by L0; it decides layer-shell, tray and shortcut
-  viability before L1.
+- [`spike.md`](spike.md) — L0 results on the actual Pi 4B.
 
-Start with L0. Do not create the Cargo workspace or port a widget until the L0
-matrix is written.
+**Status 2026-11-19:** L0 and L1 are done. The code is under
+[`linux/`](../../linux/), 18 tests green on the Pi. Next is L2: the GTK4 shell,
+widget host, settings, tray and search panel.
+
+L0 verified Pi OS Trixie / labwc, layer-shell, `ksni` tray and the labwc
+shortcut. KDE, GNOME and X11 had no machine and move to L7.
