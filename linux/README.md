@@ -2,10 +2,10 @@
 
 Rust + GTK4 implementation, planned in
 [`docs/planning/linux-port/`](../../docs/planning/linux-port/). This tree is at
-**L4**: core, snapshot contract, credentials, daemon, CLI, the GTK4 shell, the
-system widgets and the eight network widgets (Weather, Clock, Git, Open, Ship,
-Task, PR, Market) on Pi OS labwc. KDE/GNOME/X11 are L7. Network fetches use the
-system `curl`; OpenBox uses bundled SQLite.
+**L5**: core, snapshot contract, credentials, daemon, CLI, the GTK4 shell, the
+system and network widgets, LogBox/MetricBox and the 13-provider search panel
+on Pi OS labwc. KDE/GNOME/X11 are L7. Network fetches use the system `curl`;
+OpenBox uses bundled SQLite.
 
 ## Build and test
 
@@ -52,7 +52,7 @@ packaging             systemd unit and autostart entry
 Secret Service is used through `secret-tool` when it exists; otherwise the
 0600 file is used. A token never appears in a snapshot or the settings file.
 
-## L0 / L2 / L3 / L4 evidence
+## L0 / L2-L5 evidence
 
 - [`docs/planning/linux-port/spike.md`](../../docs/planning/linux-port/spike.md)
   — Pi 4B / Trixie / labwc layer-shell, tray and shortcut spike.
@@ -62,3 +62,5 @@ Secret Service is used through `secret-tool` when it exists; otherwise the
   LiveBox, NetBox, DevBox, sizes, thresholds and Pi measurements.
 - [`docs/planning/linux-port/l4.md`](../../docs/planning/linux-port/l4.md) —
   network widgets, settings hub, credentials and fixture coverage.
+- [`docs/planning/linux-port/l5.md`](../../docs/planning/linux-port/l5.md) —
+  LogBox, MetricBox, charts and the search panel.

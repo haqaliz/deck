@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use deck_core::paths::Paths;
 use deck_core::providers;
+use deck_core::search as search_core;
 use deck_core::settings::{Settings, WidgetSize};
 use gtk4 as gtk;
 use gtk4::prelude::*;
@@ -69,6 +70,16 @@ pub fn widget_windows(
     if enabled.prs.enabled {
         widgets.push(widgets::prs::build(app, settings.clone(), paths.clone()));
     }
+    if enabled.logbox.enabled {
+        widgets.push(widgets::logbox::build(app, settings.clone(), paths.clone()));
+    }
+    if enabled.metricbox.enabled {
+        widgets.push(widgets::metricbox::build(
+            app,
+            settings.clone(),
+            paths.clone(),
+        ));
+    }
 
     // Flow placement: three 320px columns. Per-monitor placement is L7; this
     // keeps every enabled face reachable on the Pi without overlapping the
@@ -90,8 +101,12 @@ pub fn widget_windows(
     windows
 }
 
-pub fn search_window(app: &gtk::Application) -> (gtk::ApplicationWindow, gtk::Entry) {
-    let window = deck_platform::surface::overlay_window(app, 640, 400);
+pub fn search_window(
+    app: &gtk::Application,
+    paths: Paths,
+    settings: Rc<RefCell<Settings>>,
+) -> (gtk::ApplicationWindow, gtk::Entry) {
+    let window = deck_platform::surface::overlay_window(app, 640, 420);
     window.add_css_class("deck-surface");
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 8);
@@ -101,34 +116,244 @@ pub fn search_window(app: &gtk::Application) -> (gtk::ApplicationWindow, gtk::En
     content.set_margin_end(16);
 
     let entry = gtk::Entry::builder()
-        .placeholder_text("Search Deck…")
+        .placeholder_text("Search Deck… (port, time, run, task, pr, log, metric, mkt)")
         .build();
     let list = gtk::ListBox::new();
     list.add_css_class("deck-list");
-    let placeholder = gtk::Label::new(Some("Search providers arrive in L5"));
-    placeholder.set_halign(gtk::Align::Start);
-    let row = gtk::ListBoxRow::new();
-    row.add_css_class("deck-row");
-    row.set_child(Some(&placeholder));
-    list.append(&row);
+    list.set_selection_mode(gtk::SelectionMode::Single);
+    let scrolled = gtk::ScrolledWindow::new();
+    scrolled.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
+    scrolled.set_vexpand(true);
+    scrolled.set_child(Some(&list));
 
     content.append(&entry);
-    content.append(&list);
+    content.append(&scrolled);
     window.set_child(Some(&content));
+
+    let actions: Rc<RefCell<Vec<Option<search_core::SearchAction>>>> =
+        Rc::new(RefCell::new(Vec::new()));
+    let sampler = Rc::new(RefCell::new(deck_core::livebox::ProcessSampler::new()));
+    render_search(
+        &list,
+        &actions,
+        &[],
+        Some("Type to search ports, clocks, processes, builds, tasks, logs and markets"),
+    );
+
+    // Generation counter instead of removing timers: removing a SourceId that
+    // has already fired panics in glib, and an expired 180ms timer is harmless.
+    let generation = Rc::new(std::cell::Cell::new(0_u64));
+    let paths_for_change = paths.clone();
+    let settings_for_change = settings.clone();
+    let list_for_change = list.clone();
+    let actions_for_change = actions.clone();
+    let sampler_for_change = sampler.clone();
+    entry.connect_changed(move |entry| {
+        let ticket = generation.get() + 1;
+        generation.set(ticket);
+        let generation_for_timer = generation.clone();
+        let text = entry.text().to_string();
+        let paths = paths_for_change.clone();
+        let settings = settings_for_change.clone();
+        let list = list_for_change.clone();
+        let actions = actions_for_change.clone();
+        let sampler = sampler_for_change.clone();
+        gtk::glib::timeout_add_local_once(Duration::from_millis(180), move || {
+            if generation_for_timer.get() != ticket {
+                return;
+            }
+            let sections = search_core::run(
+                &search_inputs(&paths, &settings, &sampler),
+                &text,
+                deck_core::clockbox::now(),
+            );
+            render_search(&list, &actions, &sections, None);
+        });
+    });
+
+    let window_for_activate = window.clone();
+    let entry_for_activate = entry.clone();
+    let actions_for_activate = actions.clone();
+    let list_for_activate = list.clone();
+    entry.connect_activate(move |_| {
+        if let Some(row) = list_for_activate.selected_row() {
+            activate_search_row(
+                &window_for_activate,
+                &entry_for_activate,
+                &actions_for_activate,
+                &row,
+            );
+        }
+    });
+
+    let window_for_row = window.clone();
+    let entry_for_row = entry.clone();
+    let actions_for_row = actions.clone();
+    list.connect_row_activated(move |_, row| {
+        activate_search_row(&window_for_row, &entry_for_row, &actions_for_row, row);
+    });
 
     let controller = gtk::EventControllerKey::new();
     let window_for_key = window.clone();
-    controller.connect_key_pressed(move |_, key, _, _| {
-        if key == gtk::gdk::Key::Escape {
+    let list_for_key = list.clone();
+    controller.connect_key_pressed(move |_, key, _, _| match key {
+        gtk::gdk::Key::Escape => {
             window_for_key.hide();
             gtk::glib::Propagation::Stop
-        } else {
-            gtk::glib::Propagation::Proceed
         }
+        gtk::gdk::Key::Down => {
+            move_search_selection(&list_for_key, 1);
+            gtk::glib::Propagation::Stop
+        }
+        gtk::gdk::Key::Up => {
+            move_search_selection(&list_for_key, -1);
+            gtk::glib::Propagation::Stop
+        }
+        _ => gtk::glib::Propagation::Proceed,
     });
-    window.add_controller(controller);
+    entry.add_controller(controller);
 
     (window, entry)
+}
+
+fn search_inputs(
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+    sampler: &Rc<RefCell<deck_core::livebox::ProcessSampler>>,
+) -> search_core::SearchInputs {
+    let mut inputs = search_core::SearchInputs {
+        weather: deck_core::snapshot::read_payload(paths, "weather"),
+        git: deck_core::snapshot::read_payload(paths, "gitbox"),
+        market: deck_core::snapshot::read_payload(paths, "marketbox"),
+        opencode: deck_core::snapshot::read_payload(paths, "opencode"),
+        ship: deck_core::snapshot::read_payload(paths, "shipbox"),
+        tasks: deck_core::snapshot::read_payload(paths, "taskbox"),
+        prs: deck_core::snapshot::read_payload(paths, "prbox"),
+        logbox: deck_core::snapshot::read_payload(paths, "logbox"),
+        metricbox: deck_core::snapshot::read_payload(paths, "metricbox"),
+        clock_ids: settings.borrow().clock.city_ids.clone(),
+        ..search_core::SearchInputs::default()
+    };
+    inputs.processes = sampler.borrow_mut().sample(20).unwrap_or_default();
+    inputs.interfaces = deck_core::netbox::interface_names();
+    inputs.ports = deck_core::devbox::listening_ports().unwrap_or_default();
+    inputs.containers = deck_core::devbox::docker_containers();
+    inputs
+}
+
+fn render_search(
+    list: &gtk::ListBox,
+    actions: &Rc<RefCell<Vec<Option<search_core::SearchAction>>>>,
+    sections: &[search_core::SearchSection],
+    empty_text: Option<&str>,
+) {
+    while let Some(child) = list.first_child() {
+        list.remove(&child);
+    }
+    let mut stored = Vec::new();
+    if sections.is_empty() {
+        let row = gtk::ListBoxRow::new();
+        row.set_activatable(false);
+        row.set_selectable(false);
+        let label = gtk::Label::new(Some(empty_text.unwrap_or("No results")));
+        label.add_css_class("subtitle");
+        label.set_halign(gtk::Align::Start);
+        label.set_margin_top(8);
+        label.set_margin_bottom(8);
+        row.set_child(Some(&label));
+        list.append(&row);
+        stored.push(None);
+    } else {
+        for section in sections {
+            let header = gtk::ListBoxRow::new();
+            header.set_activatable(false);
+            header.set_selectable(false);
+            let label = gtk::Label::new(Some(section.provider.title()));
+            label.add_css_class("section");
+            label.set_halign(gtk::Align::Start);
+            label.set_margin_top(6);
+            header.set_child(Some(&label));
+            list.append(&header);
+            stored.push(None);
+
+            for result in &section.results {
+                let row = gtk::ListBoxRow::new();
+                let line = gtk::Box::new(gtk::Orientation::Vertical, 1);
+                line.add_css_class("search-row");
+                let title = gtk::Label::new(Some(&result.title));
+                title.add_css_class("search-title");
+                title.set_halign(gtk::Align::Start);
+                title.set_ellipsize(gtk::pango::EllipsizeMode::End);
+                let subtitle = gtk::Label::new(Some(&result.subtitle));
+                subtitle.add_css_class("subtitle");
+                subtitle.set_halign(gtk::Align::Start);
+                subtitle.set_ellipsize(gtk::pango::EllipsizeMode::End);
+                line.append(&title);
+                line.append(&subtitle);
+                row.set_child(Some(&line));
+                list.append(&row);
+                stored.push(Some(result.action.clone()));
+            }
+        }
+    }
+    *actions.borrow_mut() = stored;
+    select_first_search_row(list);
+}
+
+fn select_first_search_row(list: &gtk::ListBox) {
+    let mut index = 0;
+    while let Some(row) = list.row_at_index(index) {
+        if row.is_activatable() {
+            list.select_row(Some(&row));
+            return;
+        }
+        index += 1;
+    }
+}
+
+fn move_search_selection(list: &gtk::ListBox, delta: i32) {
+    let current = list
+        .selected_row()
+        .map(|row| row.index())
+        .unwrap_or(if delta > 0 { -1 } else { 0 });
+    let mut count = 0;
+    while list.row_at_index(count).is_some() {
+        count += 1;
+    }
+    let mut index = current + delta;
+    while index >= 0 && index < count {
+        if let Some(row) = list.row_at_index(index) {
+            if row.is_activatable() {
+                list.select_row(Some(&row));
+                return;
+            }
+        }
+        index += delta;
+    }
+}
+
+fn activate_search_row(
+    window: &gtk::ApplicationWindow,
+    entry: &gtk::Entry,
+    actions: &Rc<RefCell<Vec<Option<search_core::SearchAction>>>>,
+    row: &gtk::ListBoxRow,
+) {
+    let index = row.index() as usize;
+    let Some(Some(action)) = actions.borrow().get(index).cloned() else {
+        return;
+    };
+    match action {
+        search_core::SearchAction::Copy(text) => {
+            entry.clipboard().set_text(&text);
+        }
+        search_core::SearchAction::Open(url) => {
+            let _ = gtk::gio::AppInfo::launch_default_for_uri(
+                &url,
+                None::<&gtk::gio::AppLaunchContext>,
+            );
+        }
+    }
+    window.hide();
 }
 
 pub fn toggle_search(window: &gtk::ApplicationWindow, entry: &gtk::Entry) {
@@ -596,6 +821,8 @@ fn widgets_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         ("Ship", ship_page(paths, settings)),
         ("Tasks", tasks_page(paths, settings)),
         ("Pull requests", prs_page(paths, settings)),
+        ("Logs", logbox_page(paths, settings)),
+        ("Metrics", metricbox_page(paths, settings)),
     ];
     let mut names = Vec::new();
     for (name, page) in pages {
@@ -1076,6 +1303,305 @@ fn prs_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     page
 }
 
+fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    let current = settings.borrow().logbox.clone();
+    page.append(&caption(
+        "Elastic error/warn counts, 24h trend, services and recent lines. Add an Elastic API key in Credentials.",
+    ));
+    size_row(&page, current.size, paths, settings, |s, v| {
+        s.logbox.size = v
+    });
+    toggle(
+        &page,
+        "Show LogBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.logbox.enabled = v,
+    );
+    text_field(
+        &page,
+        "Elastic base URL",
+        &current.base_url,
+        "https://es.example.com",
+        paths,
+        settings,
+        |s, v| s.logbox.base_url = v,
+    );
+    text_field(
+        &page,
+        "Environment",
+        &current.environment,
+        "prd, stg or logs-manifold-prd",
+        paths,
+        settings,
+        |s, v| s.logbox.environment = v,
+    );
+    text_field(
+        &page,
+        "Service (optional)",
+        &current.service,
+        "empty = all services",
+        paths,
+        settings,
+        |s, v| s.logbox.service = v,
+    );
+    text_mode_row(&page, current.text_mode, paths, settings);
+    let catalog_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let load = gtk::Button::with_label("Load catalogs");
+    let catalog = caption("");
+    catalog_row.append(&load);
+    catalog_row.append(&catalog);
+    page.append(&catalog_row);
+    let paths_for_catalog = paths.clone();
+    let log_for_catalog = settings.borrow().logbox.clone();
+    let catalog_for_click = catalog.clone();
+    load.connect_clicked(move |_| {
+        let paths = paths_for_catalog.clone();
+        let log = log_for_catalog.clone();
+        let status = catalog_for_click.clone();
+        verify_async(&status, move || {
+            let Ok(key) = providers::require_token(&paths, "elastic") else {
+                return "Add an Elastic API key first".into();
+            };
+            match deck_core::logbox::environment_catalog(&log.base_url, &key) {
+                Err(error) => format!("Catalog failed: {}", error.message()),
+                Ok(environments) => {
+                    match deck_core::logbox::service_catalog(&log.base_url, &key, &log.environment)
+                    {
+                        Ok(services) => format!(
+                            "Environments: {} · Services: {}",
+                            environments
+                                .iter()
+                                .take(5)
+                                .cloned()
+                                .collect::<Vec<_>>()
+                                .join(", "),
+                            services
+                                .iter()
+                                .take(8)
+                                .cloned()
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        ),
+                        Err(error) => {
+                            format!("Environments loaded; services failed: {}", error.message())
+                        }
+                    }
+                }
+            }
+        });
+    });
+    spin(
+        &page,
+        "Small window (minutes)",
+        u64::from(current.small_minutes),
+        5,
+        1440,
+        5,
+        paths,
+        settings,
+        |s, v| s.logbox.small_minutes = v as u16,
+    );
+    spin(
+        &page,
+        "Large window (minutes)",
+        u64::from(current.large_minutes),
+        15,
+        10080,
+        15,
+        paths,
+        settings,
+        |s, v| s.logbox.large_minutes = v as u16,
+    );
+    toggle(
+        &page,
+        "Show trend",
+        current.show_trend,
+        paths,
+        settings,
+        |s, v| s.logbox.show_trend = v,
+    );
+    page
+}
+
+fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    let current = settings.borrow().metricbox.clone();
+    page.append(&caption(
+        "Grafana fleet, host, power, agents and alerts. Add a Grafana token in Credentials.",
+    ));
+    size_row(&page, current.size, paths, settings, |s, v| {
+        s.metricbox.size = v
+    });
+    toggle(
+        &page,
+        "Show MetricBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.metricbox.enabled = v,
+    );
+    text_field(
+        &page,
+        "Grafana base URL",
+        &current.base_url,
+        "https://grafana.example.com",
+        paths,
+        settings,
+        |s, v| s.metricbox.base_url = v,
+    );
+    metric_face_row(&page, current.face, paths, settings);
+    text_field(
+        &page,
+        "Host (single-host face)",
+        &current.host,
+        "e.g. x201",
+        paths,
+        settings,
+        |s, v| s.metricbox.host = v,
+    );
+    spin(
+        &page,
+        "Rate (cents/kWh)",
+        u64::from(current.rate_per_kwh_cents),
+        0,
+        100,
+        1,
+        paths,
+        settings,
+        |s, v| s.metricbox.rate_per_kwh_cents = v as u16,
+    );
+    toggle(
+        &page,
+        "Show CPU",
+        current.show_cpu,
+        paths,
+        settings,
+        |s, v| s.metricbox.show_cpu = v,
+    );
+    toggle(
+        &page,
+        "Show RAM",
+        current.show_ram,
+        paths,
+        settings,
+        |s, v| s.metricbox.show_ram = v,
+    );
+    toggle(
+        &page,
+        "Show disk",
+        current.show_disk,
+        paths,
+        settings,
+        |s, v| s.metricbox.show_disk = v,
+    );
+    toggle(
+        &page,
+        "Show GPU",
+        current.show_gpu,
+        paths,
+        settings,
+        |s, v| s.metricbox.show_gpu = v,
+    );
+    toggle(
+        &page,
+        "Show power",
+        current.show_power,
+        paths,
+        settings,
+        |s, v| s.metricbox.show_power = v,
+    );
+    page
+}
+
+fn text_mode_row(
+    page: &gtk::Box,
+    current: deck_core::settings::LogTextMode,
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let title = gtk::Label::new(Some("Recent lines"));
+    title.set_halign(gtk::Align::Start);
+    title.set_hexpand(true);
+    let combo = gtk::ComboBoxText::new();
+    for (id, label) in [
+        ("templates", "Templates only"),
+        ("latest", "Latest message"),
+        ("full", "Full lines"),
+    ] {
+        combo.append(Some(id), label);
+    }
+    combo.set_active_id(Some(match current {
+        deck_core::settings::LogTextMode::Templates => "templates",
+        deck_core::settings::LogTextMode::Latest => "latest",
+        deck_core::settings::LogTextMode::Full => "full",
+    }));
+    let paths = paths.clone();
+    let settings = settings.clone();
+    combo.connect_changed(move |combo| {
+        let mode = match combo.active_id().as_deref() {
+            Some("latest") => deck_core::settings::LogTextMode::Latest,
+            Some("full") => deck_core::settings::LogTextMode::Full,
+            _ => deck_core::settings::LogTextMode::Templates,
+        };
+        let mut current = settings.borrow_mut();
+        current.logbox.text_mode = mode;
+        let _ = current.save(&paths);
+    });
+    row.append(&title);
+    row.append(&combo);
+    page.append(&row);
+}
+
+fn metric_face_row(
+    page: &gtk::Box,
+    current: deck_core::settings::MetricBoxFace,
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let title = gtk::Label::new(Some("Face"));
+    title.set_halign(gtk::Align::Start);
+    title.set_hexpand(true);
+    let combo = gtk::ComboBoxText::new();
+    for (id, label) in [
+        ("fleet", "Fleet health"),
+        ("host", "Single host"),
+        ("power", "Power"),
+        ("agents", "Top agents"),
+        ("alerts", "Alerts"),
+    ] {
+        combo.append(Some(id), label);
+    }
+    combo.set_active_id(Some(match current {
+        deck_core::settings::MetricBoxFace::Fleet => "fleet",
+        deck_core::settings::MetricBoxFace::Host => "host",
+        deck_core::settings::MetricBoxFace::Power => "power",
+        deck_core::settings::MetricBoxFace::Agents => "agents",
+        deck_core::settings::MetricBoxFace::Alerts => "alerts",
+    }));
+    let paths = paths.clone();
+    let settings = settings.clone();
+    combo.connect_changed(move |combo| {
+        let face = match combo.active_id().as_deref() {
+            Some("host") => deck_core::settings::MetricBoxFace::Host,
+            Some("power") => deck_core::settings::MetricBoxFace::Power,
+            Some("agents") => deck_core::settings::MetricBoxFace::Agents,
+            Some("alerts") => deck_core::settings::MetricBoxFace::Alerts,
+            _ => deck_core::settings::MetricBoxFace::Fleet,
+        };
+        let mut current = settings.borrow_mut();
+        current.metricbox.face = face;
+        let _ = current.save(&paths);
+    });
+    row.append(&title);
+    row.append(&combo);
+    page.append(&row);
+}
+
 fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
     page.append(&caption(
@@ -1102,8 +1628,23 @@ fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box
         "azure",
         VerifyKind::Azure,
     );
+    credential_row(
+        &page,
+        paths,
+        settings,
+        "Elastic API key",
+        "elastic",
+        VerifyKind::Elastic,
+    );
+    credential_row(
+        &page,
+        paths,
+        settings,
+        "Grafana token",
+        "grafana",
+        VerifyKind::Grafana,
+    );
     opencode_row(&page);
-    page.append(&caption("Elastic and Grafana accounts arrive with L5."));
     page
 }
 
@@ -1111,6 +1652,8 @@ fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box
 enum VerifyKind {
     Github,
     Azure,
+    Elastic,
+    Grafana,
 }
 
 fn credential_row(
@@ -1176,9 +1719,13 @@ fn credential_row(
     verify.connect_clicked(move |_| {
         let paths = paths_for_verify.clone();
         let org = settings_for_verify.borrow().tasks.organization.clone();
+        let log_base = settings_for_verify.borrow().logbox.base_url.clone();
+        let metric_base = settings_for_verify.borrow().metricbox.base_url.clone();
         verify_async(&status_for_verify, move || match kind {
             VerifyKind::Github => verify_github(&paths),
             VerifyKind::Azure => verify_azure(&paths, &org),
+            VerifyKind::Elastic => verify_elastic(&paths, &log_base),
+            VerifyKind::Grafana => verify_grafana(&paths, &metric_base),
         });
     });
 }
@@ -1291,6 +1838,72 @@ fn verify_azure(paths: &Paths, organization: &str) -> String {
                 "PAT works".into()
             } else {
                 format!("PAT works for {name}")
+            }
+        }
+        Err(error) => format!("Failed: {}", error.message()),
+    }
+}
+
+fn verify_elastic(paths: &Paths, base: &str) -> String {
+    let Some(base) = providers::normalize_base(base) else {
+        return "Set the LogBox base URL first".into();
+    };
+    let Ok(token) = providers::require_token(paths, "elastic") else {
+        return "No Elastic API key stored".into();
+    };
+    match providers::get(
+        &format!("{base}/_cluster/health"),
+        &[
+            ("Authorization", &format!("ApiKey {token}")),
+            ("Accept", "application/json"),
+        ],
+    ) {
+        Ok(body) => {
+            let status = serde_json::from_str::<serde_json::Value>(&body)
+                .ok()
+                .and_then(|json| {
+                    json.get("status")
+                        .and_then(|value| value.as_str())
+                        .map(str::to_owned)
+                })
+                .unwrap_or_default();
+            if status.is_empty() {
+                "Cluster answered".into()
+            } else {
+                format!("Cluster is {status}")
+            }
+        }
+        Err(error) => format!("Failed: {}", error.message()),
+    }
+}
+
+fn verify_grafana(paths: &Paths, base: &str) -> String {
+    let Some(base) = providers::normalize_base(base) else {
+        return "Set the MetricBox base URL first".into();
+    };
+    let Ok(token) = providers::require_token(paths, "grafana") else {
+        return "No Grafana token stored".into();
+    };
+    match providers::get(
+        &format!("{base}/api/health"),
+        &[
+            ("Authorization", &format!("Bearer {token}")),
+            ("Accept", "application/json"),
+        ],
+    ) {
+        Ok(body) => {
+            let version = serde_json::from_str::<serde_json::Value>(&body)
+                .ok()
+                .and_then(|json| {
+                    json.get("version")
+                        .and_then(|value| value.as_str())
+                        .map(str::to_owned)
+                })
+                .unwrap_or_default();
+            if version.is_empty() {
+                "Grafana answered".into()
+            } else {
+                format!("Grafana {version} answers")
             }
         }
         Err(error) => format!("Failed: {}", error.message()),

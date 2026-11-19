@@ -5,7 +5,7 @@ use deck_core::paths::Paths;
 use deck_core::providers::{self, FetchError};
 use deck_core::settings::Settings;
 use deck_core::snapshot::{self, FetchOutcome};
-use deck_core::{gitbox, market, openbox, prs, ship, tasks, weather, CoreError};
+use deck_core::{gitbox, logbox, market, metricbox, openbox, prs, ship, tasks, weather, CoreError};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -108,6 +108,30 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
             paths,
             "marketbox",
             market::fetch(&settings.market.symbols, settings.market.display_currency),
+        );
+    }
+    if settings.logbox.enabled {
+        let previous = snapshot::read_payload::<logbox::LogBoxSnapshot>(paths, "logbox");
+        run_source(
+            paths,
+            "logbox",
+            providers::require_token(paths, "elastic").and_then(|key| {
+                logbox::fetch(
+                    &settings.logbox.base_url,
+                    &key,
+                    &settings.logbox,
+                    previous.as_ref(),
+                )
+            }),
+        );
+    }
+    if settings.metricbox.enabled {
+        run_source(
+            paths,
+            "metricbox",
+            providers::require_token(paths, "grafana").and_then(|token| {
+                metricbox::fetch(&settings.metricbox.base_url, &token, &settings.metricbox)
+            }),
         );
     }
 }

@@ -27,6 +27,8 @@ pub struct Settings {
     pub tasks: TaskBoxSettings,
     pub prs: PrBoxSettings,
     pub market: MarketBoxSettings,
+    pub logbox: LogBoxSettings,
+    pub metricbox: MetricBoxSettings,
 }
 
 impl Default for Settings {
@@ -47,6 +49,8 @@ impl Default for Settings {
             tasks: TaskBoxSettings::default(),
             prs: PrBoxSettings::default(),
             market: MarketBoxSettings::default(),
+            logbox: LogBoxSettings::default(),
+            metricbox: MetricBoxSettings::default(),
         }
     }
 }
@@ -355,6 +359,95 @@ impl Default for MarketBoxSettings {
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+pub enum LogTextMode {
+    #[default]
+    Templates,
+    Latest,
+    Full,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct LogBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub base_url: String,
+    /// `prd`, `stg` or a full `logs-manifold-*` stream name.
+    pub environment: String,
+    pub service: String,
+    pub text_mode: LogTextMode,
+    pub small_minutes: u16,
+    pub large_minutes: u16,
+    pub show_trend: bool,
+}
+
+impl Default for LogBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            base_url: String::new(),
+            environment: "logs-manifold-prd".into(),
+            service: String::new(),
+            text_mode: LogTextMode::Templates,
+            small_minutes: 15,
+            large_minutes: 1440,
+            show_trend: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum MetricBoxFace {
+    #[default]
+    Fleet,
+    Host,
+    Power,
+    Agents,
+    Alerts,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct MetricBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub base_url: String,
+    pub face: MetricBoxFace,
+    /// Empty means all hosts; used by the Host face.
+    pub host: String,
+    /// USD cents per kWh; integer so the settings file stays Eq.
+    pub rate_per_kwh_cents: u16,
+    pub large_window_minutes: u16,
+    pub show_cpu: bool,
+    pub show_ram: bool,
+    pub show_disk: bool,
+    pub show_gpu: bool,
+    pub show_power: bool,
+}
+
+impl Default for MetricBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            base_url: String::new(),
+            face: MetricBoxFace::Fleet,
+            host: String::new(),
+            rate_per_kwh_cents: 12,
+            large_window_minutes: 1440,
+            show_cpu: true,
+            show_ram: true,
+            show_disk: true,
+            show_gpu: true,
+            show_power: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum WidgetSize {
     Small,
     #[default]
@@ -461,6 +554,11 @@ mod tests {
         assert_eq!(parsed.market.display_currency, MarketCurrency::Usd);
         assert_eq!(parsed.market.symbols.len(), 4);
         assert!(!parsed.ship.enabled);
+        assert!(!parsed.logbox.enabled);
+        assert_eq!(parsed.logbox.text_mode, LogTextMode::Templates);
+        assert!(!parsed.metricbox.enabled);
+        assert_eq!(parsed.metricbox.face, MetricBoxFace::Fleet);
+        assert_eq!(parsed.metricbox.rate_per_kwh_cents, 12);
     }
 
     #[test]

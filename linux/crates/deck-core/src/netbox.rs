@@ -128,6 +128,14 @@ pub fn totals(rates: &[InterfaceRate]) -> (f64, f64) {
         })
 }
 
+/// Interface names from `/proc/net/dev`; used by search, which needs names
+/// rather than rates.
+pub fn interface_names() -> Vec<String> {
+    fs::read_to_string("/proc/net/dev")
+        .map(|text| parse_net_dev(&text).into_keys().collect())
+        .unwrap_or_default()
+}
+
 pub fn format_rate(bytes_per_second: f64) -> String {
     if bytes_per_second >= 1_000_000.0 {
         format!("{:.1} MB/s", bytes_per_second / 1_000_000.0)

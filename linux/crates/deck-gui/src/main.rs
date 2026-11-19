@@ -66,7 +66,11 @@ fn main() -> gtk::glib::ExitCode {
             paths_for_activate.clone(),
         );
 
-        let (search, entry) = ui::search_window(app);
+        let (search, entry) = ui::search_window(
+            app,
+            paths_for_activate.clone(),
+            settings_for_activate.clone(),
+        );
         let settings_window = ui::settings_window(
             app,
             paths_for_activate.clone(),

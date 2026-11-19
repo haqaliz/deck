@@ -1,0 +1,14 @@
+[
+  {
+    "uid": "P4169E866C3094E38",
+    "type": "prometheus",
+    "name": "VictoriaMetrics",
+    "isDefault": true
+  },
+  {
+    "uid": "efk-logs-prd",
+    "type": "elasticsearch",
+    "name": "Manifold logs PRD",
+    "isDefault": false
+  }
+]

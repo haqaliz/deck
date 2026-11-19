@@ -21,6 +21,46 @@ pub struct ClockRow {
 
 pub const LOCAL_ID: &str = "local";
 
+/// A small curated set for search, so cities the user has not configured are
+/// still findable by name. It is deliberately shorter than the macOS picker.
+pub const CURATED_CITIES: &[&str] = &[
+    "UTC",
+    "Europe/Amsterdam",
+    "Europe/London",
+    "Europe/Paris",
+    "Europe/Berlin",
+    "Europe/Madrid",
+    "Europe/Rome",
+    "Europe/Warsaw",
+    "Europe/Istanbul",
+    "Europe/Moscow",
+    "America/New_York",
+    "America/Chicago",
+    "America/Denver",
+    "America/Los_Angeles",
+    "America/Toronto",
+    "America/Vancouver",
+    "America/Mexico_City",
+    "America/Sao_Paulo",
+    "America/Argentina/Buenos_Aires",
+    "Asia/Tokyo",
+    "Asia/Shanghai",
+    "Asia/Hong_Kong",
+    "Asia/Singapore",
+    "Asia/Seoul",
+    "Asia/Kolkata",
+    "Asia/Dubai",
+    "Asia/Tehran",
+    "Asia/Kathmandu",
+    "Australia/Sydney",
+    "Australia/Perth",
+    "Pacific/Auckland",
+    "Africa/Cairo",
+    "Africa/Johannesburg",
+    "Africa/Lagos",
+    "Africa/Nairobi",
+];
+
 pub fn now() -> DateTime<Utc> {
     Utc::now()
 }
