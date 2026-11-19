@@ -51,7 +51,7 @@ export PATH="$tools:$PATH"
 extra_libraries=()
 for library in \
     libX11.so.6 libxcb.so.1 libwayland-client.so.0 \
-    libfontconfig.so.1 libfreetype.so.6 libfribidi.so.0 libharfbuzz.so.0; do
+    libfontconfig.so.1 libfreetype.so.6 libfribidi.so.0 libharfbuzz.so.0 libexpat.so.1; do
     path="$(ldconfig -p | awk -v library="$library" '$1 == library { print $NF; exit }')"
     if [[ -n "$path" ]]; then
         extra_libraries+=(--library "$path")
