@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/deck-core",
+    "crates/deck-platform",
+    "crates/deckd",
+    "crates/deck-gui",
+    "crates/deck-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+time = { version = "=0.3.36", features = ["formatting"] }
+tempfile = "3"

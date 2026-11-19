@@ -8,3 +8,5 @@ CalBoxCore/.build/
 graphify-out/
 
 .serena/
+
+linux/target/
