@@ -9,3 +9,4 @@ license.workspace = true
 deck-core = { path = "../deck-core" }
 gtk4 = "0.10"
 gtk4-layer-shell = "0.7"
+x11rb = "0.13"

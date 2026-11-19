@@ -1356,7 +1356,7 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (in progress 2026-11-20; L0-L6 done)
+### M12 — Linux & Raspberry Pi port (in progress 2026-11-20; L0-L7 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the
@@ -1427,8 +1427,13 @@ Milestones (detail in
       3.6 MB, ~120 ms socket-ready, 0.53% CPU / 119 MB RSS over 60s. Pi 5 and
       a keyring remain untested. See
       [`docs/planning/linux-port/l6.md`](docs/planning/linux-port/l6.md).
-- [ ] **L7 — Desktop AppImage + cross-DE** (3-4w): KDE/GNOME/wlroots/X11,
-      GNOME dashboard fallback, multi-monitor.
+- [x] **L7 — Desktop AppImage + cross-DE** (3-4w): **X11 smoke + CI AppImage
+      done 2026-11-20.** Surface override, X11 desktop/skip-taskbar hints,
+      GNOME dashboard fallback, gsettings/labwc/snippet shortcut paths,
+      automatic multi-monitor flow and a Debian Trixie AppImage workflow.
+      KDE/GNOME/wlroots/X11 DEs and a clean AppImage launch remain untested;
+      labwc's Xwayland still tiles the X11 windows. See
+      [`docs/planning/linux-port/l7.md`](docs/planning/linux-port/l7.md).
 - [ ] **L8 — Hardening + v1** (2w): performance, offline, security, docs,
       release artifacts.
 

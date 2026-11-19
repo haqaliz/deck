@@ -48,17 +48,69 @@ fn run() -> Result<(), deck_core::CoreError> {
             let command = std::env::current_exe()
                 .map(|path| format!("{} --toggle-search", path.display()))
                 .unwrap_or_else(|_| "deck --toggle-search".into());
-            match deck_core::shortcut::install_labwc_shortcut(&command, key) {
-                Ok(path) => {
-                    println!("deck: installed {key} in {}", path.display());
-                    Ok(())
+            let desktop = std::env::var("XDG_CURRENT_DESKTOP")
+                .unwrap_or_default()
+                .to_lowercase();
+            let session = detect_session();
+            if desktop.contains("gnome") {
+                match deck_core::gnome::install(&command) {
+                    Ok(()) => {
+                        println!("deck: installed Super+Space as a GNOME custom shortcut");
+                        Ok(())
+                    }
+                    Err(error) => {
+                        eprintln!("deck: GNOME shortcut install failed: {error}");
+                        exit(1);
+                    }
                 }
-                Err(error) => {
-                    eprintln!("deck: shortcut install failed: {error}");
-                    exit(1);
+            } else if desktop.contains("labwc")
+                || std::process::Command::new("pgrep")
+                    .args(["-x", "labwc"])
+                    .status()
+                    .map(|status| status.success())
+                    .unwrap_or(false)
+            {
+                match deck_core::shortcut::install_labwc_shortcut(&command, key) {
+                    Ok(path) => {
+                        println!("deck: installed {key} in {}", path.display());
+                        Ok(())
+                    }
+                    Err(error) => {
+                        eprintln!("deck: shortcut install failed: {error}");
+                        exit(1);
+                    }
                 }
+            } else {
+                println!("deck: no automatic installer for this desktop.");
+                println!("Bind `{command}` to your chosen shortcut:");
+                if desktop.contains("kde") {
+                    println!(
+                        "  KDE: System Settings → Shortcuts → Custom Shortcuts → New → Command/URL"
+                    );
+                } else if session == deck_core::platform::SessionKind::X11 {
+                    println!("  X11: your desktop's keyboard settings, or a launcher entry");
+                } else {
+                    println!("  Sway: bindsym $mod+space exec {command}");
+                    println!("  Hyprland: bind = SUPER, Space, exec, {command}");
+                    println!("  wlroots: use your compositor's command binding");
+                }
+                Ok(())
             }
         }
+        Some("--remove-shortcut") => match deck_core::shortcut::remove_labwc_shortcut() {
+            Ok(Some(path)) => {
+                println!("deck: removed the search shortcut from {}", path.display());
+                Ok(())
+            }
+            Ok(None) => {
+                println!("deck: no Deck shortcut was installed");
+                Ok(())
+            }
+            Err(error) => {
+                eprintln!("deck: shortcut removal failed: {error}");
+                exit(1);
+            }
+        },
         Some("--daemon") => {
             let once = args.iter().any(|arg| arg == "--once");
             if once {
@@ -72,7 +124,8 @@ fn run() -> Result<(), deck_core::CoreError> {
         Some("--help") | Some("-h") | None => {
             println!(
                 "deck [--version] [--settings] [--toggle-search] \
-                 [--install-shortcut [--key KEY]] [--daemon [--once]]"
+                 [--install-shortcut [--key KEY]] [--remove-shortcut] \
+                 [--daemon [--once]]"
             );
             Ok(())
         }
@@ -80,7 +133,8 @@ fn run() -> Result<(), deck_core::CoreError> {
             eprintln!("deck: unknown argument: {other}");
             eprintln!(
                 "deck [--version] [--settings] [--toggle-search] \
-                 [--install-shortcut [--key KEY]] [--daemon [--once]]"
+                 [--install-shortcut [--key KEY]] [--remove-shortcut] \
+                 [--daemon [--once]]"
             );
             exit(2);
         }

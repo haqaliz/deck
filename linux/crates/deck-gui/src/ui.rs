@@ -81,19 +81,36 @@ pub fn widget_windows(
         ));
     }
 
-    // Flow placement: three 320px columns. Per-monitor placement is L7; this
-    // keeps every enabled face reachable on the Pi without overlapping the
-    // previous one.
+    // Flow placement: three 320px columns. A full column moves to the next
+    // monitor when one exists, so a multi-monitor desktop fills before it
+    // stacks; on a single monitor it keeps stacking. Placement is automatic
+    // and deterministic, so it survives restarts and monitor changes.
+    let monitors: Vec<gtk::gdk::Monitor> = gtk::gdk::Display::default()
+        .map(|display| {
+            let model = display.monitors();
+            (0..model.n_items())
+                .filter_map(|index| model.item(index))
+                .filter_map(|object| object.downcast::<gtk::gdk::Monitor>().ok())
+                .collect()
+        })
+        .unwrap_or_default();
     let mut windows = Vec::new();
     let mut cursors = [48_i32; 3];
     let mut column = 0_usize;
+    let mut monitor_index = 0_usize;
     for (window, height) in widgets {
-        if cursors[column] + height > 752 && column < 2 {
-            column += 1;
+        if cursors[column] + height > 752 {
+            if column < 2 {
+                column += 1;
+            } else if monitor_index + 1 < monitors.len() {
+                monitor_index += 1;
+                column = 0;
+                cursors = [48_i32; 3];
+            }
         }
         let x = 24 + column as i32 * 332;
         let y = cursors[column];
-        deck_platform::surface::place(&window, x, y);
+        deck_platform::surface::place_on(&window, monitors.get(monitor_index), x, y);
         cursors[column] += height + 10;
         window.present();
         windows.push(window);
@@ -405,6 +422,12 @@ pub fn settings_window(
     general.append(&caption(
         "A systemd user service can keep deckd running; this entry starts the GUI.",
     ));
+    if deck_core::credentials::CredentialStore::detect(&paths).kind() == "file-0600" {
+        general.append(&caption(
+            "No system keyring (secret-tool) was found. Tokens are stored in a 0600 file; install libsecret-tools and sign in to a keyring to use Secret Service.",
+        ));
+    }
+    surface_row(&general, settings.borrow().surface_mode, &paths, &settings);
     notebook.append_page(&general, Some(&tab("General")));
 
     let search = page();
@@ -1514,6 +1537,49 @@ fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.metricbox.show_power = v,
     );
     page
+}
+
+fn surface_row(
+    page: &gtk::Box,
+    current: deck_core::settings::SurfaceMode,
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let title = gtk::Label::new(Some("Widget surface (restart)"));
+    title.set_halign(gtk::Align::Start);
+    title.set_hexpand(true);
+    let combo = gtk::ComboBoxText::new();
+    for (id, label) in [
+        ("auto", "Auto-detect"),
+        ("layershell", "Layer shell"),
+        ("x11", "X11 desktop"),
+        ("dashboard", "Dashboard window"),
+    ] {
+        combo.append(Some(id), label);
+    }
+    combo.set_active_id(Some(match current {
+        deck_core::settings::SurfaceMode::Auto => "auto",
+        deck_core::settings::SurfaceMode::LayerShell => "layershell",
+        deck_core::settings::SurfaceMode::X11 => "x11",
+        deck_core::settings::SurfaceMode::Dashboard => "dashboard",
+    }));
+    let paths = paths.clone();
+    let settings = settings.clone();
+    combo.connect_changed(move |combo| {
+        let mode = match combo.active_id().as_deref() {
+            Some("layershell") => deck_core::settings::SurfaceMode::LayerShell,
+            Some("x11") => deck_core::settings::SurfaceMode::X11,
+            Some("dashboard") => deck_core::settings::SurfaceMode::Dashboard,
+            _ => deck_core::settings::SurfaceMode::Auto,
+        };
+        let mut current = settings.borrow_mut();
+        current.surface_mode = mode;
+        let _ = current.save(&paths);
+    });
+    row.append(&title);
+    row.append(&combo);
+    page.append(&row);
 }
 
 fn text_mode_row(

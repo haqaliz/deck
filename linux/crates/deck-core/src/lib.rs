@@ -4,6 +4,7 @@ pub mod credentials;
 pub mod devbox;
 pub mod error;
 pub mod gitbox;
+pub mod gnome;
 pub mod livebox;
 pub mod logbox;
 pub mod market;

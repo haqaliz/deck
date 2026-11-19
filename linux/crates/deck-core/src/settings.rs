@@ -15,6 +15,7 @@ pub struct Settings {
     pub schema_version: u32,
     pub autostart: bool,
     pub theme: Theme,
+    pub surface_mode: SurfaceMode,
     pub search_shortcut: Option<String>,
     pub livebox: LiveBoxSettings,
     pub netbox: NetBoxSettings,
@@ -37,6 +38,7 @@ impl Default for Settings {
             schema_version: 1,
             autostart: true,
             theme: Theme::System,
+            surface_mode: SurfaceMode::Auto,
             search_shortcut: None,
             livebox: LiveBoxSettings::default(),
             netbox: NetBoxSettings::default(),
@@ -448,6 +450,16 @@ impl Default for MetricBoxSettings {
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+pub enum SurfaceMode {
+    #[default]
+    Auto,
+    LayerShell,
+    X11,
+    Dashboard,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum WidgetSize {
     Small,
     #[default]
@@ -544,6 +556,7 @@ mod tests {
         assert_eq!(parsed.netbox.refresh_seconds, 5);
         assert!(parsed.devbox.show_ports);
         assert_eq!(parsed.devbox.refresh_seconds, 10);
+        assert_eq!(parsed.surface_mode, SurfaceMode::Auto);
         assert_eq!(parsed.livebox.size, WidgetSize::Large);
         assert_eq!(parsed.netbox.size, WidgetSize::Medium);
         assert_eq!(parsed.netbox.interface_count, 3);
