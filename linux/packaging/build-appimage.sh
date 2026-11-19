@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Builds the x86_64 AppImage on a Linux host with GTK4 dev packages.
+# CI runs this inside a Debian Trixie container; see .github/workflows/linux-appimage.yml.
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+linux="$(cd "$here/.." && pwd)"
+cd "$linux"
+
+version="${VERSION:-0.1.0}"
+tools="$linux/dist/appimage-tools"
+appdir="$linux/dist/AppDir"
+mkdir -p "$tools" "$linux/dist"
+
+cargo build --release -p deck-gui -p deckd -p deck-cli
+
+fetch() {
+    local url="$1" output="$2"
+    if [[ ! -x "$output" ]]; then
+        curl -fL --retry 3 -o "$output" "$url"
+        chmod +x "$output"
+    fi
+}
+fetch \
+    "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage" \
+    "$tools/linuxdeploy"
+fetch \
+    "https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh" \
+    "$tools/linuxdeploy-plugin-gtk.sh"
+
+rm -rf "$appdir"
+mkdir -p "$appdir/usr/bin" "$appdir/usr/share/applications" \
+    "$appdir/usr/share/icons/hicolor/scalable/apps" \
+    "$appdir/usr/share/icons/hicolor/256x256/apps"
+install -m0755 target/release/deck-gui "$appdir/usr/bin/deck-gui"
+install -m0755 target/release/deck "$appdir/usr/bin/deck"
+install -m0755 target/release/deckd "$appdir/usr/bin/deckd"
+install -m0644 "$here/deck.desktop" "$appdir/usr/share/applications/deck.desktop"
+install -m0644 "$linux/assets/deck.svg" \
+    "$appdir/usr/share/icons/hicolor/scalable/apps/deck.svg"
+rsvg-convert -w 256 -h 256 "$linux/assets/deck.svg" -o "$appdir/deck.png"
+install -m0644 "$appdir/deck.png" "$appdir/usr/share/icons/hicolor/256x256/apps/deck.png"
+
+export ARCH=x86_64
+export APPIMAGE_EXTRACT_AND_RUN=1
+export DEPLOY_GTK_VERSION=4
+export PATH="$tools:$PATH"
+"$tools/linuxdeploy" \
+    --appdir "$appdir" \
+    --desktop-file "$here/deck.desktop" \
+    --icon-file "$appdir/deck.png" \
+    --plugin gtk \
+    --output appimage
+
+built="$(find . -maxdepth 1 -name '*.AppImage' -print -quit)"
+if [[ -z "$built" ]]; then
+    echo "linuxdeploy produced no AppImage" >&2
+    exit 1
+fi
+output="$linux/dist/deck_${version}_x86_64.AppImage"
+mv "$built" "$output"
+sha256sum "$output" >"$output.sha256"
+echo "built $output"

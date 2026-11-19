@@ -7,6 +7,25 @@ system and network widgets, LogBox/MetricBox and the 13-provider search panel
 on Pi OS labwc. KDE/GNOME/X11 are L7. Network fetches use the system `curl`;
 OpenBox uses bundled SQLite.
 
+## Install on Raspberry Pi OS
+
+```bash
+sudo dpkg -i deck_0.1.0_arm64.deb
+deck-gui                 # starts the widgets, tray and socket
+deck --install-shortcut  # labwc W-Space, GNOME Super+Space, or printed snippet
+```
+
+Autostart is controlled by the General tab. The optional background sampler:
+
+```bash
+systemctl --user enable --now deckd
+```
+
+Uninstall with `sudo dpkg -r deck`. User settings in `~/.config/deck` and
+snapshots in `~/.local/share/deck` are kept; remove the shortcut first with
+`deck --remove-shortcut`. The package recommends `libsecret-tools`; without a
+keyring, tokens live in the 0600 fallback file and Settings shows the warning.
+
 ## Build and test
 
 ```bash

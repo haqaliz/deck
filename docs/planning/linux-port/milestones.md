@@ -271,28 +271,34 @@ See [`l5.md`](l5.md) for evidence and the deferred live-infra checks.
 
 ---
 
-## L6 — Pi OS packaging + Pi v1 release (2-3 weeks)
+## L6 — Pi OS packaging + Pi v1 release (done 2026-11-20, Pi 4)
 
 **Goal:** a clean Pi OS install from the `.deb` that feels finished.
 
 ### Tasks
 
-- [ ] arm64 `.deb`: dependencies, icons, desktop entries, systemd user unit,
+- [x] arm64 `.deb`: dependencies, icons, desktop entries, systemd user unit,
       autostart, uninstall rules.
-- [ ] labwc shortcut installer (Trixie) and panel/tray path; Wayfire installer only if Bookworm is supported later.
-- [ ] Secret Service fallback warning on first run if no keyring is present.
-- [ ] Pi 4 and Pi 5 smoke: install, first run, widgets, settings, search,
-      credentials, updates, uninstall.
-- [ ] Measure idle CPU, memory, startup time and widget refresh cost.
-- [ ] Install docs: Pi OS version, apt command, keybinding, known limits.
-- [ ] Release artifact + SHA256; no macOS release changes.
+- [x] labwc shortcut installer/removal (Trixie) and panel/tray path.
+- [x] Secret Service fallback warning in the General tab when no keyring is
+      present.
+- [x] Pi 4 smoke: install, first run, widgets, settings, search, deckd,
+      shortcut removal and uninstall/reinstall.
+- [ ] Pi 5 smoke: no hardware.
+- [x] Measure idle CPU, memory, startup time and widget refresh cost.
+- [x] Install docs: Pi OS version, apt command, keybinding, known limits.
+- [x] Release artifact + SHA256 in `dist/`; publication waits for L8.
 
 ### Acceptance
 
-- Fresh Pi OS Trixie labwc, `apt install ./deck.deb`, launch, add widgets,
-  pair one network account, search, quit, uninstall.
+- Fresh Pi OS Trixie labwc: `dpkg -i`, launch, widgets, search, settings,
+  `deckd --once`, uninstall and reinstall verified. The Secret Service path
+  remains unexercised because the Pi has no keyring.
 - No secret in a snapshot or log; `.deb` dependencies resolve from Pi OS.
-- Pi 4 idle overhead is acceptable and recorded in the docs.
+- Pi 4 idle overhead: 0.53% CPU and 119 MB RSS over 60s in the release build.
+- Pi 5 is documented as untested.
+
+See [`l6.md`](l6.md) for the package details and measurements.
 
 ---
 

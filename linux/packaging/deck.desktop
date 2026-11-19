@@ -1,7 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Deck
-Comment=Desktop widgets, settings and search
+GenericName=Desktop widgets and search
+Comment=Desktop widgets, settings and Spotlight-style search
 Exec=deck-gui
+Icon=deck
 Terminal=false
-X-GNOME-Autostart-enabled=true
+Categories=Utility;
+Keywords=widgets;dashboard;search;monitor;
+StartupNotify=false

@@ -10,3 +10,4 @@ graphify-out/
 .serena/
 
 linux/target/
+linux/dist/
