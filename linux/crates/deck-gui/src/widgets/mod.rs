@@ -87,6 +87,7 @@ pub fn status_text(paths: &Paths, source: &str) -> String {
         Some(FetchOutcome::BadResponse) => "The source returned an error".into(),
         Some(FetchOutcome::CredentialsUnavailable) => "Credentials unavailable".into(),
         Some(FetchOutcome::QueryRejected) => "The query was rejected".into(),
+        Some(FetchOutcome::RateLimited) => "Rate limited — showing the last data".into(),
         Some(FetchOutcome::Ok) | None => "Waiting for the first fetch…".into(),
     }
 }

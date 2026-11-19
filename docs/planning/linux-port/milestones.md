@@ -335,27 +335,32 @@ See [`l7.md`](l7.md) for the matrix and limitations.
 
 ---
 
-## L8 — Hardening + v1 (2 weeks)
+## L8 — Hardening + v1 (done 2026-11-20, v0.1.0)
 
 **Goal:** a release that can be used daily and trusted.
 
 ### Tasks
 
-- [ ] Crash handling: structured logs, last-error screen, no silent blank
-      widgets.
-- [ ] Offline/timeout/429 behavior on every network widget.
-- [ ] Config migration and corrupt-file tolerance.
-- [ ] Security pass: 0600 fallback, no token in snapshots/logs, deep-link
-      filtering, no writes to remote services.
-- [ ] Performance pass on Pi 4/5: idle CPU, memory, startup, widget cadence.
-- [ ] Docs: install, first run, search, credentials, platform limits, FAQ.
-- [ ] Release checklist: CI green, artifacts, checksums, tag, release notes.
-- [ ] Definition of done below.
+- [x] Crash handling: panic hooks, last-error log and the Settings General
+      line.
+- [x] Offline/timeout/429 behavior on every network widget: last good
+      snapshot plus a rate-limited status.
+- [x] Config migration and corrupt-file tolerance.
+- [x] Security pass: 0600 fallback, no token in snapshots/logs, http(s)-only
+      actions, no remote writes.
+- [x] Performance pass on Pi 4: release idle, memory, startup and refresh
+      cost; Pi 5 has no hardware.
+- [x] Docs: install, first run, search, credentials, platform limits, FAQ.
+- [x] Release checklist: CI green, `.deb` + AppImage, checksums, tag and
+      release notes.
+- [x] Definition of done below.
 
 ### Acceptance
 
-The v1 definition of done is met and the known-limitations page is honest about
-GNOME Wayland, CalBox, ClipBox, BatBox and Flatpak.
+The v1 definition of done is met for the Pi-first slice. The
+[known-limitations page](known-limitations.md) is honest about GNOME Wayland,
+the untested desktop matrix, Pi 5, keyrings, live API accounts, the AppImage
+clean-desktop launch, CalBox, ClipBox, BatBox and Flatpak.
 
 ---
 

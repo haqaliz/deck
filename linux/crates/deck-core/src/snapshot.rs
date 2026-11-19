@@ -31,6 +31,7 @@ pub enum FetchOutcome {
     BadResponse,
     CredentialsUnavailable,
     QueryRejected,
+    RateLimited,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

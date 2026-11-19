@@ -45,11 +45,25 @@ export ARCH=x86_64
 export APPIMAGE_EXTRACT_AND_RUN=1
 export DEPLOY_GTK_VERSION=4
 export PATH="$tools:$PATH"
+
+# linuxdeploy's GTK plugin treats these as system libraries; bundle them so a
+# clean desktop does not need GTK's transitive X11/font stack preinstalled.
+extra_libraries=()
+for library in \
+    libX11.so.6 libxcb.so.1 libwayland-client.so.0 \
+    libfontconfig.so.1 libfreetype.so.6 libfribidi.so.0 libharfbuzz.so.0; do
+    path="$(ldconfig -p | awk -v library="$library" '$1 == library { print $NF; exit }')"
+    if [[ -n "$path" ]]; then
+        extra_libraries+=(--library "$path")
+    fi
+done
+
 "$tools/linuxdeploy" \
     --appdir "$appdir" \
     --desktop-file "$here/deck.desktop" \
     --icon-file "$appdir/deck.png" \
     --plugin gtk \
+    "${extra_libraries[@]}" \
     --output appimage
 
 built="$(find . -maxdepth 1 -name '*.AppImage' -print -quit)"

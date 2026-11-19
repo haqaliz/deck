@@ -1356,7 +1356,7 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (in progress 2026-11-20; L0-L7 done)
+### M12 — Linux & Raspberry Pi port (v0.1.0 released 2026-11-20; L0-L8 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the
@@ -1434,8 +1434,12 @@ Milestones (detail in
       KDE/GNOME/wlroots/X11 DEs and a clean AppImage launch remain untested;
       labwc's Xwayland still tiles the X11 windows. See
       [`docs/planning/linux-port/l7.md`](docs/planning/linux-port/l7.md).
-- [ ] **L8 — Hardening + v1** (2w): performance, offline, security, docs,
-      release artifacts.
+- [x] **L8 — Hardening + v1** (2w): **v0.1.0 done 2026-11-20.** Panic/last-error
+      handling, rate-limited status, schema migration, security pass, 30-minute
+      Pi 4 idle sample, install/known-limitations docs, `.deb` + AppImage
+      release with SHA256 and tag `linux-v0.1.0`. The desktop matrix, Pi 5,
+      keyrings and live API accounts remain explicitly untested. See
+      [`docs/planning/linux-port/l8.md`](docs/planning/linux-port/l8.md).
 
 **Estimate:** 22-29 weeks for one engineer; about 4-5 months with two people
 after L1. **Start with L0.** It is one week of throwaway code and measurements;

@@ -13,6 +13,7 @@ pub enum FetchError {
     BadResponse(u16),
     CredentialsUnavailable,
     InvalidPayload,
+    RateLimited,
 }
 
 impl FetchError {
@@ -23,6 +24,7 @@ impl FetchError {
             Self::Unreachable(_) => FetchOutcome::Unreachable,
             Self::BadResponse(_) | Self::InvalidPayload => FetchOutcome::BadResponse,
             Self::CredentialsUnavailable => FetchOutcome::CredentialsUnavailable,
+            Self::RateLimited => FetchOutcome::RateLimited,
         }
     }
 
@@ -34,6 +36,7 @@ impl FetchError {
             Self::BadResponse(status) => format!("server returned {status}"),
             Self::CredentialsUnavailable => "credentials unavailable".into(),
             Self::InvalidPayload => "unexpected payload".into(),
+            Self::RateLimited => "rate limited".into(),
         }
     }
 }
@@ -100,6 +103,7 @@ fn request(
     let status: u16 = status.trim().parse().unwrap_or(0);
     match status {
         401 | 403 => Err(FetchError::AuthOrTarget),
+        429 => Err(FetchError::RateLimited),
         200..=299 => Ok(body.to_owned()),
         other => Err(FetchError::BadResponse(other)),
     }
