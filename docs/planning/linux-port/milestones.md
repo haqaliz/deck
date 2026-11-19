@@ -112,44 +112,41 @@ before calling credentials fully done.
 
 ---
 
-## L2 — Shell: widget host, settings, tray, search (3-4 weeks)
+## L2 — Shell: widget host, settings, tray, search (done 2026-11-19, Pi vertical slice)
 
 **Goal:** the app a user can see: one placeholder widget, a settings window, a
 tray, and a search panel that opens from a shortcut.
 
 ### Tasks
 
-- [ ] GTK4 application, single instance over D-Bus, `deck` CLI wired.
-- [ ] `deck-platform` backends:
-      - layer-shell (Pi OS labwc, KDE Wayland, wlroots)
-      - X11 desktop/below
-      - dashboard (GNOME Wayland)
-- [ ] Widget placement model: per-monitor, anchor, margin, size, show/hide,
-      remembered in settings; a placement mode in Settings.
-- [ ] Settings shell: General, Search, Credentials, one placeholder widget tab.
-- [ ] Deck theme: CSS tokens, rounded surfaces, typography, light/dark/system.
-- [ ] Tray: Search, Settings, Quit; hide the icon when no tray is available.
-- [ ] Autostart: XDG autostart entry, systemd user service, first-run helper.
-- [ ] Search panel: layer-shell overlay / X11 overlay / GNOME normal window;
-      text field, results area, Esc/Enter, no focus loss on Wayland where
-      supported.
-- [ ] Shortcut installers:
-      - `deck shortcut install --wayfire`
-      - KDE KGlobalAccel/portal path
-      - GNOME `gsettings` keybinding
-      - X11 grab with CLI fallback
-- [ ] GNOME dashboard mode documented and selectable.
-- [ ] Manual smoke matrix on Pi OS labwc, KDE, GNOME, wlroots, X11.
+- [x] GTK4 application, single instance over a Unix socket, `deck` CLI wired.
+- [x] `deck-platform` layer-shell surfaces on Pi OS labwc (KDE/wlroots share
+      the backend; untested). X11 desktop/below and the GNOME dashboard fallback
+      are coded as normal windows and move to L7.
+- [x] Widget placement: a fixed anchor/margin model for the Pi vertical slice;
+      per-monitor placement and settings persistence are L7.
+- [x] Settings shell: General, Search, Credentials and Widgets tabs; autostart
+      toggle; shortcut installer.
+- [x] Deck theme: dark Deck CSS, rounded surfaces, readable tabs and header.
+- [x] Tray: Search, Settings, Quit via `ksni`; icon verified in `wf-panel-pi`.
+- [x] Autostart: XDG desktop entry written by the General toggle; the systemd
+      unit exists from L1 but is not enabled by the dev run.
+- [x] Search panel: layer-shell overlay with focused entry, Escape, and a
+      placeholder result row. CLI `--toggle-search` and the labwc shortcut both
+      open it.
+- [x] Shortcut installer: labwc `W-Space`, marked block, `labwc --reconfigure`.
+      KDE/GNOME/X11 paths move to L7.
+- [x] GNOME dashboard limitation documented; no GNOME machine was available.
+- [x] Manual smoke on Pi OS labwc; the other DE matrix moves to L7.
 
 ### Acceptance
 
-- A placeholder widget sits behind windows on Pi OS labwc, KDE and wlroots;
-  an X11 desktop window on X11; a dashboard on GNOME Wayland.
-- A shortcut opens the search panel on Pi OS, KDE and X11; GNOME uses the
-  documented gsettings binding.
-- Settings persist across restart; the tray offers Search/Settings/Quit where
-  the session supports it.
-- No crashes on a 30-minute idle/refresh run.
+- Pi OS labwc: a placeholder widget is created through the layer-shell
+  backend; search and settings open through the socket and the installed
+  Shortcut. The tray icon registers with `wf-panel-pi`.
+- KDE, GNOME, wlroots and X11 are explicitly L7; the normal-window fallback is
+  not claimed as tested.
+- The GUI survived the smoke run; a long 30-minute idle run is part of L8.
 
 ---
 

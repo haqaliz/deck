@@ -10,9 +10,10 @@ Planning artifacts and the start of the second native app.
   the v1 definition of done.
 - [`spike.md`](spike.md) — L0 results on the actual Pi 4B.
 
-**Status 2026-11-19:** L0 and L1 are done. The code is under
-[`linux/`](../../linux/), 18 tests green on the Pi. Next is L2: the GTK4 shell,
-widget host, settings, tray and search panel.
+**Status 2026-11-19:** L0, L1 and L2 are done on the Pi. The code is under
+[`linux/`](../../linux/), 22 core + 2 daemon tests green. The GTK4 shell,
+layer-shell widget, settings, tray, search panel and labwc shortcut work. Next
+is L3: LiveBox, NetBox and DevBox. See [`l2.md`](l2.md).
 
 L0 verified Pi OS Trixie / labwc, layer-shell, `ksni` tray and the labwc
 shortcut. KDE, GNOME and X11 had no machine and move to L7.

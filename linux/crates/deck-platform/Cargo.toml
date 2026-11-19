@@ -7,3 +7,5 @@ license.workspace = true
 
 [dependencies]
 deck-core = { path = "../deck-core" }
+gtk4 = "0.10"
+gtk4-layer-shell = "0.7"

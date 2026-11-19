@@ -1,5 +1,7 @@
-//! Platform backends arrive in L2. L1 owns only the session decision shared
-//! by the daemon and the CLI.
+//! Platform backends. L2 provides layer-shell/default surfaces; X11 and the
+//! GNOME dashboard get their full treatment in L7.
+
+pub mod surface;
 
 pub use deck_core::platform::{detect_session, detect_session_from, SessionKind};
 
