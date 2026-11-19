@@ -60,10 +60,11 @@ fn main() -> gtk::glib::ExitCode {
             let _ = deck_core::autostart::install(&exec, &paths_for_activate);
         }
 
-        let mut keep_alive = ui::widget_windows(app, settings_for_activate.clone());
-        for window in &keep_alive {
-            window.present();
-        }
+        let mut keep_alive = ui::widget_windows(
+            app,
+            settings_for_activate.clone(),
+            paths_for_activate.clone(),
+        );
 
         let (search, entry) = ui::search_window(app);
         let settings_window = ui::settings_window(

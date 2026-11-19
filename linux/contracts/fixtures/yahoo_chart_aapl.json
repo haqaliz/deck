@@ -1,0 +1,22 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "currency": "USD",
+          "symbol": "AAPL",
+          "exchangeName": "NMS",
+          "fullExchangeName": "NasdaqGS",
+          "instrumentType": "EQUITY",
+          "regularMarketTime": 1788897601,
+          "regularMarketPrice": 316.22,
+          "regularMarketChangePercent": -1.172,
+          "longName": "Apple Inc.",
+          "shortName": "Apple Inc.",
+          "chartPreviousClose": 319.97
+        }
+      }
+    ],
+    "error": null
+  }
+}

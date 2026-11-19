@@ -11,4 +11,13 @@ pub enum CoreError {
 
     #[error("credentials: {0}")]
     Credentials(String),
+
+    #[error("database: {0}")]
+    Database(String),
+}
+
+impl From<rusqlite::Error> for CoreError {
+    fn from(error: rusqlite::Error) -> Self {
+        Self::Database(error.to_string())
+    }
 }

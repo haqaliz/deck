@@ -14,7 +14,10 @@ use crate::widgets;
 
 const COLORS: [(f64, f64, f64); 3] = [(0.42, 0.78, 0.35), (0.0, 0.75, 0.91), (1.0, 0.55, 0.16)];
 
-pub fn build(app: &gtk::Application, settings: Rc<RefCell<Settings>>) -> gtk::ApplicationWindow {
+pub fn build(
+    app: &gtk::Application,
+    settings: Rc<RefCell<Settings>>,
+) -> (gtk::ApplicationWindow, i32) {
     let (size, show_chart, show_processes, refresh_seconds) = {
         let livebox = &settings.borrow().livebox;
         (
@@ -24,9 +27,10 @@ pub fn build(app: &gtk::Application, settings: Rc<RefCell<Settings>>) -> gtk::Ap
             livebox.refresh_seconds,
         )
     };
+    let height = widgets::height(size, 160, 220, 360);
     let spec = deck_platform::surface::WidgetSpec {
-        width: 360,
-        height: widgets::height(size, 160, 220, 360),
+        width: 320,
+        height,
         top: 80,
         left: 80,
         title: "LiveBox".into(),
@@ -258,7 +262,7 @@ pub fn build(app: &gtk::Application, settings: Rc<RefCell<Settings>>) -> gtk::Ap
     });
     gtk::glib::timeout_add_seconds_local(interval, tick);
 
-    window
+    (window, height)
 }
 
 #[derive(Default)]

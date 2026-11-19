@@ -12,14 +12,18 @@ use crate::widgets;
 
 const COLORS: [(f64, f64, f64); 2] = [(0.0, 0.75, 0.91), (0.42, 0.78, 0.35)];
 
-pub fn build(app: &gtk::Application, settings: Rc<RefCell<Settings>>) -> gtk::ApplicationWindow {
+pub fn build(
+    app: &gtk::Application,
+    settings: Rc<RefCell<Settings>>,
+) -> (gtk::ApplicationWindow, i32) {
     let (size, show_chart, refresh_seconds) = {
         let netbox = &settings.borrow().netbox;
         (netbox.size, netbox.show_chart, netbox.refresh_seconds)
     };
+    let height = widgets::height(size, 120, 230, 300);
     let spec = deck_platform::surface::WidgetSpec {
-        width: 360,
-        height: widgets::height(size, 120, 230, 300),
+        width: 320,
+        height,
         top: 80,
         left: 460,
         title: "NetBox".into(),
@@ -181,7 +185,7 @@ pub fn build(app: &gtk::Application, settings: Rc<RefCell<Settings>>) -> gtk::Ap
         tick_once();
     });
     gtk::glib::timeout_add_seconds_local(interval, tick);
-    window
+    (window, height)
 }
 
 struct State {

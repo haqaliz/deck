@@ -71,6 +71,16 @@ pub fn overlay_window(app: &gtk::Application, width: i32, height: i32) -> gtk::A
     window
 }
 
+/// Moves an already-created widget surface. Only layer-shell sessions are
+/// placed here; X11 and the GNOME dashboard fallback get their own backends in
+/// L7.
+pub fn place(window: &gtk::ApplicationWindow, x: i32, y: i32) {
+    if uses_layer_shell() {
+        window.set_margin(Edge::Top, y);
+        window.set_margin(Edge::Left, x);
+    }
+}
+
 pub fn uses_layer_shell() -> bool {
     detect_session() == SessionKind::LayerShell && gtk4_layer_shell::is_supported()
 }

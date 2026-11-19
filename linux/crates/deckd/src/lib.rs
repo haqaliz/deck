@@ -2,8 +2,10 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use deck_core::paths::Paths;
+use deck_core::providers::{self, FetchError};
+use deck_core::settings::Settings;
 use deck_core::snapshot::{self, FetchOutcome};
-use deck_core::CoreError;
+use deck_core::{gitbox, market, openbox, prs, ship, tasks, weather, CoreError};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -12,16 +14,123 @@ struct HelloPayload {
     pid: u32,
 }
 
-/// One daemon tick. L1 has no network fetches yet; it proves the snapshot,
-/// status and path plumbing end to end.
+/// One daemon tick: the hello probe plus every enabled widget fetch.
+///
+/// A failed provider writes its own fetch status and leaves the last good
+/// snapshot in place; one dead API must never stop the others.
 pub fn run_once(paths: &Paths) -> Result<PathBuf, CoreError> {
+    let settings = Settings::load(paths);
     let payload = HelloPayload {
         message: "deckd is alive",
         pid: std::process::id(),
     };
     let path = snapshot::write(paths, "hello", &payload)?;
     snapshot::write_status(paths, "hello", FetchOutcome::Ok)?;
+    fetch_all(paths, &settings);
     Ok(path)
+}
+
+fn fetch_all(paths: &Paths, settings: &Settings) {
+    if settings.weather.enabled {
+        run_source(paths, "weather", weather::fetch(&settings.weather.location));
+    }
+    if settings.git.enabled {
+        match gitbox::sample(&settings.git.repo_paths, settings.git.scan_depth as usize) {
+            Some(snapshot) => record(paths, "gitbox", Ok(snapshot)),
+            None => {
+                record::<gitbox::GitBoxSnapshot>(paths, "gitbox", Err(FetchError::NotConfigured))
+            }
+        }
+    }
+    if settings.openbox.enabled {
+        match openbox::load() {
+            Ok(Some(snapshot)) => record(paths, "opencode", Ok(snapshot)),
+            Ok(None) => record::<openbox::OpenCodeSnapshot>(
+                paths,
+                "opencode",
+                Err(FetchError::NotConfigured),
+            ),
+            Err(error) => {
+                eprintln!("deckd: opencode: {error}");
+                let _ = snapshot::write_status(paths, "opencode", FetchOutcome::BadResponse);
+            }
+        }
+    }
+    if settings.ship.enabled {
+        run_source(
+            paths,
+            "shipbox",
+            providers::require_token(paths, "github").and_then(|token| {
+                ship::fetch(
+                    &settings.ship.repos,
+                    settings.ship.run_count as usize,
+                    &token,
+                )
+            }),
+        );
+    }
+    if settings.tasks.enabled {
+        run_source(
+            paths,
+            "taskbox",
+            providers::require_token(paths, "azure").and_then(|token| {
+                tasks::fetch(
+                    &settings.tasks.organization,
+                    &settings.tasks.project,
+                    &token,
+                    &settings.tasks.query,
+                    settings.tasks.task_count as usize,
+                )
+            }),
+        );
+    }
+    if settings.prs.enabled {
+        let github = providers::token(paths, "github").ok().flatten();
+        let azure = providers::token(paths, "azure").ok().flatten();
+        if github.is_none() && azure.is_none() {
+            let _ = snapshot::write_status(paths, "prbox", FetchOutcome::NotConfigured);
+        } else {
+            run_source(
+                paths,
+                "prbox",
+                prs::fetch(prs::PrSources {
+                    github_token: github.as_deref(),
+                    azure_token: azure.as_deref(),
+                    azure_org: &settings.tasks.organization,
+                    azure_project: &settings.tasks.project,
+                    limit: settings.prs.pr_count as usize,
+                }),
+            );
+        }
+    }
+    if settings.market.enabled {
+        run_source(
+            paths,
+            "marketbox",
+            market::fetch(&settings.market.symbols, settings.market.display_currency),
+        );
+    }
+}
+
+fn run_source<T: Serialize>(paths: &Paths, source: &str, result: Result<T, FetchError>) {
+    if let Err(error) = &result {
+        eprintln!("deckd: {source}: {}", error.message());
+    }
+    record(paths, source, result);
+}
+
+fn record<T: Serialize>(paths: &Paths, source: &str, result: Result<T, FetchError>) {
+    match result {
+        Ok(payload) => {
+            if let Err(error) = snapshot::write(paths, source, &payload) {
+                eprintln!("deckd: {source}: {error}");
+            }
+            let _ = snapshot::write_status(paths, source, FetchOutcome::Ok);
+        }
+        Err(error) => {
+            let _ = snapshot::write_status(paths, source, error.outcome());
+        }
+    }
 }
 
 pub fn run_forever(paths: &Paths, interval: Duration) -> Result<(), CoreError> {
@@ -57,6 +166,14 @@ mod tests {
 
         let status = fs::read_to_string(paths.fetch_status_file("hello")).expect("status");
         assert!(status.contains("\"outcome\": \"ok\""));
+    }
+
+    #[test]
+    fn disabled_widgets_do_not_write_fetch_status() {
+        let (_tmp, paths) = temp_paths();
+        run_once(&paths).expect("run");
+        assert!(!paths.fetch_status_file("weather").exists());
+        assert!(!paths.snapshot_file("weather").exists());
     }
 
     #[test]

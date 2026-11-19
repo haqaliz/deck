@@ -125,3 +125,44 @@ checkbutton {
 .alarm {
     color: #f38ba8;
 }
+
+.up {
+    color: #a6e3a1;
+}
+
+.down {
+    color: #f38ba8;
+}
+
+.link-row {
+    background-image: none;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    color: #cdd6f4;
+    font-size: 12px;
+}
+
+.link-row:hover {
+    color: #89b4fa;
+}
+
+.widget-list {
+    background-color: #181825;
+}
+
+.widget-list row {
+    background-color: transparent;
+    color: #cdd6f4;
+    border-radius: 6px;
+    padding: 2px 4px;
+}
+
+.widget-list row:selected {
+    background-color: #313244;
+    color: #cdd6f4;
+}
+
+.widget-list label {
+    color: #cdd6f4;
+}

@@ -1,0 +1,55 @@
+{
+  "current_condition": [
+    {
+      "temp_C": "9",
+      "temp_F": "48",
+      "FeelsLikeC": "7",
+      "FeelsLikeF": "45",
+      "humidity": "87",
+      "weatherCode": "116",
+      "weatherDesc": [{"value": "Partly cloudy "}],
+      "winddir16Point": "SW",
+      "windspeedKmph": "19"
+    }
+  ],
+  "nearest_area": [
+    {
+      "areaName": [{"value": "Amsterdam"}],
+      "country": [{"value": "Netherlands"}]
+    }
+  ],
+  "weather": [
+    {
+      "date": "2026-11-19",
+      "maxtempC": "11",
+      "maxtempF": "52",
+      "mintempC": "6",
+      "mintempF": "43",
+      "hourly": [
+        {"time": "900", "weatherCode": "119"},
+        {"time": "1200", "weatherCode": "116"},
+        {"time": "1500", "weatherCode": "122"}
+      ]
+    },
+    {
+      "date": "2026-11-20",
+      "maxtempC": "8",
+      "maxtempF": "46",
+      "mintempC": "3",
+      "mintempF": "37",
+      "hourly": [
+        {"time": "1200", "weatherCode": "296"}
+      ]
+    },
+    {
+      "date": "2026-11-21",
+      "maxtempC": "7",
+      "maxtempF": "45",
+      "mintempC": "2",
+      "mintempF": "36",
+      "hourly": [
+        {"time": "1200", "weatherCode": "113"}
+      ]
+    }
+  ]
+}

@@ -1,14 +1,23 @@
 pub mod autostart;
+pub mod clockbox;
 pub mod credentials;
 pub mod devbox;
 pub mod error;
+pub mod gitbox;
 pub mod livebox;
+pub mod market;
 pub mod netbox;
+pub mod openbox;
 pub mod paths;
 pub mod platform;
+pub mod providers;
+pub mod prs;
 pub mod settings;
+pub mod ship;
 pub mod shortcut;
 pub mod snapshot;
 pub mod socket;
+pub mod tasks;
+pub mod weather;
 
 pub use error::CoreError;
