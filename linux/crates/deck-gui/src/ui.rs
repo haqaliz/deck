@@ -1,8 +1,10 @@
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::time::Duration;
 
 use deck_core::paths::Paths;
+use deck_core::providers;
 use deck_core::settings::{Settings, WidgetSize};
 use gtk4 as gtk;
 use gtk4::prelude::*;
@@ -26,24 +28,64 @@ pub fn apply_css() {
 pub fn widget_windows(
     app: &gtk::Application,
     settings: Rc<RefCell<Settings>>,
+    paths: Paths,
 ) -> Vec<gtk::ApplicationWindow> {
-    let (livebox, netbox, devbox) = {
-        let settings = settings.borrow();
-        (
-            settings.livebox.enabled,
-            settings.netbox.enabled,
-            settings.devbox.enabled,
-        )
-    };
+    let enabled = settings.borrow().clone();
+    let mut widgets: Vec<(gtk::ApplicationWindow, i32)> = Vec::new();
+    if enabled.livebox.enabled {
+        widgets.push(widgets::livebox::build(app, settings.clone()));
+    }
+    if enabled.netbox.enabled {
+        widgets.push(widgets::netbox::build(app, settings.clone()));
+    }
+    if enabled.devbox.enabled {
+        widgets.push(widgets::devbox::build(app, settings.clone()));
+    }
+    if enabled.weather.enabled {
+        widgets.push(widgets::weather::build(
+            app,
+            settings.clone(),
+            paths.clone(),
+        ));
+    }
+    if enabled.clock.enabled {
+        widgets.push(widgets::clock::build(app, settings.clone()));
+    }
+    if enabled.git.enabled {
+        widgets.push(widgets::git::build(app, settings.clone(), paths.clone()));
+    }
+    if enabled.market.enabled {
+        widgets.push(widgets::market::build(app, settings.clone(), paths.clone()));
+    }
+    if enabled.openbox.enabled {
+        widgets.push(widgets::open::build(app, settings.clone(), paths.clone()));
+    }
+    if enabled.ship.enabled {
+        widgets.push(widgets::ship::build(app, settings.clone(), paths.clone()));
+    }
+    if enabled.tasks.enabled {
+        widgets.push(widgets::tasks::build(app, settings.clone(), paths.clone()));
+    }
+    if enabled.prs.enabled {
+        widgets.push(widgets::prs::build(app, settings.clone(), paths.clone()));
+    }
+
+    // Flow placement: three 320px columns. Per-monitor placement is L7; this
+    // keeps every enabled face reachable on the Pi without overlapping the
+    // previous one.
     let mut windows = Vec::new();
-    if livebox {
-        windows.push(widgets::livebox::build(app, settings.clone()));
-    }
-    if netbox {
-        windows.push(widgets::netbox::build(app, settings.clone()));
-    }
-    if devbox {
-        windows.push(widgets::devbox::build(app, settings.clone()));
+    let mut cursors = [48_i32; 3];
+    let mut column = 0_usize;
+    for (window, height) in widgets {
+        if cursors[column] + height > 752 && column < 2 {
+            column += 1;
+        }
+        let x = 24 + column as i32 * 332;
+        let y = cursors[column];
+        deck_platform::surface::place(&window, x, y);
+        cursors[column] += height + 10;
+        window.present();
+        windows.push(window);
     }
     windows
 }
@@ -106,8 +148,8 @@ pub fn settings_window(
     let window = gtk::ApplicationWindow::builder()
         .application(app)
         .title("Deck Settings")
-        .default_width(640)
-        .default_height(560)
+        .default_width(760)
+        .default_height(600)
         .build();
     window.set_decorated(false);
     window.add_css_class("deck-surface");
@@ -165,28 +207,10 @@ pub fn settings_window(
     search.append(&status);
     notebook.append_page(&search, Some(&tab("Search")));
 
-    let credentials = page();
-    credentials.append(&caption(
-        "Secret Service when available, otherwise a 0600 file.",
-    ));
-    credentials.append(&caption(&format!(
-        "Fallback: {}",
-        paths.credentials_file().display()
-    )));
+    let credentials = credentials_page(&paths, &settings);
     notebook.append_page(&credentials, Some(&tab("Credentials")));
 
-    notebook.append_page(
-        &scrolled(livebox_page(&paths, &settings)),
-        Some(&tab("LiveBox")),
-    );
-    notebook.append_page(
-        &scrolled(netbox_page(&paths, &settings)),
-        Some(&tab("NetBox")),
-    );
-    notebook.append_page(
-        &scrolled(devbox_page(&paths, &settings)),
-        Some(&tab("DevBox")),
-    );
+    notebook.append_page(&widgets_page(&paths, &settings), Some(&tab("Widgets")));
 
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     header.add_css_class("deck-header");
@@ -549,6 +573,796 @@ fn devbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.devbox.refresh_seconds = v,
     );
     page
+}
+
+fn widgets_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let root = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    let list = gtk::ListBox::new();
+    list.add_css_class("widget-list");
+    list.set_width_request(150);
+    let stack = gtk::Stack::new();
+    stack.set_hexpand(true);
+    stack.set_vexpand(true);
+
+    let pages = vec![
+        ("LiveBox", livebox_page(paths, settings)),
+        ("NetBox", netbox_page(paths, settings)),
+        ("DevBox", devbox_page(paths, settings)),
+        ("Weather", weather_page(paths, settings)),
+        ("Clock", clock_page(paths, settings)),
+        ("Git", git_page(paths, settings)),
+        ("Market", market_page(paths, settings)),
+        ("Open", open_page(paths, settings)),
+        ("Ship", ship_page(paths, settings)),
+        ("Tasks", tasks_page(paths, settings)),
+        ("Pull requests", prs_page(paths, settings)),
+    ];
+    let mut names = Vec::new();
+    for (name, page) in pages {
+        names.push(name.to_string());
+        let label = gtk::Label::new(Some(name));
+        label.set_halign(gtk::Align::Start);
+        label.set_xalign(0.0);
+        label.set_margin_top(6);
+        label.set_margin_bottom(6);
+        label.set_margin_start(8);
+        let row = gtk::ListBoxRow::new();
+        row.set_child(Some(&label));
+        list.append(&row);
+        stack.add_named(&scrolled(page), Some(name));
+    }
+
+    let stack_for_select = stack.clone();
+    let names_for_select = names.clone();
+    list.connect_row_selected(move |_, row| {
+        if let Some(row) = row {
+            if let Some(name) = names_for_select.get(row.index() as usize) {
+                stack_for_select.set_visible_child_name(name);
+            }
+        }
+    });
+    if let Some(row) = list.row_at_index(0) {
+        list.select_row(Some(&row));
+    }
+    root.append(&list);
+    root.append(&stack);
+    root
+}
+
+fn weather_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    let current = settings.borrow().weather.clone();
+    page.append(&caption(
+        "wttr.in current conditions and a three-day forecast. No account is needed.",
+    ));
+    size_row(&page, current.size, paths, settings, |s, v| {
+        s.weather.size = v
+    });
+    toggle(
+        &page,
+        "Show WeatherBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.weather.enabled = v,
+    );
+    text_field(
+        &page,
+        "Location (empty geolocates)",
+        &current.location,
+        "e.g. Amsterdam",
+        paths,
+        settings,
+        |s, v| s.weather.location = v,
+    );
+    toggle(
+        &page,
+        "Fahrenheit",
+        current.units_fahrenheit,
+        paths,
+        settings,
+        |s, v| s.weather.units_fahrenheit = v,
+    );
+    toggle(
+        &page,
+        "Show forecast",
+        current.show_forecast,
+        paths,
+        settings,
+        |s, v| s.weather.show_forecast = v,
+    );
+    page
+}
+
+fn clock_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    let current = settings.borrow().clock.clone();
+    page.append(&caption(
+        "IANA zone IDs, one per entry. `local` follows this machine.",
+    ));
+    size_row(&page, current.size, paths, settings, |s, v| {
+        s.clock.size = v
+    });
+    toggle(
+        &page,
+        "Show ClockBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.clock.enabled = v,
+    );
+    list_field(
+        &page,
+        "Cities",
+        &current.city_ids,
+        "local, Europe/Amsterdam, Asia/Tokyo",
+        paths,
+        settings,
+        |s, v| s.clock.city_ids = v,
+    );
+    text_field(
+        &page,
+        "Main city (small face, optional)",
+        &current.main_city_id,
+        "empty = first non-local city",
+        paths,
+        settings,
+        |s, v| s.clock.main_city_id = v,
+    );
+    toggle(
+        &page,
+        "Show relative day",
+        current.show_relative_day,
+        paths,
+        settings,
+        |s, v| s.clock.show_relative_day = v,
+    );
+    toggle(
+        &page,
+        "Show offset",
+        current.show_offset,
+        paths,
+        settings,
+        |s, v| s.clock.show_offset = v,
+    );
+    page
+}
+
+fn git_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    let current = settings.borrow().git.clone();
+    page.append(&caption(
+        "Scans repo roots for .git directories and reads git log locally.",
+    ));
+    size_row(&page, current.size, paths, settings, |s, v| s.git.size = v);
+    toggle(
+        &page,
+        "Show GitBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.git.enabled = v,
+    );
+    list_field(
+        &page,
+        "Repo roots",
+        &current.repo_paths,
+        "~/dev, ~/work",
+        paths,
+        settings,
+        |s, v| s.git.repo_paths = v,
+    );
+    spin(
+        &page,
+        "Scan depth",
+        current.scan_depth as u64,
+        1,
+        6,
+        1,
+        paths,
+        settings,
+        |s, v| s.git.scan_depth = v as u8,
+    );
+    toggle(
+        &page,
+        "Show chart",
+        current.show_chart,
+        paths,
+        settings,
+        |s, v| s.git.show_chart = v,
+    );
+    toggle(
+        &page,
+        "Show repos (large)",
+        current.show_repos,
+        paths,
+        settings,
+        |s, v| s.git.show_repos = v,
+    );
+    spin(
+        &page,
+        "Repo count",
+        current.repo_count as u64,
+        1,
+        10,
+        1,
+        paths,
+        settings,
+        |s, v| s.git.repo_count = v as u8,
+    );
+    page
+}
+
+fn market_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    let current = settings.borrow().market.clone();
+    page.append(&caption(
+        "Crypto, stocks, gold and fiat. Prices are converted to the display currency.",
+    ));
+    size_row(&page, current.size, paths, settings, |s, v| {
+        s.market.size = v
+    });
+    toggle(
+        &page,
+        "Show MarketBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.market.enabled = v,
+    );
+    list_field(
+        &page,
+        "Symbols",
+        &current.symbols,
+        "BTC, ETH, GOLD, AAPL, EUR",
+        paths,
+        settings,
+        |s, v| s.market.symbols = v,
+    );
+    currency_row(&page, current.display_currency, paths, settings);
+    spin(
+        &page,
+        "Ticker count (large)",
+        current.ticker_count as u64,
+        1,
+        12,
+        1,
+        paths,
+        settings,
+        |s, v| s.market.ticker_count = v as u8,
+    );
+    toggle(
+        &page,
+        "Show day change",
+        current.show_day_change,
+        paths,
+        settings,
+        |s, v| s.market.show_day_change = v,
+    );
+    page
+}
+
+fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    let current = settings.borrow().openbox.clone();
+    page.append(&caption(
+        "Reads the local opencode SQLite database; no token is needed.",
+    ));
+    size_row(&page, current.size, paths, settings, |s, v| {
+        s.openbox.size = v
+    });
+    toggle(
+        &page,
+        "Show OpenBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.openbox.enabled = v,
+    );
+    toggle(
+        &page,
+        "Show models",
+        current.show_models,
+        paths,
+        settings,
+        |s, v| s.openbox.show_models = v,
+    );
+    toggle(
+        &page,
+        "Show tools",
+        current.show_tools,
+        paths,
+        settings,
+        |s, v| s.openbox.show_tools = v,
+    );
+    toggle(
+        &page,
+        "Show sessions (large)",
+        current.show_sessions,
+        paths,
+        settings,
+        |s, v| s.openbox.show_sessions = v,
+    );
+    spin(
+        &page,
+        "Model count",
+        current.model_count as u64,
+        1,
+        6,
+        1,
+        paths,
+        settings,
+        |s, v| s.openbox.model_count = v as u8,
+    );
+    spin(
+        &page,
+        "Tool count",
+        current.tool_count as u64,
+        1,
+        6,
+        1,
+        paths,
+        settings,
+        |s, v| s.openbox.tool_count = v as u8,
+    );
+    spin(
+        &page,
+        "Session count",
+        current.session_count as u64,
+        1,
+        6,
+        1,
+        paths,
+        settings,
+        |s, v| s.openbox.session_count = v as u8,
+    );
+    page
+}
+
+fn ship_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    let current = settings.borrow().ship.clone();
+    page.append(&caption(
+        "GitHub Actions runs for explicit repos. Add a GitHub token in Credentials.",
+    ));
+    size_row(&page, current.size, paths, settings, |s, v| s.ship.size = v);
+    toggle(
+        &page,
+        "Show ShipBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.ship.enabled = v,
+    );
+    list_field(
+        &page,
+        "Repos",
+        &current.repos,
+        "owner/repo, owner/other",
+        paths,
+        settings,
+        |s, v| s.ship.repos = v,
+    );
+    spin(
+        &page,
+        "Run count",
+        current.run_count as u64,
+        2,
+        8,
+        1,
+        paths,
+        settings,
+        |s, v| s.ship.run_count = v as u8,
+    );
+    toggle(
+        &page,
+        "Show runs",
+        current.show_list,
+        paths,
+        settings,
+        |s, v| s.ship.show_list = v,
+    );
+    page
+}
+
+fn tasks_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    let current = settings.borrow().tasks.clone();
+    page.append(&caption(
+        "Azure DevOps work items assigned to you. Add an Azure PAT in Credentials.",
+    ));
+    size_row(&page, current.size, paths, settings, |s, v| {
+        s.tasks.size = v
+    });
+    toggle(
+        &page,
+        "Show TaskBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.tasks.enabled = v,
+    );
+    text_field(
+        &page,
+        "Organization",
+        &current.organization,
+        "e.g. contoso",
+        paths,
+        settings,
+        |s, v| s.tasks.organization = v,
+    );
+    text_field(
+        &page,
+        "Project",
+        &current.project,
+        "e.g. Manifold",
+        paths,
+        settings,
+        |s, v| s.tasks.project = v,
+    );
+    text_field(
+        &page,
+        "WIQL (empty = assigned open items)",
+        &current.query,
+        "SELECT [System.Id] FROM WorkItems …",
+        paths,
+        settings,
+        |s, v| s.tasks.query = v,
+    );
+    spin(
+        &page,
+        "Task count",
+        current.task_count as u64,
+        1,
+        20,
+        1,
+        paths,
+        settings,
+        |s, v| s.tasks.task_count = v as u8,
+    );
+    toggle(
+        &page,
+        "Show lane legend",
+        current.show_legend,
+        paths,
+        settings,
+        |s, v| s.tasks.show_legend = v,
+    );
+    toggle(
+        &page,
+        "Show list",
+        current.show_list,
+        paths,
+        settings,
+        |s, v| s.tasks.show_list = v,
+    );
+    page
+}
+
+fn prs_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    let current = settings.borrow().prs.clone();
+    page.append(&caption(
+        "GitHub and Azure DevOps review queues. Azure uses the Tasks organization and project.",
+    ));
+    size_row(&page, current.size, paths, settings, |s, v| s.prs.size = v);
+    toggle(
+        &page,
+        "Show PRBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.prs.enabled = v,
+    );
+    spin(
+        &page,
+        "PR count",
+        current.pr_count as u64,
+        3,
+        12,
+        1,
+        paths,
+        settings,
+        |s, v| s.prs.pr_count = v as u8,
+    );
+    toggle(
+        &page,
+        "Show list",
+        current.show_list,
+        paths,
+        settings,
+        |s, v| s.prs.show_list = v,
+    );
+    page
+}
+
+fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    page.append(&caption(
+        "Secret Service when available, otherwise a 0600 file. Tokens are read by deckd.",
+    ));
+    page.append(&caption(&format!(
+        "Store: {} · fallback {}",
+        deck_core::credentials::CredentialStore::detect(paths).kind(),
+        paths.credentials_file().display()
+    )));
+    credential_row(
+        &page,
+        paths,
+        settings,
+        "GitHub token",
+        "github",
+        VerifyKind::Github,
+    );
+    credential_row(
+        &page,
+        paths,
+        settings,
+        "Azure DevOps PAT",
+        "azure",
+        VerifyKind::Azure,
+    );
+    opencode_row(&page);
+    page.append(&caption("Elastic and Grafana accounts arrive with L5."));
+    page
+}
+
+#[derive(Clone, Copy)]
+enum VerifyKind {
+    Github,
+    Azure,
+}
+
+fn credential_row(
+    page: &gtk::Box,
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+    label: &str,
+    id: &str,
+    kind: VerifyKind,
+) {
+    widgets::section(page, label);
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    let entry = gtk::Entry::new();
+    entry.set_visibility(false);
+    entry.set_input_purpose(gtk::InputPurpose::Password);
+    entry.set_placeholder_text(Some("stored token is not shown"));
+    entry.set_hexpand(true);
+    let save = gtk::Button::with_label("Save");
+    let delete = gtk::Button::with_label("Delete");
+    let verify = gtk::Button::with_label("Verify");
+    row.append(&entry);
+    row.append(&save);
+    row.append(&delete);
+    row.append(&verify);
+    page.append(&row);
+    let status = caption("");
+    page.append(&status);
+
+    let paths_for_save = paths.clone();
+    let id_owned = id.to_owned();
+    let status_for_save = status.clone();
+    let entry_for_save = entry.clone();
+    save.connect_clicked(move |_| {
+        let value = entry_for_save.text().to_string();
+        if value.trim().is_empty() {
+            status_for_save.set_text("Enter a token first");
+            return;
+        }
+        let store = deck_core::credentials::CredentialStore::detect(&paths_for_save);
+        match store.write(&id_owned, value.trim()) {
+            Ok(()) => {
+                entry_for_save.set_text("");
+                status_for_save.set_text("Saved");
+            }
+            Err(error) => status_for_save.set_text(&format!("Could not save: {error}")),
+        }
+    });
+
+    let paths_for_delete = paths.clone();
+    let id_owned = id.to_owned();
+    let status_for_delete = status.clone();
+    delete.connect_clicked(move |_| {
+        let store = deck_core::credentials::CredentialStore::detect(&paths_for_delete);
+        match store.delete(&id_owned) {
+            Ok(()) => status_for_delete.set_text("Deleted"),
+            Err(error) => status_for_delete.set_text(&format!("Could not delete: {error}")),
+        }
+    });
+
+    let paths_for_verify = paths.clone();
+    let settings_for_verify = settings.clone();
+    let status_for_verify = status.clone();
+    verify.connect_clicked(move |_| {
+        let paths = paths_for_verify.clone();
+        let org = settings_for_verify.borrow().tasks.organization.clone();
+        verify_async(&status_for_verify, move || match kind {
+            VerifyKind::Github => verify_github(&paths),
+            VerifyKind::Azure => verify_azure(&paths, &org),
+        });
+    });
+}
+
+fn opencode_row(page: &gtk::Box) {
+    widgets::section(page, "opencode database");
+    let paths = deck_core::openbox::default_db_path();
+    page.append(&caption(&paths.display().to_string()));
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    let verify = gtk::Button::with_label("Check");
+    row.append(&verify);
+    page.append(&row);
+    let status = caption("");
+    page.append(&status);
+    verify.connect_clicked(move |_| {
+        let status = status.clone();
+        verify_async(&status, || match deck_core::openbox::load() {
+            Ok(Some(snapshot)) => format!(
+                "{} sessions in the last 24h, {} total tokens",
+                snapshot.sessions, snapshot.total_input
+            ),
+            Ok(None) => "opencode database not found".into(),
+            Err(error) => format!("Could not read: {error}"),
+        });
+    });
+}
+
+fn verify_async<F>(label: &gtk::Label, work: F)
+where
+    F: FnOnce() -> String + Send + 'static,
+{
+    label.set_text("Checking…");
+    let (sender, receiver) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = sender.send(work());
+    });
+    let label = label.clone();
+    gtk::glib::timeout_add_local(Duration::from_millis(100), move || {
+        match receiver.try_recv() {
+            Ok(message) => {
+                label.set_text(&message);
+                gtk::glib::ControlFlow::Break
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => gtk::glib::ControlFlow::Continue,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                label.set_text("Verification failed");
+                gtk::glib::ControlFlow::Break
+            }
+        }
+    });
+}
+
+fn verify_github(paths: &Paths) -> String {
+    let Ok(token) = providers::require_token(paths, "github") else {
+        return "No GitHub token stored".into();
+    };
+    match providers::get(
+        "https://api.github.com/user",
+        &[
+            ("Authorization", &format!("Bearer {token}")),
+            ("Accept", "application/vnd.github+json"),
+            ("X-GitHub-Api-Version", "2022-11-28"),
+        ],
+    ) {
+        Ok(body) => {
+            let login = serde_json::from_str::<serde_json::Value>(&body)
+                .ok()
+                .and_then(|json| {
+                    json.get("login")
+                        .and_then(|value| value.as_str())
+                        .map(str::to_owned)
+                })
+                .unwrap_or_default();
+            if login.is_empty() {
+                "Token answered, but no login was returned".into()
+            } else {
+                format!("Token works for {login}")
+            }
+        }
+        Err(error) => format!("Failed: {}", error.message()),
+    }
+}
+
+fn verify_azure(paths: &Paths, organization: &str) -> String {
+    if organization.trim().is_empty() {
+        return "Set the Tasks organization first".into();
+    }
+    let Ok(token) = providers::require_token(paths, "azure") else {
+        return "No Azure PAT stored".into();
+    };
+    let auth = providers::basic_auth("", &token);
+    match providers::get(
+        &format!(
+            "https://dev.azure.com/{}/_apis/connectionData?api-version=7.0",
+            organization.trim()
+        ),
+        &[("Authorization", &auth), ("Accept", "application/json")],
+    ) {
+        Ok(body) => {
+            let name = serde_json::from_str::<serde_json::Value>(&body)
+                .ok()
+                .and_then(|json| {
+                    json.get("authenticatedUser")
+                        .and_then(|user| user.get("providerDisplayName"))
+                        .and_then(|value| value.as_str())
+                        .map(str::to_owned)
+                })
+                .unwrap_or_default();
+            if name.is_empty() {
+                "PAT works".into()
+            } else {
+                format!("PAT works for {name}")
+            }
+        }
+        Err(error) => format!("Failed: {}", error.message()),
+    }
+}
+
+fn currency_row(
+    page: &gtk::Box,
+    current: deck_core::market::MarketCurrency,
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let title = gtk::Label::new(Some("Display currency"));
+    title.set_halign(gtk::Align::Start);
+    title.set_hexpand(true);
+    let combo = gtk::ComboBoxText::new();
+    for currency in [
+        deck_core::market::MarketCurrency::Usd,
+        deck_core::market::MarketCurrency::Eur,
+        deck_core::market::MarketCurrency::Cad,
+        deck_core::market::MarketCurrency::Aed,
+        deck_core::market::MarketCurrency::Irt,
+        deck_core::market::MarketCurrency::Irr,
+    ] {
+        combo.append(Some(currency.label()), currency.label());
+    }
+    combo.set_active_id(Some(current.label()));
+    let paths = paths.clone();
+    let settings = settings.clone();
+    combo.connect_changed(move |combo| {
+        let Some(currency) = combo
+            .active_id()
+            .and_then(|id| deck_core::market::MarketCurrency::from_label(&id))
+        else {
+            return;
+        };
+        let mut current = settings.borrow_mut();
+        current.market.display_currency = currency;
+        let _ = current.save(&paths);
+    });
+    row.append(&title);
+    row.append(&combo);
+    page.append(&row);
+}
+
+fn list_field(
+    page: &gtk::Box,
+    label: &str,
+    values: &[String],
+    placeholder: &str,
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+    apply: fn(&mut Settings, Vec<String>),
+) {
+    text_field(
+        page,
+        label,
+        &values.join(", "),
+        placeholder,
+        paths,
+        settings,
+        move |settings, text| {
+            let values = text
+                .split([',', '\n'])
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_owned)
+                .collect();
+            apply(settings, values);
+        },
+    );
 }
 
 fn page() -> gtk::Box {

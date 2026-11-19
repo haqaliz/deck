@@ -1,0 +1,37 @@
+{
+  "count": 2,
+  "value": [
+    {
+      "id": 101,
+      "rev": 4,
+      "fields": {
+        "System.Title": "Fix the flux capacitor",
+        "System.State": "Active",
+        "System.WorkItemType": "Bug",
+        "System.ChangedDate": "2026-11-19T10:30:00Z",
+        "System.Tags": "backend; urgent"
+      },
+      "_links": {
+        "html": {
+          "href": "https://dev.azure.com/acme/Manifold/_workitems/edit/101"
+        }
+      }
+    },
+    {
+      "id": 102,
+      "rev": 2,
+      "fields": {
+        "System.Title": "Ship the Linux port",
+        "System.State": "Committed",
+        "System.WorkItemType": "Feature",
+        "System.ChangedDate": "2026-11-18T08:00:00Z",
+        "System.Tags": ""
+      },
+      "_links": {
+        "html": {
+          "href": "https://dev.azure.com/acme/Manifold/_workitems/edit/102"
+        }
+      }
+    }
+  ]
+}

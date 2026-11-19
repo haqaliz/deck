@@ -3,6 +3,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::market::MarketCurrency;
 use crate::paths::{write_atomic, Paths};
 
 /// Settings that are not widget-specific. Widget sections arrive with the
@@ -18,6 +19,14 @@ pub struct Settings {
     pub livebox: LiveBoxSettings,
     pub netbox: NetBoxSettings,
     pub devbox: DevBoxSettings,
+    pub weather: WeatherBoxSettings,
+    pub clock: ClockBoxSettings,
+    pub git: GitBoxSettings,
+    pub openbox: OpenBoxSettings,
+    pub ship: ShipBoxSettings,
+    pub tasks: TaskBoxSettings,
+    pub prs: PrBoxSettings,
+    pub market: MarketBoxSettings,
 }
 
 impl Default for Settings {
@@ -30,6 +39,14 @@ impl Default for Settings {
             livebox: LiveBoxSettings::default(),
             netbox: NetBoxSettings::default(),
             devbox: DevBoxSettings::default(),
+            weather: WeatherBoxSettings::default(),
+            clock: ClockBoxSettings::default(),
+            git: GitBoxSettings::default(),
+            openbox: OpenBoxSettings::default(),
+            ship: ShipBoxSettings::default(),
+            tasks: TaskBoxSettings::default(),
+            prs: PrBoxSettings::default(),
+            market: MarketBoxSettings::default(),
         }
     }
 }
@@ -140,6 +157,202 @@ impl Default for DevBoxSettings {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct WeatherBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub location: String,
+    pub units_fahrenheit: bool,
+    pub show_forecast: bool,
+}
+
+impl Default for WeatherBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            location: String::new(),
+            units_fahrenheit: false,
+            show_forecast: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct ClockBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    /// IANA identifiers, plus the `local` sentinel.
+    pub city_ids: Vec<String>,
+    pub main_city_id: String,
+    pub show_relative_day: bool,
+    pub show_offset: bool,
+}
+
+impl Default for ClockBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            city_ids: vec!["local".into(), "UTC".into()],
+            main_city_id: String::new(),
+            show_relative_day: true,
+            show_offset: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct GitBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub repo_paths: Vec<String>,
+    pub scan_depth: u8,
+    pub show_chart: bool,
+    pub show_repos: bool,
+    pub repo_count: u8,
+}
+
+impl Default for GitBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            repo_paths: Vec::new(),
+            scan_depth: 3,
+            show_chart: true,
+            show_repos: true,
+            repo_count: 5,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct OpenBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub show_models: bool,
+    pub show_tools: bool,
+    pub show_sessions: bool,
+    pub model_count: u8,
+    pub tool_count: u8,
+    pub session_count: u8,
+}
+
+impl Default for OpenBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            show_models: true,
+            show_tools: false,
+            show_sessions: false,
+            model_count: 3,
+            tool_count: 3,
+            session_count: 3,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct ShipBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    /// "owner/repo" entries.
+    pub repos: Vec<String>,
+    pub run_count: u8,
+    pub show_list: bool,
+}
+
+impl Default for ShipBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            repos: Vec::new(),
+            run_count: 4,
+            show_list: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct TaskBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub organization: String,
+    pub project: String,
+    pub query: String,
+    pub task_count: u8,
+    pub show_legend: bool,
+    pub show_list: bool,
+}
+
+impl Default for TaskBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            organization: String::new(),
+            project: String::new(),
+            query: String::new(),
+            task_count: 5,
+            show_legend: true,
+            show_list: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct PrBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub pr_count: u8,
+    pub show_list: bool,
+}
+
+impl Default for PrBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            pr_count: 6,
+            show_list: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct MarketBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub symbols: Vec<String>,
+    pub display_currency: MarketCurrency,
+    pub ticker_count: u8,
+    pub show_day_change: bool,
+}
+
+impl Default for MarketBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            symbols: vec!["BTC".into(), "ETH".into(), "GOLD".into(), "AAPL".into()],
+            display_currency: MarketCurrency::Usd,
+            ticker_count: 8,
+            show_day_change: true,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum WidgetSize {
@@ -242,6 +455,12 @@ mod tests {
         assert_eq!(parsed.netbox.size, WidgetSize::Medium);
         assert_eq!(parsed.netbox.interface_count, 3);
         assert_eq!(parsed.devbox.port_count, 5);
+        assert!(!parsed.weather.enabled);
+        assert_eq!(parsed.weather.size, WidgetSize::Medium);
+        assert_eq!(parsed.clock.city_ids, vec!["local", "UTC"]);
+        assert_eq!(parsed.market.display_currency, MarketCurrency::Usd);
+        assert_eq!(parsed.market.symbols.len(), 4);
+        assert!(!parsed.ship.enabled);
     }
 
     #[test]

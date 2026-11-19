@@ -8,14 +8,18 @@ use gtk4::prelude::*;
 
 use crate::widgets;
 
-pub fn build(app: &gtk::Application, settings: Rc<RefCell<Settings>>) -> gtk::ApplicationWindow {
+pub fn build(
+    app: &gtk::Application,
+    settings: Rc<RefCell<Settings>>,
+) -> (gtk::ApplicationWindow, i32) {
     let (size, refresh_seconds) = {
         let devbox = &settings.borrow().devbox;
         (devbox.size, devbox.refresh_seconds)
     };
+    let height = widgets::height(size, 120, 230, 300);
     let spec = deck_platform::surface::WidgetSpec {
-        width: 360,
-        height: widgets::height(size, 120, 230, 300),
+        width: 320,
+        height,
         top: 420,
         left: 460,
         title: "DevBox".into(),
@@ -122,5 +126,5 @@ pub fn build(app: &gtk::Application, settings: Rc<RefCell<Settings>>) -> gtk::Ap
 
     tick();
     gtk::glib::timeout_add_seconds_local(interval, tick);
-    window
+    (window, height)
 }

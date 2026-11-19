@@ -1,0 +1,35 @@
+{
+  "total_count": 3,
+  "workflow_runs": [
+    {
+      "name": "CI",
+      "run_number": 42,
+      "head_branch": "main",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-19T09:00:00Z",
+      "updated_at": "2026-11-19T09:03:12Z",
+      "html_url": "https://github.com/haqaliz/deck/actions/runs/42"
+    },
+    {
+      "name": "Release",
+      "run_number": 41,
+      "head_branch": "main",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-11-18T21:00:00Z",
+      "updated_at": "2026-11-18T21:01:00Z",
+      "html_url": "https://github.com/haqaliz/deck/actions/runs/41"
+    },
+    {
+      "name": "CI",
+      "run_number": 43,
+      "head_branch": "feat/linux-l4",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-11-19T10:00:00Z",
+      "updated_at": "2026-11-19T10:00:30Z",
+      "html_url": "https://github.com/haqaliz/deck/actions/runs/43"
+    }
+  ]
+}

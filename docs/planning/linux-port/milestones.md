@@ -189,35 +189,45 @@ checks.
 
 ---
 
-## L4 — Network widgets (4-5 weeks)
+## L4 — Network widgets (Pi vertical slice done 2026-11-19)
 
 **Goal:** the eight API widgets, with account management and fixture-tested
 parsers.
 
 ### Tasks
 
-- [ ] Credentials UI: add/edit/delete accounts for GitHub, Azure DevOps,
-      opencode, Elastic and Grafana; Verify button; keychain/file fallback.
-- [ ] WeatherBox: wttr.in, units, forecast.
-- [ ] ClockBox: world clocks, main city, offsets.
-- [ ] GitBox: repo scan, commits/day, streak, top repos.
-- [ ] OpenBox: local SQLite + remote server mode, models/tools/sessions.
-- [ ] ShipBox: GitHub Actions, automatic/static repos, multi-repo merge.
-- [ ] TaskBox: Azure DevOps work items, WIQL, accounts/projects.
-- [ ] PRBox: GitHub + Azure DevOps, review queue, per-provider settings.
-- [ ] MarketBox: crypto/fiat/gold/stocks, display currency, live picker policy.
-- [ ] Fetch statuses, retry/stale behavior, offline/empty/error copy.
-- [ ] Deep links via `xdg-open`.
-- [ ] Copy/port the macOS fixtures and add golden tests for each parser.
-- [ ] Widget faces and settings tabs for all eight.
+- [x] Credentials UI: single-account rows for GitHub, Azure DevOps and
+      opencode with save/delete/verify and the keychain/file fallback.
+- [ ] Elastic and Grafana accounts: deferred to L5 with their widgets.
+- [x] WeatherBox: wttr.in, units, forecast.
+- [x] ClockBox: world clocks, main city, offsets.
+- [x] GitBox: repo scan, commits/day, streak, top repos.
+- [x] OpenBox: local SQLite, models/tools/sessions.
+- [ ] OpenBox remote server mode: deferred.
+- [x] ShipBox: GitHub Actions, static list, multi-repo merge.
+- [ ] ShipBox automatic repo discovery: deferred.
+- [x] TaskBox: Azure DevOps work items, WIQL, organization/project.
+- [x] PRBox: GitHub + Azure DevOps review queue.
+- [ ] PRBox per-provider toggles and review-state glyphs: deferred.
+- [x] MarketBox: crypto/fiat/gold/stocks, display currency.
+- [ ] MarketBox live picker policy: deferred; symbols are a settings list.
+- [x] Fetch statuses, retry/stale behavior, offline/empty/error copy.
+- [x] Deep links through GTK's URI handler (`xdg-open` on Linux).
+- [x] Copy/port the macOS fixtures and add parser tests; Weather, Open, Ship,
+      Task and PR use new fixtures where macOS had none.
+- [x] Widget faces and settings tabs for all eight.
 
 ### Acceptance
 
-- Each widget renders real data with the user's accounts; no token in a
-  snapshot or log.
+- Weather, Market, Git and Open render live/local data on the Pi. Ship, Task
+  and PR are fixture-verified; no GitHub token or Azure PAT was available.
 - A failed provider shows its own reason and never blanks the others.
-- All three sizes and the settings tabs work.
-- Goldens cover the success, empty, auth failure and malformed-payload cases.
+- All three sizes and the settings hub work; small/medium/large screenshots
+  are in [`l4.md`](l4.md).
+- Parser tests cover success and malformed payloads; the auth-failure branch is
+  exercised by the status mapping, not by a live token.
+
+See [`l4.md`](l4.md) for the evidence and the deferred account/discovery work.
 
 ---
 

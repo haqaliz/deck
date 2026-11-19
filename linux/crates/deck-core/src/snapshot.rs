@@ -70,6 +70,20 @@ pub fn read<T: DeserializeOwned>(path: &Path) -> Result<Option<Snapshot<T>>, Cor
     Ok(Some(serde_json::from_slice(&bytes)?))
 }
 
+/// Reads the payload of a snapshot without wrapping the error path in the
+/// caller: the GUI treats a missing or older file as "no data yet".
+pub fn read_payload<T: DeserializeOwned>(paths: &Paths, source: &str) -> Option<T> {
+    read::<T>(&paths.snapshot_file(source))
+        .ok()
+        .flatten()
+        .map(|snapshot| snapshot.payload)
+}
+
+pub fn read_status(paths: &Paths, source: &str) -> Option<FetchStatus> {
+    let bytes = fs::read(paths.fetch_status_file(source)).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+
 pub fn write_status(
     paths: &Paths,
     source: &str,
