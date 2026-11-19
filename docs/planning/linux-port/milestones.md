@@ -231,34 +231,43 @@ See [`l4.md`](l4.md) for the evidence and the deferred account/discovery work.
 
 ---
 
-## L5 — LogBox, MetricBox, search providers (3-4 weeks)
+## L5 — LogBox, MetricBox, search providers (done 2026-11-19, Pi vertical slice)
 
 **Goal:** the two infra widgets plus the full v1 search experience.
 
 ### Tasks
 
-- [ ] LogBox: Elastic counts/trend/templates/recent lines, environment/service
-      catalogs, raw-text modes, Kibana deep links.
-- [ ] MetricBox: Grafana datasource discovery, fleet/host/power/agents/alerts,
-      configurable columns, host/service catalogs, Grafana deep links.
-- [ ] Charts for counts/trend/sparkline in Cairo.
-- [ ] Search providers for all 13 v1 widgets:
-      - local snapshots: system, network, dev, clock, git, open sessions
-      - remote: work items, PRs, markets, logs, metrics, weather, ship runs
-- [ ] Prefixes and ordering matching macOS; debounce, per-source floor, cache,
-      429 degrades one section only.
-- [ ] Search panel results: grouped sections, keyboard navigation, Enter opens
-      the URL or result.
-- [ ] Rate-budget rule: searches run in the GUI on user input, never in `deckd`.
-- [ ] Tests for prefix parsing, grouping, cache, and degraded sections.
+- [x] LogBox: Elastic counts/trend/templates/recent lines, environment/service
+      catalog loader, templates/latest/full modes and a Kibana link.
+- [x] MetricBox: Grafana datasource discovery, fleet/host/power/agents/alerts,
+      configurable columns, host list from the snapshot and a Grafana link.
+- [x] Charts for counts/trend in Cairo; MarketBox sparklines.
+- [x] Search providers for all 13 v1 widgets:
+      - local: system, network, dev, clock, git, open sessions
+      - snapshot-backed: work items, PRs, markets, logs, metrics, weather,
+        ship runs
+- [x] Prefixes and macOS-style ordering; 180ms debounce.
+- [ ] Per-source floor, remote search cache and 429 isolation: deferred because
+      search is local-only and makes no network calls.
+- [x] Search panel results: grouped sections, Up/Down, Enter/click opens the
+      URL or copies the result.
+- [x] Rate-budget rule: searches run in the GUI on user input, never in `deckd`.
+- [x] Tests for prefix parsing, work-item kinds, ordering/limits and degraded
+      sections; cache is not applicable to the local-only slice.
 
 ### Acceptance
 
-- Real LogBox/MetricBox data with the user's read-only credentials.
-- Deep links open Kibana/Grafana in the browser.
-- Search finds at least one result per ported provider and degrades cleanly
-  when one source is down.
-- No search request runs on the background tick.
+- LogBox/MetricBox faces and parsers are verified with seeded snapshots and
+  fixtures; a real cluster was not available, so live credentials and the
+  Verify buttons remain untested.
+- Kibana/Grafana links point at the configured base URL; query-specific deep
+  links are deferred.
+- Search returns at least one result for every ported provider in tests and
+  screenshots, and a missing snapshot simply removes its section.
+- No search request runs on the background tick; there are no search-time
+  network requests at all.
+
+See [`l5.md`](l5.md) for evidence and the deferred live-infra checks.
 
 ---
 

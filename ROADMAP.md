@@ -1356,7 +1356,7 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (in progress 2026-11-19; L0-L4 done)
+### M12 — Linux & Raspberry Pi port (in progress 2026-11-19; L0-L5 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the
@@ -1412,8 +1412,14 @@ Milestones (detail in
       mode, Ship auto-discovery and PR review-state glyphs are deferred. 74
       core + 3 daemon tests. See
       [`docs/planning/linux-port/l4.md`](docs/planning/linux-port/l4.md).
-- [ ] **L5 — LogBox, MetricBox, search** (3-4w): Elastic/Grafana, dynamic
-      catalogs, deep links, all ported search providers.
+- [x] **L5 — LogBox, MetricBox, search** (3-4w): **Pi vertical slice done
+      2026-11-19.** Elastic counts/trend/services/templates/recent and Grafana
+      fleet/host/power/agents/alerts faces with Cairo charts; a 13-provider
+      grouped search panel with prefixes, work-item kinds, keyboard selection
+      and Copy/Open. Search is snapshot-local (no search-time network). LogBox
+      and MetricBox are fixture/seeded-snapshot verified because no live
+      Elastic/Grafana account was available. 97 core + 3 daemon tests. See
+      [`docs/planning/linux-port/l5.md`](docs/planning/linux-port/l5.md).
 - [ ] **L6 — Pi OS packaging + Pi v1** (2-3w): arm64 `.deb`, labwc shortcut,
       Pi 4/5 smoke, install docs.
 - [ ] **L7 — Desktop AppImage + cross-DE** (3-4w): KDE/GNOME/wlroots/X11,

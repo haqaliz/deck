@@ -166,3 +166,13 @@ checkbutton {
 .widget-list label {
     color: #cdd6f4;
 }
+
+.search-row {
+    padding: 4px 6px;
+}
+
+.search-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #cdd6f4;
+}

@@ -1,0 +1,47 @@
+{
+  "results": {
+    "A": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": { "fields": [
+            { "name": "Time", "type": "time" },
+            { "name": "Value", "type": "number", "labels": { "host": "x201" } }
+          ] },
+          "data": { "values": [[1794865918349], [34.1]] }
+        },
+        {
+          "schema": { "fields": [
+            { "name": "Time", "type": "time" },
+            { "name": "Value", "type": "number", "labels": { "host": "x300" } }
+          ] },
+          "data": { "values": [[1794865918349], [71.4]] }
+        }
+      ]
+    },
+    "B": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": { "fields": [
+            { "name": "Time", "type": "time" },
+            { "name": "Value", "type": "number", "labels": { "host": "x201" } }
+          ] },
+          "data": { "values": [[1794865918349], [55.2]] }
+        }
+      ]
+    },
+    "D": {
+      "status": 200,
+      "frames": [
+        {
+          "schema": { "fields": [
+            { "name": "Time", "type": "time" },
+            { "name": "Value", "type": "number", "labels": { "host": "x201" } }
+          ] },
+          "data": { "values": [[1794865918349], [3.4]] }
+        }
+      ]
+    }
+  }
+}

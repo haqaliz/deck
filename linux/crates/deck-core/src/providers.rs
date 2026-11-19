@@ -127,6 +127,17 @@ pub fn require_token(paths: &Paths, id: &str) -> Result<String, FetchError> {
     }
 }
 
+/// Normalises a user-entered API base: a scheme and a non-empty host, no
+/// trailing slash. Keeps credentials from being sent to a malformed target.
+pub fn normalize_base(raw: &str) -> Option<String> {
+    let value = raw.trim().trim_end_matches('/');
+    if !(value.starts_with("https://") || value.starts_with("http://")) {
+        return None;
+    }
+    let host = value.split("://").nth(1).unwrap_or("");
+    (!host.is_empty()).then(|| value.to_owned())
+}
+
 pub fn basic_auth(user: &str, token: &str) -> String {
     format!("Basic {}", base64(format!("{user}:{token}").as_bytes()))
 }
@@ -182,6 +193,17 @@ mod tests {
         assert_eq!(base64(b"fo"), "Zm8=");
         assert_eq!(base64(b"foo"), "Zm9v");
         assert_eq!(base64(b"foobar"), "Zm9vYmFy");
+    }
+
+    #[test]
+    fn base_urls_require_a_scheme_and_host() {
+        assert_eq!(
+            normalize_base("https://grafana.example.com/"),
+            Some("https://grafana.example.com".into())
+        );
+        assert_eq!(normalize_base("grafana.example.com"), None);
+        assert_eq!(normalize_base("https://"), None);
+        assert_eq!(normalize_base(""), None);
     }
 
     #[test]

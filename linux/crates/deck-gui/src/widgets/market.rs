@@ -51,6 +51,7 @@ pub fn build(
             label.add_css_class("metric");
             label.set_halign(gtk::Align::Start);
             label.set_ellipsize(gtk::pango::EllipsizeMode::End);
+            label.set_hexpand(true);
             if market.show_day_change {
                 match row.day_change_pct {
                     Some(value) if value > 0.0 => label.add_css_class("up"),
@@ -58,7 +59,23 @@ pub fn build(
                     _ => {}
                 }
             }
-            body.append(&label);
+            let line = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+            line.append(&label);
+            if feed_size == WidgetSize::Large {
+                if let Some(points) = &row.sparkline {
+                    if points.len() > 1 {
+                        let chart = gtk::DrawingArea::new();
+                        chart.set_size_request(64, 18);
+                        let points = points.clone();
+                        let up = row.day_change_pct.unwrap_or(0.0) >= 0.0;
+                        chart.set_draw_func(move |_, cr, width, height| {
+                            widgets::draw_sparkline(cr, width, height, &points, up);
+                        });
+                        line.append(&chart);
+                    }
+                }
+            }
+            body.append(&line);
         }
         if let Some(note) = &snapshot.note {
             widgets::add_row(&body, note);

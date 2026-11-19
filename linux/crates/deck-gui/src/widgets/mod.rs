@@ -3,7 +3,9 @@ pub mod devbox;
 pub mod feed;
 pub mod git;
 pub mod livebox;
+pub mod logbox;
 pub mod market;
+pub mod metricbox;
 pub mod netbox;
 pub mod open;
 pub mod prs;
@@ -140,6 +142,34 @@ pub fn draw_bars(cr: &gtk::cairo::Context, width: i32, height: i32, values: &[i6
         }
     }
     let _ = cr.fill();
+}
+
+/// Line-only sparkline for market rows; no axes or background.
+pub fn draw_sparkline(cr: &gtk::cairo::Context, width: i32, height: i32, values: &[f64], up: bool) {
+    if values.len() < 2 {
+        return;
+    }
+    let width = width as f64;
+    let height = height as f64;
+    let min = values.iter().copied().fold(f64::INFINITY, f64::min);
+    let max = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let span = (max - min).max(1e-9);
+    if up {
+        cr.set_source_rgb(0.42, 0.78, 0.35);
+    } else {
+        cr.set_source_rgb(0.96, 0.55, 0.66);
+    }
+    cr.set_line_width(1.0);
+    for (index, value) in values.iter().enumerate() {
+        let x = index as f64 / (values.len() - 1) as f64 * width;
+        let y = 1.0 + (height - 2.0) * (1.0 - (value - min) / span);
+        if index == 0 {
+            cr.move_to(x, y);
+        } else {
+            cr.line_to(x, y);
+        }
+    }
+    let _ = cr.stroke();
 }
 
 pub fn apply_tier(label: &gtk::Label, tier: Tier) {
