@@ -69,8 +69,9 @@ maintains.
 
 The CI artifact `deck_0.1.0_x86_64.AppImage` bundles GTK4,
 gtk4-layer-shell and the X11/font/Wayland libraries. Make it executable and
-run it; if FUSE 2 is unavailable, use `--appimage-extract-and-run`. It was not
-launched on a clean desktop in this release; see the known-limitations page.
+run it; if FUSE 2 is unavailable, use `--appimage-extract-and-run`. It was
+smoke-tested under Xvfb with software rendering; a clean physical desktop
+remains a known-limitations item.
 
 ## Packaging
 

@@ -34,10 +34,12 @@ verified on the hardware available.
   available. Their parsers and faces are fixture/seeded-snapshot tested; the
   live fetch and Verify buttons are not.
 - **AppImage on a clean desktop**: the CI artifact bundles GTK4,
-  gtk4-layer-shell, X11/font and Wayland libraries and was inspected with
-  `unsquashfs`, but it was not launched on a clean Ubuntu/Fedora machine. It
-  needs FUSE 2 at runtime (`--appimage-extract-and-run` works without it, at
-  the cost of extracting first).
+  gtk4-layer-shell, X11/font and Wayland libraries. `ldd` is clean on bare
+  Debian Trixie and it ran for 10 seconds under Xvfb with
+  `GSK_RENDERER=cairo` (Xvfb has no GL). It was not launched on a clean
+  physical Ubuntu/Fedora desktop. It needs FUSE 2 at runtime
+  (`--appimage-extract-and-run` works without it, at the cost of extracting
+  first).
 
 ## Deliberate v1 gaps
 
