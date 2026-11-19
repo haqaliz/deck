@@ -1356,7 +1356,7 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (in progress 2026-11-19; L0-L2 done)
+### M12 — Linux & Raspberry Pi port (in progress 2026-11-19; L0-L3 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the
@@ -1397,8 +1397,13 @@ Milestones (detail in
       autostart, search overlay, Unix-socket control and the labwc `W-Space`
       installer. KDE/GNOME/wlroots/X11 and per-monitor placement are L7. See
       [`docs/planning/linux-port/l2.md`](docs/planning/linux-port/l2.md).
-- [ ] **L3 — System widgets** (3-4w): LiveBox, NetBox, DevBox, Linux metrics,
-      GPU backends, charts.
+- [x] **L3 — System widgets** (3-4w): **Pi/labwc vertical slice done
+      2026-11-19.** LiveBox, NetBox and DevBox with `/proc`/`statvfs` data,
+      per-core CPU, volumes, processes, interface/error counters, thresholds,
+      all three sizes, settings and Cairo charts. AMD/NVIDIA GPU paths are
+      coded but unverified; Intel fdinfo and the desktop matrix are L7. 38 core
+      + 2 daemon tests; 0.82% CPU / 111 MB RSS over 60s on the Pi 4. See
+      [`docs/planning/linux-port/l3.md`](docs/planning/linux-port/l3.md).
 - [ ] **L4 — Network widgets** (4-5w): Weather, Clock, Git, Open, Ship, Task,
       PR, Market; accounts and fixtures.
 - [ ] **L5 — LogBox, MetricBox, search** (3-4w): Elastic/Grafana, dynamic

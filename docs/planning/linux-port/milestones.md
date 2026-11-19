@@ -150,34 +150,42 @@ tray, and a search panel that opens from a shortcut.
 
 ---
 
-## L3 — System widgets (3-4 weeks)
+## L3 — System widgets (done 2026-11-19, Pi vertical slice)
 
 **Goal:** LiveBox, NetBox and DevBox with real Linux/Pi data.
 
 ### Tasks
 
-- [ ] CPU: `/proc/stat`, per-core, thresholds, history.
-- [ ] Memory: `/proc/meminfo`.
-- [ ] Disk: `statvfs`, per-volume list, thresholds.
-- [ ] Processes: `/proc` top CPU/MEM, refresh interval, process count.
-- [ ] Network: `/proc/net/dev` or netlink, per-interface rates, picker,
+- [x] CPU: `/proc/stat`, per-core, thresholds, history.
+- [x] Memory: `/proc/meminfo`.
+- [x] Disk: `statvfs`, per-volume list, thresholds.
+- [x] Processes: `/proc` top CPU/MEM, refresh interval, process count.
+- [x] Network: `/proc/net/dev` or netlink, per-interface rates, picker,
       packet/error counters, thresholds.
-- [ ] Docker: `docker ps`/`stats` or the Engine API; hide when absent.
+- [x] Docker: `docker ps`/`stats` or the Engine API; hide when absent.
+      (`docker ps` status only; no stats.)
 - [ ] GPU row: AMD sysfs, NVIDIA `nvidia-smi`, Intel fdinfo; hide when no
-      backend; never fabricate 0%.
-- [ ] Chart component: Cairo/DrawingArea, same visual language as the macOS
+      backend; never fabricate 0%. AMD/NVIDIA are coded but unverified; Intel
+      fdinfo is not implemented. The row hides correctly on the Pi.
+- [x] Chart component: Cairo/DrawingArea, same visual language as the macOS
       chart; no Swift Charts.
-- [ ] Widget faces: LiveBox small/medium/large, NetBox, DevBox; placement and
+- [x] Widget faces: LiveBox small/medium/large, NetBox, DevBox; placement and
       size presets.
-- [ ] Tests for every parser and threshold table.
-- [ ] Pi 4/5 measurements: idle CPU, widget refresh cost, memory.
+- [x] Tests for every parser and threshold table.
+- [x] Pi 4/5 measurements: idle CPU, widget refresh cost, memory. (Pi 4 only;
+      Pi 5 not available.)
 
 ### Acceptance
 
-- All three widgets render real data at all sizes on Pi OS and a desktop.
+- All three widgets render real data at all sizes on Pi OS; a desktop is the
+  L7 matrix because no desktop machine is available.
 - CPU/mem/disk values match `top`/`free`/`df` within a sensible tolerance.
 - Thresholds turn amber/red at the configured values.
-- No sustained CPU load from the widgets on a Pi 4 at the default cadence.
+- No sustained CPU load from the widgets on a Pi 4 at the default cadence:
+  0.82% of one core and 111 MB RSS over 60s in the debug build.
+
+See [`l3.md`](l3.md) for evidence, measurements and the deferred GPU/desktop
+checks.
 
 ---
 

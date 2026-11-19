@@ -1,5 +1,6 @@
 mod tray;
 mod ui;
+mod widgets;
 
 use std::cell::RefCell;
 use std::io::{BufRead, BufReader, Write};
@@ -59,8 +60,10 @@ fn main() -> gtk::glib::ExitCode {
             let _ = deck_core::autostart::install(&exec, &paths_for_activate);
         }
 
-        let widget = ui::widget_window(app);
-        widget.present();
+        let mut keep_alive = ui::widget_windows(app, settings_for_activate.clone());
+        for window in &keep_alive {
+            window.present();
+        }
 
         let (search, entry) = ui::search_window(app);
         let settings_window = ui::settings_window(
@@ -78,7 +81,8 @@ fn main() -> gtk::glib::ExitCode {
         let entry_for_poll = entry.clone();
         let settings_for_poll = settings_window.clone();
         // Keep the visible windows alive for the process lifetime.
-        let keep_alive = vec![widget, search, settings_window];
+        keep_alive.push(search);
+        keep_alive.push(settings_window);
 
         gtk::glib::timeout_add_local(Duration::from_millis(100), move || {
             let _ = &keep_alive;

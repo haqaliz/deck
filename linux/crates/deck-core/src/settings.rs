@@ -15,6 +15,9 @@ pub struct Settings {
     pub autostart: bool,
     pub theme: Theme,
     pub search_shortcut: Option<String>,
+    pub livebox: LiveBoxSettings,
+    pub netbox: NetBoxSettings,
+    pub devbox: DevBoxSettings,
 }
 
 impl Default for Settings {
@@ -24,8 +27,126 @@ impl Default for Settings {
             autostart: true,
             theme: Theme::System,
             search_shortcut: None,
+            livebox: LiveBoxSettings::default(),
+            netbox: NetBoxSettings::default(),
+            devbox: DevBoxSettings::default(),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct LiveBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub show_cpu: bool,
+    pub show_mem: bool,
+    pub show_disk: bool,
+    pub show_gpu: bool,
+    pub show_processes: bool,
+    pub show_chart: bool,
+    pub process_count: u8,
+    pub refresh_seconds: u64,
+    pub cpu_warn: u8,
+    pub cpu_alarm: u8,
+    pub mem_warn: u8,
+    pub mem_alarm: u8,
+    pub disk_warn: u8,
+    pub disk_alarm: u8,
+    pub gpu_warn: u8,
+    pub gpu_alarm: u8,
+}
+
+impl Default for LiveBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            size: WidgetSize::Large,
+            show_cpu: true,
+            show_mem: true,
+            show_disk: true,
+            show_gpu: true,
+            show_processes: true,
+            show_chart: true,
+            process_count: 3,
+            refresh_seconds: 15,
+            cpu_warn: 80,
+            cpu_alarm: 90,
+            mem_warn: 80,
+            mem_alarm: 90,
+            disk_warn: 80,
+            disk_alarm: 90,
+            gpu_warn: 80,
+            gpu_alarm: 90,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct NetBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    /// Empty means every interface, sorted by traffic.
+    pub interface: String,
+    pub interface_count: u8,
+    pub refresh_seconds: u64,
+    pub show_packets: bool,
+    pub show_chart: bool,
+    /// Thresholds in MB/s (decimal), like the macOS NetBox.
+    pub warn_mbps: u16,
+    pub alarm_mbps: u16,
+}
+
+impl Default for NetBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            size: WidgetSize::Medium,
+            interface: String::new(),
+            interface_count: 3,
+            refresh_seconds: 5,
+            show_packets: true,
+            show_chart: true,
+            warn_mbps: 50,
+            alarm_mbps: 100,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct DevBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub show_ports: bool,
+    pub show_containers: bool,
+    pub port_count: u8,
+    pub container_count: u8,
+    pub refresh_seconds: u64,
+}
+
+impl Default for DevBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            size: WidgetSize::Large,
+            show_ports: true,
+            show_containers: true,
+            port_count: 5,
+            container_count: 5,
+            refresh_seconds: 10,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum WidgetSize {
+    Small,
+    #[default]
+    Medium,
+    Large,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -106,6 +227,31 @@ mod tests {
         };
         settings.save(&paths).expect("save");
         assert_eq!(Settings::load(&paths), settings);
+    }
+
+    #[test]
+    fn system_widget_sections_default_when_missing() {
+        let parsed: Settings = serde_json::from_str("{\"schema_version\":1}").expect("parse");
+        assert!(parsed.livebox.enabled);
+        assert_eq!(parsed.livebox.refresh_seconds, 15);
+        assert!(parsed.netbox.enabled);
+        assert_eq!(parsed.netbox.refresh_seconds, 5);
+        assert!(parsed.devbox.show_ports);
+        assert_eq!(parsed.devbox.refresh_seconds, 10);
+        assert_eq!(parsed.livebox.size, WidgetSize::Large);
+        assert_eq!(parsed.netbox.size, WidgetSize::Medium);
+        assert_eq!(parsed.netbox.interface_count, 3);
+        assert_eq!(parsed.devbox.port_count, 5);
+    }
+
+    #[test]
+    fn widget_size_round_trips_as_lowercase() {
+        let mut settings = Settings::default();
+        settings.livebox.size = WidgetSize::Small;
+        let json = serde_json::to_string(&settings).expect("serialize");
+        assert!(json.contains("\"size\":\"small\""));
+        let parsed: Settings = serde_json::from_str(&json).expect("parse");
+        assert_eq!(parsed.livebox.size, WidgetSize::Small);
     }
 
     #[test]
