@@ -49,8 +49,9 @@ closed, and the Pi should not pay for a full GUI to keep data current. Why the
 GUI does search: mirror macOS's rule that user-initiated searches never starve
 the background fetch budget.
 
-Single instance: `io.github.haqaliz.deck` on the session bus. The CLI and
-autostart both talk to the same GUI process.
+Single instance: a Unix socket at `$XDG_RUNTIME_DIR/deck.sock` (cache dir
+fallback). The CLI and autostart both talk to the same GUI process; no D-Bus
+daemon is required for L2.
 
 ## Workspace layout
 

@@ -1356,7 +1356,7 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (in progress 2026-11-19; L0-L1 done)
+### M12 — Linux & Raspberry Pi port (in progress 2026-11-19; L0-L2 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the
@@ -1392,8 +1392,11 @@ Milestones (detail in
       files and `linux.yml` CI. 18 tests, fmt, clippy and release build green
       on the Pi; the file fallback is the active credential path there because
       `secret-tool` is absent. See [`linux/README.md`](linux/README.md).
-- [ ] **L2 — Shell** (3-4w): widget host, placement, settings, tray, autostart,
-      search panel and shortcut installers.
+- [x] **L2 — Shell** (3-4w): **Pi/labwc vertical slice done 2026-11-19.**
+      GTK4 app, layer-shell widget surface, settings shell, `ksni` tray,
+      autostart, search overlay, Unix-socket control and the labwc `W-Space`
+      installer. KDE/GNOME/wlroots/X11 and per-monitor placement are L7. See
+      [`docs/planning/linux-port/l2.md`](docs/planning/linux-port/l2.md).
 - [ ] **L3 — System widgets** (3-4w): LiveBox, NetBox, DevBox, Linux metrics,
       GPU backends, charts.
 - [ ] **L4 — Network widgets** (4-5w): Weather, Clock, Git, Open, Ship, Task,

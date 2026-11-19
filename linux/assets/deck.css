@@ -1,0 +1,106 @@
+window,
+.deck-surface,
+.background {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+}
+
+headerbar {
+    background-color: #181825;
+    color: #cdd6f4;
+}
+
+label {
+    color: #cdd6f4;
+}
+
+label.title {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+label.subtitle {
+    font-size: 12px;
+    color: #a6adc8;
+}
+
+entry {
+    background-color: #313244;
+    color: #cdd6f4;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+listbox,
+listbox row {
+    background-color: transparent;
+    color: #cdd6f4;
+}
+
+button {
+    background-color: #45475a;
+    color: #cdd6f4;
+    border-radius: 6px;
+    padding: 4px 10px;
+}
+
+notebook,
+notebook > stack,
+notebook > header,
+notebook > header > tabs,
+notebook > header > tabs > tab {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+}
+
+notebook > header > tabs > tab:checked {
+    background-color: #313244;
+    color: #cdd6f4;
+}
+
+checkbutton {
+    color: #cdd6f4;
+}
+
+.deck-page {
+    background-color: #1e1e2e;
+}
+
+.deck-header {
+    background-color: #181825;
+    color: #cdd6f4;
+}
+
+.deck-notebook,
+.deck-notebook > header,
+.deck-notebook > stack,
+.deck-notebook > header > tabs,
+.deck-notebook > header > tabs > tab {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+}
+
+.deck-notebook > header > tabs > tab:checked {
+    background-color: #313244;
+    color: #cdd6f4;
+}
+
+.deck-row,
+.deck-list {
+    background-color: transparent;
+    color: #cdd6f4;
+}
+
+.deck-header label {
+    color: #cdd6f4;
+}
+
+.deck-header label,
+.deck-header .title,
+.deck-header button {
+    color: #cdd6f4;
+}
+
+.deck-close label {
+    color: #cdd6f4;
+}
