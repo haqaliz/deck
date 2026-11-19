@@ -1,0 +1,18 @@
+Package: deck
+Version: @VERSION@
+Section: utils
+Priority: optional
+Architecture: @ARCH@
+Installed-Size: @SIZE@
+Maintainer: Aliz <haqaliz@users.noreply.github.com>
+Homepage: https://github.com/haqaliz/deck
+Depends: libgtk-4-1 (>= 4.10), libgtk4-layer-shell0, libglib2.0-0, curl, ca-certificates, xdg-utils
+Recommends: libsecret-tools, fonts-noto-color-emoji
+Description: desktop widgets and search for Linux
+ Deck is a set of always-on-desktop widgets plus a Spotlight-style search
+ panel. This package provides the GTK4 shell, the system/network widgets,
+ LogBox, MetricBox and the background sampler.
+ .
+ It works as a layer-shell desktop surface on labwc, KDE Plasma and wlroots,
+ and as a normal borderless window on GNOME and X11 until the L7 backends are
+ available.

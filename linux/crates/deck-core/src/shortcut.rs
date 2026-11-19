@@ -43,6 +43,31 @@ pub fn install_labwc_shortcut(command: &str, key: &str) -> Result<PathBuf, Strin
     Ok(rc)
 }
 
+/// Removes Deck's marked block and reconfigure labwc. `Ok(None)` means there
+/// was nothing to remove.
+pub fn remove_labwc_shortcut() -> Result<Option<PathBuf>, String> {
+    let rc = labwc_config_path().map_err(|error| error.to_string())?;
+    if !rc.exists() {
+        return Ok(None);
+    }
+    let original = fs::read_to_string(&rc).map_err(|error| error.to_string())?;
+    let Some(updated) = strip_shortcut(&original) else {
+        return Ok(None);
+    };
+    write_atomic(&rc, updated.as_bytes(), 0o644).map_err(|error| error.to_string())?;
+    reconfigure_labwc();
+    Ok(Some(rc))
+}
+
+fn strip_shortcut(xml: &str) -> Option<String> {
+    let start = xml.find(MARKER_START)?;
+    let end = xml.find(MARKER_END)? + MARKER_END.len();
+    let mut updated = String::with_capacity(xml.len());
+    updated.push_str(&xml[..start]);
+    updated.push_str(xml[end..].trim_start_matches(['\n', '\r']));
+    Some(updated)
+}
+
 fn apply_shortcut(xml: &str, command: &str, key: &str) -> Option<String> {
     let command = xml_escape(command);
     let block = format!(
@@ -128,6 +153,16 @@ mod tests {
         assert!(twice.contains("/usr/bin/deck --toggle-search"));
         assert!(twice.contains("A-F12"));
         assert!(!twice.contains("W-Space"));
+    }
+
+    #[test]
+    fn removes_only_the_marked_block() {
+        let xml = "<openbox_config><keyboard>\n  <keybind key=\"A-Tab\"/>\n<!-- deck:search:start -->\n<keybind key=\"W-Space\"/>\n<!-- deck:search:end -->\n</keyboard></openbox_config>";
+        let stripped = strip_shortcut(xml).expect("strip");
+        assert!(!stripped.contains(MARKER_START));
+        assert!(!stripped.contains("W-Space"));
+        assert!(stripped.contains("A-Tab"));
+        assert!(strip_shortcut("<openbox_config/>").is_none());
     }
 
     #[test]
