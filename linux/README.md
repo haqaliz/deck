@@ -11,7 +11,7 @@ bundled SQLite.
 ## Install on Raspberry Pi OS
 
 ```bash
-sudo dpkg -i deck_0.1.0_arm64.deb
+sudo dpkg -i deck_0.1.1_arm64.deb
 deck-gui                 # starts the widgets, tray and socket
 deck --install-shortcut  # labwc W-Space, GNOME Super+Space, or printed snippet
 ```
@@ -32,8 +32,10 @@ keyring, tokens live in the 0600 fallback file and Settings shows the warning.
 1. Start `deck-gui` (or log out/in after enabling autostart). The tray menu has
    Search, Settings and Quit; `deck --toggle-search` and the installed
    shortcut open the panel.
-2. Open Settings → Widgets. Each of the 13 faces has its own page, size and
-   enable switch. Changes to size/visibility apply on restart.
+2. Drag a widget's title (or the search panel's header) to move it; positions
+   are saved and restored on the next start. Open Settings → Widgets for each
+   face's page, size and enable switch. Changes to size/visibility apply on
+   restart.
 3. Open Settings → Credentials for GitHub, Azure DevOps, Elastic, Grafana and
    the local opencode check. Without a keyring the tokens go to a 0600 file;
    the General tab repeats that warning.
@@ -67,7 +69,7 @@ maintains.
 
 ## AppImage
 
-The CI artifact `deck_0.1.0_x86_64.AppImage` bundles GTK4,
+The CI artifact `deck_0.1.1_x86_64.AppImage` bundles GTK4,
 gtk4-layer-shell and the X11/font/Wayland libraries. Make it executable and
 run it; if FUSE 2 is unavailable, use `--appimage-extract-and-run`. It was
 smoke-tested under Xvfb with software rendering; a clean physical desktop

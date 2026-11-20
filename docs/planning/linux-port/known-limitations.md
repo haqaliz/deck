@@ -1,4 +1,4 @@
-# Deck for Linux — known limitations (v0.1.0)
+# Deck for Linux — known limitations (v0.1.1)
 
 Deck on Linux is a **Pi-first v1**. This page is the honest boundary of what was
 verified on the hardware available.
@@ -58,8 +58,9 @@ verified on the hardware available.
   snippet. labwc and GNOME have installers.
 - No auto-update, Flatpak, ARM32 or Pi Zero.
 - CalBox, ClipBox and BatBox are deferred; PiBox is explicitly out of v1.
-- Per-monitor user arrangement and drag-to-place widgets are not in v1;
-  placement is automatic.
+- Placement is automatic until dragged. Widget title bars and the search
+  header can be dragged; positions persist in settings. Per-monitor
+  arrangement across monitor changes is not verified (one display available).
 
 ## Reporting a problem
 

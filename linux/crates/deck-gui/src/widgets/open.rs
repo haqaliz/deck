@@ -16,7 +16,7 @@ pub fn build(
     paths: Paths,
 ) -> (gtk::ApplicationWindow, i32) {
     let size = settings.borrow().openbox.size;
-    let feed = feed::build(app, "Open", size, (150, 230, 340));
+    let feed = feed::build(app, "Open", size, (150, 230, 340), settings.clone());
     let body = feed.body.clone();
     let feed_size = feed.size;
     let paths_for_tick = paths.clone();

@@ -40,7 +40,13 @@ pub fn build(
     let header = gtk::Label::new(Some("NETBOX"));
     header.add_css_class("subtitle");
     header.set_halign(gtk::Align::Start);
-    content.append(&header);
+    header.set_hexpand(true);
+    header.set_tooltip_text(Some("Drag to move"));
+    content.append(&crate::ui::movable_header(
+        &window,
+        &header,
+        settings.clone(),
+    ));
 
     let summary = gtk::Box::new(gtk::Orientation::Horizontal, 14);
     summary.set_halign(gtk::Align::Start);

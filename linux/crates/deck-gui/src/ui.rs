@@ -110,12 +110,86 @@ pub fn widget_windows(
         }
         let x = 24 + column as i32 * 332;
         let y = cursors[column];
+        let key = window
+            .title()
+            .map(|title| title.to_string())
+            .unwrap_or_default();
+        let saved = settings.borrow().positions.get(&key).copied();
+        let (x, y) = saved
+            .map(|position| (position.x, position.y))
+            .unwrap_or((x, y));
         deck_platform::surface::place_on(&window, monitors.get(monitor_index), x, y);
         cursors[column] += height + 10;
         window.present();
         windows.push(window);
     }
     windows
+}
+
+/// Wraps a header so it moves the window on every backend: margins on a
+/// layer surface, a client-side window handle otherwise.
+pub fn movable_header<W>(
+    window: &gtk::ApplicationWindow,
+    header: &W,
+    settings: Rc<RefCell<Settings>>,
+) -> gtk::Widget
+where
+    W: IsA<gtk::Widget> + Clone + 'static,
+{
+    if deck_platform::surface::uses_layer_shell() {
+        make_draggable(window, header, settings);
+        header.clone().upcast()
+    } else {
+        let handle = gtk::WindowHandle::new();
+        handle.set_child(Some(header));
+        handle.upcast()
+    }
+}
+
+/// Makes a layer-surface widget/search window draggable by a handle. The
+/// position is written to settings on drop and restored on the next start.
+pub fn make_draggable(
+    window: &gtk::ApplicationWindow,
+    handle: &impl IsA<gtk::Widget>,
+    settings: Rc<RefCell<Settings>>,
+) {
+    if !deck_platform::surface::uses_layer_shell() {
+        return;
+    }
+    handle.set_cursor_from_name(Some("grab"));
+    let drag = gtk::GestureDrag::new();
+    let state: Rc<RefCell<Option<(i32, i32)>>> = Rc::new(RefCell::new(None));
+    let window_for_begin = window.clone();
+    let state_for_begin = state.clone();
+    drag.connect_drag_begin(move |_, _, _| {
+        *state_for_begin.borrow_mut() = Some(deck_platform::surface::position(&window_for_begin));
+    });
+    let window_for_update = window.clone();
+    let state_for_update = state.clone();
+    drag.connect_drag_update(move |_, dx, dy| {
+        if let Some((x, y)) = *state_for_update.borrow() {
+            deck_platform::surface::move_to(
+                &window_for_update,
+                x + dx.round() as i32,
+                y + dy.round() as i32,
+            );
+        }
+    });
+    let window_for_end = window.clone();
+    let settings_for_end = settings;
+    drag.connect_drag_end(move |_, _, _| {
+        let (x, y) = deck_platform::surface::position(&window_for_end);
+        let key = window_for_end
+            .title()
+            .map(|title| title.to_string())
+            .unwrap_or_default();
+        let mut current = settings_for_end.borrow_mut();
+        current
+            .positions
+            .insert(key, deck_core::settings::WindowPosition { x, y });
+        let _ = current.save(&Paths::from_env());
+    });
+    handle.add_controller(drag);
 }
 
 pub fn search_window(
@@ -127,10 +201,22 @@ pub fn search_window(
     window.add_css_class("deck-surface");
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 8);
-    content.set_margin_top(16);
+    content.set_margin_top(12);
     content.set_margin_bottom(16);
     content.set_margin_start(16);
     content.set_margin_end(16);
+
+    let header = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let title = gtk::Label::new(Some("DECK SEARCH"));
+    title.add_css_class("section");
+    title.set_halign(gtk::Align::Start);
+    let hint = gtk::Label::new(Some("drag to move"));
+    hint.add_css_class("subtitle");
+    hint.set_halign(gtk::Align::End);
+    hint.set_hexpand(true);
+    header.append(&title);
+    header.append(&hint);
+    content.append(&movable_header(&window, &header, settings.clone()));
 
     let entry = gtk::Entry::builder()
         .placeholder_text("Search Deck… (port, time, run, task, pr, log, metric, mkt)")
@@ -146,6 +232,20 @@ pub fn search_window(
     content.append(&entry);
     content.append(&scrolled);
     window.set_child(Some(&content));
+
+    let width = 640;
+    let screen_width = gtk::gdk::Display::default()
+        .and_then(|display| display.monitors().item(0))
+        .and_then(|object| object.downcast::<gtk::gdk::Monitor>().ok())
+        .map(|monitor| monitor.geometry().width())
+        .unwrap_or(width);
+    let (x, y) = settings
+        .borrow()
+        .positions
+        .get("Deck Search")
+        .map(|position| (position.x, position.y))
+        .unwrap_or(((screen_width - width).max(0) / 2, 100));
+    deck_platform::surface::place(&window, x, y);
 
     let actions: Rc<RefCell<Vec<Option<search_core::SearchAction>>>> =
         Rc::new(RefCell::new(Vec::new()));
