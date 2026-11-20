@@ -5,7 +5,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 linux="$(cd "$here/.." && pwd)"
 cd "$linux"
 
-version="${VERSION:-0.1.2}"
+version="${VERSION:-0.1.3}"
 arch="${ARCH:-$(dpkg --print-architecture)}"
 target_dir="${CARGO_TARGET_DIR:-target}/release"
 cargo_args=(--release -p deck-gui -p deckd -p deck-cli)
@@ -22,8 +22,12 @@ trap 'rm -rf "$stage"' EXIT
 install -Dm0755 "$target_dir/deck-gui" "$stage/usr/bin/deck-gui"
 install -Dm0755 "$target_dir/deck" "$stage/usr/bin/deck"
 install -Dm0755 "$target_dir/deckd" "$stage/usr/bin/deckd"
-install -Dm0644 "$here/deck.desktop" "$stage/usr/share/applications/deck.desktop"
-install -Dm0644 "$linux/assets/deck.svg" "$stage/usr/share/icons/hicolor/scalable/apps/deck.svg"
+install -Dm0644 "$here/io.github.haqaliz.deck.desktop" \
+    "$stage/usr/share/applications/io.github.haqaliz.deck.desktop"
+for size in 16 24 32 48 64 128 256 512; do
+    install -Dm0644 "$linux/assets/icons/deck-${size}.png" \
+        "$stage/usr/share/icons/hicolor/${size}x${size}/apps/deck.png"
+done
 install -Dm0644 "$here/deckd.service" "$stage/usr/lib/systemd/user/deckd.service"
 install -Dm0644 "$linux/README.md" "$stage/usr/share/doc/deck/README.md"
 install -Dm0644 "$here/deb/copyright" "$stage/usr/share/doc/deck/copyright"
