@@ -103,7 +103,7 @@ pub fn overlay_window(app: &gtk::Application, width: i32, height: i32) -> gtk::A
         window.init_layer_shell();
         window.set_layer(Layer::Overlay);
         window.set_anchor(Edge::Top, true);
-        window.set_margin(Edge::Top, 100);
+        window.set_anchor(Edge::Left, true);
         window.set_namespace(Some("deck-search"));
         window.set_keyboard_mode(KeyboardMode::Exclusive);
     }
@@ -126,9 +126,36 @@ pub fn place_on(
         if let Some(monitor) = monitor {
             window.set_monitor(Some(monitor));
         }
+        let (x, y) = clamp_position(window, x, y);
         window.set_margin(Edge::Top, y);
         window.set_margin(Edge::Left, x);
     }
+}
+
+/// Moves an already-mapped layer surface. No-op on X11/dashboard, where the
+/// window manager owns placement.
+pub fn move_to(window: &gtk::ApplicationWindow, x: i32, y: i32) {
+    if uses_layer_shell() {
+        let (x, y) = clamp_position(window, x, y);
+        window.set_margin(Edge::Top, y);
+        window.set_margin(Edge::Left, x);
+    }
+}
+
+pub fn position(window: &gtk::ApplicationWindow) -> (i32, i32) {
+    (window.margin(Edge::Left), window.margin(Edge::Top))
+}
+
+fn clamp_position(window: &gtk::ApplicationWindow, x: i32, y: i32) -> (i32, i32) {
+    let Some(monitor) = window.monitor() else {
+        return (x.max(0), y.max(0));
+    };
+    let geometry = monitor.geometry();
+    let width = window.default_width();
+    let height = window.default_height();
+    let max_x = (geometry.width() - width.max(1)).max(0);
+    let max_y = (geometry.height() - height.max(1)).max(0);
+    (x.clamp(0, max_x), y.clamp(0, max_y))
 }
 
 pub fn uses_layer_shell() -> bool {

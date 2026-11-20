@@ -47,7 +47,13 @@ pub fn build(
     let header = gtk::Label::new(Some("LIVEBOX"));
     header.add_css_class("subtitle");
     header.set_halign(gtk::Align::Start);
-    content.append(&header);
+    header.set_hexpand(true);
+    header.set_tooltip_text(Some("Drag to move"));
+    content.append(&crate::ui::movable_header(
+        &window,
+        &header,
+        settings.clone(),
+    ));
 
     let metrics = gtk::Box::new(
         if size == WidgetSize::Small {

@@ -5,9 +5,9 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 linux="$(cd "$here/.." && pwd)"
 cd "$linux"
 
-version="${VERSION:-0.1.0}"
+version="${VERSION:-0.1.1}"
 arch="${ARCH:-$(dpkg --print-architecture)}"
-target_dir="target/release"
+target_dir="${CARGO_TARGET_DIR:-target}/release"
 cargo_args=(--release -p deck-gui -p deckd -p deck-cli)
 if [[ -n "${TARGET:-}" ]]; then
     target_dir="target/${TARGET}/release"

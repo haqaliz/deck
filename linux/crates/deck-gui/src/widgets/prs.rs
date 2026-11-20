@@ -16,7 +16,13 @@ pub fn build(
     paths: Paths,
 ) -> (gtk::ApplicationWindow, i32) {
     let size = settings.borrow().prs.size;
-    let feed = feed::build(app, "Pull requests", size, (140, 240, 340));
+    let feed = feed::build(
+        app,
+        "Pull requests",
+        size,
+        (140, 240, 340),
+        settings.clone(),
+    );
     let body = feed.body.clone();
     let feed_size = feed.size;
     let paths_for_tick = paths.clone();

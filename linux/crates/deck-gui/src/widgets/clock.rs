@@ -13,7 +13,7 @@ pub fn build(
     settings: Rc<RefCell<Settings>>,
 ) -> (gtk::ApplicationWindow, i32) {
     let size = settings.borrow().clock.size;
-    let feed = feed::build(app, "Clock", size, (140, 210, 300));
+    let feed = feed::build(app, "Clock", size, (140, 210, 300), settings.clone());
     let body = feed.body.clone();
     let feed_size = feed.size;
     let settings_for_tick = settings.clone();

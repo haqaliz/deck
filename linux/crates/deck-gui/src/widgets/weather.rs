@@ -16,7 +16,7 @@ pub fn build(
     paths: Paths,
 ) -> (gtk::ApplicationWindow, i32) {
     let size = settings.borrow().weather.size;
-    let feed = feed::build(app, "Weather", size, (150, 220, 290));
+    let feed = feed::build(app, "Weather", size, (150, 220, 290), settings.clone());
     let body = feed.body.clone();
     let feed_size = feed.size;
     let paths_for_tick = paths.clone();

@@ -7,7 +7,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 linux="$(cd "$here/.." && pwd)"
 cd "$linux"
 
-version="${VERSION:-0.1.0}"
+version="${VERSION:-0.1.1}"
 tools="$linux/dist/appimage-tools"
 appdir="$linux/dist/AppDir"
 mkdir -p "$tools" "$linux/dist"

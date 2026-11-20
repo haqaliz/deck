@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
@@ -17,6 +18,9 @@ pub struct Settings {
     pub autostart: bool,
     pub theme: Theme,
     pub surface_mode: SurfaceMode,
+    /// Last dragged position per widget title (and "Search"). Empty means the
+    /// automatic flow is used.
+    pub positions: BTreeMap<String, WindowPosition>,
     pub search_shortcut: Option<String>,
     pub livebox: LiveBoxSettings,
     pub netbox: NetBoxSettings,
@@ -44,6 +48,7 @@ impl Default for Settings {
             autostart: true,
             theme: Theme::System,
             surface_mode: SurfaceMode::Auto,
+            positions: BTreeMap::new(),
             search_shortcut: None,
             livebox: LiveBoxSettings::default(),
             netbox: NetBoxSettings::default(),
@@ -454,6 +459,13 @@ impl Default for MetricBoxSettings {
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowPosition {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum SurfaceMode {
     #[default]
@@ -569,6 +581,7 @@ mod tests {
         assert!(parsed.devbox.show_ports);
         assert_eq!(parsed.devbox.refresh_seconds, 10);
         assert_eq!(parsed.surface_mode, SurfaceMode::Auto);
+        assert!(parsed.positions.is_empty());
         assert_eq!(parsed.livebox.size, WidgetSize::Large);
         assert_eq!(parsed.netbox.size, WidgetSize::Medium);
         assert_eq!(parsed.netbox.interface_count, 3);
@@ -584,6 +597,21 @@ mod tests {
         assert!(!parsed.metricbox.enabled);
         assert_eq!(parsed.metricbox.face, MetricBoxFace::Fleet);
         assert_eq!(parsed.metricbox.rate_per_kwh_cents, 12);
+    }
+
+    #[test]
+    fn dragged_positions_round_trip() {
+        let (_tmp, paths) = temp_paths();
+        let mut settings = Settings::default();
+        settings
+            .positions
+            .insert("LiveBox".into(), WindowPosition { x: 120, y: 340 });
+        settings.save(&paths).expect("save");
+        let loaded = Settings::load(&paths);
+        assert_eq!(
+            loaded.positions.get("LiveBox"),
+            Some(&WindowPosition { x: 120, y: 340 })
+        );
     }
 
     #[test]

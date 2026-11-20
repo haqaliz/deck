@@ -1,0 +1,32 @@
+name: Linux deb
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "linux-v*"
+
+jobs:
+  arm64:
+    runs-on: ubuntu-24.04-arm
+    container: debian:trixie
+    steps:
+      - name: base packages
+        working-directory: .
+        run: |
+          apt-get update
+          apt-get install -y git ca-certificates curl build-essential pkg-config \
+            libgtk-4-dev libgtk4-layer-shell-dev libgtk4-layer-shell0 dpkg-dev
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: build arm64 deb
+        working-directory: linux
+        run: |
+          version="$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)"
+          VERSION="$version" bash packaging/build-deb.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deck-deb-arm64
+          path: |
+            linux/dist/deck_*_arm64.deb
+            linux/dist/deck_*_arm64.deb.sha256

@@ -1,4 +1,7 @@
-use deck_core::settings::WidgetSize;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use deck_core::settings::{Settings, WidgetSize};
 use gtk4 as gtk;
 use gtk4::prelude::*;
 
@@ -17,6 +20,7 @@ pub fn build(
     title: &str,
     size: WidgetSize,
     heights: (i32, i32, i32),
+    settings: Rc<RefCell<Settings>>,
 ) -> Feed {
     let height = widgets::height(size, heights.0, heights.1, heights.2);
     let spec = deck_platform::surface::WidgetSpec {
@@ -38,7 +42,9 @@ pub fn build(
     let header = gtk::Label::new(Some(&title.to_uppercase()));
     header.add_css_class("subtitle");
     header.set_halign(gtk::Align::Start);
-    content.append(&header);
+    header.set_hexpand(true);
+    header.set_tooltip_text(Some("Drag to move"));
+    content.append(&crate::ui::movable_header(&window, &header, settings));
 
     let scroll = gtk::ScrolledWindow::new();
     scroll.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
