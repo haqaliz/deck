@@ -2,7 +2,7 @@
 
 Rust + GTK4 implementation, planned in
 [`docs/planning/linux-port/`](../../docs/planning/linux-port/). This tree is at
-**v0.1.0 (L8)**: core, snapshot contract, credentials, daemon, CLI, the GTK4
+**v0.1.1 (L8)**: core, snapshot contract, credentials, daemon, CLI, the GTK4
 shell, all 13 widgets, the search panel, the Pi `.deb` and the desktop
 AppImage. Pi OS labwc is the verified target; KDE/GNOME/wlroots/X11 are coded
 but not claimed as tested. Network fetches use the system `curl`; OpenBox uses
@@ -78,8 +78,8 @@ remains a known-limitations item.
 ## Packaging
 
 ```bash
-VERSION=0.1.0 bash packaging/build-deb.sh       # arm64 .deb on the Pi
-VERSION=0.1.0 bash packaging/build-appimage.sh  # x86_64 AppImage on a GTK4 desktop
+VERSION=0.1.1 bash packaging/build-deb.sh       # arm64 .deb on the Pi
+VERSION=0.1.1 bash packaging/build-appimage.sh  # x86_64 AppImage on a GTK4 desktop
 ```
 
 ## Build and test
