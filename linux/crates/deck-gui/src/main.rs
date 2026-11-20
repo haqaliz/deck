@@ -30,6 +30,15 @@ fn main() -> gtk::glib::ExitCode {
     }
 
     install_panic_hook(paths.cache_dir.clone());
+    if deck_core::platform::detect_session() == deck_core::platform::SessionKind::LayerShell
+        && std::process::Command::new("pgrep")
+            .args(["-x", "labwc"])
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false)
+    {
+        let _ = deck_core::shortcut::ensure_labwc_desktop_rule();
+    }
     let settings = Rc::new(RefCell::new(Settings::load(&paths)));
     deck_platform::surface::set_mode(settings.borrow().surface_mode);
     let socket = paths.socket_file();

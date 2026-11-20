@@ -46,6 +46,7 @@ pub fn build(
         &window,
         &header,
         settings.clone(),
+        40,
     ));
 
     let summary = gtk::Box::new(gtk::Orientation::Horizontal, 14);

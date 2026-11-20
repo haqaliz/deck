@@ -2,7 +2,7 @@
 
 Rust + GTK4 implementation, planned in
 [`docs/planning/linux-port/`](../../docs/planning/linux-port/). This tree is at
-**v0.1.1 (L8)**: core, snapshot contract, credentials, daemon, CLI, the GTK4
+**v0.1.2 (L8)**: core, snapshot contract, credentials, daemon, CLI, the GTK4
 shell, all 13 widgets, the search panel, the Pi `.deb` and the desktop
 AppImage. Pi OS labwc is the verified target; KDE/GNOME/wlroots/X11 are coded
 but not claimed as tested. Network fetches use the system `curl`; OpenBox uses
@@ -11,7 +11,7 @@ bundled SQLite.
 ## Install on Raspberry Pi OS
 
 ```bash
-sudo dpkg -i deck_0.1.1_arm64.deb
+sudo dpkg -i deck_0.1.2_arm64.deb
 deck-gui                 # starts the widgets, tray and socket
 deck --install-shortcut  # labwc W-Space, GNOME Super+Space, or printed snippet
 ```
@@ -33,7 +33,9 @@ keyring, tokens live in the 0600 fallback file and Settings shows the warning.
    Search, Settings and Quit; `deck --toggle-search` and the installed
    shortcut open the panel.
 2. Drag a widget's title (or the search panel's header) to move it; positions
-   are saved and restored on the next start. Open Settings → Widgets for each
+   are saved and restored on the next start. On labwc, Deck adds a marked
+   window rule that keeps the PCManFM desktop on the bottom so it cannot block
+   pointer input to the widgets. Open Settings → Widgets for each
    face's page, size and enable switch. Changes to size/visibility apply on
    restart.
 3. Open Settings → Credentials for GitHub, Azure DevOps, Elastic, Grafana and
@@ -69,7 +71,7 @@ maintains.
 
 ## AppImage
 
-The CI artifact `deck_0.1.1_x86_64.AppImage` bundles GTK4,
+The CI artifact `deck_0.1.2_x86_64.AppImage` bundles GTK4,
 gtk4-layer-shell and the X11/font/Wayland libraries. Make it executable and
 run it; if FUSE 2 is unavailable, use `--appimage-extract-and-run`. It was
 smoke-tested under Xvfb with software rendering; a clean physical desktop
@@ -78,8 +80,8 @@ remains a known-limitations item.
 ## Packaging
 
 ```bash
-VERSION=0.1.1 bash packaging/build-deb.sh       # arm64 .deb on the Pi
-VERSION=0.1.1 bash packaging/build-appimage.sh  # x86_64 AppImage on a GTK4 desktop
+VERSION=0.1.2 bash packaging/build-deb.sh       # arm64 .deb on the Pi
+VERSION=0.1.2 bash packaging/build-appimage.sh  # x86_64 AppImage on a GTK4 desktop
 ```
 
 ## Build and test

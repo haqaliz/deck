@@ -53,6 +53,7 @@ pub fn build(
         &window,
         &header,
         settings.clone(),
+        40,
     ));
 
     let metrics = gtk::Box::new(
