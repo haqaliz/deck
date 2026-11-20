@@ -212,7 +212,7 @@ checksum = "a31eee39dddec8330830986fcd7625edb5a24ec90ea038215273bbc3adb08ac6"
 
 [[package]]
 name = "deck-cli"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "deck-core",
  "deckd",
@@ -220,7 +220,7 @@ dependencies = [
 
 [[package]]
 name = "deck-core"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -235,7 +235,7 @@ dependencies = [
 
 [[package]]
 name = "deck-gui"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "deck-core",
  "deck-platform",
@@ -246,7 +246,7 @@ dependencies = [
 
 [[package]]
 name = "deck-platform"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "deck-core",
  "gtk4",
@@ -256,7 +256,7 @@ dependencies = [
 
 [[package]]
 name = "deckd"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "deck-core",
  "serde",
