@@ -44,7 +44,7 @@ pub fn build(
     header.set_halign(gtk::Align::Start);
     header.set_hexpand(true);
     header.set_tooltip_text(Some("Drag to move"));
-    content.append(&crate::ui::movable_header(&window, &header, settings));
+    content.append(&crate::ui::movable_header(&window, &header, settings, 40));
 
     let scroll = gtk::ScrolledWindow::new();
     scroll.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);

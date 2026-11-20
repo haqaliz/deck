@@ -132,12 +132,13 @@ pub fn movable_header<W>(
     window: &gtk::ApplicationWindow,
     header: &W,
     settings: Rc<RefCell<Settings>>,
+    drag_zone: i32,
 ) -> gtk::Widget
 where
     W: IsA<gtk::Widget> + Clone + 'static,
 {
     if deck_platform::surface::uses_layer_shell() {
-        make_draggable(window, header, settings);
+        make_draggable(window, header, settings, drag_zone);
         header.clone().upcast()
     } else {
         let handle = gtk::WindowHandle::new();
@@ -152,16 +153,22 @@ pub fn make_draggable(
     window: &gtk::ApplicationWindow,
     handle: &impl IsA<gtk::Widget>,
     settings: Rc<RefCell<Settings>>,
+    drag_zone: i32,
 ) {
     if !deck_platform::surface::uses_layer_shell() {
         return;
     }
     handle.set_cursor_from_name(Some("grab"));
     let drag = gtk::GestureDrag::new();
+    drag.set_propagation_phase(gtk::PropagationPhase::Capture);
     let state: Rc<RefCell<Option<(i32, i32)>>> = Rc::new(RefCell::new(None));
     let window_for_begin = window.clone();
     let state_for_begin = state.clone();
-    drag.connect_drag_begin(move |_, _, _| {
+    drag.connect_drag_begin(move |_, _, y| {
+        if y > f64::from(drag_zone) {
+            *state_for_begin.borrow_mut() = None;
+            return;
+        }
         *state_for_begin.borrow_mut() = Some(deck_platform::surface::position(&window_for_begin));
     });
     let window_for_update = window.clone();
@@ -177,7 +184,11 @@ pub fn make_draggable(
     });
     let window_for_end = window.clone();
     let settings_for_end = settings;
+    let state_for_end = state;
     drag.connect_drag_end(move |_, _, _| {
+        if state_for_end.borrow().is_none() {
+            return;
+        }
         let (x, y) = deck_platform::surface::position(&window_for_end);
         let key = window_for_end
             .title()
@@ -189,7 +200,7 @@ pub fn make_draggable(
             .insert(key, deck_core::settings::WindowPosition { x, y });
         let _ = current.save(&Paths::from_env());
     });
-    handle.add_controller(drag);
+    window.add_controller(drag);
 }
 
 pub fn search_window(
@@ -216,7 +227,7 @@ pub fn search_window(
     hint.set_hexpand(true);
     header.append(&title);
     header.append(&hint);
-    content.append(&movable_header(&window, &header, settings.clone()));
+    content.append(&movable_header(&window, &header, settings.clone(), 36));
 
     let entry = gtk::Entry::builder()
         .placeholder_text("Search Deck… (port, time, run, task, pr, log, metric, mkt)")

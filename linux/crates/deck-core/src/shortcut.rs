@@ -10,6 +10,8 @@ pub const DEFAULT_KEY: &str = "W-Space";
 
 const MARKER_START: &str = "<!-- deck:search:start -->";
 const MARKER_END: &str = "<!-- deck:search:end -->";
+const DESKTOP_START: &str = "<!-- deck:desktop:start -->";
+const DESKTOP_END: &str = "<!-- deck:desktop:end -->";
 
 /// Write or replace Deck's search keybind in the labwc user config, then ask
 /// labwc to reload. The user's other bindings are preserved.
@@ -43,7 +45,58 @@ pub fn install_labwc_shortcut(command: &str, key: &str) -> Result<PathBuf, Strin
     Ok(rc)
 }
 
-/// Removes Deck's marked block and reconfigure labwc. `Ok(None)` means there
+/// Puts the PCManFM desktop window on the always-on-bottom layer so it cannot
+/// swallow pointer input aimed at Deck's bottom-layer widgets. Runs once;
+/// other window rules are preserved.
+pub fn ensure_labwc_desktop_rule() -> Result<Option<PathBuf>, String> {
+    let rc = labwc_config_path().map_err(|error| error.to_string())?;
+    if !rc.exists() {
+        return Ok(None);
+    }
+    let original = fs::read_to_string(&rc).map_err(|error| error.to_string())?;
+    if original.contains(DESKTOP_START) {
+        return Ok(None);
+    }
+    let Some(updated) = apply_desktop_rule(&original) else {
+        return Ok(None);
+    };
+    write_atomic(&rc, updated.as_bytes(), 0o644).map_err(|error| error.to_string())?;
+    reconfigure_labwc();
+    Ok(Some(rc))
+}
+
+pub fn remove_labwc_desktop_rule() -> Result<Option<PathBuf>, String> {
+    let rc = labwc_config_path().map_err(|error| error.to_string())?;
+    if !rc.exists() {
+        return Ok(None);
+    }
+    let original = fs::read_to_string(&rc).map_err(|error| error.to_string())?;
+    let Some(updated) = strip_marked(&original, DESKTOP_START, DESKTOP_END) else {
+        return Ok(None);
+    };
+    write_atomic(&rc, updated.as_bytes(), 0o644).map_err(|error| error.to_string())?;
+    reconfigure_labwc();
+    Ok(Some(rc))
+}
+
+fn apply_desktop_rule(xml: &str) -> Option<String> {
+    if xml.contains(DESKTOP_START) {
+        return None;
+    }
+    let block = format!(
+        "    {DESKTOP_START}\n    <windowRule identifier=\"pcmanfm\"><action name=\"ToggleAlwaysOnBottom\"/></windowRule>\n    <windowRule identifier=\"pcmanfm-pi\"><action name=\"ToggleAlwaysOnBottom\"/></windowRule>\n    <windowRule title=\"*pcmanfm*\"><action name=\"ToggleAlwaysOnBottom\"/></windowRule>\n    {DESKTOP_END}\n"
+    );
+    if xml.contains("</windowRules>") {
+        return Some(xml.replace("</windowRules>", &format!("{block}  </windowRules>")));
+    }
+    if xml.contains("</openbox_config>") {
+        let section = format!("  <windowRules>\n{block}  </windowRules>\n");
+        return Some(xml.replace("</openbox_config>", &format!("{section}</openbox_config>")));
+    }
+    None
+}
+
+/// Removes Deck's marked block and reconfigures labwc. `Ok(None)` means there
 /// was nothing to remove.
 pub fn remove_labwc_shortcut() -> Result<Option<PathBuf>, String> {
     let rc = labwc_config_path().map_err(|error| error.to_string())?;
@@ -60,8 +113,12 @@ pub fn remove_labwc_shortcut() -> Result<Option<PathBuf>, String> {
 }
 
 fn strip_shortcut(xml: &str) -> Option<String> {
-    let start = xml.find(MARKER_START)?;
-    let end = xml.find(MARKER_END)? + MARKER_END.len();
+    strip_marked(xml, MARKER_START, MARKER_END)
+}
+
+fn strip_marked(xml: &str, marker_start: &str, marker_end: &str) -> Option<String> {
+    let start = xml.find(marker_start)?;
+    let end = xml.find(marker_end)? + marker_end.len();
     let mut updated = String::with_capacity(xml.len());
     updated.push_str(&xml[..start]);
     updated.push_str(xml[end..].trim_start_matches(['\n', '\r']));
@@ -163,6 +220,34 @@ mod tests {
         assert!(!stripped.contains("W-Space"));
         assert!(stripped.contains("A-Tab"));
         assert!(strip_shortcut("<openbox_config/>").is_none());
+    }
+
+    #[test]
+    fn adds_the_desktop_rule_once_and_keeps_user_rules() {
+        let xml = "<openbox_config><windowRules><windowRule identifier=\"Kodi\"/></windowRules></openbox_config>";
+        let once = apply_desktop_rule(xml).expect("rule");
+        assert_eq!(once.matches(DESKTOP_START).count(), 1);
+        assert!(once.contains("pcmanfm"));
+        assert!(once.contains("Kodi"));
+        assert!(apply_desktop_rule(&once).is_none());
+    }
+
+    #[test]
+    fn adds_a_window_rules_section_when_missing() {
+        let xml = "<openbox_config><theme/></openbox_config>";
+        let updated = apply_desktop_rule(xml).expect("rule");
+        assert!(updated.contains("<windowRules>"));
+        assert!(updated.contains(DESKTOP_START));
+        assert!(updated.ends_with("</openbox_config>"));
+    }
+
+    #[test]
+    fn removes_the_desktop_rule_without_touching_others() {
+        let xml = "<openbox_config><windowRules><windowRule identifier=\"Kodi\"/></windowRules></openbox_config>";
+        let with_rule = apply_desktop_rule(xml).expect("rule");
+        let stripped = strip_marked(&with_rule, DESKTOP_START, DESKTOP_END).expect("strip");
+        assert!(!stripped.contains("pcmanfm"));
+        assert!(stripped.contains("Kodi"));
     }
 
     #[test]

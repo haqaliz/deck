@@ -1,4 +1,4 @@
-# Deck for Linux — known limitations (v0.1.1)
+# Deck for Linux — known limitations (v0.1.2)
 
 Deck on Linux is a **Pi-first v1**. This page is the honest boundary of what was
 verified on the hardware available.
@@ -61,6 +61,10 @@ verified on the hardware available.
 - Placement is automatic until dragged. Widget title bars and the search
   header can be dragged; positions persist in settings. Per-monitor
   arrangement across monitor changes is not verified (one display available).
+- On labwc, Deck writes a marked `windowRule` that puts PCManFM's desktop
+  window on the always-on-bottom layer. Without that rule the desktop window
+  sits above Deck's bottom layer and swallows pointer input. It is installed
+  automatically when `labwc` is running; other window rules are preserved.
 
 ## Reporting a problem
 

@@ -48,6 +48,7 @@ fn run() -> Result<(), deck_core::CoreError> {
             let command = std::env::current_exe()
                 .map(|path| format!("{} --toggle-search", path.display()))
                 .unwrap_or_else(|_| "deck --toggle-search".into());
+            let _ = deck_core::shortcut::ensure_labwc_desktop_rule();
             let desktop = std::env::var("XDG_CURRENT_DESKTOP")
                 .unwrap_or_default()
                 .to_lowercase();
