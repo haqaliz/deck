@@ -18,7 +18,7 @@ impl ksni::Tray for DeckTray {
     }
 
     fn icon_name(&self) -> String {
-        "computer".into()
+        "deck".into()
     }
 
     fn menu(&self) -> Vec<ksni::MenuItem<Self>> {

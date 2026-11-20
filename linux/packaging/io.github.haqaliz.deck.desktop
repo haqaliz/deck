@@ -9,3 +9,4 @@ Terminal=false
 Categories=Utility;
 Keywords=widgets;dashboard;search;monitor;
 StartupNotify=false
+StartupWMClass=io.github.haqaliz.deck

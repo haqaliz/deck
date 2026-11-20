@@ -17,7 +17,7 @@ jobs:
           apt-get update
           apt-get install -y git ca-certificates curl build-essential pkg-config \
             libgtk-4-dev libgtk4-layer-shell-dev gtk-update-icon-cache \
-            librsvg2-bin desktop-file-utils file libfuse2
+            desktop-file-utils file libfuse2
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: build AppImage
