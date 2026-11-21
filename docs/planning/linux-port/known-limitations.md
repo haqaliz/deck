@@ -1,4 +1,4 @@
-# Deck for Linux — known limitations (v0.4.0)
+# Deck for Linux — known limitations (v0.5.0)
 
 Deck on Linux is a **Pi-first v1**. This page is the honest boundary of what was
 verified on the hardware available.
@@ -33,6 +33,8 @@ verified on the hardware available.
 - **Multi-monitor**: the flow moves a full column to the next monitor, but no
   second display was available to verify it.
 - **KWallet**: GNOME Keyring/Secret Service is verified; KWallet is not.
+- **CalDAV**: the parser and widget are fixture-tested; no live CalDAV server
+  was available.
 - **Live GitHub, Azure DevOps, Elastic and Grafana**: no tokens/clusters were
   available. Their parsers and faces are fixture/seeded-snapshot tested; the
   live fetch and Verify buttons are not.
@@ -62,7 +64,7 @@ verified on the hardware available.
 - KDE shortcut install is best-effort via `kwriteconfig6/5` and needs a
   Plasma restart; labwc and GNOME installers are exercised.
 - No auto-update, Flatpak, ARM32 or Pi Zero.
-- CalBox, ClipBox and BatBox are deferred; PiBox is explicitly out of v1.
+- ClipBox and BatBox are deferred; PiBox is explicitly out of v1.
 - Placement is automatic until dragged. Widget title bars and the search
   header can be dragged; positions persist in settings. Per-monitor
   arrangement across monitor changes is not verified (one display available).

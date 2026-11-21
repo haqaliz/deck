@@ -1,4 +1,5 @@
 pub mod autostart;
+pub mod calbox;
 pub mod clockbox;
 pub mod credentials;
 pub mod devbox;

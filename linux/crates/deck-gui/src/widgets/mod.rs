@@ -1,3 +1,4 @@
+pub mod calbox;
 pub mod clock;
 pub mod devbox;
 pub mod feed;

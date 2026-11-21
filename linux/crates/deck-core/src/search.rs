@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Utc};
 
+use crate::calbox::CalBoxSnapshot;
 use crate::clockbox::{self, Zone};
 use crate::devbox::{DockerContainer, ListeningPort};
 use crate::gitbox::GitBoxSnapshot;
@@ -21,6 +22,7 @@ use crate::weather::WeatherSnapshot;
 pub enum SearchProvider {
     Port,
     Time,
+    Calendar,
     OpenCode,
     Run,
     System,
@@ -39,6 +41,7 @@ impl SearchProvider {
         match self {
             Self::Port => "port",
             Self::Time => "time",
+            Self::Calendar => "cal",
             Self::OpenCode => "oc",
             Self::Run => "run",
             Self::System => "sys",
@@ -61,6 +64,7 @@ impl SearchProvider {
         match self {
             Self::Port => "Ports and containers",
             Self::Time => "World clocks",
+            Self::Calendar => "Calendar",
             Self::OpenCode => "OpenCode sessions",
             Self::Run => "Builds",
             Self::System => "System",
@@ -75,9 +79,10 @@ impl SearchProvider {
         }
     }
 
-    pub const ALL: [Self; 13] = [
+    pub const ALL: [Self; 14] = [
         Self::Port,
         Self::Time,
+        Self::Calendar,
         Self::OpenCode,
         Self::Run,
         Self::System,
@@ -95,6 +100,7 @@ impl SearchProvider {
         match self {
             Self::Port => "Dev",
             Self::Time => "Clocks",
+            Self::Calendar => "Calendar",
             Self::OpenCode => "OpenCode sessions",
             Self::Run => "Builds",
             Self::System => "System",
@@ -113,6 +119,7 @@ impl SearchProvider {
         Some(match prefix {
             "port" => Self::Port,
             "time" => Self::Time,
+            "cal" => Self::Calendar,
             "oc" => Self::OpenCode,
             "run" => Self::Run,
             "sys" => Self::System,
@@ -243,6 +250,7 @@ pub struct SearchSection {
 #[derive(Debug, Clone, Default)]
 pub struct SearchInputs {
     pub weather: Option<WeatherSnapshot>,
+    pub calbox: Option<CalBoxSnapshot>,
     pub git: Option<GitBoxSnapshot>,
     pub market: Option<MarketSnapshot>,
     pub opencode: Option<OpenCodeSnapshot>,
@@ -303,6 +311,7 @@ pub fn run(inputs: &SearchInputs, raw: &str, now: DateTime<Utc>) -> Vec<SearchSe
     for provider in [
         SearchProvider::Port,
         SearchProvider::Time,
+        SearchProvider::Calendar,
         SearchProvider::OpenCode,
         SearchProvider::Run,
         SearchProvider::System,
@@ -328,6 +337,7 @@ pub fn run(inputs: &SearchInputs, raw: &str, now: DateTime<Utc>) -> Vec<SearchSe
         results.extend(match provider {
             SearchProvider::Port => dev(inputs),
             SearchProvider::Time => clocks(inputs, now),
+            SearchProvider::Calendar => calendar(inputs),
             SearchProvider::OpenCode => opencode(inputs),
             SearchProvider::Run => runs(inputs),
             SearchProvider::System => system(inputs),
@@ -350,6 +360,7 @@ fn group(results: Vec<SearchResult>, limit: usize) -> Vec<SearchSection> {
     for provider in [
         SearchProvider::Port,
         SearchProvider::Time,
+        SearchProvider::Calendar,
         SearchProvider::OpenCode,
         SearchProvider::Run,
         SearchProvider::System,
@@ -458,6 +469,37 @@ fn clocks(inputs: &SearchInputs, now: DateTime<Utc>) -> Vec<SearchResult> {
                 subtitle: format!("{time} · {day} · {offset}"),
                 score,
                 action: SearchAction::Copy(time),
+            })
+        })
+        .collect()
+}
+
+fn calendar(inputs: &SearchInputs) -> Vec<SearchResult> {
+    let Some(snapshot) = &inputs.calbox else {
+        return Vec::new();
+    };
+    let query = current_query();
+    snapshot
+        .events
+        .iter()
+        .filter_map(|event| {
+            let score = best_score(&query, &[&event.title, &event.calendar_title, &event.start])?;
+            let action = if event.url.is_empty() {
+                SearchAction::Copy(event.title.clone())
+            } else {
+                SearchAction::Open(event.url.clone())
+            };
+            Some(SearchResult {
+                id: format!("cal:{}", event.id),
+                provider: SearchProvider::Calendar,
+                title: event.title.clone(),
+                subtitle: format!(
+                    "{} · {}",
+                    event.start.get(11..16).unwrap_or(&event.start),
+                    event.calendar_title
+                ),
+                score,
+                action,
             })
         })
         .collect()
@@ -1370,5 +1412,41 @@ mod deep_link_tests {
             _ => panic!("expected open"),
         }
         assert!(log_action(&SearchInputs::default(), "x").is_none());
+    }
+}
+
+#[cfg(test)]
+mod calendar_search_tests {
+    use super::*;
+    use crate::calbox;
+    use chrono::Utc;
+
+    #[test]
+    fn scoped_calendar_search_matches_event_titles() {
+        let now = Utc::now();
+        let inputs = SearchInputs {
+            calbox: Some(CalBoxSnapshot {
+                written_at: now.to_rfc3339(),
+                events: vec![calbox::CalEvent {
+                    id: "event-1".into(),
+                    title: "Design review".into(),
+                    start: now.to_rfc3339(),
+                    end: (now + chrono::Duration::hours(1)).to_rfc3339(),
+                    is_all_day: false,
+                    calendar_title: "Work".into(),
+                    calendar_id: "work".into(),
+                    color: "#0a84ff".into(),
+                    url: "https://meet.example.com/abc".into(),
+                }],
+            }),
+            ..SearchInputs::default()
+        };
+        let sections = run(&inputs, "cal review", now);
+        let section = sections
+            .iter()
+            .find(|section| section.provider == SearchProvider::Calendar)
+            .expect("calendar section");
+        assert_eq!(section.results[0].title, "Design review");
+        assert!(matches!(section.results[0].action, SearchAction::Open(_)));
     }
 }

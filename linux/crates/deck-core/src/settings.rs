@@ -27,6 +27,7 @@ pub struct Settings {
     /// plus the `azure` token stay valid when this list is empty.
     pub azure_accounts: Vec<AzureAccount>,
     pub livebox: LiveBoxSettings,
+    pub calbox: CalBoxSettings,
     pub netbox: NetBoxSettings,
     pub devbox: DevBoxSettings,
     pub weather: WeatherBoxSettings,
@@ -57,6 +58,7 @@ impl Default for Settings {
             search: SearchSettings::default(),
             azure_accounts: Vec::new(),
             livebox: LiveBoxSettings::default(),
+            calbox: CalBoxSettings::default(),
             netbox: NetBoxSettings::default(),
             devbox: DevBoxSettings::default(),
             weather: WeatherBoxSettings::default(),
@@ -104,6 +106,41 @@ pub struct SearchSettings {
     /// Provider ids the user turned off: port, time, oc, run, sys, net, git,
     /// weather, task, pr, log, metric, mkt.
     pub disabled: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct CalBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub server_url: String,
+    pub username: String,
+    pub show_all_day: bool,
+    pub show_today: bool,
+    pub show_tomorrow: bool,
+    pub today_count: u8,
+    pub tomorrow_count: u8,
+    pub use_calendar_colors: bool,
+    /// Used when calendar colours are off.
+    pub accent_color: String,
+}
+
+impl Default for CalBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            server_url: String::new(),
+            username: String::new(),
+            show_all_day: true,
+            show_today: true,
+            show_tomorrow: true,
+            today_count: 6,
+            tomorrow_count: 4,
+            use_calendar_colors: true,
+            accent_color: "#0a84ff".into(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

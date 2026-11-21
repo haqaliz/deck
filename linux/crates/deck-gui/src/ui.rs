@@ -37,6 +37,9 @@ pub fn widget_windows(
     if enabled.livebox.enabled {
         widgets.push(widgets::livebox::build(app, settings.clone()));
     }
+    if enabled.calbox.enabled {
+        widgets.push(widgets::calbox::build(app, settings.clone(), paths.clone()));
+    }
     if enabled.netbox.enabled {
         widgets.push(widgets::netbox::build(app, settings.clone()));
     }
@@ -693,6 +696,7 @@ fn search_inputs(
 ) -> search_core::SearchInputs {
     let mut inputs = search_core::SearchInputs {
         weather: deck_core::snapshot::read_payload(paths, "weather"),
+        calbox: deck_core::snapshot::read_payload(paths, "calbox"),
         git: deck_core::snapshot::read_payload(paths, "gitbox"),
         market: deck_core::snapshot::read_payload(paths, "marketbox"),
         opencode: deck_core::snapshot::read_payload(paths, "opencode"),
@@ -1001,6 +1005,11 @@ pub fn settings_window(
             devbox_page(&paths, &settings),
         ),
         (
+            "Calendar",
+            "x-office-calendar",
+            calbox_page(&paths, &settings),
+        ),
+        (
             "Weather",
             "weather-few-clouds",
             weather_page(&paths, &settings),
@@ -1118,6 +1127,109 @@ fn add_settings_page(
     sidebar.append(&row);
     stack.add_named(&scrolled(page), Some(name));
     names.push(Some(name.to_string()));
+}
+
+fn calbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    page.add_css_class("deck-page-cards");
+    page.append(&caption(
+        "CalDAV events for today and tomorrow. The password is stored with the CalDAV credential id.",
+    ));
+    let current = settings.borrow().calbox.clone();
+    let general = form_card(&page, "GENERAL");
+    size_row(&general, current.size, paths, settings, |s, v| {
+        s.calbox.size = v
+    });
+    toggle(
+        &general,
+        "Show CalBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.calbox.enabled = v,
+    );
+    text_field(
+        &general,
+        "CalDAV server URL",
+        &current.server_url,
+        "https://cal.example.com/dav/",
+        paths,
+        settings,
+        |s, v| s.calbox.server_url = v,
+    );
+    text_field(
+        &general,
+        "Username",
+        &current.username,
+        "CalDAV username",
+        paths,
+        settings,
+        |s, v| s.calbox.username = v,
+    );
+    let display = form_card(&page, "DISPLAY");
+    toggle(
+        &display,
+        "Show all-day events",
+        current.show_all_day,
+        paths,
+        settings,
+        |s, v| s.calbox.show_all_day = v,
+    );
+    toggle(
+        &display,
+        "Show today",
+        current.show_today,
+        paths,
+        settings,
+        |s, v| s.calbox.show_today = v,
+    );
+    toggle(
+        &display,
+        "Show tomorrow",
+        current.show_tomorrow,
+        paths,
+        settings,
+        |s, v| s.calbox.show_tomorrow = v,
+    );
+    spin(
+        &display,
+        "Today rows",
+        current.today_count as u64,
+        1,
+        10,
+        1,
+        paths,
+        settings,
+        |s, v| s.calbox.today_count = v as u8,
+    );
+    spin(
+        &display,
+        "Tomorrow rows",
+        current.tomorrow_count as u64,
+        1,
+        10,
+        1,
+        paths,
+        settings,
+        |s, v| s.calbox.tomorrow_count = v as u8,
+    );
+    toggle(
+        &display,
+        "Use calendar colors",
+        current.use_calendar_colors,
+        paths,
+        settings,
+        |s, v| s.calbox.use_calendar_colors = v,
+    );
+    color_row(
+        &display,
+        "Accent color",
+        &current.accent_color,
+        paths,
+        settings,
+        |s, v| s.calbox.accent_color = v,
+    );
+    page
 }
 
 fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
@@ -2565,6 +2677,14 @@ fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box
         &card,
         paths,
         settings,
+        "CalDAV password",
+        "caldav",
+        VerifyKind::CalDav,
+    );
+    credential_row(
+        &card,
+        paths,
+        settings,
         "opencode serve token",
         "opencode",
         VerifyKind::Opencode,
@@ -2741,6 +2861,7 @@ enum VerifyKind {
     Elastic,
     Grafana,
     Opencode,
+    CalDav,
 }
 
 fn credential_row(
@@ -2809,12 +2930,15 @@ fn credential_row(
         let log_base = settings_for_verify.borrow().logbox.base_url.clone();
         let metric_base = settings_for_verify.borrow().metricbox.base_url.clone();
         let opencode_url = settings_for_verify.borrow().openbox.server_url.clone();
+        let cal_url = settings_for_verify.borrow().calbox.server_url.clone();
+        let cal_user = settings_for_verify.borrow().calbox.username.clone();
         verify_async(&status_for_verify, move || match kind {
             VerifyKind::Github => verify_github(&paths),
             VerifyKind::Azure => verify_azure(&paths, &org),
             VerifyKind::Elastic => verify_elastic(&paths, &log_base),
             VerifyKind::Grafana => verify_grafana(&paths, &metric_base),
             VerifyKind::Opencode => verify_opencode(&paths, &opencode_url),
+            VerifyKind::CalDav => verify_caldav(&paths, &cal_url, &cal_user),
         });
     });
 }
@@ -2865,6 +2989,19 @@ where
             }
         }
     });
+}
+
+fn verify_caldav(paths: &Paths, server_url: &str, username: &str) -> String {
+    if server_url.trim().is_empty() || username.trim().is_empty() {
+        return "Set the CalDAV server URL and username first".into();
+    }
+    let Ok(password) = providers::require_token(paths, "caldav") else {
+        return "No CalDAV password stored".into();
+    };
+    match deck_core::calbox::probe(server_url, username, &password) {
+        Ok(count) => format!("{count} calendars found"),
+        Err(error) => format!("CalDAV check failed: {}", error.message()),
+    }
 }
 
 fn verify_opencode(paths: &Paths, server_url: &str) -> String {

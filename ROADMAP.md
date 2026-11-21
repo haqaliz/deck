@@ -1356,7 +1356,7 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (v0.4.0 released 2026-11-21; L0-L11 done)
+### M12 — Linux & Raspberry Pi port (v0.5.0 released 2026-11-22; L0-L12 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the
@@ -1365,7 +1365,7 @@ snapshot/API contract, fixtures, thresholds and UX language.
 **Owner decisions (2026-11-19):** cross-DE always-on-desktop windows; v1 on
 Pi OS Trixie labwc (actual hardware; Bookworm Wayfire optional), KDE Plasma,
 GNOME, wlroots and generic X11; Pi 5/4 64-bit; Rust + GTK4; keep macOS Swift;
-13 widgets in v1; no PiBox; defer CalBox and ClipBox; Deck search panel plus
+14 widgets in v1; no PiBox; defer CalBox and ClipBox; Deck search panel plus
 shortcut; Secret Service with a 0600 fallback; Pi `.deb` plus desktop
 AppImage; Pi OS first; Deck's own look; autostart plus tray.
 
@@ -1437,7 +1437,7 @@ Milestones (detail in
 - [x] **L8 — Hardening + v1** (2w): **v0.1.0 done 2026-11-20.** Panic/last-error
       handling, rate-limited status, schema migration, security pass, 30-minute
       Pi 4 idle sample, install/known-limitations docs, `.deb` + AppImage
-      release with SHA256 and tag `linux-v0.1.0`. v0.1.1 made widgets movable; v0.1.2 adds the labwc PCManFM always-on-bottom rule; v0.1.3 uses the macOS app icon across Linux; v0.1.4 adds the ARGB tray pixmap for AppImage hosts; v0.2.0 is the macOS visual-parity pass; v0.3.0 adds remote work-item/PR search with cache and 429 isolation, provider toggles, LiveBox per-core lines and colors, Ship discovery, PR provider/review controls, a Market live picker, OpenBox remote mode, KDE shortcuts and tag-triggered releases; v0.4.0 adds section-card settings, multi-account Azure credentials, remote log search, stock lookup, and verifies the wlroots/X11/keyring paths in containers. The desktop matrix, Pi 5,
+      release with SHA256 and tag `linux-v0.1.0`. v0.1.1 made widgets movable; v0.1.2 adds the labwc PCManFM always-on-bottom rule; v0.1.3 uses the macOS app icon across Linux; v0.1.4 adds the ARGB tray pixmap for AppImage hosts; v0.2.0 is the macOS visual-parity pass; v0.3.0 adds remote work-item/PR search with cache and 429 isolation, provider toggles, LiveBox per-core lines and colors, Ship discovery, PR provider/review controls, a Market live picker, OpenBox remote mode, KDE shortcuts and tag-triggered releases; v0.4.0 adds section-card settings, multi-account Azure credentials, remote log search, stock lookup, and verifies the wlroots/X11/keyring paths in containers; v0.5.0 adds CalBox over CalDAV. The desktop matrix, Pi 5,
       keyrings and live API accounts remain explicitly untested. See
       [`docs/planning/linux-port/l8.md`](docs/planning/linux-port/l8.md).
 - [x] **L9 — macOS visual parity** (1w): **v0.2.0 done 2026-11-21.**
@@ -1462,6 +1462,10 @@ Milestones (detail in
       Yahoo Finance stock lookup; and container verification of wlroots
       layer-shell, X11 desktop hints and Secret Service. See
       [`docs/planning/linux-port/l11.md`](docs/planning/linux-port/l11.md).
+- [x] **L12 — CalBox** (1w): **v0.5.0 done 2026-11-22.** CalDAV discovery,
+      today/tomorrow agenda, all-day rows, calendar colours, event links,
+      settings, credentials Verify and search results. See
+      [`docs/planning/linux-port/l12.md`](docs/planning/linux-port/l12.md).
 
 **Estimate:** 22-29 weeks for one engineer; about 4-5 months with two people
 after L1. **Start with L0.** It is one week of throwaway code and measurements;

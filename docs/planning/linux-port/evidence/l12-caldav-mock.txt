@@ -1,0 +1,14 @@
+# End-to-end CalDAV check on the Pi
+
+A local Python server answered PROPFIND with one calendar and REPORT with one
+VEVENT. deckd was run with calbox enabled, username test and the password in
+the 0600 credential file.
+
+$ XDG_CONFIG_HOME=/tmp/caltest/config XDG_DATA_HOME=/tmp/caltest/data deckd --once
+deckd: wrote /tmp/caltest/data/deck/hello.json
+
+$ python3 - <<'PY'
+json.load(open("/tmp/caltest/data/deck/calbox.json"))["payload"]["events"]
+PY
+events 1
+Mock review Test #FF2968

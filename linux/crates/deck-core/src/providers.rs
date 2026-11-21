@@ -54,7 +54,7 @@ pub fn post(url: &str, headers: &[(&str, &str)], body: &str) -> Result<String, F
     request("POST", url, headers, Some(body))
 }
 
-fn request(
+pub fn request(
     method: &str,
     url: &str,
     headers: &[(&str, &str)],
