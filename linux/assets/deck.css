@@ -1,137 +1,267 @@
-window,
-.deck-surface,
+/* Deck's visual language, aligned with the macOS app: near-black cards,
+   rounded corners, compact uppercase section labels and profile colours. */
+
+window {
+    background-color: transparent;
+    color: #f5f5f7;
+}
+
 .background {
-    background-color: #1e1e2e;
-    color: #cdd6f4;
+    background-color: transparent;
 }
 
-headerbar {
-    background-color: #181825;
-    color: #cdd6f4;
+.deck-surface {
+    background-image: linear-gradient(145deg, #242427 0%, #111113 55%, #000000 100%);
+    border-radius: 22px;
+    color: #f5f5f7;
 }
 
+.deck-surface label,
 label {
-    color: #cdd6f4;
+    color: #f5f5f7;
 }
 
 label.title {
-    font-size: 18px;
+    font-size: 30px;
     font-weight: 700;
 }
 
 label.subtitle {
+    font-size: 11px;
+    color: #9a9aa1;
+}
+
+label.section {
+    font-size: 9px;
+    font-weight: 700;
+    color: #8e8e93;
+}
+
+label.metric {
     font-size: 12px;
-    color: #a6adc8;
+    font-weight: 700;
+}
+
+.accent-green {
+    color: #30d158;
+}
+
+.accent-cyan {
+    color: #40c8e0;
+}
+
+.accent-orange {
+    color: #ff9f0a;
+}
+
+.accent-blue {
+    color: #0a84ff;
+}
+
+.accent-pink {
+    color: #ff375f;
+}
+
+.accent-red {
+    color: #ff453a;
+}
+
+.accent-purple {
+    color: #bf5af2;
+}
+
+.accent-yellow {
+    color: #ffd60a;
+}
+
+.muted {
+    color: #9a9aa1;
+}
+
+.warn {
+    color: #ff9f0a;
+}
+
+.alarm {
+    color: #ff453a;
+}
+
+.up {
+    color: #30d158;
+}
+
+.down {
+    color: #ff453a;
 }
 
 entry {
-    background-color: #313244;
-    color: #cdd6f4;
-    border-radius: 8px;
-    padding: 8px;
+    background-color: #242427;
+    color: #f5f5f7;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9px;
+    padding: 7px 9px;
 }
 
-listbox,
-listbox row {
-    background-color: transparent;
-    color: #cdd6f4;
+entry:focus {
+    border-color: #0a84ff;
 }
 
 button {
     background-image: none;
-    background-color: #45475a;
-    color: #cdd6f4;
-    border-radius: 6px;
+    background-color: #2c2c30;
+    color: #f5f5f7;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 7px;
     padding: 4px 10px;
 }
 
-notebook,
-notebook > stack,
-notebook > header,
-notebook > header > tabs,
-notebook > header > tabs > tab {
-    background-color: #1e1e2e;
-    color: #cdd6f4;
-}
-
-notebook > header > tabs > tab:checked {
-    background-color: #313244;
-    color: #cdd6f4;
+button:hover {
+    background-color: #3a3a3f;
 }
 
 checkbutton {
-    color: #cdd6f4;
+    color: #f5f5f7;
 }
 
-.deck-page {
-    background-color: #1e1e2e;
+spinbutton {
+    color: #f5f5f7;
 }
+
+spinbutton entry {
+    background-color: #242427;
+}
+
+separator {
+    background-color: rgba(255, 255, 255, 0.10);
+    min-height: 1px;
+}
+
+/* Settings ----------------------------------------------------------------- */
 
 .deck-header {
-    background-color: #181825;
-    color: #cdd6f4;
-}
-
-.deck-notebook,
-.deck-notebook > header,
-.deck-notebook > stack,
-.deck-notebook > header > tabs,
-.deck-notebook > header > tabs > tab {
-    background-color: #1e1e2e;
-    color: #cdd6f4;
-}
-
-.deck-notebook > header > tabs > tab:checked {
-    background-color: #313244;
-    color: #cdd6f4;
-}
-
-.deck-row,
-.deck-list {
     background-color: transparent;
-    color: #cdd6f4;
-}
-
-.deck-header label {
-    color: #cdd6f4;
+    color: #f5f5f7;
 }
 
 .deck-header label,
 .deck-header .title,
 .deck-header button {
-    color: #cdd6f4;
+    color: #f5f5f7;
 }
 
 .deck-close label {
-    color: #cdd6f4;
+    color: #f5f5f7;
 }
 
-.metric {
-    font-size: 13px;
-    font-weight: 600;
+.settings-sidebar {
+    background-color: #141416;
+    border-radius: 0 0 0 22px;
 }
 
-.section {
+.settings-sidebar row {
+    background-color: transparent;
+    color: #f5f5f7;
+    border-radius: 7px;
+    padding: 5px 8px;
+}
+
+.settings-sidebar row:selected {
+    background-color: #2c2c30;
+    color: #f5f5f7;
+}
+
+.settings-sidebar row:hover {
+    background-color: #202023;
+}
+
+.settings-sidebar label {
+    color: #f5f5f7;
+}
+
+.settings-sidebar image {
+    color: #9a9aa1;
+}
+
+.settings-section {
+    color: #8e8e93;
     font-size: 9px;
     font-weight: 700;
-    color: #a6adc8;
-    margin-top: 4px;
+    margin-top: 8px;
+    margin-bottom: 2px;
+    padding-left: 8px;
 }
 
-.warn {
-    color: #f9e2af;
+/* Search ------------------------------------------------------------------- */
+
+.search-window,
+.search-window .background {
+    background-color: transparent;
 }
 
-.alarm {
-    color: #f38ba8;
+.search-card {
+    background-color: rgba(44, 44, 47, 0.97);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.up {
-    color: #a6e3a1;
+.search-entry {
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 2px 4px;
+    font-size: 22px;
+    font-weight: 500;
 }
 
-.down {
-    color: #f38ba8;
+.search-entry:focus,
+.search-entry:focus-within {
+    border: none;
+    box-shadow: none;
+    outline-style: none;
+    outline-width: 0;
+}
+
+.search-entry text {
+    color: #f5f5f7;
+}
+
+.search-divider {
+    background-color: rgba(255, 255, 255, 0.10);
+    min-height: 1px;
+}
+
+.search-row {
+    padding: 6px 8px;
+}
+
+.search-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f5f5f7;
+}
+
+.search-section {
+    color: #9a9aa1;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 8px 8px 2px 8px;
+}
+
+.deck-list,
+.deck-list row {
+    background-color: transparent;
+    color: #f5f5f7;
+}
+
+.deck-list row:selected {
+    background-color: #58627e;
+    color: #f5f5f7;
+    border-radius: 8px;
+}
+
+.deck-list row:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
 }
 
 .link-row {
@@ -139,40 +269,196 @@ checkbutton {
     background-color: transparent;
     border: none;
     padding: 0;
-    color: #cdd6f4;
+    color: #f5f5f7;
     font-size: 12px;
 }
 
 .link-row:hover {
-    color: #89b4fa;
+    color: #0a84ff;
 }
 
+/* Legacy list names used by older pages. */
 .widget-list {
-    background-color: #181825;
+    background-color: #141416;
 }
 
 .widget-list row {
     background-color: transparent;
-    color: #cdd6f4;
-    border-radius: 6px;
-    padding: 2px 4px;
+    color: #f5f5f7;
+    border-radius: 7px;
+    padding: 3px 6px;
 }
 
 .widget-list row:selected {
-    background-color: #313244;
-    color: #cdd6f4;
+    background-color: #2c2c30;
+    color: #f5f5f7;
 }
 
 .widget-list label {
-    color: #cdd6f4;
+    color: #f5f5f7;
 }
 
-.search-row {
-    padding: 4px 6px;
+.search-grip {
+    color: #8e8e93;
+    font-size: 10px;
+    padding: 0 2px;
 }
 
-.search-title {
-    font-size: 14px;
+/* Widget rows -------------------------------------------------------------- */
+
+.row-name {
+    color: #f5f5f7;
+    font-size: 11px;
+}
+
+.row-value {
+    color: #f5f5f7;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.row-muted {
+    color: #8e8e93;
+    font-size: 10px;
+}
+
+.process-tabs {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.process-tab {
+    background-color: transparent;
+    border: none;
+    border-radius: 5px;
+    padding: 1px 8px;
+    min-height: 0;
+    font-size: 10px;
+    font-weight: 700;
+    color: #9a9aa1;
+}
+
+.process-tab:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.process-tab:checked {
+    background-color: #f5f5f7;
+    color: #000000;
+}
+
+.process-tab:checked label {
+    color: #000000;
+}
+
+.widget-divider {
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.row-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #f5f5f7;
+}
+
+.row-meta {
+    font-size: 10px;
+    color: #8e8e93;
+}
+
+/* Clock -------------------------------------------------------------------- */
+
+.clock-time {
+    color: #40c8e0;
+    font-size: 24px;
     font-weight: 600;
-    color: #cdd6f4;
+}
+
+.clock-time-small {
+    color: #40c8e0;
+    font-size: 34px;
+    font-weight: 600;
+}
+
+.clock-name {
+    color: #f5f5f7;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.clock-divider {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.log-count {
+    color: #f5f5f7;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+/* Settings form ------------------------------------------------------------ */
+
+.deck-page {
+    background-color: #1c1c1e;
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+.settings-title {
+    color: #f5f5f7;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.form-row {
+    padding: 5px 0;
+}
+
+switch:checked {
+    background-color: #30d158;
+}
+
+switch:checked slider {
+    background-color: #ffffff;
+}
+
+/* Weather ------------------------------------------------------------------ */
+
+.weather-glyph {
+    color: #f5f5f7;
+    font-size: 30px;
+}
+
+.weather-glyph-small {
+    color: #f5f5f7;
+    font-size: 18px;
+}
+
+.weather-temp {
+    color: #f5f5f7;
+    font-size: 30px;
+    font-weight: 600;
+}
+
+.weather-location {
+    color: #f5f5f7;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.weather-temps {
+    color: #f5f5f7;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.form-section {
+    color: #8e8e93;
+    font-size: 10px;
+    font-weight: 700;
+    margin-top: 10px;
+    margin-bottom: 2px;
 }

@@ -4,8 +4,9 @@ use std::rc::Rc;
 use deck_core::paths::Paths;
 use deck_core::settings::{Settings, WidgetSize};
 use deck_core::snapshot;
-use deck_core::tasks::{self, TaskBoxSnapshot};
+use deck_core::tasks::{self, TaskBoxSnapshot, TaskLane};
 use gtk4 as gtk;
+use gtk4::prelude::*;
 
 use crate::widgets::{self, feed};
 
@@ -42,18 +43,32 @@ pub fn build(
                 "open"
             }
         );
-        widgets::add_row(&body, &total);
+        let (_, total_label, sprint_label) = widgets::split_row(&body, &total);
+        total_label.add_css_class("row-title");
+        if let Some(sprint) = &snapshot.sprint {
+            sprint_label.set_markup(&format!("<span foreground=\"#8e8e93\">{sprint}</span>"));
+        }
 
         if task_settings.show_legend && feed_size != WidgetSize::Small {
-            let legend = tasks::lane_counts(&snapshot.tasks)
-                .iter()
-                .filter(|(_, count)| *count > 0)
-                .map(|(lane, count)| format!("{} {count}", lane.label()))
-                .collect::<Vec<_>>()
-                .join(" · ");
-            if !legend.is_empty() {
-                widgets::add_row(&body, &legend);
+            let legend = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+            for (lane, count) in tasks::lane_counts(&snapshot.tasks) {
+                let always = matches!(
+                    lane,
+                    TaskLane::Todo | TaskLane::InProgress | TaskLane::Testing
+                );
+                if !always && count == 0 {
+                    continue;
+                }
+                let label = gtk::Label::new(None);
+                label.set_markup(&widgets::metric_markup(
+                    lane.label(),
+                    &count.to_string(),
+                    lane_color(lane),
+                    widgets::WHITE,
+                ));
+                legend.append(&label);
             }
+            body.append(&legend);
         }
 
         if task_settings.show_list && feed_size != WidgetSize::Small {
@@ -62,13 +77,22 @@ pub fn build(
                 .iter()
                 .take(task_settings.task_count.max(1) as usize)
             {
-                let title = format!("#{}  {}", task.id, task.title);
+                let line = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+                line.append(&widgets::dot(lane_color(tasks::lane(&task.state))));
+                let text = format!("#{}  {}", task.id, task.title);
                 if task.url.is_empty() {
-                    widgets::add_row(&body, &title);
+                    let label = gtk::Label::new(Some(&text));
+                    label.add_css_class("row-name");
+                    label.set_halign(gtk::Align::Start);
+                    label.set_ellipsize(gtk::pango::EllipsizeMode::End);
+                    line.append(&label);
                 } else {
-                    widgets::link_row(&body, &title, &task.url);
+                    let link = gtk::LinkButton::with_label(&task.url, &text);
+                    link.add_css_class("link-row");
+                    link.set_halign(gtk::Align::Start);
+                    line.append(&link);
                 }
-                widgets::add_row(&body, &format!("{} · {}", task.item_type, task.state));
+                body.append(&line);
             }
             if snapshot.tasks.is_empty() {
                 widgets::add_row(&body, "Nothing assigned");
@@ -83,4 +107,14 @@ pub fn build(
     tick();
     gtk::glib::timeout_add_seconds_local(5, tick);
     (feed.window, feed.height)
+}
+
+fn lane_color(lane: TaskLane) -> &'static str {
+    match lane {
+        TaskLane::Todo => widgets::BLUE,
+        TaskLane::InProgress => widgets::ORANGE,
+        TaskLane::Testing => widgets::PINK,
+        TaskLane::Done => widgets::GREEN,
+        TaskLane::Other => "#8e8e93",
+    }
 }

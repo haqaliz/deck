@@ -30,35 +30,90 @@ pub fn build(
             return gtk::glib::ControlFlow::Continue;
         };
 
-        let summary = gtk::Box::new(gtk::Orientation::Horizontal, 14);
-        let errors = widgets::metric_label("ERR");
-        errors.set_text(&format!("ERR  {}", snapshot.error_small));
-        if snapshot.error_small > 0 {
-            errors.add_css_class("alarm");
-        }
-        let warns = widgets::metric_label("WARN");
-        warns.set_text(&format!("WARN  {}", snapshot.warn_small));
-        if snapshot.warn_small > 0 {
-            warns.add_css_class("warn");
-        }
-        summary.append(&errors);
-        summary.append(&warns);
-        body.append(&summary);
-
+        let header = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        let name = gtk::Label::new(None);
+        name.set_markup(&format!(
+            "<span foreground=\"#9a9aa1\">LOGBOX</span>  <span foreground=\"{}\">{}</span>",
+            widgets::BLUE,
+            snapshot.environment.to_uppercase()
+        ));
+        name.set_halign(gtk::Align::Start);
+        header.append(&name);
         if let Some(at) = snapshot.last_error_at.as_deref() {
-            widgets::add_row(&body, &format!("last error {}", short_time(at)));
+            let last = gtk::Label::new(Some(short_time(at)));
+            last.add_css_class("row-meta");
+            last.set_hexpand(true);
+            last.set_xalign(1.0);
+            header.append(&last);
+        }
+        body.append(&header);
+
+        if feed_size == WidgetSize::Small {
+            let summary = gtk::Box::new(gtk::Orientation::Horizontal, 14);
+            let errors = widgets::metric_label("ERR");
+            errors.set_markup(&widgets::metric_markup(
+                "ERR",
+                &snapshot.error_small.to_string(),
+                widgets::RED,
+                widgets::WHITE,
+            ));
+            let warns = widgets::metric_label("WARN");
+            warns.set_markup(&widgets::metric_markup(
+                "WARN",
+                &snapshot.warn_small.to_string(),
+                widgets::ORANGE,
+                widgets::WHITE,
+            ));
+            summary.append(&errors);
+            summary.append(&warns);
+            body.append(&summary);
+        } else {
+            let numbers = gtk::Box::new(gtk::Orientation::Horizontal, 14);
+            let errors = gtk::Label::new(Some(&snapshot.error_small.to_string()));
+            errors.add_css_class("log-count");
+            let errors_label =
+                gtk::Label::new(Some(&format!("ERRORS · {}m", snapshot.small_minutes)));
+            errors_label.add_css_class("row-meta");
+            errors_label.set_xalign(0.0);
+            let column = gtk::Box::new(gtk::Orientation::Vertical, 0);
+            column.append(&errors);
+            column.append(&errors_label);
+            numbers.append(&column);
+            let large = gtk::Label::new(Some(&snapshot.error_large.to_string()));
+            large.add_css_class("row-title");
+            let large_label =
+                gtk::Label::new(Some(&format!("LAST {}h", snapshot.large_minutes / 60)));
+            large_label.add_css_class("row-meta");
+            large_label.set_xalign(0.0);
+            let large_column = gtk::Box::new(gtk::Orientation::Vertical, 0);
+            large_column.set_margin_top(6);
+            large_column.append(&large);
+            large_column.append(&large_label);
+            numbers.append(&large_column);
+            let warns = gtk::Label::new(None);
+            warns.add_css_class("row-meta");
+            warns.set_hexpand(true);
+            warns.set_xalign(1.0);
+            warns.set_markup(&format!(
+                "<span foreground=\"#8e8e93\">{} WARN · {} IN {}h</span>",
+                snapshot.warn_small,
+                snapshot.warn_large,
+                snapshot.large_minutes / 60
+            ));
+            numbers.append(&warns);
+            body.append(&numbers);
         }
 
         if log.show_trend && feed_size != WidgetSize::Small && !snapshot.trend.is_empty() {
             let chart = gtk::DrawingArea::new();
-            chart.set_size_request(-1, 40);
+            chart.set_size_request(-1, 48);
             let values: Vec<i64> = snapshot
                 .trend
                 .iter()
                 .map(|point| point.count as i64)
                 .collect();
             chart.set_draw_func(move |_, cr, width, height| {
-                widgets::draw_bars(cr, width, height, &values);
+                widgets::draw_bars(cr, width, height, &values, false);
             });
             body.append(&chart);
         }
@@ -66,10 +121,11 @@ pub fn build(
         if feed_size != WidgetSize::Small {
             widgets::section(&body, "SERVICES");
             for service in snapshot.services.iter().take(4) {
-                widgets::add_row(
-                    &body,
-                    &format!("{}   {} errors", service.name, service.count),
-                );
+                let (_, _, count) = widgets::split_row(&body, &service.name);
+                count.set_markup(&format!(
+                    "<span foreground=\"#8e8e93\">{} errors</span>",
+                    service.count
+                ));
             }
             if snapshot.services.is_empty() {
                 widgets::add_row(&body, "No errors in the window");
@@ -79,7 +135,11 @@ pub fn build(
         if feed_size == WidgetSize::Large {
             widgets::section(&body, "TEMPLATES");
             for template in snapshot.templates.iter().take(4) {
-                widgets::add_row(&body, &format!("{}   {}", template.name, template.count));
+                let (_, _, count) = widgets::split_row(&body, &template.name);
+                count.set_markup(&format!(
+                    "<span foreground=\"#8e8e93\">{}</span>",
+                    template.count
+                ));
             }
             if snapshot.templates.is_empty() {
                 widgets::add_row(&body, "None");
@@ -88,16 +148,24 @@ pub fn build(
 
         if log.text_mode != LogTextMode::Templates && !snapshot.recent.is_empty() {
             widgets::section(&body, "RECENT");
-            for line in snapshot.recent.iter().take(3) {
-                widgets::add_row(
-                    &body,
-                    &format!(
-                        "{}  {}  {}",
-                        short_time(&line.at),
-                        line.level.to_uppercase(),
-                        line.message
-                    ),
-                );
+            for line in snapshot
+                .recent
+                .iter()
+                .take(if feed_size == WidgetSize::Large { 5 } else { 3 })
+            {
+                let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+                row.append(&widgets::dot(level_color(&line.level)));
+                let message = gtk::Label::new(Some(&line.message));
+                message.add_css_class("row-name");
+                message.set_halign(gtk::Align::Start);
+                message.set_hexpand(true);
+                message.set_ellipsize(gtk::pango::EllipsizeMode::End);
+                row.append(&message);
+                let at = gtk::Label::new(Some(short_time(&line.at)));
+                at.add_css_class("row-meta");
+                at.set_xalign(1.0);
+                row.append(&at);
+                body.append(&row);
             }
         }
 
@@ -122,4 +190,12 @@ fn short_time(value: &str) -> &str {
 fn valid_base(base: &str) -> Option<String> {
     let base = base.trim().trim_end_matches('/');
     (base.starts_with("https://") || base.starts_with("http://")).then(|| base.to_owned())
+}
+
+fn level_color(level: &str) -> &'static str {
+    match level.to_lowercase().as_str() {
+        "error" | "fatal" => widgets::RED,
+        "warn" | "warning" => widgets::ORANGE,
+        _ => widgets::BLUE,
+    }
 }

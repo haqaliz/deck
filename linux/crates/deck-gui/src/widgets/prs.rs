@@ -36,12 +36,17 @@ pub fn build(
             return gtk::glib::ControlFlow::Continue;
         };
         let summary = gtk::Box::new(gtk::Orientation::Horizontal, 14);
-        for (title, count) in [
-            ("MINE", snapshot.authored_count),
-            ("REVIEW", snapshot.reviewing_count),
+        for (title, count, color) in [
+            ("MINE", snapshot.authored_count, widgets::GREEN),
+            ("REVIEW", snapshot.reviewing_count, widgets::ORANGE),
         ] {
             let label = widgets::metric_label(title);
-            label.set_text(&format!("{title}  {count}"));
+            label.set_markup(&widgets::metric_markup(
+                title,
+                &count.to_string(),
+                color,
+                widgets::WHITE,
+            ));
             summary.append(&label);
         }
         body.append(&summary);
@@ -56,12 +61,27 @@ pub fn build(
                     PrProvider::Github => "GitHub",
                     PrProvider::AzureDevOps => "Azure",
                 };
+                let color = if row.role == deck_core::prs::PrRole::Authored {
+                    widgets::GREEN
+                } else {
+                    widgets::ORANGE
+                };
+                let line = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+                line.append(&widgets::dot(color));
                 let title = format!("{} #{}  {}", row.repo, row.number, row.title);
                 if row.url.is_empty() {
-                    widgets::add_row(&body, &title);
+                    let label = gtk::Label::new(Some(&title));
+                    label.add_css_class("row-name");
+                    label.set_halign(gtk::Align::Start);
+                    label.set_ellipsize(gtk::pango::EllipsizeMode::End);
+                    line.append(&label);
                 } else {
-                    widgets::link_row(&body, &title, &row.url);
+                    let link = gtk::LinkButton::with_label(&row.url, &title);
+                    link.add_css_class("link-row");
+                    link.set_halign(gtk::Align::Start);
+                    line.append(&link);
                 }
+                body.append(&line);
                 widgets::add_row(
                     &body,
                     &format!(
@@ -76,7 +96,7 @@ pub fn build(
                 );
             }
             if snapshot.pull_requests.is_empty() {
-                widgets::add_row(&body, "No open pull requests");
+                widgets::add_row(&body, "No open PRs");
             }
         }
         if let Some(note) = &snapshot.note {

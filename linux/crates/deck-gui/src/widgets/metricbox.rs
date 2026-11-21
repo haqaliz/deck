@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use deck_core::metricbox::{worst_first, MetricBoxSnapshot, MetricHost};
+use deck_core::metricbox::{worst_first, MetricBoxSnapshot};
 use deck_core::paths::Paths;
 use deck_core::settings::{MetricBoxFace, MetricBoxSettings, Settings, WidgetSize};
 use deck_core::snapshot;
@@ -30,14 +30,25 @@ pub fn build(
             widgets::add_row(&body, &widgets::status_text(&paths_for_tick, "metricbox"));
             return gtk::glib::ControlFlow::Continue;
         };
-        widgets::add_row(
-            &body,
-            &format!(
-                "{} hosts · {} firing",
-                snapshot.hosts.len(),
-                snapshot.firing_alerts.len()
+        let summary = gtk::Box::new(gtk::Orientation::Horizontal, 14);
+        for (title, value, color) in [
+            ("HOSTS", snapshot.hosts.len().to_string(), widgets::CYAN),
+            (
+                "FIRING",
+                snapshot.firing_alerts.len().to_string(),
+                widgets::RED,
             ),
-        );
+        ] {
+            let label = widgets::metric_label(title);
+            label.set_markup(&widgets::metric_markup(
+                title,
+                &value,
+                color,
+                widgets::WHITE,
+            ));
+            summary.append(&label);
+        }
+        body.append(&summary);
 
         match metric.face {
             MetricBoxFace::Fleet => fleet(&body, &snapshot, &metric, feed_size),
@@ -75,14 +86,38 @@ fn fleet(
     };
     let hosts = worst_first(&snapshot.hosts);
     for host in hosts.iter().take(limit) {
-        let row = gtk::Label::new(Some(&host_line(host, settings, size)));
-        row.add_css_class("metric");
-        row.set_halign(gtk::Align::Start);
-        row.set_ellipsize(gtk::pango::EllipsizeMode::End);
-        if host.last_seen_seconds.unwrap_or(0.0) > 120.0 {
-            row.add_css_class("alarm");
+        let (_, _, value) = widgets::split_row(body, &host.host);
+        let mut parts = Vec::new();
+        if settings.show_cpu {
+            parts.push(format!("C{:.0}", host.cpu.unwrap_or(0.0)));
         }
-        body.append(&row);
+        if settings.show_ram {
+            parts.push(format!("R{:.0}", host.ram.unwrap_or(0.0)));
+        }
+        if size != WidgetSize::Small {
+            if settings.show_disk {
+                parts.push(format!("D{:.0}", host.disk.unwrap_or(0.0)));
+            }
+            if settings.show_gpu {
+                if let Some(gpu) = host.gpu_percent {
+                    parts.push(format!("G{gpu:.0}"));
+                }
+            }
+            if settings.show_power {
+                if let Some(watts) = host.total_watts() {
+                    parts.push(format!("{watts:.0}W"));
+                }
+            }
+        }
+        let color = if host.last_seen_seconds.unwrap_or(0.0) > 120.0 {
+            widgets::RED
+        } else {
+            "#8e8e93"
+        };
+        value.set_markup(&format!(
+            "<span foreground=\"{color}\">{}</span>",
+            parts.join("  ")
+        ));
     }
     if snapshot.hosts.is_empty() {
         widgets::add_row(body, "No hosts returned");
@@ -121,7 +156,7 @@ fn host(body: &gtk::Box, snapshot: &MetricBoxSnapshot, settings: &MetricBoxSetti
             .map(|value| value.round() as i64)
             .collect();
         chart.set_draw_func(move |_, cr, width, height| {
-            widgets::draw_bars(cr, width, height, &values);
+            widgets::draw_bars(cr, width, height, &values, false);
         });
         body.append(&chart);
     }
@@ -178,32 +213,6 @@ fn alerts(body: &gtk::Box, snapshot: &MetricBoxSnapshot) {
     if snapshot.firing_alerts.is_empty() {
         widgets::add_row(body, "Nothing firing");
     }
-}
-
-fn host_line(host: &MetricHost, settings: &MetricBoxSettings, size: WidgetSize) -> String {
-    let mut parts = vec![host.host.clone()];
-    if settings.show_cpu {
-        parts.push(format!("C{:.0}", host.cpu.unwrap_or(0.0)));
-    }
-    if settings.show_ram {
-        parts.push(format!("R{:.0}", host.ram.unwrap_or(0.0)));
-    }
-    if size != WidgetSize::Small {
-        if settings.show_disk {
-            parts.push(format!("D{:.0}", host.disk.unwrap_or(0.0)));
-        }
-        if settings.show_gpu {
-            if let Some(gpu) = host.gpu_percent {
-                parts.push(format!("G{gpu:.0}"));
-            }
-        }
-        if settings.show_power {
-            if let Some(watts) = host.total_watts() {
-                parts.push(format!("{watts:.0}W"));
-            }
-        }
-    }
-    parts.join("  ")
 }
 
 fn valid_base(base: &str) -> Option<String> {

@@ -181,11 +181,14 @@ pub fn parse_meminfo(text: &str) -> Option<MemInfo> {
     })
 }
 
-pub fn memory_usage() -> io::Result<f64> {
+pub fn memory_info() -> io::Result<MemInfo> {
     let text = fs::read_to_string("/proc/meminfo")?;
     parse_meminfo(&text)
-        .map(MemInfo::used_percent)
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "no MemTotal/MemAvailable"))
+}
+
+pub fn memory_usage() -> io::Result<f64> {
+    memory_info().map(MemInfo::used_percent)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -223,6 +226,7 @@ pub fn disk_usage(path: &Path) -> io::Result<DiskUsage> {
 pub struct DiskVolume {
     pub mount: String,
     pub used_percent: f64,
+    pub available_bytes: u64,
 }
 
 /// Device, mount point and filesystem type from `/proc/mounts`.
@@ -272,6 +276,7 @@ pub fn disk_volumes() -> Vec<DiskVolume> {
         volumes.push(DiskVolume {
             mount,
             used_percent: usage.used_percent(),
+            available_bytes: usage.available_bytes,
         });
     }
     volumes.sort_by(|left, right| left.mount.cmp(&right.mount));

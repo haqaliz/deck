@@ -1,10 +1,11 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::path::Path;
 use std::rc::Rc;
 
 use deck_core::livebox::{
-    disk_usage, disk_volumes, gpu_usage, memory_usage, tier, CpuSampler, ProcessSampler,
+    disk_usage, disk_volumes, gpu_usage, memory_info, memory_usage, tier, CpuSampler, DiskVolume,
+    ProcessSample, ProcessSampler,
 };
 use deck_core::settings::{Settings, WidgetSize};
 use gtk4 as gtk;
@@ -13,6 +14,12 @@ use gtk4::prelude::*;
 use crate::widgets;
 
 const COLORS: [(f64, f64, f64); 3] = [(0.42, 0.78, 0.35), (0.0, 0.75, 0.91), (1.0, 0.55, 0.16)];
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ProcessMode {
+    Cpu,
+    Mem,
+}
 
 pub fn build(
     app: &gtk::Application,
@@ -44,17 +51,7 @@ pub fn build(
     content.set_margin_start(14);
     content.set_margin_end(14);
 
-    let header = gtk::Label::new(Some("LIVEBOX"));
-    header.add_css_class("subtitle");
-    header.set_halign(gtk::Align::Start);
-    header.set_hexpand(true);
-    header.set_tooltip_text(Some("Drag to move"));
-    content.append(&crate::ui::movable_header(
-        &window,
-        &header,
-        settings.clone(),
-        40,
-    ));
+    content.append(&crate::ui::widget_drag_bar(&window, settings.clone()));
 
     let metrics = gtk::Box::new(
         if size == WidgetSize::Small {
@@ -77,41 +74,46 @@ pub fn build(
 
     let chart = (size != WidgetSize::Small && show_chart).then(|| {
         let chart = gtk::DrawingArea::new();
-        chart.set_size_request(-1, 46);
+        chart.set_size_request(-1, 62);
         content.append(&chart);
         chart
     });
 
-    let cores = (size == WidgetSize::Large).then(|| {
-        let label = gtk::Label::new(Some("CORES   —"));
-        label.add_css_class("subtitle");
-        label.set_halign(gtk::Align::Start);
-        label.set_ellipsize(gtk::pango::EllipsizeMode::End);
-        content.append(&label);
-        label
-    });
-
-    let (processes_header, processes) = if size == WidgetSize::Large && show_processes {
-        let header = gtk::Label::new(Some("PROCESSES"));
-        header.add_css_class("section");
-        header.set_halign(gtk::Align::Start);
-        let rows = gtk::Box::new(gtk::Orientation::Vertical, 1);
-        content.append(&header);
-        content.append(&rows);
-        (Some(header), Some(rows))
-    } else {
-        (None, None)
-    };
-
     let volumes = (size == WidgetSize::Large).then(|| {
-        let header = gtk::Label::new(Some("VOLUMES"));
-        header.add_css_class("section");
-        header.set_halign(gtk::Align::Start);
-        let rows = gtk::Box::new(gtk::Orientation::Vertical, 1);
-        content.append(&header);
+        let rows = gtk::Box::new(gtk::Orientation::Vertical, 2);
         content.append(&rows);
         rows
     });
+
+    let process_mode = Rc::new(Cell::new(ProcessMode::Cpu));
+    let (processes_header, processes, cpu_tab, mem_tab) =
+        if size == WidgetSize::Large && show_processes {
+            let header = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+            let title = gtk::Label::new(Some("TOP PROCESSES"));
+            title.add_css_class("section");
+            title.set_halign(gtk::Align::Start);
+            title.set_hexpand(true);
+            let tabs = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+            tabs.add_css_class("process-tabs");
+            let cpu_tab = gtk::ToggleButton::with_label("CPU");
+            cpu_tab.add_css_class("process-tab");
+            cpu_tab.set_active(true);
+            let mem_tab = gtk::ToggleButton::with_label("MEM");
+            mem_tab.add_css_class("process-tab");
+            tabs.append(&cpu_tab);
+            tabs.append(&mem_tab);
+            header.append(&title);
+            header.append(&tabs);
+            let divider = gtk::Separator::new(gtk::Orientation::Horizontal);
+            divider.add_css_class("widget-divider");
+            content.append(&divider);
+            let rows = gtk::Box::new(gtk::Orientation::Vertical, 2);
+            content.append(&header);
+            content.append(&rows);
+            (Some(header), Some(rows), Some(cpu_tab), Some(mem_tab))
+        } else {
+            (None, None, None, None)
+        };
 
     window.set_child(Some(&content));
 
@@ -141,14 +143,14 @@ pub fn build(
     let disk_for_tick = disk.clone();
     let gpu_for_tick = gpu.clone();
     let chart_for_tick = chart.clone();
-    let cores_for_tick = cores.clone();
     let processes_for_tick = processes.clone();
     let processes_header_for_tick = processes_header.clone();
     let volumes_for_tick = volumes.clone();
-    let tick = move || {
+    let process_mode_for_tick = process_mode.clone();
+    let tick = Rc::new(move || {
         let livebox = settings_for_tick.borrow().livebox.clone();
 
-        let (cpu_sample, mem_value, disk_value, gpu_value, samples) = {
+        let (cpu_sample, mem_value, disk_value, gpu_value, mut samples) = {
             let mut state = state_for_tick.borrow_mut();
             let cpu_sample = state.cpu.sample().unwrap_or_default();
             let mem_value = memory_usage().unwrap_or(0.0);
@@ -182,6 +184,7 @@ pub fn build(
             &cpu_for_tick,
             "CPU",
             cpu_sample.overall,
+            widgets::GREEN,
             livebox.cpu_warn as f64,
             livebox.cpu_alarm as f64,
         );
@@ -189,6 +192,7 @@ pub fn build(
             &mem_for_tick,
             "MEM",
             mem_value,
+            widgets::CYAN,
             livebox.mem_warn as f64,
             livebox.mem_alarm as f64,
         );
@@ -196,6 +200,7 @@ pub fn build(
             &disk_for_tick,
             "DISK",
             disk_value,
+            widgets::ORANGE,
             livebox.disk_warn as f64,
             livebox.disk_alarm as f64,
         );
@@ -204,70 +209,81 @@ pub fn build(
                 &gpu_for_tick,
                 "GPU",
                 value,
+                widgets::PURPLE,
                 livebox.gpu_warn as f64,
                 livebox.gpu_alarm as f64,
             );
         }
 
-        if let Some(label) = &cores_for_tick {
-            let text = cpu_sample
-                .cores
-                .iter()
-                .enumerate()
-                .map(|(index, value)| format!("{index} {value:.0}%"))
-                .collect::<Vec<_>>()
-                .join("   ");
-            label.set_text(&format!("CORES   {text}"));
+        if let Some(rows) = &volumes_for_tick {
+            widgets::clear(rows);
+            for volume in disk_volumes().into_iter().take(3) {
+                add_volume_row(rows, &volume, livebox.disk_warn, livebox.disk_alarm);
+            }
         }
 
         if let Some(rows) = &processes_for_tick {
             widgets::clear(rows);
-            for sample in samples {
-                widgets::add_row(
-                    rows,
-                    &format!(
-                        "{}  {:.0}%  {:.0} MB",
-                        sample.name,
-                        sample.cpu_percent,
-                        sample.rss_bytes as f64 / 1_048_576.0
-                    ),
-                );
+            let mode = process_mode_for_tick.get();
+            if mode == ProcessMode::Mem {
+                samples.sort_by(|left, right| right.rss_bytes.cmp(&left.rss_bytes));
+            }
+            let mem_total = memory_info().map(|info| info.total_kb * 1024).unwrap_or(0);
+            for sample in &samples {
+                let mem_percent = if mem_total == 0 {
+                    0.0
+                } else {
+                    sample.rss_bytes as f64 / mem_total as f64 * 100.0
+                };
+                add_process_row(rows, sample, mem_percent, mode);
             }
         }
         if let Some(header) = &processes_header_for_tick {
             header.set_visible(livebox.show_processes);
         }
 
-        if let Some(rows) = &volumes_for_tick {
-            widgets::clear(rows);
-            for volume in disk_volumes().into_iter().take(3) {
-                let row = widgets::add_row(
-                    rows,
-                    &format!("{}  {:.0}%", volume.mount, volume.used_percent),
-                );
-                widgets::apply_tier(
-                    &row,
-                    tier(
-                        volume.used_percent,
-                        livebox.disk_warn as f64,
-                        livebox.disk_alarm as f64,
-                    ),
-                );
-            }
-        }
-
         if let Some(chart) = &chart_for_tick {
             chart.queue_draw();
         }
-        gtk::glib::ControlFlow::Continue
-    };
+    });
+
+    if let (Some(cpu_widget), Some(mem_widget)) = (&cpu_tab, &mem_tab) {
+        let cpu = cpu_widget.clone();
+        let mem = mem_widget.clone();
+        let mode = process_mode.clone();
+        let refresh = tick.clone();
+        let mem_for_cpu = mem.clone();
+        cpu.connect_clicked(move |button| {
+            if !button.is_active() {
+                button.set_active(true);
+                return;
+            }
+            mem_for_cpu.set_active(false);
+            mode.set(ProcessMode::Cpu);
+            refresh();
+        });
+        let mode = process_mode.clone();
+        let refresh = tick.clone();
+        let cpu_for_mem = cpu.clone();
+        mem.connect_clicked(move |button| {
+            if !button.is_active() {
+                button.set_active(true);
+                return;
+            }
+            cpu_for_mem.set_active(false);
+            mode.set(ProcessMode::Mem);
+            refresh();
+        });
+    }
 
     // One early sample gives the first frame a real delta instead of 0%.
     let tick_once = tick.clone();
-    gtk::glib::timeout_add_seconds_local_once(1, move || {
-        tick_once();
+    gtk::glib::timeout_add_seconds_local_once(1, move || tick_once());
+    let tick_for_timeout = tick;
+    gtk::glib::timeout_add_seconds_local(interval, move || {
+        tick_for_timeout();
+        gtk::glib::ControlFlow::Continue
     });
-    gtk::glib::timeout_add_seconds_local(interval, tick);
 
     (window, height)
 }
@@ -279,7 +295,113 @@ struct State {
     history: VecDeque<[f64; 3]>,
 }
 
-fn update_metric(label: &gtk::Label, title: &str, value: f64, warn: f64, alarm: f64) {
-    label.set_text(&format!("{title}  {value:>3.0}%"));
-    widgets::apply_tier(label, tier(value, warn, alarm));
+fn add_volume_row(container: &gtk::Box, volume: &DiskVolume, warn: u8, alarm: u8) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    let dot = gtk::Label::new(None);
+    let color = if tier(volume.used_percent, warn as f64, alarm as f64)
+        == deck_core::livebox::Tier::Alarm
+    {
+        widgets::RED
+    } else {
+        widgets::ORANGE
+    };
+    dot.set_markup(&format!("<span foreground=\"{color}\">●</span>"));
+    let name = gtk::Label::new(Some(&volume.mount));
+    name.add_css_class("row-name");
+    name.set_xalign(0.0);
+    name.set_hexpand(true);
+    name.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    let percent = gtk::Label::new(Some(&format!("{:3.0}%", volume.used_percent)));
+    percent.add_css_class("row-value");
+    percent.set_xalign(1.0);
+    percent.set_width_chars(4);
+    let free = gtk::Label::new(Some(&format_free_bytes(volume.available_bytes)));
+    free.add_css_class("row-muted");
+    free.set_xalign(1.0);
+    row.append(&dot);
+    row.append(&name);
+    row.append(&percent);
+    row.append(&free);
+    container.append(&row);
+}
+
+fn add_process_row(
+    container: &gtk::Box,
+    sample: &ProcessSample,
+    mem_percent: f64,
+    mode: ProcessMode,
+) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let name = gtk::Label::new(Some(&sample.name));
+    name.add_css_class("row-name");
+    name.set_xalign(0.0);
+    name.set_hexpand(true);
+    name.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    let cpu_color = if mode == ProcessMode::Cpu {
+        widgets::GREEN
+    } else {
+        "#6e6e73"
+    };
+    let mem_color = if mode == ProcessMode::Mem {
+        widgets::CYAN
+    } else {
+        "#6e6e73"
+    };
+    let cpu = gtk::Label::new(None);
+    cpu.set_markup(&format!(
+        "<span foreground=\"{cpu_color}\">{:.1}%</span>",
+        sample.cpu_percent
+    ));
+    cpu.add_css_class("row-value");
+    cpu.set_xalign(1.0);
+    cpu.set_width_chars(5);
+    let mem = gtk::Label::new(None);
+    mem.set_markup(&format!(
+        "<span foreground=\"{mem_color}\">{mem_percent:.1}%</span>"
+    ));
+    mem.add_css_class("row-value");
+    mem.set_xalign(1.0);
+    mem.set_width_chars(5);
+    row.append(&name);
+    row.append(&cpu);
+    row.append(&mem);
+    container.append(&row);
+}
+
+/// Decimal units, as the macOS face shows them ("195 GB free").
+fn format_free_bytes(bytes: u64) -> String {
+    let value = bytes as f64;
+    if value >= 1_000_000_000_000.0 {
+        format!("{:.1} TB free", value / 1_000_000_000_000.0)
+    } else if value >= 1_000_000_000.0 {
+        format!("{:.0} GB free", value / 1_000_000_000.0)
+    } else if value >= 1_000_000.0 {
+        format!("{:.0} MB free", value / 1_000_000.0)
+    } else if value >= 1_000.0 {
+        format!("{:.0} KB free", value / 1_000.0)
+    } else {
+        format!("{bytes} B free")
+    }
+}
+
+fn update_metric(label: &gtk::Label, title: &str, value: f64, dot: &str, warn: f64, alarm: f64) {
+    let level = tier(value, warn, alarm);
+    label.set_markup(&widgets::metric_markup(
+        title,
+        &format!("{value:>3.0}%"),
+        dot,
+        widgets::value_color(level),
+    ));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_free_bytes;
+
+    #[test]
+    fn free_space_uses_decimal_units() {
+        assert_eq!(format_free_bytes(512_000_000), "512 MB free");
+        assert_eq!(format_free_bytes(195_000_000_000), "195 GB free");
+        assert_eq!(format_free_bytes(1_200_000_000_000), "1.2 TB free");
+    }
 }

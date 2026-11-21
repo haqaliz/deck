@@ -33,17 +33,7 @@ pub fn build(
     content.set_margin_start(14);
     content.set_margin_end(14);
 
-    let header = gtk::Label::new(Some("DEVBOX"));
-    header.add_css_class("subtitle");
-    header.set_halign(gtk::Align::Start);
-    header.set_hexpand(true);
-    header.set_tooltip_text(Some("Drag to move"));
-    content.append(&crate::ui::movable_header(
-        &window,
-        &header,
-        settings.clone(),
-        40,
-    ));
+    content.append(&crate::ui::widget_drag_bar(&window, settings.clone()));
 
     let summary = gtk::Box::new(gtk::Orientation::Horizontal, 18);
     summary.set_halign(gtk::Align::Start);
@@ -87,8 +77,18 @@ pub fn build(
         let listeners = listening_ports().unwrap_or_default();
         let containers = docker_containers();
 
-        ports_count_for_tick.set_text(&format!("PORTS  {}", listeners.len()));
-        containers_count_for_tick.set_text(&format!("CONTAINERS  {}", containers.len()));
+        ports_count_for_tick.set_markup(&widgets::metric_markup(
+            "PORTS",
+            &listeners.len().to_string(),
+            widgets::CYAN,
+            widgets::WHITE,
+        ));
+        containers_count_for_tick.set_markup(&widgets::metric_markup(
+            "CONTAINERS",
+            &containers.len().to_string(),
+            widgets::CYAN,
+            widgets::WHITE,
+        ));
 
         if let Some((header, rows)) = &ports_for_tick {
             header.set_visible(devbox.show_ports);
@@ -96,13 +96,15 @@ pub fn build(
             widgets::clear(rows);
             if devbox.show_ports {
                 if listeners.is_empty() {
-                    widgets::add_row(rows, "none");
+                    widgets::add_row(rows, "No listening ports");
                 } else {
                     for listener in listeners.iter().take(devbox.port_count.max(1) as usize) {
-                        widgets::add_row(
-                            rows,
-                            &format!("{}  :{}", listener.protocol, listener.port),
-                        );
+                        let (_, _, address) = widgets::split_row(rows, &listener.protocol);
+                        address.set_markup(&format!(
+                            "<span foreground=\"{}\">:{}</span>",
+                            widgets::CYAN,
+                            listener.port
+                        ));
                     }
                 }
             }
@@ -114,16 +116,17 @@ pub fn build(
             widgets::clear(rows);
             if devbox.show_containers {
                 if containers.is_empty() {
-                    widgets::add_row(rows, "none");
+                    widgets::add_row(rows, "No containers");
                 } else {
                     for container in containers
                         .iter()
                         .take(devbox.container_count.max(1) as usize)
                     {
-                        widgets::add_row(
-                            rows,
-                            &format!("{}  {}", container.name, container.status),
-                        );
+                        let (_, _, status) = widgets::split_row(rows, &container.name);
+                        status.set_markup(&format!(
+                            "<span foreground=\"#8e8e93\">{}</span>",
+                            container.status
+                        ));
                     }
                 }
             }

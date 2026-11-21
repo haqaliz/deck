@@ -32,14 +32,27 @@ pub fn build(
         };
 
         let summary = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-        for (title, value) in [
-            ("TODAY", snapshot.sessions.to_string()),
-            ("IN", widgets::format_tokens(snapshot.input)),
-            ("OUT", widgets::format_tokens(snapshot.output)),
-            ("COST", widgets::format_money(snapshot.cost)),
+        for (title, value, color) in [
+            ("TODAY", snapshot.sessions.to_string(), widgets::BLUE),
+            ("IN", widgets::format_tokens(snapshot.input), widgets::CYAN),
+            (
+                "OUT",
+                widgets::format_tokens(snapshot.output),
+                widgets::GREEN,
+            ),
+            (
+                "COST",
+                widgets::format_money(snapshot.cost),
+                widgets::ORANGE,
+            ),
         ] {
             let label = widgets::metric_label(title);
-            label.set_text(&format!("{title}  {value}"));
+            label.set_markup(&widgets::metric_markup(
+                title,
+                &value,
+                color,
+                widgets::WHITE,
+            ));
             summary.append(&label);
         }
         body.append(&summary);
@@ -51,16 +64,13 @@ pub fn build(
                 .iter()
                 .take(openbox.model_count.max(1) as usize)
             {
-                widgets::add_row(
-                    &body,
-                    &format!(
-                        "{}   {}   {}/{}",
-                        model.model,
-                        widgets::format_money(model.cost),
-                        widgets::format_tokens(model.input),
-                        widgets::format_tokens(model.output)
-                    ),
-                );
+                let (_, _, value) = widgets::split_row(&body, &model.model);
+                value.set_markup(&format!(
+                    "<span foreground=\"#8e8e93\">{} · {}/{}</span>",
+                    widgets::format_money(model.cost),
+                    widgets::format_tokens(model.input),
+                    widgets::format_tokens(model.output)
+                ));
             }
             if snapshot.models.is_empty() {
                 widgets::add_row(&body, "No model usage yet");
@@ -74,7 +84,11 @@ pub fn build(
                 .iter()
                 .take(openbox.tool_count.max(1) as usize)
             {
-                widgets::add_row(&body, &format!("{}   {}", tool.tool, tool.count));
+                let (_, _, count) = widgets::split_row(&body, &tool.tool);
+                count.set_markup(&format!(
+                    "<span foreground=\"#8e8e93\">{}</span>",
+                    tool.count
+                ));
             }
             if snapshot.tools.is_empty() {
                 widgets::add_row(&body, "No tool calls yet");
@@ -88,15 +102,12 @@ pub fn build(
                 .iter()
                 .take(openbox.session_count.max(1) as usize)
             {
-                widgets::add_row(
-                    &body,
-                    &format!(
-                        "{}   {}/{}",
-                        session.title,
-                        widgets::format_tokens(session.input),
-                        widgets::format_tokens(session.output)
-                    ),
-                );
+                let (_, _, tokens) = widgets::split_row(&body, &session.title);
+                tokens.set_markup(&format!(
+                    "<span foreground=\"#8e8e93\">{}/{}</span>",
+                    widgets::format_tokens(session.input),
+                    widgets::format_tokens(session.output)
+                ));
             }
             if snapshot.session_list.is_empty() {
                 widgets::add_row(&body, "No sessions in the last 14 days");
