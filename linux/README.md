@@ -3,7 +3,7 @@
 Rust + GTK4 implementation, planned in
 [`docs/planning/linux-port/`](../../docs/planning/linux-port/). This tree is at
 **v0.5.0 (L12)**: core, snapshot contract, credentials, daemon, CLI, the GTK4
-shell, all 14 widgets, the search panel, the Pi `.deb` and the desktop
+shell, all 13 v1 widgets plus CalBox, the search panel, the Pi `.deb` and the desktop
 AppImage. Pi OS labwc is the verified target; KDE/GNOME/wlroots/X11 are coded
 but not claimed as tested. Network fetches use the system `curl`; OpenBox uses
 bundled SQLite.

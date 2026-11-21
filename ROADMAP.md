@@ -1365,14 +1365,15 @@ snapshot/API contract, fixtures, thresholds and UX language.
 **Owner decisions (2026-11-19):** cross-DE always-on-desktop windows; v1 on
 Pi OS Trixie labwc (actual hardware; Bookworm Wayfire optional), KDE Plasma,
 GNOME, wlroots and generic X11; Pi 5/4 64-bit; Rust + GTK4; keep macOS Swift;
-14 widgets in v1; no PiBox; defer CalBox and ClipBox; Deck search panel plus
-shortcut; Secret Service with a 0600 fallback; Pi `.deb` plus desktop
-AppImage; Pi OS first; Deck's own look; autostart plus tray.
+13 widgets in v1; no PiBox; defer CalBox and ClipBox (CalBox shipped
+post-v1 in v0.5.0); Deck search panel plus shortcut; Secret Service with a
+0600 fallback; Pi `.deb` plus desktop AppImage; Pi OS first; Deck's own look;
+autostart plus tray.
 
 **v1 widgets (13):** LiveBox, NetBox, DevBox, WeatherBox, ClockBox, GitBox,
 OpenBox, ShipBox, TaskBox, PRBox, MarketBox, LogBox, MetricBox.
-**Deferred:** CalBox, ClipBox, BatBox, PiBox, native DE widgets, Flatpak,
-ARM32, Pi Zero.
+**Deferred:** ClipBox, BatBox, PiBox, native DE widgets, Flatpak, ARM32,
+Pi Zero. CalBox shipped post-v1 in v0.5.0.
 
 **GNOME Wayland is a documented fallback:** Mutter has no `wlr-layer-shell`, so
 v1 cannot place true desktop widgets there. GNOME gets a dashboard window, a
