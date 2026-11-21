@@ -47,6 +47,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="$GITHUB_REF_NAME"
-          gh release view "$tag" >/dev/null 2>&1 || \
-            gh release create "$tag" --title "Deck for Linux $tag" --generate-notes --verify-tag
-          gh release upload "$tag" dist/* --clobber
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+              --title "Deck for Linux $tag" --generate-notes --verify-tag
+          gh release upload "$tag" dist/* --repo "$GITHUB_REPOSITORY" --clobber
