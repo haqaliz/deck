@@ -5,7 +5,9 @@ use deck_core::paths::Paths;
 use deck_core::providers::{self, FetchError};
 use deck_core::settings::Settings;
 use deck_core::snapshot::{self, FetchOutcome};
-use deck_core::{gitbox, logbox, market, metricbox, openbox, prs, ship, tasks, weather, CoreError};
+use deck_core::{
+    calbox, gitbox, logbox, market, metricbox, openbox, prs, ship, tasks, weather, CoreError,
+};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -64,6 +66,19 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
                     .and_then(|token| openbox::load_remote(&settings.openbox.server_url, &token)),
             );
         }
+    }
+    if settings.calbox.enabled {
+        run_source(
+            paths,
+            "calbox",
+            providers::require_token(paths, "caldav").and_then(|password| {
+                calbox::fetch(
+                    &settings.calbox.server_url,
+                    &settings.calbox.username,
+                    &password,
+                )
+            }),
+        );
     }
     if settings.ship.enabled {
         run_source(
