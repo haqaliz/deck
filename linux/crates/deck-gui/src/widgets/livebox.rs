@@ -13,8 +13,6 @@ use gtk4::prelude::*;
 
 use crate::widgets;
 
-const COLORS: [(f64, f64, f64); 3] = [(0.42, 0.78, 0.35), (0.0, 0.75, 0.91), (1.0, 0.55, 0.16)];
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ProcessMode {
     Cpu,
@@ -25,15 +23,11 @@ pub fn build(
     app: &gtk::Application,
     settings: Rc<RefCell<Settings>>,
 ) -> (gtk::ApplicationWindow, i32) {
-    let (size, show_chart, show_processes, refresh_seconds) = {
-        let livebox = &settings.borrow().livebox;
-        (
-            livebox.size,
-            livebox.show_chart,
-            livebox.show_processes,
-            livebox.refresh_seconds,
-        )
-    };
+    let live = settings.borrow().livebox.clone();
+    let size = live.size;
+    let show_chart = live.show_chart;
+    let show_processes = live.show_processes;
+    let refresh_seconds = live.refresh_seconds;
     let height = widgets::height(size, 160, 220, 360);
     let spec = deck_platform::surface::WidgetSpec {
         width: 320,
@@ -121,8 +115,15 @@ pub fn build(
         cpu: CpuSampler::new(),
         processes: ProcessSampler::new(),
         history: VecDeque::new(),
+        core_history: VecDeque::new(),
     }));
 
+    let chart_colors = [
+        widgets::parse_hex_color(&live.cpu_color),
+        widgets::parse_hex_color(&live.mem_color),
+        widgets::parse_hex_color(&live.disk_color),
+    ];
+    let show_cores = live.show_per_core_cores;
     if let Some(chart) = &chart {
         let state_for_draw = state.clone();
         chart.set_draw_func(move |_, cr, width, height| {
@@ -130,7 +131,17 @@ pub fn build(
             let series: Vec<Vec<f64>> = (0..3)
                 .map(|index| widgets::history_series(&state.history, index))
                 .collect();
-            widgets::draw_chart(cr, width, height, &series, &COLORS, Some(100.0));
+            widgets::draw_chart(cr, width, height, &series, &chart_colors, Some(100.0));
+            if show_cores {
+                widgets::draw_core_lines(
+                    cr,
+                    width,
+                    height,
+                    &state.core_history,
+                    chart_colors[0],
+                    100.0,
+                );
+            }
         });
     }
 
@@ -169,8 +180,12 @@ pub fn build(
             state
                 .history
                 .push_back([cpu_sample.overall, mem_value, disk_value]);
+            state.core_history.push_back(cpu_sample.cores.clone());
             while state.history.len() > 120 {
                 state.history.pop_front();
+            }
+            while state.core_history.len() > 120 {
+                state.core_history.pop_front();
             }
             (cpu_sample, mem_value, disk_value, gpu_value, samples)
         };
@@ -184,7 +199,7 @@ pub fn build(
             &cpu_for_tick,
             "CPU",
             cpu_sample.overall,
-            widgets::GREEN,
+            &livebox.cpu_color,
             livebox.cpu_warn as f64,
             livebox.cpu_alarm as f64,
         );
@@ -192,7 +207,7 @@ pub fn build(
             &mem_for_tick,
             "MEM",
             mem_value,
-            widgets::CYAN,
+            &livebox.mem_color,
             livebox.mem_warn as f64,
             livebox.mem_alarm as f64,
         );
@@ -200,7 +215,7 @@ pub fn build(
             &disk_for_tick,
             "DISK",
             disk_value,
-            widgets::ORANGE,
+            &livebox.disk_color,
             livebox.disk_warn as f64,
             livebox.disk_alarm as f64,
         );
@@ -209,7 +224,7 @@ pub fn build(
                 &gpu_for_tick,
                 "GPU",
                 value,
-                widgets::PURPLE,
+                &livebox.gpu_color,
                 livebox.gpu_warn as f64,
                 livebox.gpu_alarm as f64,
             );
@@ -218,7 +233,13 @@ pub fn build(
         if let Some(rows) = &volumes_for_tick {
             widgets::clear(rows);
             for volume in disk_volumes().into_iter().take(3) {
-                add_volume_row(rows, &volume, livebox.disk_warn, livebox.disk_alarm);
+                add_volume_row(
+                    rows,
+                    &volume,
+                    livebox.disk_warn,
+                    livebox.disk_alarm,
+                    &livebox.disk_color,
+                );
             }
         }
 
@@ -235,7 +256,14 @@ pub fn build(
                 } else {
                     sample.rss_bytes as f64 / mem_total as f64 * 100.0
                 };
-                add_process_row(rows, sample, mem_percent, mode);
+                add_process_row(
+                    rows,
+                    sample,
+                    mem_percent,
+                    mode,
+                    &livebox.cpu_color,
+                    &livebox.mem_color,
+                );
             }
         }
         if let Some(header) = &processes_header_for_tick {
@@ -293,17 +321,22 @@ struct State {
     cpu: CpuSampler,
     processes: ProcessSampler,
     history: VecDeque<[f64; 3]>,
+    core_history: VecDeque<Vec<f64>>,
 }
 
-fn add_volume_row(container: &gtk::Box, volume: &DiskVolume, warn: u8, alarm: u8) {
+fn add_volume_row(
+    container: &gtk::Box,
+    volume: &DiskVolume,
+    warn: u8,
+    alarm: u8,
+    normal_color: &str,
+) {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     let dot = gtk::Label::new(None);
-    let color = if tier(volume.used_percent, warn as f64, alarm as f64)
-        == deck_core::livebox::Tier::Alarm
-    {
-        widgets::RED
-    } else {
-        widgets::ORANGE
+    let color = match tier(volume.used_percent, warn as f64, alarm as f64) {
+        deck_core::livebox::Tier::Normal => normal_color,
+        deck_core::livebox::Tier::Warn => widgets::ORANGE,
+        deck_core::livebox::Tier::Alarm => widgets::RED,
     };
     dot.set_markup(&format!("<span foreground=\"{color}\">●</span>"));
     let name = gtk::Label::new(Some(&volume.mount));
@@ -330,6 +363,8 @@ fn add_process_row(
     sample: &ProcessSample,
     mem_percent: f64,
     mode: ProcessMode,
+    cpu_hue: &str,
+    mem_hue: &str,
 ) {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let name = gtk::Label::new(Some(&sample.name));
@@ -338,12 +373,12 @@ fn add_process_row(
     name.set_hexpand(true);
     name.set_ellipsize(gtk::pango::EllipsizeMode::End);
     let cpu_color = if mode == ProcessMode::Cpu {
-        widgets::GREEN
+        cpu_hue
     } else {
         "#6e6e73"
     };
     let mem_color = if mode == ProcessMode::Mem {
-        widgets::CYAN
+        mem_hue
     } else {
         "#6e6e73"
     };

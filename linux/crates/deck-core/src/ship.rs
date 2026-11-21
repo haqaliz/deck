@@ -98,6 +98,50 @@ pub fn parse_runs(body: &str) -> Option<Vec<ShipRun>> {
     )
 }
 
+/// Recently pushed repositories the signed-in user can see. Used when ShipBox
+/// has no explicit repo list; capped so one discovery does not fan out into
+/// dozens of Actions requests.
+pub fn discover_repos(token: &str, limit: usize) -> Result<Vec<String>, FetchError> {
+    if token.trim().is_empty() {
+        return Err(FetchError::NotConfigured);
+    }
+    let body = providers::get(
+        "https://api.github.com/user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member",
+        &[
+            ("Authorization", &format!("Bearer {token}")),
+            ("Accept", "application/vnd.github+json"),
+            ("X-GitHub-Api-Version", "2022-11-28"),
+        ],
+    )?;
+    Ok(parse_user_repos(&body, limit))
+}
+
+fn parse_user_repos(body: &str, limit: usize) -> Vec<String> {
+    let json: Value = match serde_json::from_str(body) {
+        Ok(json) => json,
+        Err(_) => return Vec::new(),
+    };
+    json.as_array()
+        .into_iter()
+        .flatten()
+        .filter(|repo| {
+            !repo
+                .get("archived")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+        })
+        .filter(|repo| {
+            repo.get("permissions")
+                .and_then(|permissions| permissions.get("push"))
+                .and_then(Value::as_bool)
+                .unwrap_or(true)
+        })
+        .filter_map(|repo| repo.get("full_name").and_then(Value::as_str))
+        .take(limit)
+        .map(str::to_owned)
+        .collect()
+}
+
 pub fn fetch(
     repos: &[String],
     per_page: usize,
@@ -213,6 +257,24 @@ pub fn totals_line(runs: &[ShipRun]) -> String {
         parts.push(format!("{} queued", totals.queued));
     }
     parts.join(" · ")
+}
+
+#[cfg(test)]
+mod discovery_tests {
+    use super::parse_user_repos;
+
+    #[test]
+    fn discovery_skips_archived_and_read_only_repos() {
+        let body = r#"[
+          {"full_name":"me/one","archived":false,"permissions":{"push":true}},
+          {"full_name":"me/old","archived":true,"permissions":{"push":true}},
+          {"full_name":"me/read","archived":false,"permissions":{"push":false}},
+          {"full_name":"me/two","archived":false,"permissions":{"push":true}}
+        ]"#;
+        assert_eq!(parse_user_repos(body, 5), vec!["me/one", "me/two"]);
+        assert_eq!(parse_user_repos("[]", 5), Vec::<String>::new());
+        assert_eq!(parse_user_repos("nope", 5), Vec::<String>::new());
+    }
 }
 
 #[cfg(test)]

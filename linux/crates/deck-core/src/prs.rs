@@ -17,6 +17,13 @@ pub enum PrRole {
     Reviewing,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PrReviewState {
+    Approved,
+    ChangesRequested,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PullRequestItem {
@@ -31,6 +38,9 @@ pub struct PullRequestItem {
     pub url: String,
     pub project: Option<String>,
     pub organization: Option<String>,
+    /// "owner/name" for GitHub; needed for the per-PR review lookup.
+    pub full_repo: Option<String>,
+    pub review_state: Option<PrReviewState>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -50,6 +60,7 @@ pub struct PrSources<'a> {
     pub azure_org: &'a str,
     pub azure_project: &'a str,
     pub limit: usize,
+    pub show_review_state: bool,
 }
 
 pub fn parse_github(body: &str, role: PrRole) -> Option<(usize, Vec<PullRequestItem>)> {
@@ -83,6 +94,8 @@ pub fn parse_github(body: &str, role: PrRole) -> Option<(usize, Vec<PullRequestI
                     .to_owned(),
                 project: None,
                 organization: None,
+                review_state: None,
+                full_repo: Some(repo),
             })
         })
         .collect();
@@ -125,10 +138,61 @@ pub fn parse_azure(
                     url,
                     project: Some(project.to_owned()),
                     organization: Some(organization.to_owned()),
+                    full_repo: None,
+                    review_state: azure_review_state(item),
                 })
             })
             .collect(),
     )
+}
+
+fn azure_review_state(item: &Value) -> Option<PrReviewState> {
+    let reviewers = item.get("reviewers")?.as_array()?;
+    let mut approved = false;
+    for reviewer in reviewers {
+        match reviewer.get("vote").and_then(Value::as_i64).unwrap_or(0) {
+            -10 | -5 => return Some(PrReviewState::ChangesRequested),
+            10 | 5 => approved = true,
+            _ => {}
+        }
+    }
+    approved.then_some(PrReviewState::Approved)
+}
+
+fn github_review_state(token: &str, full_repo: &str, number: i64) -> Option<PrReviewState> {
+    let url =
+        format!("https://api.github.com/repos/{full_repo}/pulls/{number}/reviews?per_page=100");
+    let body = providers::get(
+        &url,
+        &[
+            ("Authorization", &format!("Bearer {token}")),
+            ("Accept", "application/vnd.github+json"),
+            ("X-GitHub-Api-Version", "2022-11-28"),
+        ],
+    )
+    .ok()?;
+    let json: Value = serde_json::from_str(&body).ok()?;
+    let mut latest: Option<(String, PrReviewState)> = None;
+    for review in json.as_array()? {
+        let state = match review.get("state").and_then(Value::as_str) {
+            Some("APPROVED") => PrReviewState::Approved,
+            Some("CHANGES_REQUESTED") => PrReviewState::ChangesRequested,
+            _ => continue,
+        };
+        let at = review
+            .get("submitted_at")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_owned();
+        if latest
+            .as_ref()
+            .map(|(latest, _)| at > *latest)
+            .unwrap_or(true)
+        {
+            latest = Some((at, state));
+        }
+    }
+    latest.map(|(_, state)| state)
 }
 
 fn repo_from_api_url(url: &str) -> Option<String> {
@@ -257,6 +321,21 @@ pub fn fetch(sources: PrSources) -> Result<PrBoxSnapshot, FetchError> {
         return Err(FetchError::AuthOrTarget);
     }
 
+    if sources.show_review_state {
+        if let Some(token) = sources
+            .github_token
+            .filter(|token| !token.trim().is_empty())
+        {
+            for row in rows
+                .iter_mut()
+                .filter(|row| row.provider == PrProvider::Github && row.review_state.is_none())
+            {
+                if let Some(repo) = row.full_repo.clone() {
+                    row.review_state = github_review_state(token, &repo, row.number);
+                }
+            }
+        }
+    }
     let mut rows = dedupe(rows);
     sort(&mut rows);
     let authored_count = rows
@@ -337,6 +416,24 @@ mod tests {
         let rows = dedupe(rows);
         assert!(rows.iter().all(|row| row.role == PrRole::Authored));
         assert_eq!(rows.len(), 3);
+    }
+
+    #[test]
+    fn azure_review_votes_become_a_state() {
+        let rejected = serde_json::json!({"reviewers":[{"vote":10},{"vote":-10}]});
+        assert_eq!(
+            azure_review_state(&rejected),
+            Some(PrReviewState::ChangesRequested)
+        );
+        let approved = serde_json::json!({"reviewers":[{"vote":10}]});
+        assert_eq!(azure_review_state(&approved), Some(PrReviewState::Approved));
+        let waiting = serde_json::json!({"reviewers":[{"vote":-5}]});
+        assert_eq!(
+            azure_review_state(&waiting),
+            Some(PrReviewState::ChangesRequested)
+        );
+        let none = serde_json::json!({"reviewers":[{"vote":0}]});
+        assert_eq!(azure_review_state(&none), None);
     }
 
     #[test]

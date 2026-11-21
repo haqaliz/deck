@@ -30,6 +30,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - name: secret scan
+        working-directory: .
+        run: |
+          if git grep -nE 'ghp_[A-Za-z0-9]{30,}|github_pat_|xox[baprs]-|AKIA[0-9A-Z]{16}|BEGIN (RSA|OPENSSH) PRIVATE KEY' -- . ':!native/build.noindex' ; then
+            echo "possible secret committed" >&2
+            exit 1
+          fi
       - name: fmt
         run: cargo fmt --all -- --check
       - name: clippy

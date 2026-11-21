@@ -22,6 +22,7 @@ pub struct Settings {
     /// automatic flow is used.
     pub positions: BTreeMap<String, WindowPosition>,
     pub search_shortcut: Option<String>,
+    pub search: SearchSettings,
     pub livebox: LiveBoxSettings,
     pub netbox: NetBoxSettings,
     pub devbox: DevBoxSettings,
@@ -50,6 +51,7 @@ impl Default for Settings {
             surface_mode: SurfaceMode::Auto,
             positions: BTreeMap::new(),
             search_shortcut: None,
+            search: SearchSettings::default(),
             livebox: LiveBoxSettings::default(),
             netbox: NetBoxSettings::default(),
             devbox: DevBoxSettings::default(),
@@ -67,6 +69,14 @@ impl Default for Settings {
     }
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct SearchSettings {
+    /// Provider ids the user turned off: port, time, oc, run, sys, net, git,
+    /// weather, task, pr, log, metric, mkt.
+    pub disabled: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(default)]
 pub struct LiveBoxSettings {
@@ -78,6 +88,11 @@ pub struct LiveBoxSettings {
     pub show_gpu: bool,
     pub show_processes: bool,
     pub show_chart: bool,
+    pub show_per_core_cores: bool,
+    pub cpu_color: String,
+    pub mem_color: String,
+    pub disk_color: String,
+    pub gpu_color: String,
     pub process_count: u8,
     pub refresh_seconds: u64,
     pub cpu_warn: u8,
@@ -101,6 +116,11 @@ impl Default for LiveBoxSettings {
             show_gpu: true,
             show_processes: true,
             show_chart: true,
+            show_per_core_cores: false,
+            cpu_color: "#30d158".into(),
+            mem_color: "#40c8e0".into(),
+            disk_color: "#ff9f0a".into(),
+            gpu_color: "#bf5af2".into(),
             process_count: 10,
             refresh_seconds: 15,
             cpu_warn: 80,
@@ -251,6 +271,9 @@ impl Default for GitBoxSettings {
 pub struct OpenBoxSettings {
     pub enabled: bool,
     pub size: WidgetSize,
+    /// Empty reads the local SQLite database; otherwise an `opencode serve`
+    /// base URL and the `opencode` credential are used.
+    pub server_url: String,
     pub show_models: bool,
     pub show_tools: bool,
     pub show_sessions: bool,
@@ -264,6 +287,7 @@ impl Default for OpenBoxSettings {
         Self {
             enabled: false,
             size: WidgetSize::Medium,
+            server_url: String::new(),
             show_models: true,
             show_tools: false,
             show_sessions: false,
@@ -332,6 +356,9 @@ pub struct PrBoxSettings {
     pub size: WidgetSize,
     pub pr_count: u8,
     pub show_list: bool,
+    pub show_github: bool,
+    pub show_azure: bool,
+    pub show_review_state: bool,
 }
 
 impl Default for PrBoxSettings {
@@ -341,6 +368,9 @@ impl Default for PrBoxSettings {
             size: WidgetSize::Medium,
             pr_count: 6,
             show_list: true,
+            show_github: true,
+            show_azure: true,
+            show_review_state: true,
         }
     }
 }

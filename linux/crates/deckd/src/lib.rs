@@ -43,17 +43,26 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
         }
     }
     if settings.openbox.enabled {
-        match openbox::load() {
-            Ok(Some(snapshot)) => record(paths, "opencode", Ok(snapshot)),
-            Ok(None) => record::<openbox::OpenCodeSnapshot>(
+        if settings.openbox.server_url.trim().is_empty() {
+            match openbox::load() {
+                Ok(Some(snapshot)) => record(paths, "opencode", Ok(snapshot)),
+                Ok(None) => record::<openbox::OpenCodeSnapshot>(
+                    paths,
+                    "opencode",
+                    Err(FetchError::NotConfigured),
+                ),
+                Err(error) => {
+                    eprintln!("deckd: opencode: {error}");
+                    let _ = snapshot::write_status(paths, "opencode", FetchOutcome::BadResponse);
+                }
+            }
+        } else {
+            run_source(
                 paths,
                 "opencode",
-                Err(FetchError::NotConfigured),
-            ),
-            Err(error) => {
-                eprintln!("deckd: opencode: {error}");
-                let _ = snapshot::write_status(paths, "opencode", FetchOutcome::BadResponse);
-            }
+                providers::require_token(paths, "opencode")
+                    .and_then(|token| openbox::load_remote(&settings.openbox.server_url, &token)),
+            );
         }
     }
     if settings.ship.enabled {
@@ -61,11 +70,12 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
             paths,
             "shipbox",
             providers::require_token(paths, "github").and_then(|token| {
-                ship::fetch(
-                    &settings.ship.repos,
-                    settings.ship.run_count as usize,
-                    &token,
-                )
+                let repos = if settings.ship.repos.is_empty() {
+                    ship::discover_repos(&token, 5)?
+                } else {
+                    settings.ship.repos.clone()
+                };
+                ship::fetch(&repos, settings.ship.run_count as usize, &token)
             }),
         );
     }
@@ -85,8 +95,16 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
         );
     }
     if settings.prs.enabled {
-        let github = providers::token(paths, "github").ok().flatten();
-        let azure = providers::token(paths, "azure").ok().flatten();
+        let github = settings
+            .prs
+            .show_github
+            .then(|| providers::token(paths, "github").ok().flatten())
+            .flatten();
+        let azure = settings
+            .prs
+            .show_azure
+            .then(|| providers::token(paths, "azure").ok().flatten())
+            .flatten();
         if github.is_none() && azure.is_none() {
             let _ = snapshot::write_status(paths, "prbox", FetchOutcome::NotConfigured);
         } else {
@@ -99,6 +117,7 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
                     azure_org: &settings.tasks.organization,
                     azure_project: &settings.tasks.project,
                     limit: settings.prs.pr_count as usize,
+                    show_review_state: settings.prs.show_review_state,
                 }),
             );
         }

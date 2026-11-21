@@ -56,6 +56,27 @@ pub fn install(command: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Removes Deck's custom keybinding from the GNOME list and resets its keys.
+pub fn remove() -> Result<bool, String> {
+    let current = run(&["get", SCHEMA, "custom-keybindings"])?;
+    let paths = parse_list(&current);
+    if !paths.iter().any(|path| path == KEY_PATH) {
+        return Ok(false);
+    }
+    let remaining: Vec<String> = paths.into_iter().filter(|path| path != KEY_PATH).collect();
+    run(&[
+        "set",
+        SCHEMA,
+        "custom-keybindings",
+        &render_list(&remaining),
+    ])?;
+    let schema = format!("{KEYBINDING_SCHEMA}:{KEY_PATH}");
+    let _ = run(&["reset", &schema, "name"]);
+    let _ = run(&["reset", &schema, "command"]);
+    let _ = run(&["reset", &schema, "binding"]);
+    Ok(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

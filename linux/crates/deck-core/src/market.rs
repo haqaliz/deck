@@ -51,6 +51,60 @@ pub enum MarketKind {
     Stock,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoinSearchHit {
+    pub symbol: String,
+    pub name: String,
+    pub rank: Option<u64>,
+}
+
+/// CoinGecko's `/search` endpoint: compact, market-cap ordered and carries the
+/// rank that makes a symbol choice possible.
+pub fn search_coins(query: &str) -> Result<Vec<CoinSearchHit>, FetchError> {
+    let query = query.trim();
+    if query.chars().count() < 2 {
+        return Ok(Vec::new());
+    }
+    let body = providers::get(
+        &format!(
+            "https://api.coingecko.com/api/v3/search?query={}",
+            encode_query(query)
+        ),
+        &[],
+    )?;
+    parse_coin_search(&body).ok_or(FetchError::InvalidPayload)
+}
+
+fn parse_coin_search(body: &str) -> Option<Vec<CoinSearchHit>> {
+    let json: Value = serde_json::from_str(body).ok()?;
+    Some(
+        json.get("coins")?
+            .as_array()?
+            .iter()
+            .filter_map(|coin| {
+                Some(CoinSearchHit {
+                    symbol: coin.get("symbol")?.as_str()?.to_uppercase(),
+                    name: coin.get("name")?.as_str()?.to_owned(),
+                    rank: coin.get("market_cap_rank").and_then(Value::as_u64),
+                })
+            })
+            .take(8)
+            .collect(),
+    )
+}
+
+fn encode_query(value: &str) -> String {
+    let mut out = String::new();
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') {
+            out.push(byte as char);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketRow {
@@ -518,5 +572,28 @@ mod tests {
         assert!(is_gold("XAU"));
         assert!(!is_fiat("BTC"));
         assert!(!is_gold("AAPL"));
+    }
+}
+
+#[cfg(test)]
+mod search_tests {
+    use super::{encode_query, parse_coin_search};
+
+    #[test]
+    fn parses_coin_search_in_server_order() {
+        let body = r#"{"coins":[
+          {"id":"bitcoin","symbol":"btc","name":"Bitcoin","market_cap_rank":1},
+          {"id":"bitcoin-cash","symbol":"bch","name":"Bitcoin Cash","market_cap_rank":22}
+        ]}"#;
+        let hits = parse_coin_search(body).expect("hits");
+        assert_eq!(hits[0].symbol, "BTC");
+        assert_eq!(hits[0].rank, Some(1));
+        assert_eq!(hits[1].name, "Bitcoin Cash");
+        assert!(parse_coin_search("{}").is_none());
+    }
+
+    #[test]
+    fn query_encoding_keeps_alphanumerics() {
+        assert_eq!(encode_query("bit coin&x"), "bit%20coin%26x");
     }
 }

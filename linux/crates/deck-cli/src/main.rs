@@ -64,6 +64,20 @@ fn run() -> Result<(), deck_core::CoreError> {
                         exit(1);
                     }
                 }
+            } else if desktop.contains("kde") {
+                match deck_core::shortcut::install_kde_shortcut(&command, key) {
+                    Ok(path) => {
+                        println!(
+                            "deck: installed Deck Search in KDE ({}); log out or restart Plasma to activate it",
+                            path.display()
+                        );
+                        Ok(())
+                    }
+                    Err(error) => {
+                        eprintln!("deck: KDE shortcut install failed: {error}");
+                        exit(1);
+                    }
+                }
             } else if desktop.contains("labwc")
                 || std::process::Command::new("pgrep")
                     .args(["-x", "labwc"])
@@ -98,20 +112,52 @@ fn run() -> Result<(), deck_core::CoreError> {
                 Ok(())
             }
         }
-        Some("--remove-shortcut") => match deck_core::shortcut::remove_labwc_shortcut() {
-            Ok(Some(path)) => {
-                println!("deck: removed the search shortcut from {}", path.display());
-                Ok(())
+        Some("--remove-shortcut") => {
+            let desktop = std::env::var("XDG_CURRENT_DESKTOP")
+                .unwrap_or_default()
+                .to_lowercase();
+            if desktop.contains("kde") {
+                match deck_core::shortcut::remove_kde_shortcut() {
+                    Ok(Some(path)) => {
+                        println!("deck: removed the KDE shortcut {}", path.display());
+                        return Ok(());
+                    }
+                    Ok(None) => {
+                        println!("deck: no KDE shortcut was installed");
+                        return Ok(());
+                    }
+                    Err(error) => {
+                        eprintln!("deck: KDE shortcut removal failed: {error}");
+                        exit(1);
+                    }
+                }
             }
-            Ok(None) => {
-                println!("deck: no Deck shortcut was installed");
-                Ok(())
+            if desktop.contains("gnome") {
+                match deck_core::gnome::remove() {
+                    Ok(true) => println!("deck: removed the GNOME shortcut"),
+                    Ok(false) => println!("deck: no GNOME shortcut was installed"),
+                    Err(error) => {
+                        eprintln!("deck: GNOME shortcut removal failed: {error}");
+                        exit(1);
+                    }
+                }
+                return Ok(());
             }
-            Err(error) => {
-                eprintln!("deck: shortcut removal failed: {error}");
-                exit(1);
+            match deck_core::shortcut::remove_labwc_shortcut() {
+                Ok(Some(path)) => {
+                    println!("deck: removed the search shortcut from {}", path.display());
+                    Ok(())
+                }
+                Ok(None) => {
+                    println!("deck: no Deck shortcut was installed");
+                    Ok(())
+                }
+                Err(error) => {
+                    eprintln!("deck: shortcut removal failed: {error}");
+                    exit(1);
+                }
             }
-        },
+        }
         Some("--daemon") => {
             let once = args.iter().any(|arg| arg == "--once");
             if once {
