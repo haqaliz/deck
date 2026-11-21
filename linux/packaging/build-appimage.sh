@@ -73,5 +73,5 @@ if [[ -z "$built" ]]; then
 fi
 output="$linux/dist/deck_${version}_x86_64.AppImage"
 mv "$built" "$output"
-sha256sum "$output" >"$output.sha256"
+(cd "$(dirname "$output")" && sha256sum "$(basename "$output")") >"$output.sha256"
 echo "built $output"
