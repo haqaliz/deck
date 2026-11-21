@@ -75,6 +75,49 @@ pub fn search_coins(query: &str) -> Result<Vec<CoinSearchHit>, FetchError> {
     parse_coin_search(&body).ok_or(FetchError::InvalidPayload)
 }
 
+/// Yahoo Finance's symbol search, merged with the coin hits by the picker.
+pub fn search_stocks(query: &str) -> Result<Vec<CoinSearchHit>, FetchError> {
+    let query = query.trim();
+    if query.chars().count() < 2 {
+        return Ok(Vec::new());
+    }
+    let body = providers::get(
+        &format!(
+            "https://query1.finance.yahoo.com/v1/finance/search?q={}&quotesCount=8&newsCount=0",
+            encode_query(query)
+        ),
+        &[("Accept", "application/json")],
+    )?;
+    parse_stock_search(&body).ok_or(FetchError::InvalidPayload)
+}
+
+fn parse_stock_search(body: &str) -> Option<Vec<CoinSearchHit>> {
+    let json: Value = serde_json::from_str(body).ok()?;
+    Some(
+        json.get("quotes")?
+            .as_array()?
+            .iter()
+            .filter_map(|quote| {
+                let symbol = quote.get("symbol")?.as_str()?.to_uppercase();
+                if symbol.is_empty() {
+                    return None;
+                }
+                Some(CoinSearchHit {
+                    symbol,
+                    name: quote
+                        .get("shortname")
+                        .or_else(|| quote.get("longname"))
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_owned(),
+                    rank: None,
+                })
+            })
+            .take(8)
+            .collect(),
+    )
+}
+
 fn parse_coin_search(body: &str) -> Option<Vec<CoinSearchHit>> {
     let json: Value = serde_json::from_str(body).ok()?;
     Some(
@@ -577,7 +620,7 @@ mod tests {
 
 #[cfg(test)]
 mod search_tests {
-    use super::{encode_query, parse_coin_search};
+    use super::{encode_query, parse_coin_search, parse_stock_search};
 
     #[test]
     fn parses_coin_search_in_server_order() {
@@ -590,6 +633,18 @@ mod search_tests {
         assert_eq!(hits[0].rank, Some(1));
         assert_eq!(hits[1].name, "Bitcoin Cash");
         assert!(parse_coin_search("{}").is_none());
+    }
+
+    #[test]
+    fn parses_stock_search_quotes() {
+        let body = r#"{"quotes":[
+          {"symbol":"AAPL","shortname":"Apple Inc.","quoteType":"EQUITY"},
+          {"symbol":"APLE","shortname":"Apple Hospitality","quoteType":"EQUITY"}
+        ]}"#;
+        let hits = parse_stock_search(body).expect("hits");
+        assert_eq!(hits[0].symbol, "AAPL");
+        assert_eq!(hits[0].name, "Apple Inc.");
+        assert!(parse_stock_search("{}").is_none());
     }
 
     #[test]

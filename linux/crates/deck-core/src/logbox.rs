@@ -386,6 +386,85 @@ pub fn fetch(
     })
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LogSearchHit {
+    pub at: String,
+    pub service: String,
+    pub level: String,
+    pub message: String,
+}
+
+/// Full-text search over the same data stream LogBox reads. Used only by the
+/// search panel, never by the daemon's refresh path.
+pub fn search_messages(
+    base_url: &str,
+    api_key: &str,
+    index: &str,
+    text: &str,
+    limit: usize,
+) -> Result<Vec<LogSearchHit>, FetchError> {
+    let base = providers::normalize_base(base_url).ok_or(FetchError::NotConfigured)?;
+    if api_key.trim().is_empty() {
+        return Err(FetchError::NotConfigured);
+    }
+    if !valid_index(index) || text.trim().is_empty() {
+        return Err(FetchError::NotConfigured);
+    }
+    let body = json!({
+        "size": limit.clamp(1, 25),
+        "sort": [{"@timestamp": "desc"}],
+        "_source": ["@timestamp", "message", "service", "level"],
+        "query": {"query_string": {"query": text, "lenient": true}}
+    });
+    let response = providers::post(
+        &format!("{base}/{index}/_search"),
+        &[
+            ("Authorization", &format!("ApiKey {api_key}")),
+            ("Content-Type", "application/json"),
+            ("Accept", "application/json"),
+        ],
+        &body.to_string(),
+    )?;
+    parse_search_hits(&response).ok_or(FetchError::InvalidPayload)
+}
+
+fn parse_search_hits(body: &str) -> Option<Vec<LogSearchHit>> {
+    let json: Value = serde_json::from_str(body).ok()?;
+    Some(
+        json.get("hits")?
+            .get("hits")?
+            .as_array()?
+            .iter()
+            .filter_map(|hit| {
+                let source = hit.get("_source")?;
+                Some(LogSearchHit {
+                    at: source
+                        .get("@timestamp")
+                        .or_else(|| source.get("timestamp"))
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_owned(),
+                    service: source
+                        .get("service")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_owned(),
+                    level: source
+                        .get("level")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_owned(),
+                    message: source
+                        .get("message")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_owned(),
+                })
+            })
+            .collect(),
+    )
+}
+
 pub fn environment_catalog(base_url: &str, api_key: &str) -> Result<Vec<String>, FetchError> {
     let base = providers::normalize_base(base_url).ok_or(FetchError::NotConfigured)?;
     let body = providers::get(
@@ -503,5 +582,21 @@ mod tests {
         assert!(parse_recent("{}").is_empty());
         assert!(parse_environments("{}").is_none());
         assert_eq!(LogTextMode::Templates, LogTextMode::default());
+    }
+}
+
+#[cfg(test)]
+mod search_tests {
+    use super::parse_search_hits;
+
+    #[test]
+    fn parses_full_text_hits() {
+        let body = r#"{"hits":{"hits":[
+          {"_source":{"@timestamp":"2026-11-21T10:00:00Z","service":"api","level":"error","message":"connection reset"}}
+        ]}}"#;
+        let hits = parse_search_hits(body).expect("hits");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].service, "api");
+        assert_eq!(hits[0].message, "connection reset");
     }
 }

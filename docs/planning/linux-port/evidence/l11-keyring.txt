@@ -1,0 +1,10 @@
+$ deck --check-credentials
+store: secret-service
+github: stored
+azure: missing
+elastic: missing
+grafana: missing
+opencode: missing
+
+The github token was stored and read through gnome-keyring with secret-tool
+inside dbus-run-session on Debian Trixie arm64.

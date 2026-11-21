@@ -230,6 +230,9 @@ pub fn search_window(
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 4);
     content.add_css_class("search-card");
+    if !deck_platform::surface::uses_layer_shell() {
+        content.add_css_class("search-card-opaque");
+    }
     content.set_margin_top(8);
     content.set_margin_bottom(8);
     content.set_margin_start(8);
@@ -300,6 +303,7 @@ pub fn search_window(
     let remote_cache = Rc::new(RefCell::new(search_core::RemoteSearchCache::default()));
     let task_blocked: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
     let pr_blocked: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
+    let log_blocked: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
     let last_local: Rc<RefCell<Vec<search_core::SearchSection>>> =
         Rc::new(RefCell::new(Vec::new()));
     let (remote_tx, remote_rx) = mpsc::channel::<RemoteSearchMessage>();
@@ -312,6 +316,7 @@ pub fn search_window(
     let cache_for_change = remote_cache.clone();
     let task_blocked_for_change = task_blocked.clone();
     let pr_blocked_for_change = pr_blocked.clone();
+    let log_blocked_for_change = log_blocked.clone();
     let local_for_change = last_local.clone();
     let tx_for_change = remote_tx.clone();
     entry.connect_changed(move |entry| {
@@ -327,6 +332,7 @@ pub fn search_window(
         let cache = cache_for_change.clone();
         let task_blocked = task_blocked_for_change.clone();
         let pr_blocked = pr_blocked_for_change.clone();
+        let log_blocked = log_blocked_for_change.clone();
         let local = local_for_change.clone();
         let tx = tx_for_change.clone();
         gtk::glib::timeout_add_local_once(Duration::from_millis(180), move || {
@@ -346,6 +352,7 @@ pub fn search_window(
                 cache,
                 task_blocked,
                 pr_blocked,
+                log_blocked,
                 local,
                 list,
                 actions,
@@ -360,6 +367,7 @@ pub fn search_window(
     let poll_cache = remote_cache.clone();
     let poll_task_blocked = task_blocked.clone();
     let poll_pr_blocked = pr_blocked.clone();
+    let poll_log_blocked = log_blocked.clone();
     let poll_local = last_local.clone();
     let poll_list = list.clone();
     let poll_actions = actions.clone();
@@ -383,6 +391,8 @@ pub fn search_window(
                     let until = Some(Instant::now() + search_core::REMOTE_SEARCH_BACKOFF);
                     if message.key.starts_with("task:") {
                         poll_task_blocked.set(until);
+                    } else if message.key.starts_with("log:") {
+                        poll_log_blocked.set(until);
                     } else {
                         poll_pr_blocked.set(until);
                     }
@@ -496,13 +506,19 @@ fn merge_remote_sections(
 
 enum RemoteRequest {
     Tasks {
+        token_id: String,
         organization: String,
         project: String,
         kind: Option<search_core::WorkItemKind>,
     },
     Prs {
+        azure_token_id: String,
         organization: String,
         project: String,
+    },
+    Logs {
+        base: String,
+        index: String,
     },
 }
 
@@ -513,6 +529,7 @@ fn schedule_remote_search(
     cache: Rc<RefCell<search_core::RemoteSearchCache>>,
     task_blocked: Rc<Cell<Option<Instant>>>,
     pr_blocked: Rc<Cell<Option<Instant>>>,
+    log_blocked: Rc<Cell<Option<Instant>>>,
     local: Rc<RefCell<Vec<search_core::SearchSection>>>,
     list: gtk::ListBox,
     actions: Rc<RefCell<Vec<Option<search_core::SearchAction>>>>,
@@ -536,15 +553,19 @@ fn schedule_remote_search(
             {
                 return;
             }
-            if !tasks.enabled
-                || tasks.organization.trim().is_empty()
-                || tasks.project.trim().is_empty()
-            {
+            let current = settings.borrow();
+            let (token_id, organization, project) = current.azure_account(&tasks.account_id);
+            let token_id = token_id.to_owned();
+            let organization = organization.to_owned();
+            let project = project.to_owned();
+            drop(current);
+            if !tasks.enabled || organization.trim().is_empty() || project.trim().is_empty() {
                 return;
             }
             RemoteRequest::Tasks {
-                organization: tasks.organization.clone(),
-                project: tasks.project.clone(),
+                token_id,
+                organization,
+                project,
                 kind: query.work_item_kind,
             }
         }
@@ -559,9 +580,35 @@ fn schedule_remote_search(
             if !enabled {
                 return;
             }
+            let current = settings.borrow();
+            let (token_id, organization, project) =
+                current.azure_account(&current.prs.azure_account_id);
+            let azure_token_id = token_id.to_owned();
+            let organization = organization.to_owned();
+            let project = project.to_owned();
+            drop(current);
             RemoteRequest::Prs {
-                organization: tasks.organization.clone(),
-                project: tasks.project.clone(),
+                azure_token_id,
+                organization,
+                project,
+            }
+        }
+        Some(search_core::SearchProvider::Log) => {
+            let log = settings.borrow().logbox.clone();
+            let enabled = log.enabled
+                && !log.base_url.trim().is_empty()
+                && !settings
+                    .borrow()
+                    .search
+                    .disabled
+                    .iter()
+                    .any(|id| id == "log");
+            if !enabled {
+                return;
+            }
+            RemoteRequest::Logs {
+                base: log.base_url.clone(),
+                index: deck_core::logbox::normalize_environment(&log.environment),
             }
         }
         _ => return,
@@ -569,6 +616,7 @@ fn schedule_remote_search(
     let blocked = match &request {
         RemoteRequest::Tasks { .. } => task_blocked,
         RemoteRequest::Prs { .. } => pr_blocked,
+        RemoteRequest::Logs { .. } => log_blocked,
     };
     if let Some(until) = blocked.get() {
         if until > Instant::now() {
@@ -580,6 +628,7 @@ fn schedule_remote_search(
             format!("task:{:?}:{}", kind, query.text.to_lowercase())
         }
         RemoteRequest::Prs { .. } => format!("pr:{}", query.text.to_lowercase()),
+        RemoteRequest::Logs { .. } => format!("log:{}", query.text.to_lowercase()),
     };
     if let Some(cached) = cache.borrow_mut().get(&key, Instant::now()) {
         if !cached.is_empty() {
@@ -593,18 +642,25 @@ fn schedule_remote_search(
     std::thread::spawn(move || {
         let result = match request {
             RemoteRequest::Tasks {
+                token_id,
                 organization,
                 project,
                 kind,
-            } => providers::require_token(&paths, "azure").and_then(|token| {
+            } => providers::require_token(&paths, &token_id).and_then(|token| {
                 search_core::remote_task_search(&organization, &project, &token, &text, kind)
             }),
+            RemoteRequest::Logs { base, index } => providers::require_token(&paths, "elastic")
+                .and_then(|token| {
+                    deck_core::logbox::search_messages(&base, &token, &index, &text, 10)
+                        .map(|hits| search_core::remote_log_results(&hits, &text, &base, &index))
+                }),
             RemoteRequest::Prs {
+                azure_token_id,
                 organization,
                 project,
             } => {
                 let github = providers::token(&paths, "github").ok().flatten();
-                let azure = providers::token(&paths, "azure").ok().flatten();
+                let azure = providers::token(&paths, &azure_token_id).ok().flatten();
                 if github.is_none() && azure.is_none() {
                     Err(providers::FetchError::NotConfigured)
                 } else {
@@ -798,7 +854,8 @@ pub fn settings_window(
     window.add_css_class("deck-surface");
 
     let general = page();
-    form_section(&general, "BACKGROUND REFRESH");
+    general.add_css_class("deck-page-cards");
+    let refresh = form_card(&general, "BACKGROUND REFRESH");
     let autostart_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     autostart_row.add_css_class("form-row");
     let autostart_label = gtk::Label::new(Some("Start Deck at login"));
@@ -825,25 +882,26 @@ pub fn settings_window(
     });
     autostart_row.append(&autostart_label);
     autostart_row.append(&autostart);
-    general.append(&autostart_row);
-    general.append(&caption(
+    refresh.append(&autostart_row);
+    refresh.append(&caption(
         "A systemd user service can keep deckd running; this entry starts the GUI.",
     ));
     if deck_core::credentials::CredentialStore::detect(&paths).kind() == "file-0600" {
-        general.append(&caption(
+        refresh.append(&caption(
             "No system keyring (secret-tool) was found. Tokens are stored in a 0600 file; install libsecret-tools and sign in to a keyring to use Secret Service.",
         ));
     }
-    form_section(&general, "SURFACE");
-    surface_row(&general, settings.borrow().surface_mode, &paths, &settings);
+    let surface = form_card(&general, "SURFACE");
+    surface_row(&surface, settings.borrow().surface_mode, &paths, &settings);
     if let Some(last) = deck_core::diag::read(&paths.cache_dir, "last-error.log") {
         let line = last.lines().next().unwrap_or("unknown error");
-        general.append(&caption(&format!("Last crash: {line}")));
+        surface.append(&caption(&format!("Last crash: {line}")));
     }
 
     let search = page();
-    form_section(&search, "SHORTCUT");
-    search.append(&caption("Spotlight-style panel shortcut"));
+    search.add_css_class("deck-page-cards");
+    let shortcut = form_card(&search, "SHORTCUT");
+    shortcut.append(&caption("Spotlight-style panel shortcut"));
     let status = gtk::Label::new(Some(""));
     status.add_css_class("subtitle");
     status.set_halign(gtk::Align::Start);
@@ -863,14 +921,14 @@ pub fn settings_window(
             Err(error) => status_for_click.set_text(&format!("Could not install: {error}")),
         }
     });
-    search.append(&install);
-    search.append(&status);
-    form_section(&search, "SOURCES");
+    shortcut.append(&install);
+    shortcut.append(&status);
+    let sources = form_card(&search, "SOURCES");
     let disabled = settings.borrow().search.disabled.clone();
     for provider in search_core::SearchProvider::ALL {
         let id = provider.id();
         toggle(
-            &search,
+            &sources,
             provider.settings_title(),
             !disabled.iter().any(|entry| entry == id),
             &paths,
@@ -1067,23 +1125,24 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     page.append(&caption(
         "CPU, memory, disk and top processes. Size, visibility and colors apply on restart.",
     ));
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().livebox.clone();
 
-    form_section(&page, "DISPLAY");
-    size_row(&page, current.size, paths, settings, |s, v| {
+    let display = form_card(&page, "DISPLAY");
+    size_row(&display, current.size, paths, settings, |s, v| {
         s.livebox.size = v
     });
     toggle(
-        &page,
+        &display,
         "Show LiveBox",
         current.enabled,
         paths,
         settings,
         |s, v| s.livebox.enabled = v,
     );
-    form_section(&page, "METRICS");
+    let metrics = form_card(&page, "METRICS");
     toggle(
-        &page,
+        &metrics,
         "Show CPU",
         current.show_cpu,
         paths,
@@ -1091,7 +1150,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.show_cpu = v,
     );
     toggle(
-        &page,
+        &metrics,
         "Show memory",
         current.show_mem,
         paths,
@@ -1099,7 +1158,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.show_mem = v,
     );
     toggle(
-        &page,
+        &metrics,
         "Show disk",
         current.show_disk,
         paths,
@@ -1107,7 +1166,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.show_disk = v,
     );
     toggle(
-        &page,
+        &metrics,
         "Show GPU",
         current.show_gpu,
         paths,
@@ -1115,16 +1174,16 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.show_gpu = v,
     );
     toggle(
-        &page,
+        &metrics,
         "Show processes",
         current.show_processes,
         paths,
         settings,
         |s, v| s.livebox.show_processes = v,
     );
-    form_section(&page, "CHART");
+    let chart = form_card(&page, "CHART");
     toggle(
-        &page,
+        &chart,
         "Show chart",
         current.show_chart,
         paths,
@@ -1132,7 +1191,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.show_chart = v,
     );
     toggle(
-        &page,
+        &chart,
         "Per-core CPU lines",
         current.show_per_core_cores,
         paths,
@@ -1140,7 +1199,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.show_per_core_cores = v,
     );
     color_row(
-        &page,
+        &chart,
         "CPU color",
         &current.cpu_color,
         paths,
@@ -1148,7 +1207,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.cpu_color = v,
     );
     color_row(
-        &page,
+        &chart,
         "MEM color",
         &current.mem_color,
         paths,
@@ -1156,7 +1215,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.mem_color = v,
     );
     color_row(
-        &page,
+        &chart,
         "DISK color",
         &current.disk_color,
         paths,
@@ -1164,16 +1223,16 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.disk_color = v,
     );
     color_row(
-        &page,
+        &chart,
         "GPU color",
         &current.gpu_color,
         paths,
         settings,
         |s, v| s.livebox.gpu_color = v,
     );
-    form_section(&page, "PROCESSES");
+    let processes = form_card(&page, "PROCESSES");
     spin(
-        &page,
+        &processes,
         "Process count",
         current.process_count as u64,
         1,
@@ -1184,7 +1243,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.process_count = v as u8,
     );
     spin(
-        &page,
+        &processes,
         "Refresh (seconds)",
         current.refresh_seconds,
         5,
@@ -1194,9 +1253,9 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.livebox.refresh_seconds = v,
     );
-    form_section(&page, "THRESHOLDS");
+    let thresholds = form_card(&page, "THRESHOLDS");
     spin(
-        &page,
+        &thresholds,
         "CPU warn",
         current.cpu_warn as u64,
         0,
@@ -1207,7 +1266,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.cpu_warn = v as u8,
     );
     spin(
-        &page,
+        &thresholds,
         "CPU alarm",
         current.cpu_alarm as u64,
         0,
@@ -1218,7 +1277,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.cpu_alarm = v as u8,
     );
     spin(
-        &page,
+        &thresholds,
         "MEM warn",
         current.mem_warn as u64,
         0,
@@ -1229,7 +1288,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.mem_warn = v as u8,
     );
     spin(
-        &page,
+        &thresholds,
         "MEM alarm",
         current.mem_alarm as u64,
         0,
@@ -1240,7 +1299,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.mem_alarm = v as u8,
     );
     spin(
-        &page,
+        &thresholds,
         "DISK warn",
         current.disk_warn as u64,
         0,
@@ -1251,7 +1310,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.disk_warn = v as u8,
     );
     spin(
-        &page,
+        &thresholds,
         "DISK alarm",
         current.disk_alarm as u64,
         0,
@@ -1262,7 +1321,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.disk_alarm = v as u8,
     );
     spin(
-        &page,
+        &thresholds,
         "GPU warn",
         current.gpu_warn as u64,
         0,
@@ -1273,7 +1332,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.livebox.gpu_warn = v as u8,
     );
     spin(
-        &page,
+        &thresholds,
         "GPU alarm",
         current.gpu_alarm as u64,
         0,
@@ -1288,15 +1347,17 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
 
 fn netbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().netbox.clone();
     page.append(&caption(
         "Per-interface traffic from /proc/net/dev. Empty interface means every interface.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| {
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| {
         s.netbox.size = v
     });
     toggle(
-        &page,
+        &card,
         "Show NetBox",
         current.enabled,
         paths,
@@ -1304,7 +1365,7 @@ fn netbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.netbox.enabled = v,
     );
     text_field(
-        &page,
+        &card,
         "Interface (optional)",
         &current.interface,
         "e.g. eth0",
@@ -1313,7 +1374,7 @@ fn netbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.netbox.interface = v,
     );
     spin(
-        &page,
+        &card,
         "Interface count",
         current.interface_count as u64,
         1,
@@ -1324,7 +1385,7 @@ fn netbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.netbox.interface_count = v as u8,
     );
     spin(
-        &page,
+        &card,
         "Refresh (seconds)",
         current.refresh_seconds,
         1,
@@ -1335,7 +1396,7 @@ fn netbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.netbox.refresh_seconds = v,
     );
     toggle(
-        &page,
+        &card,
         "Show packet rates",
         current.show_packets,
         paths,
@@ -1343,7 +1404,7 @@ fn netbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.netbox.show_packets = v,
     );
     toggle(
-        &page,
+        &card,
         "Show chart (large)",
         current.show_chart,
         paths,
@@ -1351,7 +1412,7 @@ fn netbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.netbox.show_chart = v,
     );
     spin(
-        &page,
+        &card,
         "Warn (MB/s)",
         current.warn_mbps as u64,
         1,
@@ -1362,7 +1423,7 @@ fn netbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.netbox.warn_mbps = v as u16,
     );
     spin(
-        &page,
+        &card,
         "Alarm (MB/s)",
         current.alarm_mbps as u64,
         1,
@@ -1377,15 +1438,17 @@ fn netbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
 
 fn devbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().devbox.clone();
     page.append(&caption(
         "Listening TCP ports from /proc and Docker containers from the docker CLI.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| {
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| {
         s.devbox.size = v
     });
     toggle(
-        &page,
+        &card,
         "Show DevBox",
         current.enabled,
         paths,
@@ -1393,7 +1456,7 @@ fn devbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.devbox.enabled = v,
     );
     toggle(
-        &page,
+        &card,
         "Show listening ports",
         current.show_ports,
         paths,
@@ -1401,7 +1464,7 @@ fn devbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.devbox.show_ports = v,
     );
     toggle(
-        &page,
+        &card,
         "Show containers",
         current.show_containers,
         paths,
@@ -1409,7 +1472,7 @@ fn devbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.devbox.show_containers = v,
     );
     spin(
-        &page,
+        &card,
         "Port count",
         current.port_count as u64,
         1,
@@ -1420,7 +1483,7 @@ fn devbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.devbox.port_count = v as u8,
     );
     spin(
-        &page,
+        &card,
         "Container count",
         current.container_count as u64,
         1,
@@ -1431,7 +1494,7 @@ fn devbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.devbox.container_count = v as u8,
     );
     spin(
-        &page,
+        &card,
         "Refresh (seconds)",
         current.refresh_seconds,
         2,
@@ -1446,15 +1509,17 @@ fn devbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
 
 fn weather_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().weather.clone();
     page.append(&caption(
         "wttr.in current conditions and a three-day forecast. No account is needed.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| {
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| {
         s.weather.size = v
     });
     toggle(
-        &page,
+        &card,
         "Show WeatherBox",
         current.enabled,
         paths,
@@ -1462,7 +1527,7 @@ fn weather_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.weather.enabled = v,
     );
     text_field(
-        &page,
+        &card,
         "Location (empty geolocates)",
         &current.location,
         "e.g. Amsterdam",
@@ -1471,7 +1536,7 @@ fn weather_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.weather.location = v,
     );
     toggle(
-        &page,
+        &card,
         "Fahrenheit",
         current.units_fahrenheit,
         paths,
@@ -1479,7 +1544,7 @@ fn weather_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.weather.units_fahrenheit = v,
     );
     toggle(
-        &page,
+        &card,
         "Show forecast",
         current.show_forecast,
         paths,
@@ -1491,15 +1556,17 @@ fn weather_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
 
 fn clock_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().clock.clone();
     page.append(&caption(
         "IANA zone IDs, one per entry. `local` follows this machine.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| {
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| {
         s.clock.size = v
     });
     toggle(
-        &page,
+        &card,
         "Show ClockBox",
         current.enabled,
         paths,
@@ -1507,7 +1574,7 @@ fn clock_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.clock.enabled = v,
     );
     list_field(
-        &page,
+        &card,
         "Cities",
         &current.city_ids,
         "local, Europe/Amsterdam, Asia/Tokyo",
@@ -1516,7 +1583,7 @@ fn clock_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.clock.city_ids = v,
     );
     text_field(
-        &page,
+        &card,
         "Main city (small face, optional)",
         &current.main_city_id,
         "empty = first non-local city",
@@ -1525,7 +1592,7 @@ fn clock_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.clock.main_city_id = v,
     );
     toggle(
-        &page,
+        &card,
         "Show relative day",
         current.show_relative_day,
         paths,
@@ -1533,7 +1600,7 @@ fn clock_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.clock.show_relative_day = v,
     );
     toggle(
-        &page,
+        &card,
         "Show offset",
         current.show_offset,
         paths,
@@ -1545,13 +1612,15 @@ fn clock_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
 
 fn git_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().git.clone();
     page.append(&caption(
         "Scans repo roots for .git directories and reads git log locally.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| s.git.size = v);
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| s.git.size = v);
     toggle(
-        &page,
+        &card,
         "Show GitBox",
         current.enabled,
         paths,
@@ -1559,7 +1628,7 @@ fn git_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.git.enabled = v,
     );
     list_field(
-        &page,
+        &card,
         "Repo roots",
         &current.repo_paths,
         "~/dev, ~/work",
@@ -1568,7 +1637,7 @@ fn git_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.git.repo_paths = v,
     );
     spin(
-        &page,
+        &card,
         "Scan depth",
         current.scan_depth as u64,
         1,
@@ -1579,7 +1648,7 @@ fn git_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.git.scan_depth = v as u8,
     );
     toggle(
-        &page,
+        &card,
         "Show chart",
         current.show_chart,
         paths,
@@ -1587,7 +1656,7 @@ fn git_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.git.show_chart = v,
     );
     toggle(
-        &page,
+        &card,
         "Show repos (large)",
         current.show_repos,
         paths,
@@ -1595,7 +1664,7 @@ fn git_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.git.show_repos = v,
     );
     spin(
-        &page,
+        &card,
         "Repo count",
         current.repo_count as u64,
         1,
@@ -1617,7 +1686,7 @@ fn coin_picker(
     form_section(page, "LIVE PICKER");
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let query = gtk::Entry::new();
-    query.set_placeholder_text(Some("Search CoinGecko, e.g. bitcoin"));
+    query.set_placeholder_text(Some("Search coins or stocks, e.g. bitcoin or Apple"));
     query.set_hexpand(true);
     let search = gtk::Button::with_label("Search");
     row.append(&query);
@@ -1645,7 +1714,13 @@ fn coin_picker(
         button.set_sensitive(false);
         let (tx, rx) = mpsc::channel();
         std::thread::spawn(move || {
-            let _ = tx.send(deck_core::market::search_coins(&text));
+            let mut hits = deck_core::market::search_coins(&text).unwrap_or_default();
+            if let Ok(mut stocks) = deck_core::market::search_stocks(&text) {
+                hits.append(&mut stocks);
+            }
+            let mut seen = std::collections::HashSet::new();
+            hits.retain(|hit| seen.insert(hit.symbol.clone()));
+            let _ = tx.send(hits);
         });
         let results = results.clone();
         let status = status_for_click.clone();
@@ -1655,7 +1730,7 @@ fn coin_picker(
         let busy = busy.clone();
         let button = button.clone();
         gtk::glib::timeout_add_local(Duration::from_millis(120), move || match rx.try_recv() {
-            Ok(Ok(hits)) => {
+            Ok(hits) => {
                 widgets::clear(&results);
                 if hits.is_empty() {
                     status.set_text("No coins found");
@@ -1701,12 +1776,6 @@ fn coin_picker(
                 button.set_sensitive(true);
                 gtk::glib::ControlFlow::Break
             }
-            Ok(Err(error)) => {
-                status.set_text(&format!("Search failed: {}", error.message()));
-                busy.set(false);
-                button.set_sensitive(true);
-                gtk::glib::ControlFlow::Break
-            }
             Err(mpsc::TryRecvError::Empty) => gtk::glib::ControlFlow::Continue,
             Err(mpsc::TryRecvError::Disconnected) => {
                 busy.set(false);
@@ -1719,15 +1788,17 @@ fn coin_picker(
 
 fn market_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().market.clone();
     page.append(&caption(
         "Crypto, stocks, gold and fiat. Prices are converted to the display currency.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| {
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| {
         s.market.size = v
     });
     toggle(
-        &page,
+        &card,
         "Show MarketBox",
         current.enabled,
         paths,
@@ -1735,7 +1806,7 @@ fn market_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.market.enabled = v,
     );
     let symbols_entry = list_field(
-        &page,
+        &card,
         "Symbols",
         &current.symbols,
         "BTC, ETH, GOLD, AAPL, EUR",
@@ -1743,10 +1814,10 @@ fn market_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.market.symbols = v,
     );
-    coin_picker(&page, paths, settings, symbols_entry);
-    currency_row(&page, current.display_currency, paths, settings);
+    coin_picker(&card, paths, settings, symbols_entry);
+    currency_row(&card, current.display_currency, paths, settings);
     spin(
-        &page,
+        &card,
         "Ticker count (large)",
         current.ticker_count as u64,
         1,
@@ -1757,7 +1828,7 @@ fn market_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.market.ticker_count = v as u8,
     );
     toggle(
-        &page,
+        &card,
         "Show day change",
         current.show_day_change,
         paths,
@@ -1769,15 +1840,17 @@ fn market_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
 
 fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().openbox.clone();
     page.append(&caption(
         "Reads the local opencode SQLite database by default; set a server URL to read `opencode serve` instead.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| {
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| {
         s.openbox.size = v
     });
     toggle(
-        &page,
+        &card,
         "Show OpenBox",
         current.enabled,
         paths,
@@ -1785,7 +1858,7 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.openbox.enabled = v,
     );
     text_field(
-        &page,
+        &card,
         "Server URL (optional)",
         &current.server_url,
         "http://127.0.0.1:4096 — empty = local database",
@@ -1794,7 +1867,7 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.openbox.server_url = v,
     );
     toggle(
-        &page,
+        &card,
         "Show models",
         current.show_models,
         paths,
@@ -1802,7 +1875,7 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.openbox.show_models = v,
     );
     toggle(
-        &page,
+        &card,
         "Show tools",
         current.show_tools,
         paths,
@@ -1810,7 +1883,7 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.openbox.show_tools = v,
     );
     toggle(
-        &page,
+        &card,
         "Show sessions (large)",
         current.show_sessions,
         paths,
@@ -1818,7 +1891,7 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.openbox.show_sessions = v,
     );
     spin(
-        &page,
+        &card,
         "Model count",
         current.model_count as u64,
         1,
@@ -1829,7 +1902,7 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.openbox.model_count = v as u8,
     );
     spin(
-        &page,
+        &card,
         "Tool count",
         current.tool_count as u64,
         1,
@@ -1840,7 +1913,7 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.openbox.tool_count = v as u8,
     );
     spin(
-        &page,
+        &card,
         "Session count",
         current.session_count as u64,
         1,
@@ -1855,13 +1928,15 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
 
 fn ship_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().ship.clone();
     page.append(&caption(
         "GitHub Actions runs for explicit repos. Add a GitHub token in Credentials.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| s.ship.size = v);
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| s.ship.size = v);
     toggle(
-        &page,
+        &card,
         "Show ShipBox",
         current.enabled,
         paths,
@@ -1869,7 +1944,7 @@ fn ship_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.ship.enabled = v,
     );
     list_field(
-        &page,
+        &card,
         "Repos",
         &current.repos,
         "owner/repo — empty discovers the 5 most recently pushed",
@@ -1878,7 +1953,7 @@ fn ship_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.ship.repos = v,
     );
     spin(
-        &page,
+        &card,
         "Run count",
         current.run_count as u64,
         2,
@@ -1889,7 +1964,7 @@ fn ship_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.ship.run_count = v as u8,
     );
     toggle(
-        &page,
+        &card,
         "Show runs",
         current.show_list,
         paths,
@@ -1899,25 +1974,71 @@ fn ship_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     page
 }
 
+fn azure_account_row(
+    page: &gtk::Box,
+    current: &str,
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+    apply: fn(&mut Settings, String),
+) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let title = gtk::Label::new(Some("Azure account"));
+    title.set_halign(gtk::Align::Start);
+    title.set_hexpand(true);
+    let combo = gtk::ComboBoxText::new();
+    combo.append(Some(""), "Default (Tasks fields)");
+    for account in &settings.borrow().azure_accounts {
+        combo.append(
+            Some(&account.id),
+            &format!(
+                "{} — {}/{}",
+                account.label, account.organization, account.project
+            ),
+        );
+    }
+    combo.set_active_id(Some(current));
+    let paths = paths.clone();
+    let settings = settings.clone();
+    combo.connect_changed(move |combo| {
+        let mut current = settings.borrow_mut();
+        apply(
+            &mut current,
+            combo.active_id().unwrap_or_default().to_string(),
+        );
+        let _ = current.save(&paths);
+    });
+    row.append(&title);
+    row.append(&combo);
+    page.append(&row);
+}
+
 fn tasks_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().tasks.clone();
     page.append(&caption(
         "Azure DevOps work items assigned to you. Add an Azure PAT in Credentials.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| {
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| {
         s.tasks.size = v
     });
     toggle(
-        &page,
+        &card,
         "Show TaskBox",
         current.enabled,
         paths,
         settings,
         |s, v| s.tasks.enabled = v,
     );
+    azure_account_row(&card, &current.account_id, paths, settings, |s, v| {
+        s.tasks.account_id = v
+    });
+    card.append(&caption(
+        "A selected account uses its own organization and project; the fields below apply to Default.",
+    ));
     text_field(
-        &page,
+        &card,
         "Organization",
         &current.organization,
         "e.g. contoso",
@@ -1926,7 +2047,7 @@ fn tasks_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.tasks.organization = v,
     );
     text_field(
-        &page,
+        &card,
         "Project",
         &current.project,
         "e.g. Manifold",
@@ -1935,7 +2056,7 @@ fn tasks_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.tasks.project = v,
     );
     text_field(
-        &page,
+        &card,
         "WIQL (empty = assigned open items)",
         &current.query,
         "SELECT [System.Id] FROM WorkItems …",
@@ -1944,7 +2065,7 @@ fn tasks_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.tasks.query = v,
     );
     spin(
-        &page,
+        &card,
         "Task count",
         current.task_count as u64,
         1,
@@ -1955,7 +2076,7 @@ fn tasks_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.tasks.task_count = v as u8,
     );
     toggle(
-        &page,
+        &card,
         "Show lane legend",
         current.show_legend,
         paths,
@@ -1963,7 +2084,7 @@ fn tasks_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.tasks.show_legend = v,
     );
     toggle(
-        &page,
+        &card,
         "Show list",
         current.show_list,
         paths,
@@ -1975,22 +2096,26 @@ fn tasks_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
 
 fn prs_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().prs.clone();
     page.append(&caption(
         "GitHub and Azure DevOps review queues. Azure uses the Tasks organization and project.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| s.prs.size = v);
+    let general = form_card(&page, "GENERAL");
+    size_row(&general, current.size, paths, settings, |s, v| {
+        s.prs.size = v
+    });
     toggle(
-        &page,
+        &general,
         "Show PRBox",
         current.enabled,
         paths,
         settings,
         |s, v| s.prs.enabled = v,
     );
-    form_section(&page, "PROVIDERS");
+    let providers = form_card(&page, "PROVIDERS");
     toggle(
-        &page,
+        &providers,
         "GitHub",
         current.show_github,
         paths,
@@ -1998,16 +2123,26 @@ fn prs_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.prs.show_github = v,
     );
     toggle(
-        &page,
+        &providers,
         "Azure DevOps",
         current.show_azure,
         paths,
         settings,
         |s, v| s.prs.show_azure = v,
     );
-    form_section(&page, "QUEUE");
+    azure_account_row(
+        &providers,
+        &current.azure_account_id,
+        paths,
+        settings,
+        |s, v| s.prs.azure_account_id = v,
+    );
+    providers.append(&caption(
+        "A selected account uses its own organization and project.",
+    ));
+    let queue = form_card(&page, "QUEUE");
     toggle(
-        &page,
+        &queue,
         "Review state",
         current.show_review_state,
         paths,
@@ -2015,7 +2150,7 @@ fn prs_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.prs.show_review_state = v,
     );
     spin(
-        &page,
+        &queue,
         "PR count",
         current.pr_count as u64,
         3,
@@ -2026,7 +2161,7 @@ fn prs_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.prs.pr_count = v as u8,
     );
     toggle(
-        &page,
+        &queue,
         "Show list",
         current.show_list,
         paths,
@@ -2038,15 +2173,17 @@ fn prs_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
 
 fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().logbox.clone();
     page.append(&caption(
         "Elastic error/warn counts, 24h trend, services and recent lines. Add an Elastic API key in Credentials.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| {
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| {
         s.logbox.size = v
     });
     toggle(
-        &page,
+        &card,
         "Show LogBox",
         current.enabled,
         paths,
@@ -2054,7 +2191,7 @@ fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.logbox.enabled = v,
     );
     text_field(
-        &page,
+        &card,
         "Elastic base URL",
         &current.base_url,
         "https://es.example.com",
@@ -2063,7 +2200,7 @@ fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.logbox.base_url = v,
     );
     text_field(
-        &page,
+        &card,
         "Environment",
         &current.environment,
         "prd, stg or logs-manifold-prd",
@@ -2072,7 +2209,7 @@ fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.logbox.environment = v,
     );
     text_field(
-        &page,
+        &card,
         "Service (optional)",
         &current.service,
         "empty = all services",
@@ -2080,7 +2217,7 @@ fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.logbox.service = v,
     );
-    text_mode_row(&page, current.text_mode, paths, settings);
+    text_mode_row(&card, current.text_mode, paths, settings);
     let catalog_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let load = gtk::Button::with_label("Load catalogs");
     let catalog = caption("");
@@ -2127,7 +2264,7 @@ fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         });
     });
     spin(
-        &page,
+        &card,
         "Small window (minutes)",
         u64::from(current.small_minutes),
         5,
@@ -2138,7 +2275,7 @@ fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.logbox.small_minutes = v as u16,
     );
     spin(
-        &page,
+        &card,
         "Large window (minutes)",
         u64::from(current.large_minutes),
         15,
@@ -2149,7 +2286,7 @@ fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.logbox.large_minutes = v as u16,
     );
     toggle(
-        &page,
+        &card,
         "Show trend",
         current.show_trend,
         paths,
@@ -2161,15 +2298,17 @@ fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
 
 fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     let current = settings.borrow().metricbox.clone();
     page.append(&caption(
         "Grafana fleet, host, power, agents and alerts. Add a Grafana token in Credentials.",
     ));
-    size_row(&page, current.size, paths, settings, |s, v| {
+    let card = form_card(&page, "SETTINGS");
+    size_row(&card, current.size, paths, settings, |s, v| {
         s.metricbox.size = v
     });
     toggle(
-        &page,
+        &card,
         "Show MetricBox",
         current.enabled,
         paths,
@@ -2177,7 +2316,7 @@ fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.metricbox.enabled = v,
     );
     text_field(
-        &page,
+        &card,
         "Grafana base URL",
         &current.base_url,
         "https://grafana.example.com",
@@ -2185,9 +2324,9 @@ fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.metricbox.base_url = v,
     );
-    metric_face_row(&page, current.face, paths, settings);
+    metric_face_row(&card, current.face, paths, settings);
     text_field(
-        &page,
+        &card,
         "Host (single-host face)",
         &current.host,
         "e.g. x201",
@@ -2196,7 +2335,7 @@ fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.metricbox.host = v,
     );
     spin(
-        &page,
+        &card,
         "Rate (cents/kWh)",
         u64::from(current.rate_per_kwh_cents),
         0,
@@ -2207,7 +2346,7 @@ fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.metricbox.rate_per_kwh_cents = v as u16,
     );
     toggle(
-        &page,
+        &card,
         "Show CPU",
         current.show_cpu,
         paths,
@@ -2215,7 +2354,7 @@ fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.metricbox.show_cpu = v,
     );
     toggle(
-        &page,
+        &card,
         "Show RAM",
         current.show_ram,
         paths,
@@ -2223,7 +2362,7 @@ fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.metricbox.show_ram = v,
     );
     toggle(
-        &page,
+        &card,
         "Show disk",
         current.show_disk,
         paths,
@@ -2231,7 +2370,7 @@ fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.metricbox.show_disk = v,
     );
     toggle(
-        &page,
+        &card,
         "Show GPU",
         current.show_gpu,
         paths,
@@ -2239,7 +2378,7 @@ fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.metricbox.show_gpu = v,
     );
     toggle(
-        &page,
+        &card,
         "Show power",
         current.show_power,
         paths,
@@ -2380,6 +2519,7 @@ fn metric_face_row(
 
 fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
+    page.add_css_class("deck-page-cards");
     page.append(&caption(
         "Secret Service when available, otherwise a 0600 file. Tokens are read by deckd.",
     ));
@@ -2388,8 +2528,9 @@ fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box
         deck_core::credentials::CredentialStore::detect(paths).kind(),
         paths.credentials_file().display()
     )));
+    let card = form_card(&page, "TOKENS");
     credential_row(
-        &page,
+        &card,
         paths,
         settings,
         "GitHub token",
@@ -2397,7 +2538,7 @@ fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box
         VerifyKind::Github,
     );
     credential_row(
-        &page,
+        &card,
         paths,
         settings,
         "Azure DevOps PAT",
@@ -2405,7 +2546,7 @@ fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box
         VerifyKind::Azure,
     );
     credential_row(
-        &page,
+        &card,
         paths,
         settings,
         "Elastic API key",
@@ -2413,7 +2554,7 @@ fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box
         VerifyKind::Elastic,
     );
     credential_row(
-        &page,
+        &card,
         paths,
         settings,
         "Grafana token",
@@ -2421,15 +2562,176 @@ fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box
         VerifyKind::Grafana,
     );
     credential_row(
-        &page,
+        &card,
         paths,
         settings,
         "opencode serve token",
         "opencode",
         VerifyKind::Opencode,
     );
-    opencode_row(&page);
+    opencode_row(&card);
+    let accounts = form_card(&page, "AZURE ACCOUNTS");
+    azure_accounts_card(&accounts, paths, settings);
     page
+}
+
+fn azure_accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Settings>>) {
+    let accounts = settings.borrow().azure_accounts.clone();
+    if accounts.is_empty() {
+        page.append(&caption(
+            "No extra Azure accounts. The Azure token above uses the Tasks organization and project.",
+        ));
+    }
+    for account in accounts {
+        let title = gtk::Label::new(Some(&format!(
+            "{} — {}/{}",
+            account.label, account.organization, account.project
+        )));
+        title.add_css_class("row-title");
+        title.set_halign(gtk::Align::Start);
+        page.append(&title);
+        let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        let entry = gtk::Entry::new();
+        entry.set_visibility(false);
+        entry.set_input_purpose(gtk::InputPurpose::Password);
+        entry.set_placeholder_text(Some("stored token is not shown"));
+        entry.set_hexpand(true);
+        let save = gtk::Button::with_label("Save");
+        let delete = gtk::Button::with_label("Delete");
+        let verify = gtk::Button::with_label("Verify");
+        let remove = gtk::Button::with_label("Remove");
+        row.append(&entry);
+        row.append(&save);
+        row.append(&delete);
+        row.append(&verify);
+        row.append(&remove);
+        page.append(&row);
+        let status = caption("");
+        page.append(&status);
+
+        let id = account.id.clone();
+        let paths_for_save = paths.clone();
+        let status_for_save = status.clone();
+        let entry_for_save = entry.clone();
+        let id_for_save = id.clone();
+        save.connect_clicked(move |_| {
+            let value = entry_for_save.text().to_string();
+            if value.trim().is_empty() {
+                status_for_save.set_text("Enter a token first");
+                return;
+            }
+            let store = deck_core::credentials::CredentialStore::detect(&paths_for_save);
+            match store.write(&id_for_save, value.trim()) {
+                Ok(()) => {
+                    entry_for_save.set_text("");
+                    status_for_save.set_text("Saved");
+                }
+                Err(error) => status_for_save.set_text(&format!("Could not save: {error}")),
+            }
+        });
+
+        let paths_for_delete = paths.clone();
+        let status_for_delete = status.clone();
+        let id_for_delete = id.clone();
+        delete.connect_clicked(move |_| {
+            let store = deck_core::credentials::CredentialStore::detect(&paths_for_delete);
+            match store.delete(&id_for_delete) {
+                Ok(()) => status_for_delete.set_text("Deleted"),
+                Err(error) => status_for_delete.set_text(&format!("Could not delete: {error}")),
+            }
+        });
+
+        let paths_for_verify = paths.clone();
+        let status_for_verify = status.clone();
+        let organization = account.organization.clone();
+        verify.connect_clicked(move |_| {
+            let paths = paths_for_verify.clone();
+            let organization = organization.clone();
+            verify_async(&status_for_verify, move || {
+                verify_azure(&paths, &organization)
+            });
+        });
+
+        let paths_for_remove = paths.clone();
+        let settings_for_remove = settings.clone();
+        let status_for_remove = status.clone();
+        let id_for_remove = id.clone();
+        remove.connect_clicked(move |_| {
+            {
+                let mut current = settings_for_remove.borrow_mut();
+                current
+                    .azure_accounts
+                    .retain(|account| account.id != id_for_remove);
+                let _ = current.save(&paths_for_remove);
+            }
+            let store = deck_core::credentials::CredentialStore::detect(&paths_for_remove);
+            let _ = store.delete(&id_for_remove);
+            status_for_remove.set_text("Removed — reopen Settings to refresh the list");
+        });
+    }
+
+    widgets::section(page, "Add account");
+    let fields = gtk::Box::new(gtk::Orientation::Vertical, 4);
+    let label = gtk::Entry::new();
+    label.set_placeholder_text(Some("Label, e.g. Work"));
+    let organization = gtk::Entry::new();
+    organization.set_placeholder_text(Some("Organization, e.g. contoso"));
+    let project = gtk::Entry::new();
+    project.set_placeholder_text(Some("Project"));
+    let token = gtk::Entry::new();
+    token.set_visibility(false);
+    token.set_input_purpose(gtk::InputPurpose::Password);
+    token.set_placeholder_text(Some("Personal access token"));
+    fields.append(&label);
+    fields.append(&organization);
+    fields.append(&project);
+    fields.append(&token);
+    page.append(&fields);
+    let add = gtk::Button::with_label("Add Azure account");
+    add.set_halign(gtk::Align::Start);
+    page.append(&add);
+    let status = caption("");
+    page.append(&status);
+    let paths = paths.clone();
+    let settings = settings.clone();
+    add.connect_clicked(move |_| {
+        let label_text = label.text().trim().to_owned();
+        let organization_text = organization.text().trim().to_owned();
+        let project_text = project.text().trim().to_owned();
+        let token_text = token.text().trim().to_owned();
+        if label_text.is_empty()
+            || organization_text.is_empty()
+            || project_text.is_empty()
+            || token_text.is_empty()
+        {
+            status.set_text("Fill in label, organization, project and token");
+            return;
+        }
+        let id = format!(
+            "azure:{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|duration| duration.as_millis())
+                .unwrap_or(0)
+        );
+        {
+            let mut current = settings.borrow_mut();
+            current
+                .azure_accounts
+                .push(deck_core::settings::AzureAccount {
+                    id: id.clone(),
+                    label: label_text,
+                    organization: organization_text,
+                    project: project_text,
+                });
+            let _ = current.save(&paths);
+        }
+        let store = deck_core::credentials::CredentialStore::detect(&paths);
+        match store.write(&id, &token_text) {
+            Ok(()) => status.set_text("Added — reopen Settings to manage the account"),
+            Err(error) => status.set_text(&format!("Account saved, token failed: {error}")),
+        }
+    });
 }
 
 #[derive(Clone, Copy)]
@@ -2797,6 +3099,17 @@ fn scrolled(page: gtk::Box) -> gtk::ScrolledWindow {
     scrolled.set_vexpand(true);
     scrolled.set_child(Some(&page));
     scrolled
+}
+
+fn form_card(page: &gtk::Box, title: &str) -> gtk::Box {
+    let label = gtk::Label::new(Some(title));
+    label.add_css_class("form-section");
+    label.set_halign(gtk::Align::Start);
+    page.append(&label);
+    let card = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    card.add_css_class("form-card");
+    page.append(&card);
+    card
 }
 
 fn form_section(page: &gtk::Box, title: &str) {
