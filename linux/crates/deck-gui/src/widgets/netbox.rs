@@ -37,27 +37,24 @@ pub fn build(
     content.set_margin_start(14);
     content.set_margin_end(14);
 
-    let header = gtk::Label::new(Some("NETBOX"));
-    header.add_css_class("subtitle");
-    header.set_halign(gtk::Align::Start);
-    header.set_hexpand(true);
-    header.set_tooltip_text(Some("Drag to move"));
-    content.append(&crate::ui::movable_header(
-        &window,
-        &header,
-        settings.clone(),
-        40,
-    ));
+    content.append(&crate::ui::widget_drag_bar(&window, settings.clone()));
 
-    let summary = gtk::Box::new(gtk::Orientation::Horizontal, 14);
+    let summary = gtk::Box::new(
+        if size == WidgetSize::Small {
+            gtk::Orientation::Vertical
+        } else {
+            gtk::Orientation::Horizontal
+        },
+        14,
+    );
     summary.set_halign(gtk::Align::Start);
     let down = widgets::metric_label("DOWN");
     let up = widgets::metric_label("UP");
     summary.append(&down);
     summary.append(&up);
     let active = (size == WidgetSize::Small).then(|| {
-        let label = gtk::Label::new(Some("ACTIVE   —"));
-        label.add_css_class("subtitle");
+        let label = gtk::Label::new(None);
+        label.add_css_class("metric");
         label.set_halign(gtk::Align::Start);
         label.set_ellipsize(gtk::pango::EllipsizeMode::End);
         summary.append(&label);
@@ -67,7 +64,7 @@ pub fn build(
 
     let chart = (size == WidgetSize::Large && show_chart).then(|| {
         let chart = gtk::DrawingArea::new();
-        chart.set_size_request(-1, 40);
+        chart.set_size_request(-1, 60);
         content.append(&chart);
         chart
     });
@@ -123,8 +120,18 @@ pub fn build(
             }
         }
 
-        down_for_tick.set_text(&format!("DOWN  {}", format_rate(down_value)));
-        up_for_tick.set_text(&format!("UP  {}", format_rate(up_value)));
+        down_for_tick.set_markup(&widgets::metric_markup(
+            "DOWN",
+            &format_rate(down_value),
+            widgets::CYAN,
+            widgets::WHITE,
+        ));
+        up_for_tick.set_markup(&widgets::metric_markup(
+            "UP",
+            &format_rate(up_value),
+            widgets::GREEN,
+            widgets::WHITE,
+        ));
 
         let visible: Vec<_> = rates
             .iter()
@@ -138,7 +145,12 @@ pub fn build(
                 .or_else(|| visible.first())
                 .map(|rate| rate.name.as_str())
                 .unwrap_or("—");
-            label.set_text(&format!("ACTIVE   {name}"));
+            label.set_markup(&widgets::metric_markup(
+                "ACTIVE",
+                name,
+                widgets::GREEN,
+                widgets::WHITE,
+            ));
         }
 
         if let Some(rows) = &interfaces_for_tick {
@@ -147,36 +159,36 @@ pub fn build(
                 widgets::add_row(rows, "Warming up…");
             } else {
                 for rate in visible.iter().take(netbox.interface_count.max(1) as usize) {
-                    let packets = if netbox.show_packets {
-                        format!(
-                            "   {:.0}/{:.0} pkt/s",
-                            rate.rx_packets_per_second, rate.tx_packets_per_second
-                        )
-                    } else {
-                        String::new()
-                    };
-                    let errors = if rate.rx_errors + rate.tx_errors > 0 {
-                        format!("   err {}/{}", rate.rx_errors, rate.tx_errors)
-                    } else {
-                        String::new()
-                    };
-                    let row = widgets::add_row(
-                        rows,
-                        &format!(
-                            "{}   ↓ {}   ↑ {}{}{}",
-                            rate.name,
-                            format_rate(rate.rx_bytes_per_second),
-                            format_rate(rate.tx_bytes_per_second),
-                            packets,
-                            errors
+                    let (_, _, value) = widgets::split_row(rows, &rate.name);
+                    let up_mbps = rate.tx_bytes_per_second / 1_000_000.0;
+                    let down_mbps = rate.rx_bytes_per_second / 1_000_000.0;
+                    let mut right = format!(
+                        "<span foreground=\"{}\">↑ {}</span>   <span foreground=\"{}\">↓ {}</span>",
+                        rate_color(up_mbps, netbox.warn_mbps, netbox.alarm_mbps, widgets::GREEN),
+                        format_rate(rate.tx_bytes_per_second),
+                        rate_color(
+                            down_mbps,
+                            netbox.warn_mbps,
+                            netbox.alarm_mbps,
+                            widgets::CYAN
                         ),
+                        format_rate(rate.rx_bytes_per_second)
                     );
-                    let peak_mbps =
-                        rate.rx_bytes_per_second.max(rate.tx_bytes_per_second) / 1_000_000.0;
-                    widgets::apply_tier(
-                        &row,
-                        tier(peak_mbps, netbox.warn_mbps as f64, netbox.alarm_mbps as f64),
-                    );
+                    if netbox.show_packets {
+                        right.push_str(&format!(
+                            "   <span foreground=\"#8e8e93\">{:.0}/{:.0} pkt/s</span>",
+                            rate.rx_packets_per_second, rate.tx_packets_per_second
+                        ));
+                    }
+                    if rate.rx_errors + rate.tx_errors > 0 {
+                        right.push_str(&format!(
+                            "   <span foreground=\"{}\">err {}/{}</span>",
+                            widgets::RED,
+                            rate.rx_errors,
+                            rate.tx_errors
+                        ));
+                    }
+                    value.set_markup(&right);
                 }
             }
         }
@@ -198,4 +210,12 @@ pub fn build(
 struct State {
     sampler: NetSampler,
     history: VecDeque<[f64; 2]>,
+}
+
+fn rate_color(mbps: f64, warn: u16, alarm: u16, normal: &'static str) -> &'static str {
+    match tier(mbps, warn as f64, alarm as f64) {
+        deck_core::livebox::Tier::Normal => normal,
+        deck_core::livebox::Tier::Warn => widgets::ORANGE,
+        deck_core::livebox::Tier::Alarm => widgets::RED,
+    }
 }

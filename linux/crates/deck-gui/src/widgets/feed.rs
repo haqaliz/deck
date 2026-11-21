@@ -39,12 +39,7 @@ pub fn build(
     content.set_margin_start(14);
     content.set_margin_end(14);
 
-    let header = gtk::Label::new(Some(&title.to_uppercase()));
-    header.add_css_class("subtitle");
-    header.set_halign(gtk::Align::Start);
-    header.set_hexpand(true);
-    header.set_tooltip_text(Some("Drag to move"));
-    content.append(&crate::ui::movable_header(&window, &header, settings, 40));
+    content.append(&crate::ui::widget_drag_bar(&window, settings));
 
     let scroll = gtk::ScrolledWindow::new();
     scroll.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);

@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use deck_core::paths::Paths;
-use deck_core::settings::Settings;
+use deck_core::settings::{Settings, WidgetSize};
 use deck_core::snapshot;
 use deck_core::weather::WeatherSnapshot;
 use gtk4 as gtk;
@@ -30,13 +30,6 @@ pub fn build(
             return gtk::glib::ControlFlow::Continue;
         };
 
-        let location = if snapshot.country.is_empty() {
-            snapshot.location.clone()
-        } else {
-            format!("{}, {}", snapshot.location, snapshot.country)
-        };
-        widgets::add_row(&body, &location);
-
         let (temp, unit) = if weather.units_fahrenheit {
             (snapshot.condition.temp_f, "°F")
         } else {
@@ -45,14 +38,26 @@ pub fn build(
         let temp = temp
             .map(|value| format!("{value:.0}{unit}"))
             .unwrap_or_else(|| "—".into());
-        let headline = gtk::Label::new(Some(&format!(
-            "{}  {temp}",
-            deck_core::weather::glyph(snapshot.condition.code)
-        )));
-        headline.add_css_class("title");
-        headline.set_halign(gtk::Align::Start);
+
+        let headline = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let glyph = gtk::Label::new(Some(deck_core::weather::glyph(snapshot.condition.code)));
+        glyph.add_css_class("weather-glyph");
+        let temperature = gtk::Label::new(Some(&temp));
+        temperature.add_css_class("weather-temp");
+        headline.append(&glyph);
+        headline.append(&temperature);
+
+        let location = gtk::Label::new(Some(&if snapshot.country.is_empty() {
+            snapshot.location.clone()
+        } else {
+            format!("{}, {}", snapshot.location, snapshot.country)
+        }));
+        location.add_css_class("weather-location");
+        location.set_hexpand(true);
+        location.set_xalign(1.0);
+        location.set_ellipsize(gtk::pango::EllipsizeMode::End);
+        headline.append(&location);
         body.append(&headline);
-        widgets::add_row(&body, &snapshot.condition.desc);
 
         let feels = if weather.units_fahrenheit {
             snapshot.condition.feels_like_f
@@ -61,20 +66,23 @@ pub fn build(
         };
         let mut details = Vec::new();
         if let Some(feels) = feels {
-            details.push(format!("Feels {feels:.0}{unit}"));
+            details.push(format!("FEELS {feels:.0}{unit}"));
         }
         if let Some(humidity) = snapshot.condition.humidity {
-            details.push(format!("Humidity {humidity:.0}%"));
+            details.push(format!("HUMIDITY {humidity:.0}%"));
         }
         if let Some(wind) = snapshot.condition.wind_kmph {
             details.push(format!("{} {wind:.0} km/h", snapshot.condition.wind_dir));
         }
-        if !details.is_empty() {
-            widgets::add_row(&body, &details.join("   "));
-        }
+        let detail = gtk::Label::new(Some(&details.join("   ")));
+        detail.add_css_class("row-meta");
+        detail.set_halign(gtk::Align::Start);
+        body.append(&detail);
 
-        if weather.show_forecast && feed_size != deck_core::settings::WidgetSize::Small {
+        if weather.show_forecast && feed_size != WidgetSize::Small {
             widgets::section(&body, "FORECAST");
+            let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+            line.set_hexpand(true);
             for day in snapshot.days.iter().take(3) {
                 let high = if weather.units_fahrenheit {
                     day.max_temp_f
@@ -86,20 +94,32 @@ pub fn build(
                 } else {
                     day.min_temp_c
                 };
-                let date = day.date.get(5..).unwrap_or(&day.date);
                 let temps = match (high, low) {
-                    (Some(high), Some(low)) => format!("{high:.0}/{low:.0}"),
+                    (Some(high), Some(low)) => format!("{high:.0}°  {low:.0}°"),
                     _ => "—".into(),
                 };
-                widgets::add_row(
-                    &body,
-                    &format!(
-                        "{date}  {}  {temps}  {}",
-                        deck_core::weather::glyph(day.code),
-                        day.desc
-                    ),
-                );
+                let column = gtk::Box::new(gtk::Orientation::Vertical, 2);
+                column.set_hexpand(true);
+                let date = gtk::Label::new(Some(day.date.get(5..).unwrap_or(&day.date)));
+                date.add_css_class("row-meta");
+                date.set_halign(gtk::Align::Center);
+                let icon = gtk::Label::new(Some(deck_core::weather::glyph(day.code)));
+                icon.add_css_class("weather-glyph-small");
+                icon.set_halign(gtk::Align::Center);
+                let temps = gtk::Label::new(Some(&temps));
+                temps.add_css_class("weather-temps");
+                temps.set_halign(gtk::Align::Center);
+                column.append(&date);
+                column.append(&icon);
+                column.append(&temps);
+                line.append(&column);
             }
+            for _ in snapshot.days.len().min(3)..3 {
+                let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+                spacer.set_hexpand(true);
+                line.append(&spacer);
+            }
+            body.append(&line);
         }
         gtk::glib::ControlFlow::Continue
     };

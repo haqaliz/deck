@@ -1356,7 +1356,7 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (v0.1.4 released 2026-11-21; L0-L8 done)
+### M12 — Linux & Raspberry Pi port (v0.2.0 released 2026-11-21; L0-L9 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the
@@ -1437,9 +1437,17 @@ Milestones (detail in
 - [x] **L8 — Hardening + v1** (2w): **v0.1.0 done 2026-11-20.** Panic/last-error
       handling, rate-limited status, schema migration, security pass, 30-minute
       Pi 4 idle sample, install/known-limitations docs, `.deb` + AppImage
-      release with SHA256 and tag `linux-v0.1.0`. v0.1.1 made widgets movable; v0.1.2 adds the labwc PCManFM always-on-bottom rule; v0.1.3 uses the macOS app icon across Linux; v0.1.4 adds the ARGB tray pixmap for AppImage hosts. The desktop matrix, Pi 5,
+      release with SHA256 and tag `linux-v0.1.0`. v0.1.1 made widgets movable; v0.1.2 adds the labwc PCManFM always-on-bottom rule; v0.1.3 uses the macOS app icon across Linux; v0.1.4 adds the ARGB tray pixmap for AppImage hosts; v0.2.0 is the macOS visual-parity pass for widgets, search and settings. The desktop matrix, Pi 5,
       keyrings and live API accounts remain explicitly untested. See
       [`docs/planning/linux-port/l8.md`](docs/planning/linux-port/l8.md).
+- [x] **L9 — macOS visual parity** (1w): **v0.2.0 done 2026-11-21.**
+      Shared macOS palette and card system, title-less widgets with drag grips,
+      macOS LiveBox (volumes, TOP PROCESSES CPU/MEM toggle, memory percent),
+      dot/count rows across every widget, three-column Clock and Weather
+      faces, a translucent search card with section headers and selected rows,
+      and a sidebar settings window with grouped form pages and switches.
+      Evidence under
+      [`docs/planning/linux-port/l9.md`](docs/planning/linux-port/l9.md).
 
 **Estimate:** 22-29 weeks for one engineer; about 4-5 months with two people
 after L1. **Start with L0.** It is one week of throwaway code and measurements;

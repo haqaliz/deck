@@ -22,6 +22,55 @@ use deck_core::snapshot::{self, FetchOutcome};
 use gtk4 as gtk;
 use gtk4::prelude::*;
 
+pub const GREEN: &str = "#30d158";
+pub const CYAN: &str = "#40c8e0";
+pub const ORANGE: &str = "#ff9f0a";
+pub const BLUE: &str = "#0a84ff";
+pub const RED: &str = "#ff453a";
+pub const PINK: &str = "#ff375f";
+pub const PURPLE: &str = "#bf5af2";
+pub const WHITE: &str = "#f5f5f7";
+
+/// A coloured bullet, a muted title and a value, matching the macOS rows.
+pub fn metric_markup(title: &str, value: &str, dot: &str, value_color: &str) -> String {
+    format!(
+        "<span foreground=\"{dot}\">●</span>  <span foreground=\"#9a9aa1\">{title}</span>  <span foreground=\"{value_color}\">{value}</span>"
+    )
+}
+
+pub fn value_color(tier: Tier) -> &'static str {
+    match tier {
+        Tier::Normal => WHITE,
+        Tier::Warn => ORANGE,
+        Tier::Alarm => RED,
+    }
+}
+
+/// A coloured bullet for macOS-style rows.
+pub fn dot(color: &str) -> gtk::Label {
+    let dot = gtk::Label::new(None);
+    dot.set_markup(&format!("<span foreground=\"{color}\">●</span>"));
+    dot
+}
+
+/// A single-line row: name at the start, value at the end. Returns the row
+/// plus both labels so callers can style or mark them up.
+pub fn split_row(container: &gtk::Box, name: &str) -> (gtk::Box, gtk::Label, gtk::Label) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    let left = gtk::Label::new(Some(name));
+    left.add_css_class("row-name");
+    left.set_xalign(0.0);
+    left.set_hexpand(true);
+    left.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    let right = gtk::Label::new(None);
+    right.add_css_class("row-value");
+    right.set_xalign(1.0);
+    row.append(&left);
+    row.append(&right);
+    container.append(&row);
+    (row, left, right)
+}
+
 pub fn metric_label(title: &str) -> gtk::Label {
     let label = gtk::Label::new(Some(&format!("{title}   —")));
     label.add_css_class("metric");
@@ -113,11 +162,18 @@ pub fn format_money(value: f64) -> String {
 }
 
 /// Small 15-day bar chart for GitBox; zero days stay visible as a baseline.
-pub fn draw_bars(cr: &gtk::cairo::Context, width: i32, height: i32, values: &[i64]) {
+pub fn draw_bars(
+    cr: &gtk::cairo::Context,
+    width: i32,
+    height: i32,
+    values: &[i64],
+    highlight_last: bool,
+) {
     let width = width as f64;
     let height = height as f64;
-    cr.set_source_rgb(0.10, 0.10, 0.16);
-    let _ = cr.paint();
+    cr.set_operator(gtk::cairo::Operator::Clear);
+    cr.paint().ok();
+    cr.set_operator(gtk::cairo::Operator::Over);
     if values.is_empty() {
         return;
     }
@@ -130,56 +186,23 @@ pub fn draw_bars(cr: &gtk::cairo::Context, width: i32, height: i32, values: &[i6
     let max = values.iter().copied().max().unwrap_or(0).max(1) as f64;
     let slot = width / values.len() as f64;
     let bar_width = (slot - 2.0).max(1.0);
-    cr.set_source_rgb(0.42, 0.62, 0.95);
+    let last = values.len().saturating_sub(1);
     for (index, value) in values.iter().enumerate() {
         let bar = (*value as f64 / max) * (height - 4.0);
         if *value > 0 {
+            if highlight_last && index == last {
+                cr.set_source_rgb(1.0, 0.62, 0.04);
+            } else {
+                cr.set_source_rgb(0.42, 0.62, 0.95);
+            }
             cr.rectangle(
                 index as f64 * slot + 1.0,
                 height - 2.0 - bar,
                 bar_width,
                 bar,
             );
+            let _ = cr.fill();
         }
-    }
-    let _ = cr.fill();
-}
-
-/// Line-only sparkline for market rows; no axes or background.
-pub fn draw_sparkline(cr: &gtk::cairo::Context, width: i32, height: i32, values: &[f64], up: bool) {
-    if values.len() < 2 {
-        return;
-    }
-    let width = width as f64;
-    let height = height as f64;
-    let min = values.iter().copied().fold(f64::INFINITY, f64::min);
-    let max = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let span = (max - min).max(1e-9);
-    if up {
-        cr.set_source_rgb(0.42, 0.78, 0.35);
-    } else {
-        cr.set_source_rgb(0.96, 0.55, 0.66);
-    }
-    cr.set_line_width(1.0);
-    for (index, value) in values.iter().enumerate() {
-        let x = index as f64 / (values.len() - 1) as f64 * width;
-        let y = 1.0 + (height - 2.0) * (1.0 - (value - min) / span);
-        if index == 0 {
-            cr.move_to(x, y);
-        } else {
-            cr.line_to(x, y);
-        }
-    }
-    let _ = cr.stroke();
-}
-
-pub fn apply_tier(label: &gtk::Label, tier: Tier) {
-    label.remove_css_class("warn");
-    label.remove_css_class("alarm");
-    match tier {
-        Tier::Normal => {}
-        Tier::Warn => label.add_css_class("warn"),
-        Tier::Alarm => label.add_css_class("alarm"),
     }
 }
 
@@ -195,8 +218,9 @@ pub fn draw_chart(
 ) {
     let width = width as f64;
     let height = height as f64;
-    cr.set_source_rgb(0.10, 0.10, 0.16);
-    let _ = cr.paint();
+    cr.set_operator(gtk::cairo::Operator::Clear);
+    cr.paint().ok();
+    cr.set_operator(gtk::cairo::Operator::Over);
 
     cr.set_source_rgba(0.5, 0.5, 0.6, 0.25);
     cr.set_line_width(1.0);

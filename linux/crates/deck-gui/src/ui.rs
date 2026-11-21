@@ -126,6 +126,22 @@ pub fn widget_windows(
     windows
 }
 
+/// A minimal top row that moves a widget without adding a macOS-less title.
+pub fn widget_drag_bar(
+    window: &gtk::ApplicationWindow,
+    settings: Rc<RefCell<Settings>>,
+) -> gtk::Widget {
+    let bar = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    bar.set_hexpand(true);
+    let grip = gtk::Label::new(Some("⠿"));
+    grip.add_css_class("search-grip");
+    grip.set_halign(gtk::Align::End);
+    grip.set_hexpand(true);
+    grip.set_tooltip_text(Some("Drag to move"));
+    bar.append(&grip);
+    movable_header(window, &bar, settings, 28)
+}
+
 /// Wraps a header so it moves the window on every backend: margins on a
 /// layer surface, a client-side window handle otherwise.
 pub fn movable_header<W>(
@@ -208,30 +224,31 @@ pub fn search_window(
     paths: Paths,
     settings: Rc<RefCell<Settings>>,
 ) -> (gtk::ApplicationWindow, gtk::Entry) {
-    let window = deck_platform::surface::overlay_window(app, 640, 420);
-    window.add_css_class("deck-surface");
+    let window = deck_platform::surface::overlay_window(app, 640, 360);
+    window.add_css_class("search-window");
 
-    let content = gtk::Box::new(gtk::Orientation::Vertical, 8);
-    content.set_margin_top(12);
-    content.set_margin_bottom(16);
-    content.set_margin_start(16);
-    content.set_margin_end(16);
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 4);
+    content.add_css_class("search-card");
+    content.set_margin_top(8);
+    content.set_margin_bottom(8);
+    content.set_margin_start(8);
+    content.set_margin_end(8);
 
-    let header = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    let title = gtk::Label::new(Some("DECK SEARCH"));
-    title.add_css_class("section");
-    title.set_halign(gtk::Align::Start);
-    let hint = gtk::Label::new(Some("drag to move"));
-    hint.add_css_class("subtitle");
-    hint.set_halign(gtk::Align::End);
-    hint.set_hexpand(true);
-    header.append(&title);
-    header.append(&hint);
-    content.append(&movable_header(&window, &header, settings.clone(), 36));
+    let header = gtk::Box::new(gtk::Orientation::Horizontal, 4);
+    let grip = gtk::Label::new(Some("⠿"));
+    grip.add_css_class("search-grip");
+    grip.set_halign(gtk::Align::End);
+    grip.set_hexpand(true);
+    grip.set_tooltip_text(Some("Drag to move"));
+    header.append(&grip);
+    content.append(&movable_header(&window, &header, settings.clone(), 26));
 
     let entry = gtk::Entry::builder()
-        .placeholder_text("Search Deck… (port, time, run, task, pr, log, metric, mkt)")
+        .placeholder_text("Search Deck…")
         .build();
+    entry.add_css_class("search-entry");
+    entry.set_margin_start(14);
+    entry.set_margin_end(14);
     let list = gtk::ListBox::new();
     list.add_css_class("deck-list");
     list.set_selection_mode(gtk::SelectionMode::Single);
@@ -241,6 +258,14 @@ pub fn search_window(
     scrolled.set_child(Some(&list));
 
     content.append(&entry);
+    let divider = gtk::Separator::new(gtk::Orientation::Horizontal);
+    divider.add_css_class("search-divider");
+    divider.set_margin_start(12);
+    divider.set_margin_end(12);
+    content.append(&divider);
+    scrolled.set_margin_start(6);
+    scrolled.set_margin_end(6);
+    scrolled.set_margin_bottom(6);
     content.append(&scrolled);
     window.set_child(Some(&content));
 
@@ -396,10 +421,9 @@ fn render_search(
             let header = gtk::ListBoxRow::new();
             header.set_activatable(false);
             header.set_selectable(false);
-            let label = gtk::Label::new(Some(section.provider.title()));
-            label.add_css_class("section");
+            let label = gtk::Label::new(Some(&section.provider.title().to_uppercase()));
+            label.add_css_class("search-section");
             label.set_halign(gtk::Align::Start);
-            label.set_margin_top(6);
             header.set_child(Some(&label));
             list.append(&header);
             stored.push(None);
@@ -507,16 +531,20 @@ pub fn settings_window(
     window.set_decorated(false);
     window.add_css_class("deck-surface");
 
-    let notebook = gtk::Notebook::new();
-    notebook.add_css_class("deck-notebook");
-
     let general = page();
-    let autostart = gtk::CheckButton::with_label("Start Deck at login");
+    form_section(&general, "BACKGROUND REFRESH");
+    let autostart_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    autostart_row.add_css_class("form-row");
+    let autostart_label = gtk::Label::new(Some("Start Deck at login"));
+    autostart_label.set_halign(gtk::Align::Start);
+    autostart_label.set_hexpand(true);
+    let autostart = gtk::Switch::new();
     autostart.set_active(settings.borrow().autostart);
+    autostart.set_valign(gtk::Align::Center);
     let paths_for_toggle = paths.clone();
     let settings_for_toggle = settings.clone();
-    autostart.connect_toggled(move |check| {
-        let active = check.is_active();
+    autostart.connect_active_notify(move |switch| {
+        let active = switch.is_active();
         {
             let mut current = settings_for_toggle.borrow_mut();
             current.autostart = active;
@@ -529,7 +557,9 @@ pub fn settings_window(
             let _ = deck_core::autostart::remove(&paths_for_toggle);
         }
     });
-    general.append(&autostart);
+    autostart_row.append(&autostart_label);
+    autostart_row.append(&autostart);
+    general.append(&autostart_row);
     general.append(&caption(
         "A systemd user service can keep deckd running; this entry starts the GUI.",
     ));
@@ -538,14 +568,15 @@ pub fn settings_window(
             "No system keyring (secret-tool) was found. Tokens are stored in a 0600 file; install libsecret-tools and sign in to a keyring to use Secret Service.",
         ));
     }
+    form_section(&general, "SURFACE");
     surface_row(&general, settings.borrow().surface_mode, &paths, &settings);
     if let Some(last) = deck_core::diag::read(&paths.cache_dir, "last-error.log") {
         let line = last.lines().next().unwrap_or("unknown error");
         general.append(&caption(&format!("Last crash: {line}")));
     }
-    notebook.append_page(&general, Some(&tab("General")));
 
     let search = page();
+    form_section(&search, "SHORTCUT");
     search.append(&caption("Spotlight-style panel shortcut"));
     let status = gtk::Label::new(Some(""));
     status.add_css_class("subtitle");
@@ -568,12 +599,115 @@ pub fn settings_window(
     });
     search.append(&install);
     search.append(&status);
-    notebook.append_page(&search, Some(&tab("Search")));
 
     let credentials = credentials_page(&paths, &settings);
-    notebook.append_page(&credentials, Some(&tab("Credentials")));
 
-    notebook.append_page(&widgets_page(&paths, &settings), Some(&tab("Widgets")));
+    let body = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    let sidebar = gtk::ListBox::new();
+    sidebar.add_css_class("settings-sidebar");
+    sidebar.set_width_request(190);
+    let stack = gtk::Stack::new();
+    stack.set_hexpand(true);
+    stack.set_vexpand(true);
+    let mut names: Vec<Option<String>> = Vec::new();
+
+    add_settings_page(
+        &sidebar,
+        &stack,
+        &mut names,
+        "General",
+        "preferences-system",
+        general,
+    );
+    add_settings_page(
+        &sidebar,
+        &stack,
+        &mut names,
+        "Search",
+        "system-search",
+        search,
+    );
+    add_settings_page(
+        &sidebar,
+        &stack,
+        &mut names,
+        "Credentials",
+        "dialog-password",
+        credentials,
+    );
+
+    let section = gtk::ListBoxRow::new();
+    section.set_selectable(false);
+    section.set_activatable(false);
+    let section_label = gtk::Label::new(Some("WIDGETS"));
+    section_label.add_css_class("settings-section");
+    section_label.set_halign(gtk::Align::Start);
+    section.set_child(Some(&section_label));
+    sidebar.append(&section);
+    names.push(None);
+
+    let widget_pages = vec![
+        (
+            "LiveBox",
+            "utilities-system-monitor",
+            livebox_page(&paths, &settings),
+        ),
+        ("NetBox", "network-wired", netbox_page(&paths, &settings)),
+        (
+            "DevBox",
+            "utilities-terminal",
+            devbox_page(&paths, &settings),
+        ),
+        (
+            "Weather",
+            "weather-few-clouds",
+            weather_page(&paths, &settings),
+        ),
+        (
+            "Clock",
+            "preferences-system-time",
+            clock_page(&paths, &settings),
+        ),
+        ("Git", "folder", git_page(&paths, &settings)),
+        (
+            "Market",
+            "applications-internet",
+            market_page(&paths, &settings),
+        ),
+        (
+            "Open",
+            "applications-development",
+            open_page(&paths, &settings),
+        ),
+        ("Ship", "emblem-synchronizing", ship_page(&paths, &settings)),
+        ("Tasks", "view-task", tasks_page(&paths, &settings)),
+        ("Pull requests", "view-list", prs_page(&paths, &settings)),
+        ("Logs", "text-x-generic", logbox_page(&paths, &settings)),
+        (
+            "Metrics",
+            "view-statistics",
+            metricbox_page(&paths, &settings),
+        ),
+    ];
+    for (name, icon, page) in widget_pages {
+        add_settings_page(&sidebar, &stack, &mut names, name, icon, page);
+    }
+
+    let stack_for_select = stack.clone();
+    let names_for_select = names.clone();
+    sidebar.connect_row_selected(move |_, row| {
+        if let Some(row) = row {
+            if let Some(Some(name)) = names_for_select.get(row.index() as usize) {
+                stack_for_select.set_visible_child_name(name);
+            }
+        }
+    });
+    if let Some(row) = sidebar.row_at_index(0) {
+        sidebar.select_row(Some(&row));
+    }
+
+    body.append(&sidebar);
+    body.append(&stack);
 
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     header.add_css_class("deck-header");
@@ -582,7 +716,7 @@ pub fn settings_window(
     header.set_margin_start(16);
     header.set_margin_end(16);
     let header_title = gtk::Label::new(Some("Deck Settings"));
-    header_title.add_css_class("title");
+    header_title.add_css_class("settings-title");
     header_title.set_halign(gtk::Align::Start);
     header_title.set_hexpand(true);
     let close = gtk::Button::with_label("Close");
@@ -596,9 +730,31 @@ pub fn settings_window(
     handle.set_child(Some(&header));
     let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
     root.append(&handle);
-    root.append(&notebook);
+    root.append(&body);
     window.set_child(Some(&root));
     window
+}
+
+fn add_settings_page(
+    sidebar: &gtk::ListBox,
+    stack: &gtk::Stack,
+    names: &mut Vec<Option<String>>,
+    name: &str,
+    icon: &str,
+    page: gtk::Box,
+) {
+    let row = gtk::ListBoxRow::new();
+    let line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let image = gtk::Image::from_icon_name(icon);
+    image.set_pixel_size(16);
+    let label = gtk::Label::new(Some(name));
+    label.set_halign(gtk::Align::Start);
+    line.append(&image);
+    line.append(&label);
+    row.set_child(Some(&line));
+    sidebar.append(&row);
+    stack.add_named(&scrolled(page), Some(name));
+    names.push(Some(name.to_string()));
 }
 
 fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
@@ -608,6 +764,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     ));
     let current = settings.borrow().livebox.clone();
 
+    form_section(&page, "DISPLAY");
     size_row(&page, current.size, paths, settings, |s, v| {
         s.livebox.size = v
     });
@@ -619,6 +776,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.livebox.enabled = v,
     );
+    form_section(&page, "METRICS");
     toggle(
         &page,
         "Show CPU",
@@ -659,6 +817,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.livebox.show_processes = v,
     );
+    form_section(&page, "CHART");
     toggle(
         &page,
         "Show chart",
@@ -667,6 +826,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.livebox.show_chart = v,
     );
+    form_section(&page, "PROCESSES");
     spin(
         &page,
         "Process count",
@@ -689,6 +849,7 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.livebox.refresh_seconds = v,
     );
+    form_section(&page, "THRESHOLDS");
     spin(
         &page,
         "CPU warn",
@@ -936,62 +1097,6 @@ fn devbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.devbox.refresh_seconds = v,
     );
     page
-}
-
-fn widgets_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
-    let root = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    let list = gtk::ListBox::new();
-    list.add_css_class("widget-list");
-    list.set_width_request(150);
-    let stack = gtk::Stack::new();
-    stack.set_hexpand(true);
-    stack.set_vexpand(true);
-
-    let pages = vec![
-        ("LiveBox", livebox_page(paths, settings)),
-        ("NetBox", netbox_page(paths, settings)),
-        ("DevBox", devbox_page(paths, settings)),
-        ("Weather", weather_page(paths, settings)),
-        ("Clock", clock_page(paths, settings)),
-        ("Git", git_page(paths, settings)),
-        ("Market", market_page(paths, settings)),
-        ("Open", open_page(paths, settings)),
-        ("Ship", ship_page(paths, settings)),
-        ("Tasks", tasks_page(paths, settings)),
-        ("Pull requests", prs_page(paths, settings)),
-        ("Logs", logbox_page(paths, settings)),
-        ("Metrics", metricbox_page(paths, settings)),
-    ];
-    let mut names = Vec::new();
-    for (name, page) in pages {
-        names.push(name.to_string());
-        let label = gtk::Label::new(Some(name));
-        label.set_halign(gtk::Align::Start);
-        label.set_xalign(0.0);
-        label.set_margin_top(6);
-        label.set_margin_bottom(6);
-        label.set_margin_start(8);
-        let row = gtk::ListBoxRow::new();
-        row.set_child(Some(&label));
-        list.append(&row);
-        stack.add_named(&scrolled(page), Some(name));
-    }
-
-    let stack_for_select = stack.clone();
-    let names_for_select = names.clone();
-    list.connect_row_selected(move |_, row| {
-        if let Some(row) = row {
-            if let Some(name) = names_for_select.get(row.index() as usize) {
-                stack_for_select.set_visible_child_name(name);
-            }
-        }
-    });
-    if let Some(row) = list.row_at_index(0) {
-        list.select_row(Some(&row));
-    }
-    root.append(&list);
-    root.append(&stack);
-    root
 }
 
 fn weather_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
@@ -2177,6 +2282,13 @@ fn scrolled(page: gtk::Box) -> gtk::ScrolledWindow {
     scrolled
 }
 
+fn form_section(page: &gtk::Box, title: &str) {
+    let label = gtk::Label::new(Some(title));
+    label.add_css_class("form-section");
+    label.set_halign(gtk::Align::Start);
+    page.append(&label);
+}
+
 fn size_row(
     page: &gtk::Box,
     current: WidgetSize,
@@ -2214,10 +2326,6 @@ fn size_row(
     page.append(&row);
 }
 
-fn tab(title: &str) -> gtk::Label {
-    gtk::Label::new(Some(title))
-}
-
 fn caption(text: &str) -> gtk::Label {
     let label = gtk::Label::new(Some(text));
     label.set_halign(gtk::Align::Start);
@@ -2236,16 +2344,24 @@ fn toggle<F>(
 ) where
     F: Fn(&mut Settings, bool) + Copy + 'static,
 {
-    let check = gtk::CheckButton::with_label(label);
-    check.set_active(active);
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    row.add_css_class("form-row");
+    let title = gtk::Label::new(Some(label));
+    title.set_halign(gtk::Align::Start);
+    title.set_hexpand(true);
+    let switch = gtk::Switch::new();
+    switch.set_active(active);
+    switch.set_valign(gtk::Align::Center);
     let paths = paths.clone();
     let settings = settings.clone();
-    check.connect_toggled(move |check| {
+    switch.connect_active_notify(move |switch| {
         let mut current = settings.borrow_mut();
-        apply(&mut current, check.is_active());
+        apply(&mut current, switch.is_active());
         let _ = current.save(&paths);
     });
-    page.append(&check);
+    row.append(&title);
+    row.append(&switch);
+    page.append(&row);
 }
 
 #[allow(clippy::too_many_arguments)]

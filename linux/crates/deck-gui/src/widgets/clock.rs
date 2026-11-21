@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use deck_core::clockbox::{self, Zone};
+use deck_core::clockbox::{self, ClockRow, Zone};
 use deck_core::settings::{Settings, WidgetSize};
 use gtk4 as gtk;
 use gtk4::prelude::*;
@@ -35,38 +35,50 @@ pub fn build(
         };
         let rows = clockbox::rows(&ids, Zone::Local, now, limit);
         if rows.is_empty() {
-            widgets::add_row(&body, "Add city IDs in Settings");
+            widgets::add_row(&body, "Pick cities in Settings");
             return gtk::glib::ControlFlow::Continue;
         }
-        for row in rows {
-            if feed_size == WidgetSize::Small {
-                let time = gtk::Label::new(Some(&row.time));
-                time.add_css_class("title");
-                time.set_halign(gtk::Align::Start);
-                body.append(&time);
-                let mut subtitle = row.name.clone();
-                if clock.show_relative_day && row.day != "Today" {
-                    subtitle.push_str(&format!("  ·  {}", row.day));
-                }
-                if clock.show_offset {
-                    subtitle.push_str(&format!("  ·  {}", row.offset));
-                }
-                widgets::add_row(&body, &subtitle);
-                continue;
-            }
-            let mut suffix = Vec::new();
-            if clock.show_relative_day && row.day != "Today" {
-                suffix.push(row.day.clone());
+
+        if feed_size == WidgetSize::Small {
+            let row = &rows[0];
+            let name = gtk::Label::new(Some(&row.name));
+            name.add_css_class("clock-name");
+            name.set_halign(gtk::Align::Start);
+            body.append(&name);
+            let time = gtk::Label::new(Some(&row.time));
+            time.add_css_class("clock-time-small");
+            time.set_halign(gtk::Align::Start);
+            body.append(&time);
+            if clock.show_relative_day {
+                widgets::add_row(&body, &row.day);
             }
             if clock.show_offset {
-                suffix.push(row.offset.clone());
+                widgets::add_row(&body, &row.offset);
             }
-            let text = if suffix.is_empty() {
-                format!("{}   {}", row.name, row.time)
-            } else {
-                format!("{}   {}   {}", row.name, row.time, suffix.join("  "))
-            };
-            widgets::add_row(&body, &text);
+            return gtk::glib::ControlFlow::Continue;
+        }
+
+        let columns = 3;
+        let mut start = 0;
+        while start < rows.len() {
+            let end = (start + columns).min(rows.len());
+            let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+            line.set_hexpand(true);
+            for row in &rows[start..end] {
+                line.append(&column(row, &clock));
+            }
+            for _ in end - start..columns {
+                let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+                spacer.set_hexpand(true);
+                line.append(&spacer);
+            }
+            body.append(&line);
+            if feed_size == WidgetSize::Large && end < rows.len() {
+                let divider = gtk::Separator::new(gtk::Orientation::Horizontal);
+                divider.add_css_class("clock-divider");
+                body.append(&divider);
+            }
+            start = end;
         }
         gtk::glib::ControlFlow::Continue
     };
@@ -74,4 +86,32 @@ pub fn build(
     tick();
     gtk::glib::timeout_add_seconds_local(10, tick);
     (feed.window, feed.height)
+}
+
+fn column(row: &ClockRow, clock: &deck_core::settings::ClockBoxSettings) -> gtk::Box {
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    column.set_hexpand(true);
+    column.set_halign(gtk::Align::Fill);
+    let time = gtk::Label::new(Some(&row.time));
+    time.add_css_class("clock-time");
+    time.set_halign(gtk::Align::Center);
+    let name = gtk::Label::new(Some(&row.name));
+    name.add_css_class("clock-name");
+    name.set_halign(gtk::Align::Center);
+    name.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    column.append(&time);
+    column.append(&name);
+    if clock.show_relative_day {
+        let day = gtk::Label::new(Some(&row.day));
+        day.add_css_class("row-meta");
+        day.set_halign(gtk::Align::Center);
+        column.append(&day);
+    }
+    if clock.show_offset {
+        let offset = gtk::Label::new(Some(&row.offset));
+        offset.add_css_class("row-meta");
+        offset.set_halign(gtk::Align::Center);
+        column.append(&offset);
+    }
+    column
 }

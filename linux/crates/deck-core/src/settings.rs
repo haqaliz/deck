@@ -101,7 +101,7 @@ impl Default for LiveBoxSettings {
             show_gpu: true,
             show_processes: true,
             show_chart: true,
-            process_count: 3,
+            process_count: 10,
             refresh_seconds: 15,
             cpu_warn: 80,
             cpu_alarm: 90,
@@ -318,7 +318,7 @@ impl Default for TaskBoxSettings {
             organization: String::new(),
             project: String::new(),
             query: String::new(),
-            task_count: 5,
+            task_count: 12,
             show_legend: true,
             show_list: true,
         }

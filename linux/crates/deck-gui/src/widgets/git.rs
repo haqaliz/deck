@@ -32,19 +32,29 @@ pub fn build(
 
         let summary = gtk::Box::new(gtk::Orientation::Horizontal, 14);
         let today = widgets::metric_label("TODAY");
-        today.set_text(&format!("TODAY  {}", snapshot.today_count));
+        today.set_markup(&widgets::metric_markup(
+            "TODAY",
+            &snapshot.today_count.to_string(),
+            widgets::ORANGE,
+            widgets::WHITE,
+        ));
         let streak = widgets::metric_label("STREAK");
-        streak.set_text(&format!("STREAK  {}d", snapshot.streak));
+        streak.set_markup(&widgets::metric_markup(
+            "STREAK",
+            &format!("{}d", snapshot.streak),
+            widgets::CYAN,
+            widgets::WHITE,
+        ));
         summary.append(&today);
         summary.append(&streak);
         body.append(&summary);
 
         if git.show_chart && feed_size != WidgetSize::Small {
             let chart = gtk::DrawingArea::new();
-            chart.set_size_request(-1, 46);
+            chart.set_size_request(-1, 70);
             let values: Vec<i64> = snapshot.days.iter().map(|day| day.count as i64).collect();
             chart.set_draw_func(move |_, cr, width, height| {
-                widgets::draw_bars(cr, width, height, &values);
+                widgets::draw_bars(cr, width, height, &values, true);
             });
             body.append(&chart);
         }
@@ -52,10 +62,12 @@ pub fn build(
         if git.show_repos && feed_size == WidgetSize::Large {
             widgets::section(&body, "REPOS");
             for repo in snapshot.repos.iter().take(git.repo_count.max(1) as usize) {
-                widgets::add_row(
-                    &body,
-                    &format!("{}   {} today", repo.short_name, repo.today_count),
-                );
+                let (_, _, count) = widgets::split_row(&body, &repo.short_name);
+                count.set_markup(&format!(
+                    "<span foreground=\"{}\">{}</span>",
+                    widgets::ORANGE,
+                    repo.today_count
+                ));
             }
             if snapshot.repos.is_empty() {
                 widgets::add_row(&body, "No commits in the last 15 days");
