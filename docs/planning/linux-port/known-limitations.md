@@ -1,4 +1,4 @@
-# Deck for Linux — known limitations (v0.2.0)
+# Deck for Linux — known limitations (v0.3.0)
 
 Deck on Linux is a **Pi-first v1**. This page is the honest boundary of what was
 verified on the hardware available.

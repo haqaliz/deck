@@ -1,3 +1,6 @@
+use std::collections::{HashMap, VecDeque};
+use std::time::{Duration, Instant};
+
 use chrono::{DateTime, Utc};
 
 use crate::clockbox::{self, Zone};
@@ -8,9 +11,10 @@ use crate::logbox::LogBoxSnapshot;
 use crate::market::MarketSnapshot;
 use crate::metricbox::MetricBoxSnapshot;
 use crate::openbox::OpenCodeSnapshot;
-use crate::prs::PrBoxSnapshot;
+use crate::providers::FetchError;
+use crate::prs::{self, PrBoxSnapshot};
 use crate::ship::{ShipBoxSnapshot, ShipStatus};
-use crate::tasks::TaskBoxSnapshot;
+use crate::tasks::{self, TaskBoxSnapshot};
 use crate::weather::WeatherSnapshot;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -48,6 +52,44 @@ impl SearchProvider {
             Self::Market => "mkt",
         }
     }
+
+    pub fn id(self) -> &'static str {
+        self.prefix()
+    }
+
+    pub fn settings_title(self) -> &'static str {
+        match self {
+            Self::Port => "Ports and containers",
+            Self::Time => "World clocks",
+            Self::OpenCode => "OpenCode sessions",
+            Self::Run => "Builds",
+            Self::System => "System",
+            Self::Network => "Network",
+            Self::Git => "Git",
+            Self::Weather => "Weather",
+            Self::Task => "Work items",
+            Self::Pr => "Pull requests",
+            Self::Log => "Logs",
+            Self::Metric => "Metrics",
+            Self::Market => "Markets",
+        }
+    }
+
+    pub const ALL: [Self; 13] = [
+        Self::Port,
+        Self::Time,
+        Self::OpenCode,
+        Self::Run,
+        Self::System,
+        Self::Network,
+        Self::Git,
+        Self::Weather,
+        Self::Task,
+        Self::Pr,
+        Self::Log,
+        Self::Metric,
+        Self::Market,
+    ];
 
     pub fn title(self) -> &'static str {
         match self {
@@ -214,6 +256,9 @@ pub struct SearchInputs {
     pub interfaces: Vec<String>,
     pub ports: Vec<ListeningPort>,
     pub containers: Vec<DockerContainer>,
+    pub disabled: Vec<String>,
+    pub log_base: Option<String>,
+    pub log_index: Option<String>,
 }
 
 pub fn score(query: &str, candidate: &str) -> Option<i32> {
@@ -270,6 +315,9 @@ pub fn run(inputs: &SearchInputs, raw: &str, now: DateTime<Utc>) -> Vec<SearchSe
         SearchProvider::Metric,
         SearchProvider::Market,
     ] {
+        if inputs.disabled.iter().any(|id| id == provider.id()) {
+            continue;
+        }
         if let Some(scope) = query.scope {
             if scope != provider {
                 continue;
@@ -657,7 +705,8 @@ fn logs(inputs: &SearchInputs) -> Vec<SearchResult> {
                 title: service.name.clone(),
                 subtitle: format!("{} errors", service.count),
                 score,
-                action: SearchAction::Copy(service.name.clone()),
+                action: log_action(inputs, &format!("service:\"{}\"", service.name))
+                    .unwrap_or_else(|| SearchAction::Copy(service.name.clone())),
             });
         }
     }
@@ -669,7 +718,8 @@ fn logs(inputs: &SearchInputs) -> Vec<SearchResult> {
                 title: template.name.clone(),
                 subtitle: format!("{} occurrences", template.count),
                 score,
-                action: SearchAction::Copy(template.name.clone()),
+                action: log_action(inputs, &format!("\"{}\"", template.name))
+                    .unwrap_or_else(|| SearchAction::Copy(template.name.clone())),
             });
         }
     }
@@ -681,8 +731,33 @@ fn logs(inputs: &SearchInputs) -> Vec<SearchResult> {
                 title: line.message.clone(),
                 subtitle: format!("{} · {}", line.service, line.level),
                 score,
-                action: SearchAction::Copy(line.message.clone()),
+                action: log_action(inputs, &format!("\"{}\"", line.message))
+                    .unwrap_or_else(|| SearchAction::Copy(line.message.clone())),
             });
+        }
+    }
+    out
+}
+
+fn log_action(inputs: &SearchInputs, kql: &str) -> Option<SearchAction> {
+    let base = inputs.log_base.as_deref()?.trim_end_matches('/');
+    let index = inputs.log_index.as_deref()?;
+    if !(base.starts_with("https://") || base.starts_with("http://")) {
+        return None;
+    }
+    let query = encode_component(&format!("'{kql}'"));
+    Some(SearchAction::Open(format!(
+        "{base}/{index}/app/discover#/?_g=(time:(from:now-15m,to:now))&_a=(query:(language:kuery,query:{query}))"
+    )))
+}
+
+fn encode_component(value: &str) -> String {
+    let mut out = String::new();
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') {
+            out.push(byte as char);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
         }
     }
     out
@@ -1066,5 +1141,201 @@ mod tests {
         assert!(web_url("http://dev.azure.com/x").is_some());
         assert!(web_url("javascript:alert(1)").is_none());
         assert!(web_url("https:///missing").is_none());
+    }
+}
+
+/// Short-lived answer cache: the same query should not spend another network
+/// call or rate-limit token while the panel stays open.
+#[derive(Debug)]
+pub struct RemoteSearchCache {
+    entries: HashMap<String, (Instant, Vec<SearchResult>)>,
+    order: VecDeque<String>,
+    capacity: usize,
+    ttl: Duration,
+}
+
+impl Default for RemoteSearchCache {
+    fn default() -> Self {
+        Self::new(48, Duration::from_secs(60))
+    }
+}
+
+impl RemoteSearchCache {
+    pub fn new(capacity: usize, ttl: Duration) -> Self {
+        Self {
+            entries: HashMap::new(),
+            order: VecDeque::new(),
+            capacity: capacity.max(1),
+            ttl,
+        }
+    }
+
+    pub fn get(&mut self, key: &str, now: Instant) -> Option<Vec<SearchResult>> {
+        let (at, results) = self.entries.get(key)?;
+        if now.duration_since(*at) > self.ttl {
+            self.entries.remove(key);
+            self.order.retain(|entry| entry != key);
+            return None;
+        }
+        let results = results.clone();
+        self.order.retain(|entry| entry != key);
+        self.order.push_back(key.to_owned());
+        Some(results)
+    }
+
+    pub fn put(&mut self, key: String, results: Vec<SearchResult>, now: Instant) {
+        self.entries.insert(key.clone(), (now, results));
+        self.order.retain(|entry| entry != &key);
+        self.order.push_back(key);
+        while self.order.len() > self.capacity {
+            if let Some(oldest) = self.order.pop_front() {
+                self.entries.remove(&oldest);
+            }
+        }
+    }
+}
+
+/// Below this length a remote provider is not asked.
+pub const REMOTE_SEARCH_FLOOR: usize = 2;
+/// A 429 pauses the remote source for this long.
+pub const REMOTE_SEARCH_BACKOFF: Duration = Duration::from_secs(60);
+
+/// Azure DevOps full-text work-item search. The local snapshot only covers the
+/// widget's assigned/open query; this asks the service for the typed text.
+pub fn remote_task_search(
+    organization: &str,
+    project: &str,
+    token: &str,
+    text: &str,
+    kind: Option<WorkItemKind>,
+) -> Result<Vec<SearchResult>, FetchError> {
+    let query = wiql_for(text, kind);
+    let snapshot = tasks::fetch(organization, project, token, &query, 10)?;
+    Ok(snapshot
+        .tasks
+        .into_iter()
+        .filter_map(|task| {
+            let score = best_score(text, &[&task.title, &task.id, &task.state, &task.item_type])?;
+            let action = if task.url.is_empty() {
+                SearchAction::Copy(task.id.clone())
+            } else {
+                SearchAction::Open(task.url)
+            };
+            Some(SearchResult {
+                id: format!("task:{}", task.id),
+                provider: SearchProvider::Task,
+                title: task.title,
+                subtitle: format!("#{} · {} · {}", task.id, task.item_type, task.state),
+                score,
+                action,
+            })
+        })
+        .collect())
+}
+
+/// PRBox's open authored/review-requested PRs, filtered by the typed text.
+/// GitHub and Azure apply the "mine" criterion in the API call; matching the
+/// text happens here because both services return small, bounded pages.
+pub fn remote_pr_search(
+    sources: prs::PrSources,
+    text: &str,
+) -> Result<Vec<SearchResult>, FetchError> {
+    let snapshot = prs::fetch(sources)?;
+    Ok(snapshot
+        .pull_requests
+        .into_iter()
+        .filter_map(|row| {
+            let provider = match row.provider {
+                prs::PrProvider::Github => "GitHub",
+                prs::PrProvider::AzureDevOps => "Azure",
+            };
+            let score = best_score(text, &[&row.title, &row.repo, &row.number.to_string()])?;
+            let action = if row.url.is_empty() {
+                SearchAction::Copy(row.id.clone())
+            } else {
+                SearchAction::Open(row.url)
+            };
+            Some(SearchResult {
+                id: format!("pr:{}", row.id),
+                provider: SearchProvider::Pr,
+                title: row.title,
+                subtitle: format!("#{} · {} · {provider}", row.number, row.repo),
+                score,
+                action,
+            })
+        })
+        .collect())
+}
+
+fn wiql_for(text: &str, kind: Option<WorkItemKind>) -> String {
+    let text = text.trim().replace('\'', "''");
+    let mut clauses = vec![format!("[System.Title] CONTAINS '{text}'")];
+    if let Some(kind) = kind {
+        let item_type = match kind {
+            WorkItemKind::Any => None,
+            WorkItemKind::Bug => Some("Bug"),
+            WorkItemKind::Backlog => Some("Product Backlog Item"),
+            WorkItemKind::Epic => Some("Epic"),
+            WorkItemKind::Feature => Some("Feature"),
+            WorkItemKind::Task => Some("Task"),
+        };
+        if let Some(item_type) = item_type {
+            clauses.push(format!("[System.WorkItemType] = '{item_type}'"));
+        }
+    }
+    format!(
+        "SELECT [System.Id] FROM WorkItems WHERE {} ORDER BY [System.ChangedDate] DESC",
+        clauses.join(" AND ")
+    )
+}
+
+#[cfg(test)]
+mod remote_tests {
+    use super::*;
+
+    #[test]
+    fn cache_expires_and_evicts() {
+        let mut cache = RemoteSearchCache::new(2, Duration::from_secs(10));
+        let now = Instant::now();
+        cache.put("a".into(), Vec::new(), now);
+        assert!(cache.get("a", now).is_some());
+        assert!(cache.get("a", now + Duration::from_secs(11)).is_none());
+
+        cache.put("b".into(), Vec::new(), now);
+        cache.put("c".into(), Vec::new(), now);
+        assert!(cache.get("a", now).is_none());
+        assert!(cache.get("b", now).is_some());
+    }
+
+    #[test]
+    fn wiql_escapes_quotes_and_kind() {
+        let query = wiql_for("login bug's", Some(WorkItemKind::Bug));
+        assert!(query.contains("login bug''s"));
+        assert!(query.contains("[System.WorkItemType] = 'Bug'"));
+        assert!(wiql_for("login", None).contains("CONTAINS 'login'"));
+    }
+}
+
+#[cfg(test)]
+mod deep_link_tests {
+    use super::*;
+
+    #[test]
+    fn log_links_carry_the_query_and_time_range() {
+        let inputs = SearchInputs {
+            log_base: Some("https://es.example.com/".into()),
+            log_index: Some("logs-manifold-prd".into()),
+            ..SearchInputs::default()
+        };
+        let action = log_action(&inputs, "service:\"api\"").expect("link");
+        match action {
+            SearchAction::Open(url) => {
+                assert!(url.starts_with("https://es.example.com/logs-manifold-prd/app/discover"));
+                assert!(url.contains("now-15m"));
+                assert!(url.contains("service%3A%22api%22"));
+            }
+            _ => panic!("expected open"),
+        }
+        assert!(log_action(&SearchInputs::default(), "x").is_none());
     }
 }

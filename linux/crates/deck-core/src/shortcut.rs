@@ -5,6 +5,107 @@ use std::process::Command;
 use crate::paths::write_atomic;
 use crate::CoreError;
 
+/// KDE autostarts a hidden desktop entry and binds its `_launch` action. The
+/// config write is picked up by KGlobalAccel on the next login.
+pub const KDE_DESKTOP_ID: &str = "io.github.haqaliz.deck.search.desktop";
+
+pub fn kde_desktop_entry(command: &str) -> String {
+    format!(
+        "[Desktop Entry]\nType=Application\nName=Deck Search\nComment=Deck Spotlight-style search\nExec={command}\nIcon=deck\nTerminal=false\nNoDisplay=true\nStartupNotify=false\n"
+    )
+}
+
+fn kde_key(key: &str) -> String {
+    key.split('-')
+        .map(|part| match part {
+            "W" => "Meta",
+            "A" => "Alt",
+            "C" => "Ctrl",
+            "S" => "Shift",
+            other => other,
+        })
+        .collect::<Vec<_>>()
+        .join("+")
+}
+
+fn kwriteconfig() -> Option<&'static str> {
+    ["kwriteconfig6", "kwriteconfig5"].into_iter().find(|tool| {
+        Command::new(tool)
+            .arg("--version")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    })
+}
+
+pub fn install_kde_shortcut(command: &str, key: &str) -> Result<PathBuf, String> {
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| "HOME is not set".to_string())?;
+    let tool = kwriteconfig().ok_or_else(|| "kwriteconfig6/kwriteconfig5 not found".to_string())?;
+    let desktop = home.join(".local/share/applications").join(KDE_DESKTOP_ID);
+    if let Some(parent) = desktop.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    write_atomic(&desktop, kde_desktop_entry(command).as_bytes(), 0o644)
+        .map_err(|error| error.to_string())?;
+
+    let value = format!("{},{},Deck Search", kde_key(key), "none");
+    let status = Command::new(tool)
+        .args([
+            "--file",
+            "kglobalshortcutsrc",
+            "--group",
+            "services",
+            "--group",
+            KDE_DESKTOP_ID,
+            "--key",
+            "_launch",
+        ])
+        .arg(value)
+        .status()
+        .map_err(|error| format!("{tool}: {error}"))?;
+    if !status.success() {
+        return Err(format!("{tool} could not write kglobalshortcutsrc"));
+    }
+    for tool in ["kbuildsycoca6", "kbuildsycoca5"] {
+        if Command::new(tool).arg("--noincremental").status().is_ok() {
+            break;
+        }
+    }
+    Ok(desktop)
+}
+
+/// Removes the hidden launcher and KGlobalAccel entry. `Ok(None)` means neither
+/// existed.
+pub fn remove_kde_shortcut() -> Result<Option<PathBuf>, String> {
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| "HOME is not set".to_string())?;
+    let desktop = home.join(".local/share/applications").join(KDE_DESKTOP_ID);
+    let mut removed = None;
+    if desktop.exists() {
+        fs::remove_file(&desktop).map_err(|error| error.to_string())?;
+        removed = Some(desktop);
+    }
+    if let Some(tool) = kwriteconfig() {
+        let _ = Command::new(tool)
+            .args([
+                "--file",
+                "kglobalshortcutsrc",
+                "--group",
+                "services",
+                "--group",
+                KDE_DESKTOP_ID,
+                "--key",
+                "_launch",
+                "--delete",
+            ])
+            .status();
+    }
+    Ok(removed)
+}
+
 /// Default Spotlight-style shortcut. L0 proved W-Space fires on labwc.
 pub const DEFAULT_KEY: &str = "W-Space";
 
@@ -253,6 +354,15 @@ mod tests {
     #[test]
     fn refuses_xml_without_a_keyboard_section() {
         assert!(apply_shortcut("<openbox_config/>", "deck", "W-Space").is_none());
+    }
+
+    #[test]
+    fn kde_entry_and_key_are_well_formed() {
+        let entry = kde_desktop_entry("/usr/bin/deck --toggle-search");
+        assert!(entry.contains("Exec=/usr/bin/deck --toggle-search"));
+        assert!(entry.contains("NoDisplay=true"));
+        assert_eq!(kde_key("W-Space"), "Meta+Space");
+        assert_eq!(kde_key("C-A-F12"), "Ctrl+Alt+F12");
     }
 
     #[test]

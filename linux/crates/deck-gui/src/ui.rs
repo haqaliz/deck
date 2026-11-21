@@ -1,7 +1,8 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::time::Duration;
+use std::sync::mpsc;
+use std::time::{Duration, Instant};
 
 use deck_core::paths::Paths;
 use deck_core::providers;
@@ -295,22 +296,39 @@ pub fn search_window(
 
     // Generation counter instead of removing timers: removing a SourceId that
     // has already fired panics in glib, and an expired 180ms timer is harmless.
-    let generation = Rc::new(std::cell::Cell::new(0_u64));
+    let generation = Rc::new(Cell::new(0_u64));
+    let remote_cache = Rc::new(RefCell::new(search_core::RemoteSearchCache::default()));
+    let task_blocked: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
+    let pr_blocked: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
+    let last_local: Rc<RefCell<Vec<search_core::SearchSection>>> =
+        Rc::new(RefCell::new(Vec::new()));
+    let (remote_tx, remote_rx) = mpsc::channel::<RemoteSearchMessage>();
     let paths_for_change = paths.clone();
     let settings_for_change = settings.clone();
     let list_for_change = list.clone();
     let actions_for_change = actions.clone();
     let sampler_for_change = sampler.clone();
+    let generation_for_change = generation.clone();
+    let cache_for_change = remote_cache.clone();
+    let task_blocked_for_change = task_blocked.clone();
+    let pr_blocked_for_change = pr_blocked.clone();
+    let local_for_change = last_local.clone();
+    let tx_for_change = remote_tx.clone();
     entry.connect_changed(move |entry| {
-        let ticket = generation.get() + 1;
-        generation.set(ticket);
-        let generation_for_timer = generation.clone();
+        let ticket = generation_for_change.get() + 1;
+        generation_for_change.set(ticket);
+        let generation_for_timer = generation_for_change.clone();
         let text = entry.text().to_string();
         let paths = paths_for_change.clone();
         let settings = settings_for_change.clone();
         let list = list_for_change.clone();
         let actions = actions_for_change.clone();
         let sampler = sampler_for_change.clone();
+        let cache = cache_for_change.clone();
+        let task_blocked = task_blocked_for_change.clone();
+        let pr_blocked = pr_blocked_for_change.clone();
+        let local = local_for_change.clone();
+        let tx = tx_for_change.clone();
         gtk::glib::timeout_add_local_once(Duration::from_millis(180), move || {
             if generation_for_timer.get() != ticket {
                 return;
@@ -320,8 +338,59 @@ pub fn search_window(
                 &text,
                 deck_core::clockbox::now(),
             );
+            *local.borrow_mut() = sections.clone();
             render_search(&list, &actions, &sections, None);
+            schedule_remote_search(
+                &text,
+                ticket,
+                cache,
+                task_blocked,
+                pr_blocked,
+                local,
+                list,
+                actions,
+                paths,
+                settings,
+                tx,
+            );
         });
+    });
+
+    let poll_generation = generation.clone();
+    let poll_cache = remote_cache.clone();
+    let poll_task_blocked = task_blocked.clone();
+    let poll_pr_blocked = pr_blocked.clone();
+    let poll_local = last_local.clone();
+    let poll_list = list.clone();
+    let poll_actions = actions.clone();
+    gtk::glib::timeout_add_local(Duration::from_millis(150), move || {
+        while let Ok(message) = remote_rx.try_recv() {
+            if poll_generation.get() != message.ticket {
+                continue;
+            }
+            match message.result {
+                Ok(results) => {
+                    poll_cache
+                        .borrow_mut()
+                        .put(message.key, results.clone(), Instant::now());
+                    if !results.is_empty() {
+                        let mut sections = poll_local.borrow().clone();
+                        merge_remote_sections(&mut sections, results);
+                        render_search(&poll_list, &poll_actions, &sections, None);
+                    }
+                }
+                Err(providers::FetchError::RateLimited) => {
+                    let until = Some(Instant::now() + search_core::REMOTE_SEARCH_BACKOFF);
+                    if message.key.starts_with("task:") {
+                        poll_task_blocked.set(until);
+                    } else {
+                        poll_pr_blocked.set(until);
+                    }
+                }
+                Err(_) => {}
+            }
+        }
+        gtk::glib::ControlFlow::Continue
     });
 
     let window_for_activate = window.clone();
@@ -369,6 +438,198 @@ pub fn search_window(
     (window, entry)
 }
 
+struct RemoteSearchMessage {
+    ticket: u64,
+    key: String,
+    result: Result<Vec<search_core::SearchResult>, providers::FetchError>,
+}
+
+fn merge_remote_sections(
+    sections: &mut Vec<search_core::SearchSection>,
+    remote: Vec<search_core::SearchResult>,
+) {
+    let Some(provider) = remote.first().map(|result| result.provider) else {
+        return;
+    };
+    if let Some(section) = sections
+        .iter_mut()
+        .find(|section| section.provider == provider)
+    {
+        for result in remote {
+            if !section
+                .results
+                .iter()
+                .any(|existing| existing.id == result.id)
+            {
+                section.results.push(result);
+            }
+        }
+        section.results.sort_by(|left, right| {
+            right
+                .score
+                .cmp(&left.score)
+                .then_with(|| left.title.cmp(&right.title))
+        });
+        section.results.truncate(10);
+        return;
+    }
+    let mut remote = remote;
+    remote.sort_by(|left, right| {
+        right
+            .score
+            .cmp(&left.score)
+            .then_with(|| left.title.cmp(&right.title))
+    });
+    remote.truncate(10);
+    let position = sections
+        .iter()
+        .position(|section| section.provider >= provider)
+        .unwrap_or(sections.len());
+    sections.insert(
+        position,
+        search_core::SearchSection {
+            provider,
+            results: remote,
+        },
+    );
+}
+
+enum RemoteRequest {
+    Tasks {
+        organization: String,
+        project: String,
+        kind: Option<search_core::WorkItemKind>,
+    },
+    Prs {
+        organization: String,
+        project: String,
+    },
+}
+
+#[allow(clippy::too_many_arguments)]
+fn schedule_remote_search(
+    text: &str,
+    ticket: u64,
+    cache: Rc<RefCell<search_core::RemoteSearchCache>>,
+    task_blocked: Rc<Cell<Option<Instant>>>,
+    pr_blocked: Rc<Cell<Option<Instant>>>,
+    local: Rc<RefCell<Vec<search_core::SearchSection>>>,
+    list: gtk::ListBox,
+    actions: Rc<RefCell<Vec<Option<search_core::SearchAction>>>>,
+    paths: Paths,
+    settings: Rc<RefCell<Settings>>,
+    tx: mpsc::Sender<RemoteSearchMessage>,
+) {
+    let query = search_core::parse(text);
+    if query.text.chars().count() < search_core::REMOTE_SEARCH_FLOOR {
+        return;
+    }
+    let tasks = settings.borrow().tasks.clone();
+    let request = match query.scope {
+        None | Some(search_core::SearchProvider::Task) => {
+            if settings
+                .borrow()
+                .search
+                .disabled
+                .iter()
+                .any(|id| id == "task")
+            {
+                return;
+            }
+            if !tasks.enabled
+                || tasks.organization.trim().is_empty()
+                || tasks.project.trim().is_empty()
+            {
+                return;
+            }
+            RemoteRequest::Tasks {
+                organization: tasks.organization.clone(),
+                project: tasks.project.clone(),
+                kind: query.work_item_kind,
+            }
+        }
+        Some(search_core::SearchProvider::Pr) => {
+            let enabled = settings.borrow().prs.enabled
+                && !settings
+                    .borrow()
+                    .search
+                    .disabled
+                    .iter()
+                    .any(|id| id == "pr");
+            if !enabled {
+                return;
+            }
+            RemoteRequest::Prs {
+                organization: tasks.organization.clone(),
+                project: tasks.project.clone(),
+            }
+        }
+        _ => return,
+    };
+    let blocked = match &request {
+        RemoteRequest::Tasks { .. } => task_blocked,
+        RemoteRequest::Prs { .. } => pr_blocked,
+    };
+    if let Some(until) = blocked.get() {
+        if until > Instant::now() {
+            return;
+        }
+    }
+    let key = match &request {
+        RemoteRequest::Tasks { kind, .. } => {
+            format!("task:{:?}:{}", kind, query.text.to_lowercase())
+        }
+        RemoteRequest::Prs { .. } => format!("pr:{}", query.text.to_lowercase()),
+    };
+    if let Some(cached) = cache.borrow_mut().get(&key, Instant::now()) {
+        if !cached.is_empty() {
+            let mut sections = local.borrow().clone();
+            merge_remote_sections(&mut sections, cached);
+            render_search(&list, &actions, &sections, None);
+        }
+        return;
+    }
+    let text = query.text;
+    std::thread::spawn(move || {
+        let result = match request {
+            RemoteRequest::Tasks {
+                organization,
+                project,
+                kind,
+            } => providers::require_token(&paths, "azure").and_then(|token| {
+                search_core::remote_task_search(&organization, &project, &token, &text, kind)
+            }),
+            RemoteRequest::Prs {
+                organization,
+                project,
+            } => {
+                let github = providers::token(&paths, "github").ok().flatten();
+                let azure = providers::token(&paths, "azure").ok().flatten();
+                if github.is_none() && azure.is_none() {
+                    Err(providers::FetchError::NotConfigured)
+                } else {
+                    search_core::remote_pr_search(
+                        deck_core::prs::PrSources {
+                            github_token: github.as_deref(),
+                            azure_token: azure.as_deref(),
+                            azure_org: &organization,
+                            azure_project: &project,
+                            limit: 12,
+                            show_review_state: false,
+                        },
+                        &text,
+                    )
+                }
+            }
+        };
+        let _ = tx.send(RemoteSearchMessage {
+            ticket,
+            key,
+            result,
+        });
+    });
+}
+
 fn search_inputs(
     paths: &Paths,
     settings: &Rc<RefCell<Settings>>,
@@ -385,6 +646,11 @@ fn search_inputs(
         logbox: deck_core::snapshot::read_payload(paths, "logbox"),
         metricbox: deck_core::snapshot::read_payload(paths, "metricbox"),
         clock_ids: settings.borrow().clock.city_ids.clone(),
+        disabled: settings.borrow().search.disabled.clone(),
+        log_base: Some(settings.borrow().logbox.base_url.clone()),
+        log_index: Some(deck_core::logbox::normalize_environment(
+            &settings.borrow().logbox.environment,
+        )),
         ..search_core::SearchInputs::default()
     };
     inputs.processes = sampler.borrow_mut().sample(20).unwrap_or_default();
@@ -599,6 +865,24 @@ pub fn settings_window(
     });
     search.append(&install);
     search.append(&status);
+    form_section(&search, "SOURCES");
+    let disabled = settings.borrow().search.disabled.clone();
+    for provider in search_core::SearchProvider::ALL {
+        let id = provider.id();
+        toggle(
+            &search,
+            provider.settings_title(),
+            !disabled.iter().any(|entry| entry == id),
+            &paths,
+            &settings,
+            move |current, enabled| {
+                current.search.disabled.retain(|entry| entry != id);
+                if !enabled {
+                    current.search.disabled.push(id.to_owned());
+                }
+            },
+        );
+    }
 
     let credentials = credentials_page(&paths, &settings);
 
@@ -745,7 +1029,28 @@ fn add_settings_page(
 ) {
     let row = gtk::ListBoxRow::new();
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    let image = gtk::Image::from_icon_name(icon);
+    // Prefer monochrome symbolic icons, with fallbacks for names the Pi theme
+    // does not ship.
+    let base = match icon {
+        "utilities-system-monitor" => "applications-system",
+        "applications-internet" => "applications-utilities",
+        "applications-development" => "applications-engineering",
+        "emblem-synchronizing" => "view-refresh",
+        "view-task" => "checkbox-checked",
+        "view-statistics" => "x-office-spreadsheet",
+        other => other,
+    };
+    let symbolic = format!("{base}-symbolic");
+    let image = gtk::gdk::Display::default()
+        .map(|display| {
+            let theme = gtk::IconTheme::for_display(&display);
+            if theme.has_icon(&symbolic) {
+                gtk::Image::from_icon_name(&symbolic)
+            } else {
+                gtk::Image::from_icon_name(icon)
+            }
+        })
+        .unwrap_or_else(|| gtk::Image::from_icon_name(icon));
     image.set_pixel_size(16);
     let label = gtk::Label::new(Some(name));
     label.set_halign(gtk::Align::Start);
@@ -760,7 +1065,7 @@ fn add_settings_page(
 fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
     page.append(&caption(
-        "CPU, memory, disk and top processes. Size and visibility apply on restart.",
+        "CPU, memory, disk and top processes. Size, visibility and colors apply on restart.",
     ));
     let current = settings.borrow().livebox.clone();
 
@@ -825,6 +1130,46 @@ fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         paths,
         settings,
         |s, v| s.livebox.show_chart = v,
+    );
+    toggle(
+        &page,
+        "Per-core CPU lines",
+        current.show_per_core_cores,
+        paths,
+        settings,
+        |s, v| s.livebox.show_per_core_cores = v,
+    );
+    color_row(
+        &page,
+        "CPU color",
+        &current.cpu_color,
+        paths,
+        settings,
+        |s, v| s.livebox.cpu_color = v,
+    );
+    color_row(
+        &page,
+        "MEM color",
+        &current.mem_color,
+        paths,
+        settings,
+        |s, v| s.livebox.mem_color = v,
+    );
+    color_row(
+        &page,
+        "DISK color",
+        &current.disk_color,
+        paths,
+        settings,
+        |s, v| s.livebox.disk_color = v,
+    );
+    color_row(
+        &page,
+        "GPU color",
+        &current.gpu_color,
+        paths,
+        settings,
+        |s, v| s.livebox.gpu_color = v,
     );
     form_section(&page, "PROCESSES");
     spin(
@@ -1263,6 +1608,115 @@ fn git_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     page
 }
 
+fn coin_picker(
+    page: &gtk::Box,
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+    symbols_entry: gtk::Entry,
+) {
+    form_section(page, "LIVE PICKER");
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let query = gtk::Entry::new();
+    query.set_placeholder_text(Some("Search CoinGecko, e.g. bitcoin"));
+    query.set_hexpand(true);
+    let search = gtk::Button::with_label("Search");
+    row.append(&query);
+    row.append(&search);
+    page.append(&row);
+    let status = caption("");
+    page.append(&status);
+    let results = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    page.append(&results);
+
+    let busy = Rc::new(Cell::new(false));
+    let paths = paths.clone();
+    let settings = settings.clone();
+    let status_for_click = status.clone();
+    search.connect_clicked(move |button| {
+        let text = query.text().trim().to_owned();
+        if text.chars().count() < 2 {
+            status_for_click.set_text("Type at least two characters");
+            return;
+        }
+        if busy.get() {
+            return;
+        }
+        busy.set(true);
+        button.set_sensitive(false);
+        let (tx, rx) = mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = tx.send(deck_core::market::search_coins(&text));
+        });
+        let results = results.clone();
+        let status = status_for_click.clone();
+        let symbols_entry = symbols_entry.clone();
+        let settings = settings.clone();
+        let paths = paths.clone();
+        let busy = busy.clone();
+        let button = button.clone();
+        gtk::glib::timeout_add_local(Duration::from_millis(120), move || match rx.try_recv() {
+            Ok(Ok(hits)) => {
+                widgets::clear(&results);
+                if hits.is_empty() {
+                    status.set_text("No coins found");
+                } else {
+                    status.set_text("");
+                }
+                for hit in hits {
+                    let rank = hit
+                        .rank
+                        .map(|rank| format!(" · #{rank}"))
+                        .unwrap_or_default();
+                    let label =
+                        gtk::Button::with_label(&format!("{}  ·  {}{rank}", hit.symbol, hit.name));
+                    label.add_css_class("link-row");
+                    label.set_halign(gtk::Align::Start);
+                    let entry = symbols_entry.clone();
+                    let settings = settings.clone();
+                    let paths = paths.clone();
+                    let symbol = hit.symbol.clone();
+                    label.connect_clicked(move |_| {
+                        let current = entry.text().to_string();
+                        let mut values: Vec<String> = current
+                            .split(',')
+                            .map(str::trim)
+                            .filter(|value| !value.is_empty())
+                            .map(str::to_owned)
+                            .collect();
+                        if !values
+                            .iter()
+                            .any(|value| value.eq_ignore_ascii_case(&symbol))
+                        {
+                            values.push(symbol.clone());
+                        }
+                        entry.set_text(&values.join(", "));
+                        let mut current = settings.borrow_mut();
+                        current.market.symbols = values;
+                        let _ = current.save(&paths);
+                    });
+                    results.append(&label);
+                }
+                status.set_text("Pick a row to add its symbol");
+                busy.set(false);
+                button.set_sensitive(true);
+                gtk::glib::ControlFlow::Break
+            }
+            Ok(Err(error)) => {
+                status.set_text(&format!("Search failed: {}", error.message()));
+                busy.set(false);
+                button.set_sensitive(true);
+                gtk::glib::ControlFlow::Break
+            }
+            Err(mpsc::TryRecvError::Empty) => gtk::glib::ControlFlow::Continue,
+            Err(mpsc::TryRecvError::Disconnected) => {
+                busy.set(false);
+                button.set_sensitive(true);
+                gtk::glib::ControlFlow::Break
+            }
+        });
+    });
+}
+
 fn market_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
     let current = settings.borrow().market.clone();
@@ -1280,7 +1734,7 @@ fn market_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.market.enabled = v,
     );
-    list_field(
+    let symbols_entry = list_field(
         &page,
         "Symbols",
         &current.symbols,
@@ -1289,6 +1743,7 @@ fn market_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.market.symbols = v,
     );
+    coin_picker(&page, paths, settings, symbols_entry);
     currency_row(&page, current.display_currency, paths, settings);
     spin(
         &page,
@@ -1316,7 +1771,7 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     let page = page();
     let current = settings.borrow().openbox.clone();
     page.append(&caption(
-        "Reads the local opencode SQLite database; no token is needed.",
+        "Reads the local opencode SQLite database by default; set a server URL to read `opencode serve` instead.",
     ));
     size_row(&page, current.size, paths, settings, |s, v| {
         s.openbox.size = v
@@ -1328,6 +1783,15 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         paths,
         settings,
         |s, v| s.openbox.enabled = v,
+    );
+    text_field(
+        &page,
+        "Server URL (optional)",
+        &current.server_url,
+        "http://127.0.0.1:4096 — empty = local database",
+        paths,
+        settings,
+        |s, v| s.openbox.server_url = v,
     );
     toggle(
         &page,
@@ -1408,7 +1872,7 @@ fn ship_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         &page,
         "Repos",
         &current.repos,
-        "owner/repo, owner/other",
+        "owner/repo — empty discovers the 5 most recently pushed",
         paths,
         settings,
         |s, v| s.ship.repos = v,
@@ -1523,6 +1987,32 @@ fn prs_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         paths,
         settings,
         |s, v| s.prs.enabled = v,
+    );
+    form_section(&page, "PROVIDERS");
+    toggle(
+        &page,
+        "GitHub",
+        current.show_github,
+        paths,
+        settings,
+        |s, v| s.prs.show_github = v,
+    );
+    toggle(
+        &page,
+        "Azure DevOps",
+        current.show_azure,
+        paths,
+        settings,
+        |s, v| s.prs.show_azure = v,
+    );
+    form_section(&page, "QUEUE");
+    toggle(
+        &page,
+        "Review state",
+        current.show_review_state,
+        paths,
+        settings,
+        |s, v| s.prs.show_review_state = v,
     );
     spin(
         &page,
@@ -1930,6 +2420,14 @@ fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box
         "grafana",
         VerifyKind::Grafana,
     );
+    credential_row(
+        &page,
+        paths,
+        settings,
+        "opencode serve token",
+        "opencode",
+        VerifyKind::Opencode,
+    );
     opencode_row(&page);
     page
 }
@@ -1940,6 +2438,7 @@ enum VerifyKind {
     Azure,
     Elastic,
     Grafana,
+    Opencode,
 }
 
 fn credential_row(
@@ -2007,11 +2506,13 @@ fn credential_row(
         let org = settings_for_verify.borrow().tasks.organization.clone();
         let log_base = settings_for_verify.borrow().logbox.base_url.clone();
         let metric_base = settings_for_verify.borrow().metricbox.base_url.clone();
+        let opencode_url = settings_for_verify.borrow().openbox.server_url.clone();
         verify_async(&status_for_verify, move || match kind {
             VerifyKind::Github => verify_github(&paths),
             VerifyKind::Azure => verify_azure(&paths, &org),
             VerifyKind::Elastic => verify_elastic(&paths, &log_base),
             VerifyKind::Grafana => verify_grafana(&paths, &metric_base),
+            VerifyKind::Opencode => verify_opencode(&paths, &opencode_url),
         });
     });
 }
@@ -2062,6 +2563,22 @@ where
             }
         }
     });
+}
+
+fn verify_opencode(paths: &Paths, server_url: &str) -> String {
+    if server_url.trim().is_empty() {
+        return "Set the OpenBox server URL first".into();
+    }
+    let Ok(token) = providers::require_token(paths, "opencode") else {
+        return "No opencode token stored".into();
+    };
+    match deck_core::openbox::load_remote(server_url, &token) {
+        Ok(snapshot) => format!(
+            "{} sessions in the last 24h, {} total tokens",
+            snapshot.sessions, snapshot.total_input
+        ),
+        Err(error) => format!("Remote opencode failed: {}", error.message()),
+    }
 }
 
 fn verify_github(paths: &Paths) -> String {
@@ -2244,7 +2761,7 @@ fn list_field(
     paths: &Paths,
     settings: &Rc<RefCell<Settings>>,
     apply: fn(&mut Settings, Vec<String>),
-) {
+) -> gtk::Entry {
     text_field(
         page,
         label,
@@ -2261,7 +2778,7 @@ fn list_field(
                 .collect();
             apply(settings, values);
         },
-    );
+    )
 }
 
 fn page() -> gtk::Box {
@@ -2323,6 +2840,44 @@ fn size_row(
     });
     row.append(&title);
     row.append(&combo);
+    page.append(&row);
+}
+
+fn color_row(
+    page: &gtk::Box,
+    label: &str,
+    current: &str,
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+    apply: fn(&mut Settings, String),
+) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    row.add_css_class("form-row");
+    let title = gtk::Label::new(Some(label));
+    title.set_halign(gtk::Align::Start);
+    title.set_hexpand(true);
+    let button = gtk::ColorButton::new();
+    if let Ok(rgba) = gtk::gdk::RGBA::parse(current) {
+        button.set_rgba(&rgba);
+    }
+    button.set_use_alpha(false);
+    button.set_valign(gtk::Align::Center);
+    let paths = paths.clone();
+    let settings = settings.clone();
+    button.connect_color_set(move |button| {
+        let rgba = button.rgba();
+        let hex = format!(
+            "#{:02x}{:02x}{:02x}",
+            (rgba.red() * 255.0).round() as u8,
+            (rgba.green() * 255.0).round() as u8,
+            (rgba.blue() * 255.0).round() as u8
+        );
+        let mut current = settings.borrow_mut();
+        apply(&mut current, hex);
+        let _ = current.save(&paths);
+    });
+    row.append(&title);
+    row.append(&button);
     page.append(&row);
 }
 
@@ -2404,7 +2959,8 @@ fn text_field<F>(
     paths: &Paths,
     settings: &Rc<RefCell<Settings>>,
     apply: F,
-) where
+) -> gtk::Entry
+where
     F: Fn(&mut Settings, String) + Copy + 'static,
 {
     let title = gtk::Label::new(Some(label));
@@ -2421,4 +2977,5 @@ fn text_field<F>(
     });
     page.append(&title);
     page.append(&entry);
+    entry
 }

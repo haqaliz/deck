@@ -68,6 +68,19 @@ pub fn build(
                 };
                 let line = gtk::Box::new(gtk::Orientation::Horizontal, 6);
                 line.append(&widgets::dot(color));
+                if pr_settings.show_review_state {
+                    if let Some(state) = row.review_state {
+                        let (glyph, glyph_color) = match state {
+                            deck_core::prs::PrReviewState::Approved => ("✓", widgets::GREEN),
+                            deck_core::prs::PrReviewState::ChangesRequested => ("✗", widgets::RED),
+                        };
+                        let mark = gtk::Label::new(None);
+                        mark.set_markup(&format!(
+                            "<span foreground=\"{glyph_color}\">{glyph}</span>"
+                        ));
+                        line.append(&mark);
+                    }
+                }
                 let title = format!("{} #{}  {}", row.repo, row.number, row.title);
                 if row.url.is_empty() {
                     let label = gtk::Label::new(Some(&title));

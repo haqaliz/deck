@@ -28,7 +28,6 @@ pub const ORANGE: &str = "#ff9f0a";
 pub const BLUE: &str = "#0a84ff";
 pub const RED: &str = "#ff453a";
 pub const PINK: &str = "#ff375f";
-pub const PURPLE: &str = "#bf5af2";
 pub const WHITE: &str = "#f5f5f7";
 
 /// A coloured bullet, a muted title and a value, matching the macOS rows.
@@ -43,6 +42,56 @@ pub fn value_color(tier: Tier) -> &'static str {
         Tier::Normal => WHITE,
         Tier::Warn => ORANGE,
         Tier::Alarm => RED,
+    }
+}
+
+/// Parses `#rrggbb`; invalid values fall back to white.
+pub fn parse_hex_color(value: &str) -> (f64, f64, f64) {
+    let value = value.trim().trim_start_matches('#');
+    if value.len() != 6 {
+        return (1.0, 1.0, 1.0);
+    }
+    let channel = |start: usize| {
+        value
+            .get(start..start + 2)
+            .and_then(|part| u8::from_str_radix(part, 16).ok())
+            .map(|part| part as f64 / 255.0)
+            .unwrap_or(1.0)
+    };
+    (channel(0), channel(2), channel(4))
+}
+
+/// Draws the dim per-core CPU lines over an existing chart.
+pub fn draw_core_lines(
+    cr: &gtk::cairo::Context,
+    width: i32,
+    height: i32,
+    history: &VecDeque<Vec<f64>>,
+    color: (f64, f64, f64),
+    max: f64,
+) {
+    if history.len() < 2 {
+        return;
+    }
+    let width = width as f64;
+    let height = height as f64;
+    let cores = history.front().map(Vec::len).unwrap_or(0);
+    cr.set_source_rgba(color.0, color.1, color.2, 0.35);
+    cr.set_line_width(1.0);
+    for core in 0..cores {
+        for (position, sample) in history.iter().enumerate() {
+            let Some(value) = sample.get(core) else {
+                continue;
+            };
+            let x = position as f64 / (history.len() - 1) as f64 * width;
+            let y = 1.0 + (height - 2.0) * (1.0 - (value / max).clamp(0.0, 1.0));
+            if position == 0 {
+                cr.move_to(x, y);
+            } else {
+                cr.line_to(x, y);
+            }
+        }
+        let _ = cr.stroke();
     }
 }
 
@@ -261,4 +310,16 @@ pub fn draw_chart(
 
 pub fn history_series<const N: usize>(history: &VecDeque<[f64; N]>, index: usize) -> Vec<f64> {
     history.iter().map(|sample| sample[index]).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_hex_color;
+
+    #[test]
+    fn parses_hex_colors() {
+        assert_eq!(parse_hex_color("#ff0000"), (1.0, 0.0, 0.0));
+        assert_eq!(parse_hex_color("00ff00"), (0.0, 1.0, 0.0));
+        assert_eq!(parse_hex_color("bad"), (1.0, 1.0, 1.0));
+    }
 }
