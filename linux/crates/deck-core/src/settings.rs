@@ -23,6 +23,9 @@ pub struct Settings {
     pub positions: BTreeMap<String, WindowPosition>,
     pub search_shortcut: Option<String>,
     pub search: SearchSettings,
+    /// Extra Azure DevOps accounts. The legacy `tasks.organization`/`project`
+    /// plus the `azure` token stay valid when this list is empty.
+    pub azure_accounts: Vec<AzureAccount>,
     pub livebox: LiveBoxSettings,
     pub netbox: NetBoxSettings,
     pub devbox: DevBoxSettings,
@@ -52,6 +55,7 @@ impl Default for Settings {
             positions: BTreeMap::new(),
             search_shortcut: None,
             search: SearchSettings::default(),
+            azure_accounts: Vec::new(),
             livebox: LiveBoxSettings::default(),
             netbox: NetBoxSettings::default(),
             devbox: DevBoxSettings::default(),
@@ -65,6 +69,31 @@ impl Default for Settings {
             market: MarketBoxSettings::default(),
             logbox: LogBoxSettings::default(),
             metricbox: MetricBoxSettings::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct AzureAccount {
+    /// Credential store id and the value stored in a widget's account field.
+    pub id: String,
+    pub label: String,
+    pub organization: String,
+    pub project: String,
+}
+
+impl Settings {
+    /// Resolves the selected Azure account, falling back to the legacy fields.
+    pub fn azure_account(&self, selected: &str) -> (&str, &str, &str) {
+        if let Some(account) = self
+            .azure_accounts
+            .iter()
+            .find(|account| account.id == selected)
+        {
+            (&account.id, &account.organization, &account.project)
+        } else {
+            ("azure", &self.tasks.organization, &self.tasks.project)
         }
     }
 }
@@ -326,6 +355,8 @@ impl Default for ShipBoxSettings {
 pub struct TaskBoxSettings {
     pub enabled: bool,
     pub size: WidgetSize,
+    /// Empty uses the legacy `organization`/`project` and `azure` token.
+    pub account_id: String,
     pub organization: String,
     pub project: String,
     pub query: String,
@@ -339,6 +370,7 @@ impl Default for TaskBoxSettings {
         Self {
             enabled: false,
             size: WidgetSize::Medium,
+            account_id: String::new(),
             organization: String::new(),
             project: String::new(),
             query: String::new(),
@@ -354,6 +386,8 @@ impl Default for TaskBoxSettings {
 pub struct PrBoxSettings {
     pub enabled: bool,
     pub size: WidgetSize,
+    /// Empty uses the legacy Tasks organization/project and `azure` token.
+    pub azure_account_id: String,
     pub pr_count: u8,
     pub show_list: bool,
     pub show_github: bool,
@@ -366,6 +400,7 @@ impl Default for PrBoxSettings {
         Self {
             enabled: false,
             size: WidgetSize::Medium,
+            azure_account_id: String::new(),
             pr_count: 6,
             show_list: true,
             show_github: true,
@@ -652,6 +687,27 @@ mod tests {
         assert!(json.contains("\"size\":\"small\""));
         let parsed: Settings = serde_json::from_str(&json).expect("parse");
         assert_eq!(parsed.livebox.size, WidgetSize::Small);
+    }
+
+    #[test]
+    fn azure_account_resolution_uses_the_selected_account_or_legacy_fields() {
+        let mut settings = Settings::default();
+        settings.tasks.organization = "legacy".into();
+        settings.tasks.project = "legacy-project".into();
+        assert_eq!(
+            settings.azure_account(""),
+            ("azure", "legacy", "legacy-project")
+        );
+        settings.azure_accounts.push(AzureAccount {
+            id: "azure:work".into(),
+            label: "Work".into(),
+            organization: "work-org".into(),
+            project: "work-project".into(),
+        });
+        assert_eq!(
+            settings.azure_account("azure:work"),
+            ("azure:work", "work-org", "work-project")
+        );
     }
 
     #[test]

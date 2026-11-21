@@ -7,7 +7,7 @@ use crate::clockbox::{self, Zone};
 use crate::devbox::{DockerContainer, ListeningPort};
 use crate::gitbox::GitBoxSnapshot;
 use crate::livebox::ProcessSample;
-use crate::logbox::LogBoxSnapshot;
+use crate::logbox::{self, LogBoxSnapshot};
 use crate::market::MarketSnapshot;
 use crate::metricbox::MetricBoxSnapshot;
 use crate::openbox::OpenCodeSnapshot;
@@ -740,15 +740,48 @@ fn logs(inputs: &SearchInputs) -> Vec<SearchResult> {
 }
 
 fn log_action(inputs: &SearchInputs, kql: &str) -> Option<SearchAction> {
-    let base = inputs.log_base.as_deref()?.trim_end_matches('/');
+    let base = inputs.log_base.as_deref()?;
     let index = inputs.log_index.as_deref()?;
+    kibana_url(base, index, kql).map(SearchAction::Open)
+}
+
+fn kibana_url(base: &str, index: &str, kql: &str) -> Option<String> {
+    let base = base.trim_end_matches('/');
     if !(base.starts_with("https://") || base.starts_with("http://")) {
         return None;
     }
     let query = encode_component(&format!("'{kql}'"));
-    Some(SearchAction::Open(format!(
+    Some(format!(
         "{base}/{index}/app/discover#/?_g=(time:(from:now-15m,to:now))&_a=(query:(language:kuery,query:{query}))"
-    )))
+    ))
+}
+
+pub fn remote_log_results(
+    hits: &[logbox::LogSearchHit],
+    text: &str,
+    base: &str,
+    index: &str,
+) -> Vec<SearchResult> {
+    hits.iter()
+        .filter_map(|hit| {
+            let score = best_score(text, &[&hit.message, &hit.service, &hit.level])?;
+            let action = kibana_url(base, index, &format!("\"{}\"", hit.message))
+                .map(SearchAction::Open)
+                .unwrap_or_else(|| SearchAction::Copy(hit.message.clone()));
+            Some(SearchResult {
+                id: format!("log:remote:{}:{}", hit.at, hit.message),
+                provider: SearchProvider::Log,
+                title: hit.message.clone(),
+                subtitle: [hit.service.as_str(), hit.level.as_str(), hit.at.as_str()]
+                    .into_iter()
+                    .filter(|part| !part.is_empty())
+                    .collect::<Vec<_>>()
+                    .join(" · "),
+                score,
+                action,
+            })
+        })
+        .collect()
 }
 
 fn encode_component(value: &str) -> String {

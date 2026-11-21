@@ -1,4 +1,4 @@
-# Deck for Linux — known limitations (v0.3.0)
+# Deck for Linux — known limitations (v0.4.0)
 
 Deck on Linux is a **Pi-first v1**. This page is the honest boundary of what was
 verified on the hardware available.
@@ -9,27 +9,30 @@ verified on the hardware available.
 - Layer-shell desktop widgets, tray, labwc W-Space search, settings, all 13
   widget faces, search providers, the `.deb`, `deckd`, and the X11 branch via
   Xwayland.
+- Sway headless (wlroots layer-shell) and X11 + Openbox in Debian Trixie arm64
+  containers: widgets on the desktop layer, search on the overlay/above layer.
+- Secret Service through `gnome-keyring` + `secret-tool` in a D-Bus session:
+  store, read and `deck --check-credentials` green.
 - Release build: 3.6 MB `.deb`, ~120 ms socket-ready, 0.53% CPU / 119 MB RSS
   over a 60-second idle sample.
 
 ## Not tested
 
 - **Pi 5**: no hardware. The arm64 package should run, but this is not claimed.
-- **KDE Plasma, GNOME Wayland, Hyprland/Sway, XFCE/i3**: no machines. The code
-  uses the shared layer-shell backend for KDE/wlroots and a normal dashboard
-  window for GNOME, but the matrix is untested.
+- **KDE Plasma, GNOME Wayland, Hyprland, XFCE/i3**: no machines. Sway covers
+  the shared wlroots layer-shell path and Openbox covers X11, but the other
+  desktops remain untested.
 - **GNOME Wayland desktop widgets**: Mutter has no `wlr-layer-shell`, so GNOME
   gets normal windows (dashboard fallback), an optional gsettings shortcut and
   no guaranteed tray. A Shell extension is post-v1.
-- **X11 on a native WM**: the app sets `_NET_WM_WINDOW_TYPE_DESKTOP`,
-  below/skip-taskbar/skip-pager and non-focusable hints. labwc's Xwayland
-  integration still tiles the windows and lists them in its panel; a native
-  X11 WM may honour the hints, but that was not verified. X11 placement is the
-  window manager's job.
+- **X11 on a native WM**: Openbox honours the desktop/below/skip-taskbar
+  hints; the search card is opaque on X11 because there is no compositor blur.
+  Evidence is under `docs/planning/linux-port/evidence/l11-x11-*`. Other X11
+  window managers are still untested, and placement remains the window
+  manager's job.
 - **Multi-monitor**: the flow moves a full column to the next monitor, but no
   second display was available to verify it.
-- **Secret Service**: the Pi has no `secret-tool`/keyring, so the 0600 fallback
-  was the only exercised path. Desktop keyrings remain to be checked.
+- **KWallet**: GNOME Keyring/Secret Service is verified; KWallet is not.
 - **Live GitHub, Azure DevOps, Elastic and Grafana**: no tokens/clusters were
   available. Their parsers and faces are fixture/seeded-snapshot tested; the
   live fetch and Verify buttons are not.
@@ -43,19 +46,21 @@ verified on the hardware available.
 
 ## Deliberate v1 gaps
 
-- Search is snapshot/local. It makes no network request at search time, so
-  remote full-text search, the per-source floor and 429 isolation at search
-  time are not implemented. Fetch-time 429 is reported as `rateLimited` and
-  keeps the last good snapshot.
-- Kibana/Grafana links open the configured base page, not a query-specific
-  deep link.
-- One account per provider in the Linux Credentials tab; multi-account and
-  Elastic/Grafana project/environment pickers beyond the typed fields are
-  deferred.
-- OpenBox remote-server mode, ShipBox automatic discovery, PR review-state
-  glyphs and the Market live picker are deferred.
-- No KDE KGlobalAccel/portal shortcut write; the CLI prints the binding
-  snippet. labwc and GNOME have installers.
+- Remote search covers Azure work items, pull requests and Elastic log lines.
+  Metrics remains snapshot-only, and the remote sources require a typed
+  prefix except work items.
+- Kibana log results open a query-specific Discover link; Grafana links still
+  open the configured base page.
+- Azure supports multiple accounts. GitHub, Elastic, Grafana and opencode
+  remain one token per provider.
+- GitHub review state needs one per-PR API request and is only fetched when
+  the setting is on; Azure reads reviewer votes from the PR list.
+- OpenBox remote mode supports servers with session-level usage; older
+  per-message servers keep the last/local snapshot.
+- The Market picker searches CoinGecko and Yahoo Finance; there is no manual
+  symbol browser.
+- KDE shortcut install is best-effort via `kwriteconfig6/5` and needs a
+  Plasma restart; labwc and GNOME installers are exercised.
 - No auto-update, Flatpak, ARM32 or Pi Zero.
 - CalBox, ClipBox and BatBox are deferred; PiBox is explicitly out of v1.
 - Placement is automatic until dragged. Widget title bars and the search

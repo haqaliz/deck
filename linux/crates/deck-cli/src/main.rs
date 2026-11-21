@@ -27,6 +27,32 @@ fn run() -> Result<(), deck_core::CoreError> {
             println!("session: {:?}", detect_session());
             Ok(())
         }
+        Some("--check-credentials") => {
+            let store = deck_core::credentials::CredentialStore::detect(&paths);
+            println!("store: {}", store.kind());
+            let settings = deck_core::settings::Settings::load(&paths);
+            let mut ids = vec![
+                "github".to_string(),
+                "azure".to_string(),
+                "elastic".to_string(),
+                "grafana".to_string(),
+                "opencode".to_string(),
+            ];
+            ids.extend(
+                settings
+                    .azure_accounts
+                    .into_iter()
+                    .map(|account| account.id),
+            );
+            for id in ids {
+                let present = store
+                    .read(&id)
+                    .map(|value| value.is_some())
+                    .unwrap_or(false);
+                println!("{id}: {}", if present { "stored" } else { "missing" });
+            }
+            Ok(())
+        }
         Some("--toggle-search") => {
             match UnixStream::connect(paths.socket_file()) {
                 Ok(mut stream) => {
@@ -172,7 +198,7 @@ fn run() -> Result<(), deck_core::CoreError> {
             println!(
                 "deck [--version] [--settings] [--toggle-search] \
                  [--install-shortcut [--key KEY]] [--remove-shortcut] \
-                 [--daemon [--once]]"
+                 [--check-credentials] [--daemon [--once]]"
             );
             Ok(())
         }
@@ -181,7 +207,7 @@ fn run() -> Result<(), deck_core::CoreError> {
             eprintln!(
                 "deck [--version] [--settings] [--toggle-search] \
                  [--install-shortcut [--key KEY]] [--remove-shortcut] \
-                 [--daemon [--once]]"
+                 [--check-credentials] [--daemon [--once]]"
             );
             exit(2);
         }

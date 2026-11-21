@@ -80,13 +80,14 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
         );
     }
     if settings.tasks.enabled {
+        let (token_id, organization, project) = settings.azure_account(&settings.tasks.account_id);
         run_source(
             paths,
             "taskbox",
-            providers::require_token(paths, "azure").and_then(|token| {
+            providers::require_token(paths, token_id).and_then(|token| {
                 tasks::fetch(
-                    &settings.tasks.organization,
-                    &settings.tasks.project,
+                    organization,
+                    project,
                     &token,
                     &settings.tasks.query,
                     settings.tasks.task_count as usize,
@@ -100,10 +101,12 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
             .show_github
             .then(|| providers::token(paths, "github").ok().flatten())
             .flatten();
+        let (azure_token_id, azure_org, azure_project) =
+            settings.azure_account(&settings.prs.azure_account_id);
         let azure = settings
             .prs
             .show_azure
-            .then(|| providers::token(paths, "azure").ok().flatten())
+            .then(|| providers::token(paths, azure_token_id).ok().flatten())
             .flatten();
         if github.is_none() && azure.is_none() {
             let _ = snapshot::write_status(paths, "prbox", FetchOutcome::NotConfigured);
@@ -114,8 +117,8 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
                 prs::fetch(prs::PrSources {
                     github_token: github.as_deref(),
                     azure_token: azure.as_deref(),
-                    azure_org: &settings.tasks.organization,
-                    azure_project: &settings.tasks.project,
+                    azure_org,
+                    azure_project,
                     limit: settings.prs.pr_count as usize,
                     show_review_state: settings.prs.show_review_state,
                 }),
