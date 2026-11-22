@@ -67,6 +67,7 @@ modules:
       append-path: /usr/lib/sdk/rust-stable/bin
       env:
         CARGO_HOME: /run/build/deck/cargo
+        CARGO_NET_OFFLINE: "true"
     build-commands:
       - cargo build --release -p deck-gui -p deckd -p deck-cli
       - install -Dm755 target/release/deck-gui /app/bin/deck-gui
@@ -77,6 +78,7 @@ modules:
       - install -Dm644 packaging/deckd.service /app/share/deck/deckd.service
       - install -Dm644 io.github.haqaliz.deck.metainfo.xml /app/share/metainfo/io.github.haqaliz.deck.metainfo.xml
     sources:
+      - cargo-sources.json
       - type: dir
         path: ../linux
         skip:
