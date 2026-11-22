@@ -29,64 +29,66 @@ pub fn build(
             widgets::add_row(&body, &widgets::status_text(&paths_for_tick, "batbox"));
             return gtk::glib::ControlFlow::Continue;
         };
-        if snapshot.batteries.is_empty() {
-            widgets::add_row(&body, "No battery");
-            let state = match snapshot.ac_online {
-                Some(true) => "AC power connected",
-                Some(false) => "On battery",
-                None => "No power supply found",
-            };
-            widgets::add_row(&body, state);
-            return gtk::glib::ControlFlow::Continue;
-        }
-        let metrics = gtk::Box::new(
-            if feed_size == WidgetSize::Small {
-                gtk::Orientation::Vertical
+        if bat.show_battery {
+            if snapshot.batteries.is_empty() {
+                widgets::add_row(&body, "No battery");
+                let state = match snapshot.ac_online {
+                    Some(true) => "AC power connected",
+                    Some(false) => "On battery",
+                    None => "No power supply found",
+                };
+                widgets::add_row(&body, state);
             } else {
-                gtk::Orientation::Horizontal
-            },
-            14,
-        );
-        metrics.set_halign(gtk::Align::Start);
-        for battery in snapshot.batteries.iter().take(2) {
-            let color = if battery.percent <= f64::from(bat.low_percent) {
-                widgets::RED
-            } else if battery.percent <= f64::from(bat.low_percent) + 20.0 {
-                widgets::ORANGE
-            } else {
-                widgets::GREEN
-            };
-            let label = widgets::metric_label("BATTERY");
-            label.set_markup(&widgets::metric_markup(
-                "BATTERY",
-                &format!("{:.0}%", battery.percent),
-                color,
-                widgets::WHITE,
-            ));
-            metrics.append(&label);
-            let left = battery
-                .minutes_left
-                .map(format_minutes)
-                .unwrap_or_else(|| "—".into());
-            let time = widgets::metric_label("TIME LEFT");
-            time.set_markup(&widgets::metric_markup(
-                "TIME LEFT",
-                &left,
-                widgets::CYAN,
-                widgets::WHITE,
-            ));
-            metrics.append(&time);
-            let state = gtk::Label::new(None);
-            state.add_css_class("metric");
-            state.set_markup(&widgets::metric_markup(
-                "STATE",
-                &battery.status,
-                widgets::CYAN,
-                widgets::WHITE,
-            ));
-            metrics.append(&state);
+                let metrics = gtk::Box::new(
+                    if feed_size == WidgetSize::Small {
+                        gtk::Orientation::Vertical
+                    } else {
+                        gtk::Orientation::Horizontal
+                    },
+                    14,
+                );
+                metrics.set_halign(gtk::Align::Start);
+                for battery in snapshot.batteries.iter().take(2) {
+                    let color = if battery.percent <= f64::from(bat.low_percent) {
+                        widgets::RED
+                    } else if battery.percent <= f64::from(bat.low_percent) + 20.0 {
+                        widgets::ORANGE
+                    } else {
+                        widgets::GREEN
+                    };
+                    let label = widgets::metric_label("BATTERY");
+                    label.set_markup(&widgets::metric_markup(
+                        "BATTERY",
+                        &format!("{:.0}%", battery.percent),
+                        color,
+                        widgets::WHITE,
+                    ));
+                    metrics.append(&label);
+                    let left = battery
+                        .minutes_left
+                        .map(format_minutes)
+                        .unwrap_or_else(|| "—".into());
+                    let time = widgets::metric_label("TIME LEFT");
+                    time.set_markup(&widgets::metric_markup(
+                        "TIME LEFT",
+                        &left,
+                        widgets::CYAN,
+                        widgets::WHITE,
+                    ));
+                    metrics.append(&time);
+                    let state = gtk::Label::new(None);
+                    state.add_css_class("metric");
+                    state.set_markup(&widgets::metric_markup(
+                        "STATE",
+                        &battery.status,
+                        widgets::CYAN,
+                        widgets::WHITE,
+                    ));
+                    metrics.append(&state);
+                }
+                body.append(&metrics);
+            }
         }
-        body.append(&metrics);
         if bat.show_accessories && feed_size != WidgetSize::Small {
             let divider = gtk::Separator::new(gtk::Orientation::Horizontal);
             divider.add_css_class("widget-divider");
