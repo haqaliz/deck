@@ -6,7 +6,8 @@ use deck_core::providers::{self, FetchError};
 use deck_core::settings::Settings;
 use deck_core::snapshot::{self, FetchOutcome};
 use deck_core::{
-    calbox, gitbox, logbox, market, metricbox, openbox, prs, ship, tasks, weather, CoreError,
+    batbox, calbox, gitbox, logbox, market, metricbox, openbox, prs, ship, tasks, weather,
+    CoreError,
 };
 use serde::Serialize;
 
@@ -76,9 +77,13 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
                     &settings.calbox.server_url,
                     &settings.calbox.username,
                     &password,
+                    &settings.calbox.calendar_ids,
                 )
             }),
         );
+    }
+    if settings.batbox.enabled {
+        run_source(paths, "batbox", Ok(batbox::load()));
     }
     if settings.ship.enabled {
         run_source(

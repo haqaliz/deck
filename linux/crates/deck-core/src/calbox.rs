@@ -25,10 +25,11 @@ pub struct CalBoxSnapshot {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct CalendarRef {
-    href: String,
-    title: String,
-    color: String,
+pub struct CalendarInfo {
+    /// Canonical CalDAV collection URL; also the id stored in settings.
+    pub id: String,
+    pub title: String,
+    pub color: String,
 }
 
 const PALETTE: [&str; 6] = [
@@ -42,13 +43,17 @@ pub fn fetch(
     server_url: &str,
     username: &str,
     password: &str,
+    selected: &[String],
 ) -> Result<CalBoxSnapshot, FetchError> {
     let base = providers::normalize_base(server_url).ok_or(FetchError::NotConfigured)?;
     if username.trim().is_empty() || password.is_empty() {
         return Err(FetchError::NotConfigured);
     }
     let auth = providers::basic_auth(username.trim(), password);
-    let calendars = discover_calendars(&base, &auth)?;
+    let mut calendars = discover_calendars(&base, &auth)?;
+    if !selected.is_empty() {
+        calendars.retain(|calendar| selected.iter().any(|id| id == &calendar.id));
+    }
     let now = Utc::now();
     let start = (now - chrono::Duration::days(1))
         .format("%Y%m%dT%H%M%SZ")
@@ -79,17 +84,21 @@ pub fn fetch(
     })
 }
 
-/// One PROPFIND, used by the Credentials Verify button.
-pub fn probe(server_url: &str, username: &str, password: &str) -> Result<usize, FetchError> {
+/// Calendar list for the settings picker and the Verify button.
+pub fn calendars(
+    server_url: &str,
+    username: &str,
+    password: &str,
+) -> Result<Vec<CalendarInfo>, FetchError> {
     let base = providers::normalize_base(server_url).ok_or(FetchError::NotConfigured)?;
     if username.trim().is_empty() || password.is_empty() {
         return Err(FetchError::NotConfigured);
     }
     let auth = providers::basic_auth(username.trim(), password);
-    Ok(discover_calendars(&base, &auth)?.len())
+    discover_calendars(&base, &auth)
 }
 
-fn discover_calendars(base: &str, auth: &str) -> Result<Vec<CalendarRef>, FetchError> {
+fn discover_calendars(base: &str, auth: &str) -> Result<Vec<CalendarInfo>, FetchError> {
     let body = r#"<?xml version="1.0" encoding="utf-8"?>
 <d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:ical="http://apple.com/ns/ical/">
   <d:prop><d:resourcetype/><d:displayname/><ical:calendar-color/><c:supported-calendar-component-set/></d:prop>
@@ -108,8 +117,8 @@ fn discover_calendars(base: &str, auth: &str) -> Result<Vec<CalendarRef>, FetchE
         Ok(body) => body,
         Err(FetchError::BadResponse(_)) => {
             // Some servers only expose the calendar at the URL itself.
-            return Ok(vec![CalendarRef {
-                href: base.to_owned(),
+            return Ok(vec![CalendarInfo {
+                id: base.to_owned(),
                 title: base.to_owned(),
                 color: PALETTE[0].to_owned(),
             }]);
@@ -118,8 +127,8 @@ fn discover_calendars(base: &str, auth: &str) -> Result<Vec<CalendarRef>, FetchE
     };
     let mut calendars = parse_calendars(&body, base);
     if calendars.is_empty() {
-        calendars.push(CalendarRef {
-            href: base.to_owned(),
+        calendars.push(CalendarInfo {
+            id: base.to_owned(),
             title: base.to_owned(),
             color: PALETTE[0].to_owned(),
         });
@@ -127,7 +136,7 @@ fn discover_calendars(base: &str, auth: &str) -> Result<Vec<CalendarRef>, FetchE
     Ok(calendars)
 }
 
-fn parse_calendars(body: &str, base: &str) -> Vec<CalendarRef> {
+fn parse_calendars(body: &str, base: &str) -> Vec<CalendarInfo> {
     let Ok(document) = roxmltree::Document::parse(body) else {
         return Vec::new();
     };
@@ -179,8 +188,8 @@ fn parse_calendars(body: &str, base: &str) -> Vec<CalendarRef> {
             .and_then(|node| node.text())
             .map(normalize_color)
             .unwrap_or_else(|| PALETTE[out.len() % PALETTE.len()].to_owned());
-        out.push(CalendarRef {
-            href: resolve_url(base, href.trim()),
+        out.push(CalendarInfo {
+            id: resolve_url(base, href.trim()),
             title,
             color,
         });
@@ -215,7 +224,7 @@ fn resolve_url(base: &str, href: &str) -> String {
 }
 
 fn report_events(
-    calendar: &CalendarRef,
+    calendar: &CalendarInfo,
     auth: &str,
     start: &str,
     end: &str,
@@ -235,7 +244,7 @@ fn report_events(
     );
     let response = providers::request(
         "REPORT",
-        &calendar.href,
+        &calendar.id,
         &[
             ("Authorization", auth),
             ("Depth", "1"),
@@ -246,7 +255,7 @@ fn report_events(
     Ok(parse_calendar_report(&response, calendar))
 }
 
-fn parse_calendar_report(body: &str, calendar: &CalendarRef) -> Vec<CalEvent> {
+fn parse_calendar_report(body: &str, calendar: &CalendarInfo) -> Vec<CalEvent> {
     let Ok(document) = roxmltree::Document::parse(body) else {
         return Vec::new();
     };
@@ -263,7 +272,7 @@ fn parse_calendar_report(body: &str, calendar: &CalendarRef) -> Vec<CalEvent> {
     out
 }
 
-fn parse_ics(ics: &str, calendar: &CalendarRef) -> Vec<CalEvent> {
+fn parse_ics(ics: &str, calendar: &CalendarInfo) -> Vec<CalEvent> {
     let lines = unfold(ics);
     let mut events = Vec::new();
     let mut fields: Vec<(String, String)> = Vec::new();
@@ -309,7 +318,7 @@ fn unfold(ics: &str) -> Vec<String> {
     lines
 }
 
-fn build_event(fields: &[(String, String)], calendar: &CalendarRef) -> Option<CalEvent> {
+fn build_event(fields: &[(String, String)], calendar: &CalendarInfo) -> Option<CalEvent> {
     let get = |name: &str| {
         fields
             .iter()
@@ -345,7 +354,7 @@ fn build_event(fields: &[(String, String)], calendar: &CalendarRef) -> Option<Ca
         end: end.to_rfc3339(),
         is_all_day,
         calendar_title: calendar.title.clone(),
-        calendar_id: calendar.href.clone(),
+        calendar_id: calendar.id.clone(),
         color: calendar.color.clone(),
         url: normalize_event_url(get("URL").unwrap_or("")),
     })
@@ -396,8 +405,8 @@ mod tests {
 
     #[test]
     fn parses_timed_and_all_day_events() {
-        let calendar = CalendarRef {
-            href: "https://cal.example.com/work/".into(),
+        let calendar = CalendarInfo {
+            id: "https://cal.example.com/work/".into(),
             title: "Work".into(),
             color: "#0a84ff".into(),
         };
@@ -427,7 +436,7 @@ mod tests {
 </d:multistatus>"#;
         let calendars = parse_calendars(xml, "https://cal.example.com");
         assert_eq!(calendars.len(), 1);
-        assert_eq!(calendars[0].href, "https://cal.example.com/cal/work/");
+        assert_eq!(calendars[0].id, "https://cal.example.com/cal/work/");
         assert_eq!(calendars[0].title, "Work");
         assert_eq!(calendars[0].color, "#FF2968");
     }
