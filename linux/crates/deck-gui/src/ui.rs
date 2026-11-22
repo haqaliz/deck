@@ -597,11 +597,13 @@ enum RemoteRequest {
         kind: Option<search_core::WorkItemKind>,
     },
     Prs {
+        github_token_id: String,
         azure_token_id: String,
         organization: String,
         project: String,
     },
     Logs {
+        token_id: String,
         base: String,
         index: String,
     },
@@ -671,8 +673,11 @@ fn schedule_remote_search(
             let azure_token_id = token_id.to_owned();
             let organization = organization.to_owned();
             let project = project.to_owned();
+            let (github_token_id, _, _, _) =
+                current.selected_account("github", &current.prs.github_account_id);
             drop(current);
             RemoteRequest::Prs {
+                github_token_id,
                 azure_token_id,
                 organization,
                 project,
@@ -691,8 +696,16 @@ fn schedule_remote_search(
             if !enabled {
                 return;
             }
+            let (token_id, _, _, server) = settings
+                .borrow()
+                .selected_account("elastic", &log.account_id);
             RemoteRequest::Logs {
-                base: log.base_url.clone(),
+                token_id,
+                base: if server.is_empty() {
+                    log.base_url.clone()
+                } else {
+                    server
+                },
                 index: deck_core::logbox::normalize_environment(&log.environment),
             }
         }
@@ -734,17 +747,21 @@ fn schedule_remote_search(
             } => providers::require_token(&paths, &token_id).and_then(|token| {
                 search_core::remote_task_search(&organization, &project, &token, &text, kind)
             }),
-            RemoteRequest::Logs { base, index } => providers::require_token(&paths, "elastic")
-                .and_then(|token| {
-                    deck_core::logbox::search_messages(&base, &token, &index, &text, 10)
-                        .map(|hits| search_core::remote_log_results(&hits, &text, &base, &index))
-                }),
+            RemoteRequest::Logs {
+                token_id,
+                base,
+                index,
+            } => providers::require_token(&paths, &token_id).and_then(|token| {
+                deck_core::logbox::search_messages(&base, &token, &index, &text, 10)
+                    .map(|hits| search_core::remote_log_results(&hits, &text, &base, &index))
+            }),
             RemoteRequest::Prs {
+                github_token_id,
                 azure_token_id,
                 organization,
                 project,
             } => {
-                let github = providers::token(&paths, "github").ok().flatten();
+                let github = providers::token(&paths, &github_token_id).ok().flatten();
                 let azure = providers::token(&paths, &azure_token_id).ok().flatten();
                 if github.is_none() && azure.is_none() {
                     Err(providers::FetchError::NotConfigured)
@@ -790,7 +807,15 @@ fn search_inputs(
         metricbox: deck_core::snapshot::read_payload(paths, "metricbox"),
         clock_ids: settings.borrow().clock.city_ids.clone(),
         disabled: settings.borrow().search.disabled.clone(),
-        log_base: Some(settings.borrow().logbox.base_url.clone()),
+        log_base: {
+            let current = settings.borrow();
+            let (_, _, _, server) = current.selected_account("elastic", &current.logbox.account_id);
+            Some(if server.is_empty() {
+                current.logbox.base_url.clone()
+            } else {
+                server
+            })
+        },
         log_index: Some(deck_core::logbox::normalize_environment(
             &settings.borrow().logbox.environment,
         )),
@@ -1353,6 +1378,17 @@ fn batbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         paths,
         settings,
         |s, v| s.batbox.show_accessories = v,
+    );
+    spin(
+        &general,
+        "Accessory rows",
+        u64::from(current.accessory_count),
+        1,
+        10,
+        1,
+        paths,
+        settings,
+        |s, v| s.batbox.accessory_count = v as u8,
     );
     spin(
         &general,
@@ -2282,6 +2318,16 @@ fn open_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.openbox.enabled = v,
     );
+    account_row(
+        &card,
+        "opencode",
+        "opencode account",
+        "Default (server URL below)",
+        &current.account_id,
+        paths,
+        settings,
+        |s, v| s.openbox.account_id = v,
+    );
     text_field(
         &card,
         "Server URL (optional)",
@@ -2368,6 +2414,16 @@ fn ship_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.ship.enabled = v,
     );
+    account_row(
+        &card,
+        "github",
+        "GitHub account",
+        "Default (github token)",
+        &current.github_account_id,
+        paths,
+        settings,
+        |s, v| s.ship.github_account_id = v,
+    );
     list_field(
         &card,
         "Repos",
@@ -2399,26 +2455,39 @@ fn ship_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
     page
 }
 
-fn azure_account_row(
+#[allow(clippy::too_many_arguments)]
+fn account_row(
     page: &gtk::Box,
+    provider: &str,
+    label: &str,
+    default_label: &str,
     current: &str,
     paths: &Paths,
     settings: &Rc<RefCell<Settings>>,
     apply: fn(&mut Settings, String),
 ) {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    let title = gtk::Label::new(Some("Azure account"));
+    let title = gtk::Label::new(Some(label));
     title.set_halign(gtk::Align::Start);
     title.set_hexpand(true);
     let combo = gtk::ComboBoxText::new();
-    combo.append(Some(""), "Default (Tasks fields)");
-    for account in &settings.borrow().azure_accounts {
+    combo.append(Some(""), default_label);
+    for account in settings
+        .borrow()
+        .accounts
+        .iter()
+        .filter(|account| account.provider == provider)
+    {
+        let target = if !account.server_url.is_empty() {
+            account.server_url.clone()
+        } else if !account.organization.is_empty() || !account.project.is_empty() {
+            format!("{}/{}", account.organization, account.project)
+        } else {
+            account.provider.clone()
+        };
         combo.append(
             Some(&account.id),
-            &format!(
-                "{} — {}/{}",
-                account.label, account.organization, account.project
-            ),
+            &format!("{} — {}", account.label, target.trim_matches('/')),
         );
     }
     combo.set_active_id(Some(current));
@@ -2456,9 +2525,16 @@ fn tasks_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.tasks.enabled = v,
     );
-    azure_account_row(&card, &current.account_id, paths, settings, |s, v| {
-        s.tasks.account_id = v
-    });
+    account_row(
+        &card,
+        "azure",
+        "Azure account",
+        "Default (Tasks fields)",
+        &current.account_id,
+        paths,
+        settings,
+        |s, v| s.tasks.account_id = v,
+    );
     card.append(&caption(
         "A selected account uses its own organization and project; the fields below apply to Default.",
     ));
@@ -2547,6 +2623,16 @@ fn prs_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.prs.show_github = v,
     );
+    account_row(
+        &providers,
+        "github",
+        "GitHub account",
+        "Default (github token)",
+        &current.github_account_id,
+        paths,
+        settings,
+        |s, v| s.prs.github_account_id = v,
+    );
     toggle(
         &providers,
         "Azure DevOps",
@@ -2555,8 +2641,11 @@ fn prs_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.prs.show_azure = v,
     );
-    azure_account_row(
+    account_row(
         &providers,
+        "azure",
+        "Azure account",
+        "Default (Tasks fields)",
         &current.azure_account_id,
         paths,
         settings,
@@ -2614,6 +2703,16 @@ fn logbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         paths,
         settings,
         |s, v| s.logbox.enabled = v,
+    );
+    account_row(
+        &card,
+        "elastic",
+        "Elastic account",
+        "Default (base URL below)",
+        &current.account_id,
+        paths,
+        settings,
+        |s, v| s.logbox.account_id = v,
     );
     text_field(
         &card,
@@ -2739,6 +2838,16 @@ fn metricbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         paths,
         settings,
         |s, v| s.metricbox.enabled = v,
+    );
+    account_row(
+        &card,
+        "grafana",
+        "Grafana account",
+        "Default (base URL below)",
+        &current.account_id,
+        paths,
+        settings,
+        |s, v| s.metricbox.account_id = v,
     );
     text_field(
         &card,
@@ -3003,22 +3112,29 @@ fn credentials_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box
         VerifyKind::Opencode,
     );
     opencode_row(&card);
-    let accounts = form_card(&page, "AZURE ACCOUNTS");
-    azure_accounts_card(&accounts, paths, settings);
+    let accounts = form_card(&page, "ACCOUNTS");
+    accounts_card(&accounts, paths, settings);
     page
 }
 
-fn azure_accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Settings>>) {
-    let accounts = settings.borrow().azure_accounts.clone();
+fn accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Settings>>) {
+    let accounts = settings.borrow().accounts.clone();
     if accounts.is_empty() {
         page.append(&caption(
-            "No extra Azure accounts. The Azure token above uses the Tasks organization and project.",
+            "No named accounts. The provider tokens above remain the defaults.",
         ));
     }
     for account in accounts {
+        let target = if account.server_url.is_empty() {
+            format!("{}/{}", account.organization, account.project)
+        } else {
+            account.server_url.clone()
+        };
         let title = gtk::Label::new(Some(&format!(
-            "{} — {}/{}",
-            account.label, account.organization, account.project
+            "{} · {} — {}",
+            account.label,
+            account.provider,
+            target.trim_matches('/')
         )));
         title.add_css_class("row-title");
         title.set_halign(gtk::Align::Start);
@@ -3031,12 +3147,10 @@ fn azure_accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Set
         entry.set_hexpand(true);
         let save = gtk::Button::with_label("Save");
         let delete = gtk::Button::with_label("Delete");
-        let verify = gtk::Button::with_label("Verify");
         let remove = gtk::Button::with_label("Remove");
         row.append(&entry);
         row.append(&save);
         row.append(&delete);
-        row.append(&verify);
         row.append(&remove);
         page.append(&row);
         let status = caption("");
@@ -3074,17 +3188,6 @@ fn azure_accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Set
             }
         });
 
-        let paths_for_verify = paths.clone();
-        let status_for_verify = status.clone();
-        let organization = account.organization.clone();
-        verify.connect_clicked(move |_| {
-            let paths = paths_for_verify.clone();
-            let organization = organization.clone();
-            verify_async(&status_for_verify, move || {
-                verify_azure(&paths, &organization)
-            });
-        });
-
         let paths_for_remove = paths.clone();
         let settings_for_remove = settings.clone();
         let status_for_remove = status.clone();
@@ -3093,7 +3196,7 @@ fn azure_accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Set
             {
                 let mut current = settings_for_remove.borrow_mut();
                 current
-                    .azure_accounts
+                    .accounts
                     .retain(|account| account.id != id_for_remove);
                 let _ = current.save(&paths_for_remove);
             }
@@ -3105,22 +3208,37 @@ fn azure_accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Set
 
     widgets::section(page, "Add account");
     let fields = gtk::Box::new(gtk::Orientation::Vertical, 4);
+    let provider = gtk::ComboBoxText::new();
+    for (id, label) in [
+        ("github", "GitHub"),
+        ("azure", "Azure DevOps"),
+        ("elastic", "Elastic"),
+        ("grafana", "Grafana"),
+        ("opencode", "opencode"),
+    ] {
+        provider.append(Some(id), label);
+    }
+    provider.set_active_id(Some("github"));
     let label = gtk::Entry::new();
     label.set_placeholder_text(Some("Label, e.g. Work"));
     let organization = gtk::Entry::new();
-    organization.set_placeholder_text(Some("Organization, e.g. contoso"));
+    organization.set_placeholder_text(Some("Organization (Azure)"));
     let project = gtk::Entry::new();
-    project.set_placeholder_text(Some("Project"));
+    project.set_placeholder_text(Some("Project (Azure)"));
+    let server = gtk::Entry::new();
+    server.set_placeholder_text(Some("Server / base URL (Elastic, Grafana, opencode)"));
     let token = gtk::Entry::new();
     token.set_visibility(false);
     token.set_input_purpose(gtk::InputPurpose::Password);
-    token.set_placeholder_text(Some("Personal access token"));
+    token.set_placeholder_text(Some("Token or password"));
+    fields.append(&provider);
     fields.append(&label);
     fields.append(&organization);
     fields.append(&project);
+    fields.append(&server);
     fields.append(&token);
     page.append(&fields);
-    let add = gtk::Button::with_label("Add Azure account");
+    let add = gtk::Button::with_label("Add account");
     add.set_halign(gtk::Align::Start);
     page.append(&add);
     let status = caption("");
@@ -3128,20 +3246,30 @@ fn azure_accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Set
     let paths = paths.clone();
     let settings = settings.clone();
     add.connect_clicked(move |_| {
+        let provider = provider
+            .active_id()
+            .map(|id| id.to_string())
+            .unwrap_or_else(|| "github".into());
         let label_text = label.text().trim().to_owned();
-        let organization_text = organization.text().trim().to_owned();
-        let project_text = project.text().trim().to_owned();
         let token_text = token.text().trim().to_owned();
-        if label_text.is_empty()
-            || organization_text.is_empty()
-            || project_text.is_empty()
-            || token_text.is_empty()
+        if label_text.is_empty() || token_text.is_empty() {
+            status.set_text("Fill in label and token");
+            return;
+        }
+        let organization = organization.text().trim().to_owned();
+        let project = project.text().trim().to_owned();
+        let server_url = server.text().trim().trim_end_matches('/').to_owned();
+        if provider == "azure" && (organization.is_empty() || project.is_empty()) {
+            status.set_text("Azure accounts need organization and project");
+            return;
+        }
+        if matches!(provider.as_str(), "elastic" | "grafana" | "opencode") && server_url.is_empty()
         {
-            status.set_text("Fill in label, organization, project and token");
+            status.set_text("This provider needs a server or base URL");
             return;
         }
         let id = format!(
-            "azure:{}",
+            "{provider}:{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|duration| duration.as_millis())
@@ -3150,12 +3278,14 @@ fn azure_accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Set
         {
             let mut current = settings.borrow_mut();
             current
-                .azure_accounts
-                .push(deck_core::settings::AzureAccount {
+                .accounts
+                .push(deck_core::settings::CredentialAccount {
                     id: id.clone(),
+                    provider,
                     label: label_text,
-                    organization: organization_text,
-                    project: project_text,
+                    organization,
+                    project,
+                    server_url,
                 });
             let _ = current.save(&paths);
         }

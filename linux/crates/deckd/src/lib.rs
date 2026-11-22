@@ -86,10 +86,12 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
         run_source(paths, "batbox", Ok(batbox::load()));
     }
     if settings.ship.enabled {
+        let (github_id, _, _, _) =
+            settings.selected_account("github", &settings.ship.github_account_id);
         run_source(
             paths,
             "shipbox",
-            providers::require_token(paths, "github").and_then(|token| {
+            providers::require_token(paths, &github_id).and_then(|token| {
                 let repos = if settings.ship.repos.is_empty() {
                     ship::discover_repos(&token, 5)?
                 } else {
@@ -116,10 +118,12 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
         );
     }
     if settings.prs.enabled {
+        let (github_id, _, _, _) =
+            settings.selected_account("github", &settings.prs.github_account_id);
         let github = settings
             .prs
             .show_github
-            .then(|| providers::token(paths, "github").ok().flatten())
+            .then(|| providers::token(paths, &github_id).ok().flatten())
             .flatten();
         let (azure_token_id, azure_org, azure_project) =
             settings.azure_account(&settings.prs.azure_account_id);
@@ -154,27 +158,32 @@ fn fetch_all(paths: &Paths, settings: &Settings) {
     }
     if settings.logbox.enabled {
         let previous = snapshot::read_payload::<logbox::LogBoxSnapshot>(paths, "logbox");
+        let (token_id, _, _, server) =
+            settings.selected_account("elastic", &settings.logbox.account_id);
+        let base = if server.is_empty() {
+            settings.logbox.base_url.clone()
+        } else {
+            server
+        };
         run_source(
             paths,
             "logbox",
-            providers::require_token(paths, "elastic").and_then(|key| {
-                logbox::fetch(
-                    &settings.logbox.base_url,
-                    &key,
-                    &settings.logbox,
-                    previous.as_ref(),
-                )
-            }),
+            providers::require_token(paths, &token_id)
+                .and_then(|key| logbox::fetch(&base, &key, &settings.logbox, previous.as_ref())),
         );
     }
     if settings.metricbox.enabled {
-        run_source(
-            paths,
-            "metricbox",
-            providers::require_token(paths, "grafana").and_then(|token| {
-                metricbox::fetch(&settings.metricbox.base_url, &token, &settings.metricbox)
-            }),
-        );
+        run_source(paths, "metricbox", {
+            let (token_id, _, _, server) =
+                settings.selected_account("grafana", &settings.metricbox.account_id);
+            let base = if server.is_empty() {
+                settings.metricbox.base_url.clone()
+            } else {
+                server
+            };
+            providers::require_token(paths, &token_id)
+                .and_then(|token| metricbox::fetch(&base, &token, &settings.metricbox))
+        });
     }
 }
 

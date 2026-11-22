@@ -97,8 +97,20 @@ pub fn build(
             if snapshot.accessories.is_empty() {
                 widgets::add_row(&body, "No accessories");
             } else {
-                for accessory in snapshot.accessories.iter().take(5) {
-                    let (_, _, value) = widgets::split_row(&body, &accessory.name);
+                for accessory in snapshot
+                    .accessories
+                    .iter()
+                    .take(bat.accessory_count.max(1) as usize)
+                {
+                    let (row, _, value) = widgets::split_row(&body, &accessory.name);
+                    let color = match accessory.percent {
+                        Some(percent) if percent <= f64::from(bat.low_percent) => widgets::RED,
+                        Some(percent) if percent <= f64::from(bat.low_percent) + 20.0 => {
+                            widgets::ORANGE
+                        }
+                        _ => widgets::GREEN,
+                    };
+                    row.prepend(&widgets::dot(color));
                     value.set_markup(&format!(
                         "<span foreground=\"#8e8e93\">{} {}</span>",
                         accessory

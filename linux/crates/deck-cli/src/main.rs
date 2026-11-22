@@ -38,12 +38,7 @@ fn run() -> Result<(), deck_core::CoreError> {
                 "grafana".to_string(),
                 "opencode".to_string(),
             ];
-            ids.extend(
-                settings
-                    .azure_accounts
-                    .into_iter()
-                    .map(|account| account.id),
-            );
+            ids.extend(settings.accounts.into_iter().map(|account| account.id));
             for id in ids {
                 let present = store
                     .read(&id)
