@@ -141,7 +141,6 @@ pub fn widget_drag_bar(
     grip.add_css_class("search-grip");
     grip.set_halign(gtk::Align::End);
     grip.set_hexpand(true);
-    grip.set_tooltip_text(Some("Drag to move"));
     bar.append(&grip);
     movable_header(window, &bar, settings, 28)
 }
@@ -178,46 +177,120 @@ pub fn make_draggable(
     if !deck_platform::surface::uses_layer_shell() {
         return;
     }
+    struct Drag {
+        target: (i32, i32),
+        applied: (i32, i32),
+        max: (i32, i32),
+        last_dx: f64,
+        last_dy: f64,
+        last_window: (i32, i32),
+        active: bool,
+    }
+
     handle.set_cursor_from_name(Some("grab"));
     let drag = gtk::GestureDrag::new();
     drag.set_propagation_phase(gtk::PropagationPhase::Capture);
-    let state: Rc<RefCell<Option<(i32, i32)>>> = Rc::new(RefCell::new(None));
+    let state: Rc<RefCell<Option<Drag>>> = Rc::new(RefCell::new(None));
+    let ticking = Rc::new(Cell::new(false));
+    // Gesture offsets are window-relative. As the window follows the pointer,
+    // its local coordinates move too, which halves the apparent motion and
+    // makes dragging feel sticky. Add the window movement since the last event
+    // back in so the card tracks the pointer 1:1.
+    let apply_pointer_delta = |drag: &mut Drag, dx: f64, dy: f64| {
+        let local_dx = dx - drag.last_dx;
+        let local_dy = dy - drag.last_dy;
+        let window_dx = f64::from(drag.applied.0 - drag.last_window.0);
+        let window_dy = f64::from(drag.applied.1 - drag.last_window.1);
+        drag.target = (
+            (f64::from(drag.target.0) + local_dx + window_dx).round() as i32,
+            (f64::from(drag.target.1) + local_dy + window_dy).round() as i32,
+        );
+        drag.target.0 = drag.target.0.clamp(0, drag.max.0);
+        drag.target.1 = drag.target.1.clamp(0, drag.max.1);
+        drag.last_dx = dx;
+        drag.last_dy = dy;
+        drag.last_window = drag.applied;
+    };
+
     let window_for_begin = window.clone();
+    let handle_for_begin = handle.clone();
     let state_for_begin = state.clone();
+    let ticking_for_begin = ticking.clone();
     drag.connect_drag_begin(move |_, _, y| {
         if y > f64::from(drag_zone) {
             *state_for_begin.borrow_mut() = None;
             return;
         }
-        *state_for_begin.borrow_mut() = Some(deck_platform::surface::position(&window_for_begin));
+        let origin = deck_platform::surface::position(&window_for_begin);
+        *state_for_begin.borrow_mut() = Some(Drag {
+            target: origin,
+            applied: origin,
+            max: deck_platform::surface::max_position(&window_for_begin),
+            last_dx: 0.0,
+            last_dy: 0.0,
+            last_window: origin,
+            active: true,
+        });
+        handle_for_begin.set_cursor_from_name(Some("grabbing"));
+        if !ticking_for_begin.replace(true) {
+            let state = state_for_begin.clone();
+            let ticking = ticking_for_begin.clone();
+            let tick_window = window_for_begin.clone();
+            window_for_begin.add_tick_callback(move |_, _| {
+                let mut slot = state.borrow_mut();
+                let Some(drag) = slot.as_mut() else {
+                    ticking.set(false);
+                    return gtk::glib::ControlFlow::Break;
+                };
+                if drag.target != drag.applied {
+                    deck_platform::surface::move_to_raw(&tick_window, drag.target.0, drag.target.1);
+                    drag.applied = drag.target;
+                }
+                if drag.active {
+                    gtk::glib::ControlFlow::Continue
+                } else {
+                    *slot = None;
+                    ticking.set(false);
+                    gtk::glib::ControlFlow::Break
+                }
+            });
+        }
     });
-    let window_for_update = window.clone();
+
     let state_for_update = state.clone();
     drag.connect_drag_update(move |_, dx, dy| {
-        if let Some((x, y)) = *state_for_update.borrow() {
-            deck_platform::surface::move_to(
-                &window_for_update,
-                x + dx.round() as i32,
-                y + dy.round() as i32,
-            );
+        if let Some(drag) = state_for_update.borrow_mut().as_mut() {
+            apply_pointer_delta(drag, dx, dy);
         }
     });
+
     let window_for_end = window.clone();
+    let handle_for_end = handle.clone();
     let settings_for_end = settings;
     let state_for_end = state;
-    drag.connect_drag_end(move |_, _, _| {
-        if state_for_end.borrow().is_none() {
+    drag.connect_drag_end(move |_, dx, dy| {
+        let mut slot = state_for_end.borrow_mut();
+        let Some(drag) = slot.as_mut() else {
             return;
-        }
-        let (x, y) = deck_platform::surface::position(&window_for_end);
+        };
+        apply_pointer_delta(drag, dx, dy);
+        let target = drag.target;
+        deck_platform::surface::move_to_raw(&window_for_end, target.0, target.1);
+        drag.applied = target;
+        drag.active = false;
+        handle_for_end.set_cursor_from_name(Some("grab"));
         let key = window_for_end
             .title()
             .map(|title| title.to_string())
             .unwrap_or_default();
         let mut current = settings_for_end.borrow_mut();
-        current
-            .positions
-            .insert(key, deck_core::settings::WindowPosition { x, y });
+        current.positions.insert(
+            key,
+            deck_core::settings::WindowPosition {
+                x: target.0,
+                y: target.1,
+            },
+        );
         let _ = current.save(&Paths::from_env());
     });
     window.add_controller(drag);
@@ -246,7 +319,6 @@ pub fn search_window(
     grip.add_css_class("search-grip");
     grip.set_halign(gtk::Align::End);
     grip.set_hexpand(true);
-    grip.set_tooltip_text(Some("Drag to move"));
     header.append(&grip);
     content.append(&movable_header(&window, &header, settings.clone(), 26));
 

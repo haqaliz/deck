@@ -137,9 +137,26 @@ pub fn place_on(
 pub fn move_to(window: &gtk::ApplicationWindow, x: i32, y: i32) {
     if uses_layer_shell() {
         let (x, y) = clamp_position(window, x, y);
-        window.set_margin(Edge::Top, y);
-        window.set_margin(Edge::Left, x);
+        move_to_raw(window, x, y);
     }
+}
+
+/// Sets the layer-shell margins without re-querying the monitor. Used by the
+/// frame-coalesced drag path, which already clamped its target.
+pub fn move_to_raw(window: &gtk::ApplicationWindow, x: i32, y: i32) {
+    window.set_margin(Edge::Top, y);
+    window.set_margin(Edge::Left, x);
+}
+
+pub fn max_position(window: &gtk::ApplicationWindow) -> (i32, i32) {
+    let Some(monitor) = window.monitor() else {
+        return (i32::MAX, i32::MAX);
+    };
+    let geometry = monitor.geometry();
+    (
+        (geometry.width() - window.default_width().max(1)).max(0),
+        (geometry.height() - window.default_height().max(1)).max(0),
+    )
 }
 
 pub fn position(window: &gtk::ApplicationWindow) -> (i32, i32) {
