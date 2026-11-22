@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.haqaliz.deck</id>
+  <name>Deck</name>
+  <summary>Desktop widgets and Spotlight-style search</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>Deck is a set of always-on-desktop widgets plus a Spotlight-style search panel.</p>
+    <p>It includes system and network monitors, calendars, clipboard history, build and PR feeds, logs, metrics and more.</p>
+  </description>
+  <launchable type="desktop-id">io.github.haqaliz.deck.desktop</launchable>
+  <url type="homepage">https://github.com/haqaliz/deck</url>
+  <releases>
+    <release version="0.7.0" date="2026-11-22"/>
+  </releases>
+</component>

@@ -1,4 +1,5 @@
 use std::env;
+use std::path::Path;
 
 /// Which widget surface backend the session needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,6 +12,15 @@ pub enum SessionKind {
     Dashboard,
     /// No display; daemon/CLI only.
     Unknown,
+}
+
+/// App id when running inside a Flatpak sandbox.
+pub fn flatpak_id() -> Option<String> {
+    std::env::var("FLATPAK_ID").ok().or_else(|| {
+        Path::new("/.flatpak-info")
+            .exists()
+            .then(|| "io.github.haqaliz.deck".into())
+    })
 }
 
 pub fn detect_session() -> SessionKind {

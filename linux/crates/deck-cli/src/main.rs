@@ -71,9 +71,12 @@ fn run() -> Result<(), deck_core::CoreError> {
                 .and_then(|index| args.get(index + 1))
                 .map(String::as_str)
                 .unwrap_or(deck_core::shortcut::DEFAULT_KEY);
-            let command = std::env::current_exe()
-                .map(|path| format!("{} --toggle-search", path.display()))
-                .unwrap_or_else(|_| "deck --toggle-search".into());
+            let command = match deck_core::platform::flatpak_id() {
+                Some(id) => format!("flatpak run {id} --toggle-search"),
+                None => std::env::current_exe()
+                    .map(|path| format!("{} --toggle-search", path.display()))
+                    .unwrap_or_else(|_| "deck --toggle-search".into()),
+            };
             let _ = deck_core::shortcut::ensure_labwc_desktop_rule();
             let desktop = std::env::var("XDG_CURRENT_DESKTOP")
                 .unwrap_or_default()
