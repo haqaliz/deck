@@ -2,7 +2,7 @@
 
 Rust + GTK4 implementation, planned in
 [`docs/planning/linux-port/`](../../docs/planning/linux-port/). This tree is at
-**v0.6.1 (L13)**: core, snapshot contract, credentials, daemon, CLI, the GTK4
+**v0.7.0 (L14)**: core, snapshot contract, credentials, daemon, CLI, the GTK4
 shell, all 13 v1 widgets plus CalBox, ClipBox and BatBox, the search panel, the Pi `.deb` and the desktop
 AppImage. Pi OS labwc is the verified target; KDE/GNOME/wlroots/X11 are coded
 but not claimed as tested. Network fetches use the system `curl`; OpenBox uses
@@ -11,7 +11,7 @@ bundled SQLite.
 ## Install on Raspberry Pi OS
 
 ```bash
-sudo dpkg -i deck_0.6.1_arm64.deb
+sudo dpkg -i deck_0.7.0_arm64.deb
 deck-gui                 # starts the widgets, tray and socket
 deck --install-shortcut  # labwc W-Space, GNOME Super+Space, or printed snippet
 ```
@@ -71,7 +71,7 @@ maintains.
 
 ## AppImage
 
-The CI artifact `deck_0.6.1_x86_64.AppImage` bundles GTK4,
+The CI artifact `deck_0.7.0_x86_64.AppImage` bundles GTK4,
 gtk4-layer-shell and the X11/font/Wayland libraries. Make it executable and
 run it; if FUSE 2 is unavailable, use `--appimage-extract-and-run`. It was
 smoke-tested under Xvfb with software rendering; a clean physical desktop
@@ -80,8 +80,8 @@ remains a known-limitations item.
 ## Packaging
 
 ```bash
-VERSION=0.6.1 bash packaging/build-deb.sh       # arm64 .deb on the Pi
-VERSION=0.6.1 bash packaging/build-appimage.sh  # x86_64 AppImage on a GTK4 desktop
+VERSION=0.7.0 bash packaging/build-deb.sh       # arm64 .deb on the Pi
+VERSION=0.7.0 bash packaging/build-appimage.sh  # x86_64 AppImage on a GTK4 desktop
 ```
 
 ## Build and test
