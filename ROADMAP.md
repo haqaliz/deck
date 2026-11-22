@@ -1356,7 +1356,7 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (v0.5.1 released 2026-11-22; L0-L12 done)
+### M12 — Linux & Raspberry Pi port (v0.6.0 released 2026-11-22; L0-L13 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the
@@ -1372,7 +1372,7 @@ autostart plus tray.
 
 **v1 widgets (13):** LiveBox, NetBox, DevBox, WeatherBox, ClockBox, GitBox,
 OpenBox, ShipBox, TaskBox, PRBox, MarketBox, LogBox, MetricBox.
-**Deferred:** ClipBox, BatBox, PiBox, native DE widgets, Flatpak, ARM32,
+**Deferred:** PiBox, native DE widgets, Flatpak, ARM32,
 Pi Zero. CalBox shipped post-v1 in v0.5.0.
 
 **GNOME Wayland is a documented fallback:** Mutter has no `wlr-layer-shell`, so
@@ -1438,7 +1438,7 @@ Milestones (detail in
 - [x] **L8 — Hardening + v1** (2w): **v0.1.0 done 2026-11-20.** Panic/last-error
       handling, rate-limited status, schema migration, security pass, 30-minute
       Pi 4 idle sample, install/known-limitations docs, `.deb` + AppImage
-      release with SHA256 and tag `linux-v0.1.0`. v0.1.1 made widgets movable; v0.1.2 adds the labwc PCManFM always-on-bottom rule; v0.1.3 uses the macOS app icon across Linux; v0.1.4 adds the ARGB tray pixmap for AppImage hosts; v0.2.0 is the macOS visual-parity pass; v0.3.0 adds remote work-item/PR search with cache and 429 isolation, provider toggles, LiveBox per-core lines and colors, Ship discovery, PR provider/review controls, a Market live picker, OpenBox remote mode, KDE shortcuts and tag-triggered releases; v0.4.0 adds section-card settings, multi-account Azure credentials, remote log search, stock lookup, and verifies the wlroots/X11/keyring paths in containers; v0.5.0 adds CalBox over CalDAV; v0.5.1 makes widget dragging frame-coalesced and pointer-accurate. The desktop matrix, Pi 5,
+      release with SHA256 and tag `linux-v0.1.0`. v0.1.1 made widgets movable; v0.1.2 adds the labwc PCManFM always-on-bottom rule; v0.1.3 uses the macOS app icon across Linux; v0.1.4 adds the ARGB tray pixmap for AppImage hosts; v0.2.0 is the macOS visual-parity pass; v0.3.0 adds remote work-item/PR search with cache and 429 isolation, provider toggles, LiveBox per-core lines and colors, Ship discovery, PR provider/review controls, a Market live picker, OpenBox remote mode, KDE shortcuts and tag-triggered releases; v0.4.0 adds section-card settings, multi-account Azure credentials, remote log search, stock lookup, and verifies the wlroots/X11/keyring paths in containers; v0.5.0 adds CalBox over CalDAV; v0.5.1 makes widget dragging frame-coalesced and pointer-accurate; v0.6.0 adds CalBox calendar selection, ClipBox and BatBox. The desktop matrix, Pi 5,
       keyrings and live API accounts remain explicitly untested. See
       [`docs/planning/linux-port/l8.md`](docs/planning/linux-port/l8.md).
 - [x] **L9 — macOS visual parity** (1w): **v0.2.0 done 2026-11-21.**
@@ -1467,6 +1467,11 @@ Milestones (detail in
       today/tomorrow agenda, all-day rows, calendar colours, event links,
       settings, credentials Verify and search results. See
       [`docs/planning/linux-port/l12.md`](docs/planning/linux-port/l12.md).
+- [x] **L13 — CalBox picker + ClipBox + BatBox** (1w): **v0.6.0 done
+      2026-11-22.** Calendar discovery picker and filtering; ClipBox text
+      history with wl-clipboard/xsel, 0600 persistence and click-to-copy; BatBox
+      battery/AC state from sysfs. See
+      [`docs/planning/linux-port/l13.md`](docs/planning/linux-port/l13.md).
 
 **Estimate:** 22-29 weeks for one engineer; about 4-5 months with two people
 after L1. **Start with L0.** It is one week of throwaway code and measurements;

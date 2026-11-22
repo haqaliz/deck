@@ -28,6 +28,8 @@ pub struct Settings {
     pub azure_accounts: Vec<AzureAccount>,
     pub livebox: LiveBoxSettings,
     pub calbox: CalBoxSettings,
+    pub clipbox: ClipBoxSettings,
+    pub batbox: BatBoxSettings,
     pub netbox: NetBoxSettings,
     pub devbox: DevBoxSettings,
     pub weather: WeatherBoxSettings,
@@ -59,6 +61,8 @@ impl Default for Settings {
             azure_accounts: Vec::new(),
             livebox: LiveBoxSettings::default(),
             calbox: CalBoxSettings::default(),
+            clipbox: ClipBoxSettings::default(),
+            batbox: BatBoxSettings::default(),
             netbox: NetBoxSettings::default(),
             devbox: DevBoxSettings::default(),
             weather: WeatherBoxSettings::default(),
@@ -110,11 +114,59 @@ pub struct SearchSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(default)]
+pub struct BatBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub show_battery: bool,
+    pub show_accessories: bool,
+    pub low_percent: u8,
+}
+
+impl Default for BatBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            show_battery: true,
+            show_accessories: true,
+            low_percent: 20,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct ClipBoxSettings {
+    pub enabled: bool,
+    pub size: WidgetSize,
+    pub show_list: bool,
+    pub history_count: u8,
+    pub text_color: String,
+    pub file_color: String,
+}
+
+impl Default for ClipBoxSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: WidgetSize::Medium,
+            show_list: true,
+            history_count: 5,
+            text_color: "#5e5ce6".into(),
+            file_color: "#0a84ff".into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
 pub struct CalBoxSettings {
     pub enabled: bool,
     pub size: WidgetSize,
     pub server_url: String,
     pub username: String,
+    /// Empty reads every VEVENT calendar. Once non-empty, only these ids.
+    pub calendar_ids: Vec<String>,
     pub show_all_day: bool,
     pub show_today: bool,
     pub show_tomorrow: bool,
@@ -132,6 +184,7 @@ impl Default for CalBoxSettings {
             size: WidgetSize::Medium,
             server_url: String::new(),
             username: String::new(),
+            calendar_ids: Vec::new(),
             show_all_day: true,
             show_today: true,
             show_tomorrow: true,

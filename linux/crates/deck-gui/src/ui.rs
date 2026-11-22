@@ -40,6 +40,16 @@ pub fn widget_windows(
     if enabled.calbox.enabled {
         widgets.push(widgets::calbox::build(app, settings.clone(), paths.clone()));
     }
+    if enabled.clipbox.enabled {
+        widgets.push(widgets::clipbox::build(
+            app,
+            settings.clone(),
+            paths.clone(),
+        ));
+    }
+    if enabled.batbox.enabled {
+        widgets.push(widgets::batbox::build(app, settings.clone(), paths.clone()));
+    }
     if enabled.netbox.enabled {
         widgets.push(widgets::netbox::build(app, settings.clone()));
     }
@@ -769,6 +779,7 @@ fn search_inputs(
     let mut inputs = search_core::SearchInputs {
         weather: deck_core::snapshot::read_payload(paths, "weather"),
         calbox: deck_core::snapshot::read_payload(paths, "calbox"),
+        clipbox: deck_core::clipbox::load(paths),
         git: deck_core::snapshot::read_payload(paths, "gitbox"),
         market: deck_core::snapshot::read_payload(paths, "marketbox"),
         opencode: deck_core::snapshot::read_payload(paths, "opencode"),
@@ -1081,6 +1092,8 @@ pub fn settings_window(
             "x-office-calendar",
             calbox_page(&paths, &settings),
         ),
+        ("Clipboard", "edit-paste", clipbox_page(&paths, &settings)),
+        ("Battery", "battery-good", batbox_page(&paths, &settings)),
         (
             "Weather",
             "weather-few-clouds",
@@ -1238,6 +1251,8 @@ fn calbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         settings,
         |s, v| s.calbox.username = v,
     );
+    let calendars = form_card(&page, "CALENDARS");
+    calendar_picker(&calendars, paths, settings, &current);
     let display = form_card(&page, "DISPLAY");
     toggle(
         &display,
@@ -1302,6 +1317,232 @@ fn calbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
         |s, v| s.calbox.accent_color = v,
     );
     page
+}
+
+fn batbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    page.add_css_class("deck-page-cards");
+    page.append(&caption(
+        "Battery state from /sys/class/power_supply. Laptops and USB battery devices only; the Pi reports no battery.",
+    ));
+    let current = settings.borrow().batbox.clone();
+    let general = form_card(&page, "GENERAL");
+    size_row(&general, current.size, paths, settings, |s, v| {
+        s.batbox.size = v
+    });
+    toggle(
+        &general,
+        "Show BatBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.batbox.enabled = v,
+    );
+    toggle(
+        &general,
+        "Show battery",
+        current.show_battery,
+        paths,
+        settings,
+        |s, v| s.batbox.show_battery = v,
+    );
+    toggle(
+        &general,
+        "Show accessories",
+        current.show_accessories,
+        paths,
+        settings,
+        |s, v| s.batbox.show_accessories = v,
+    );
+    spin(
+        &general,
+        "Low battery percent",
+        u64::from(current.low_percent),
+        5,
+        50,
+        5,
+        paths,
+        settings,
+        |s, v| s.batbox.low_percent = v as u8,
+    );
+    page
+}
+
+fn clipbox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
+    let page = page();
+    page.add_css_class("deck-page-cards");
+    page.append(&caption(
+        "Text clipboard history. Needs wl-clipboard on Wayland or xsel/xclip on X11.",
+    ));
+    let current = settings.borrow().clipbox.clone();
+    let general = form_card(&page, "GENERAL");
+    size_row(&general, current.size, paths, settings, |s, v| {
+        s.clipbox.size = v
+    });
+    toggle(
+        &general,
+        "Show ClipBox",
+        current.enabled,
+        paths,
+        settings,
+        |s, v| s.clipbox.enabled = v,
+    );
+    toggle(
+        &general,
+        "Show list",
+        current.show_list,
+        paths,
+        settings,
+        |s, v| s.clipbox.show_list = v,
+    );
+    spin(
+        &general,
+        "History rows",
+        current.history_count as u64,
+        1,
+        20,
+        1,
+        paths,
+        settings,
+        |s, v| s.clipbox.history_count = v as u8,
+    );
+    let colors = form_card(&page, "COLORS");
+    color_row(
+        &colors,
+        "Text color",
+        &current.text_color,
+        paths,
+        settings,
+        |s, v| s.clipbox.text_color = v,
+    );
+    color_row(
+        &colors,
+        "Link/file color",
+        &current.file_color,
+        paths,
+        settings,
+        |s, v| s.clipbox.file_color = v,
+    );
+    page
+}
+
+fn calendar_picker(
+    page: &gtk::Box,
+    paths: &Paths,
+    settings: &Rc<RefCell<Settings>>,
+    current: &deck_core::settings::CalBoxSettings,
+) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let load = gtk::Button::with_label("Load calendars");
+    let status = caption("");
+    row.append(&load);
+    row.append(&status);
+    page.append(&row);
+    let list = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    page.append(&list);
+    if !current.calendar_ids.is_empty() {
+        status.set_text(&format!(
+            "{} selected — load to edit",
+            current.calendar_ids.len()
+        ));
+    } else {
+        status.set_text("No selection = every VEVENT calendar");
+    }
+    let checks: Rc<RefCell<Vec<(String, gtk::CheckButton)>>> = Rc::new(RefCell::new(Vec::new()));
+    let paths = paths.clone();
+    let settings = settings.clone();
+    let status_for_click = status.clone();
+    load.connect_clicked(move |button| {
+        let settings_snapshot = settings.borrow().calbox.clone();
+        if settings_snapshot.server_url.trim().is_empty()
+            || settings_snapshot.username.trim().is_empty()
+        {
+            status_for_click.set_text("Set the server URL and username first");
+            return;
+        }
+        let Ok(password) = providers::require_token(&paths, "caldav") else {
+            status_for_click.set_text("Store the CalDAV password in Credentials first");
+            return;
+        };
+        button.set_sensitive(false);
+        status_for_click.set_text("Loading…");
+        let (tx, rx) = mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = tx.send(deck_core::calbox::calendars(
+                &settings_snapshot.server_url,
+                &settings_snapshot.username,
+                &password,
+            ));
+        });
+        let list = list.clone();
+        let checks = checks.clone();
+        let settings = settings.clone();
+        let paths = paths.clone();
+        let status = status_for_click.clone();
+        let button = button.clone();
+        gtk::glib::timeout_add_local(Duration::from_millis(120), move || match rx.try_recv() {
+            Ok(Ok(calendars)) => {
+                widgets::clear(&list);
+                checks.borrow_mut().clear();
+                if calendars.is_empty() {
+                    status.set_text("No VEVENT calendars found");
+                    button.set_sensitive(true);
+                    return gtk::glib::ControlFlow::Break;
+                }
+                for calendar in calendars {
+                    let check = gtk::CheckButton::with_label(&calendar.title);
+                    check.set_active(
+                        settings.borrow().calbox.calendar_ids.is_empty()
+                            || settings
+                                .borrow()
+                                .calbox
+                                .calendar_ids
+                                .iter()
+                                .any(|id| id == &calendar.id),
+                    );
+                    let id = calendar.id.clone();
+                    let checks_for_toggle = checks.clone();
+                    let settings_for_toggle = settings.clone();
+                    let paths_for_toggle = paths.clone();
+                    check.connect_toggled(move |_| {
+                        let selected: Vec<String> = checks_for_toggle
+                            .borrow()
+                            .iter()
+                            .filter(|(_, check)| check.is_active())
+                            .map(|(id, _)| id.clone())
+                            .collect();
+                        let all = checks_for_toggle.borrow().len();
+                        let mut current = settings_for_toggle.borrow_mut();
+                        current.calbox.calendar_ids = if selected.len() == all {
+                            Vec::new()
+                        } else {
+                            selected
+                        };
+                        let _ = current.save(&paths_for_toggle);
+                    });
+                    checks.borrow_mut().push((id, check.clone()));
+                    let line = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+                    line.append(&widgets::dot(&calendar.color));
+                    line.append(&check);
+                    list.append(&line);
+                }
+                status.set_text("Changes apply on the next deckd tick");
+                button.set_sensitive(true);
+                gtk::glib::ControlFlow::Break
+            }
+            Ok(Err(error)) => {
+                status.set_text(&format!("Could not load: {}", error.message()));
+                button.set_sensitive(true);
+                gtk::glib::ControlFlow::Break
+            }
+            Err(mpsc::TryRecvError::Empty) => gtk::glib::ControlFlow::Continue,
+            Err(mpsc::TryRecvError::Disconnected) => {
+                status.set_text("Calendar discovery failed");
+                button.set_sensitive(true);
+                gtk::glib::ControlFlow::Break
+            }
+        });
+    });
 }
 
 fn livebox_page(paths: &Paths, settings: &Rc<RefCell<Settings>>) -> gtk::Box {
@@ -3070,8 +3311,8 @@ fn verify_caldav(paths: &Paths, server_url: &str, username: &str) -> String {
     let Ok(password) = providers::require_token(paths, "caldav") else {
         return "No CalDAV password stored".into();
     };
-    match deck_core::calbox::probe(server_url, username, &password) {
-        Ok(count) => format!("{count} calendars found"),
+    match deck_core::calbox::calendars(server_url, username, &password) {
+        Ok(calendars) => format!("{} calendars found", calendars.len()),
         Err(error) => format!("CalDAV check failed: {}", error.message()),
     }
 }

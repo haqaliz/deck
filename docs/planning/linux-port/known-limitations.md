@@ -1,4 +1,4 @@
-# Deck for Linux — known limitations (v0.5.1)
+# Deck for Linux — known limitations (v0.6.0)
 
 Deck on Linux is a **Pi-first v1**. This page is the honest boundary of what was
 verified on the hardware available.
@@ -64,7 +64,7 @@ verified on the hardware available.
 - KDE shortcut install is best-effort via `kwriteconfig6/5` and needs a
   Plasma restart; labwc and GNOME installers are exercised.
 - No auto-update, Flatpak, ARM32 or Pi Zero.
-- ClipBox and BatBox are deferred; PiBox is explicitly out of v1.
+- BatBox accessories/BlueZ integration is not populated yet; PiBox is explicitly out of v1.
 - Placement is automatic until dragged. Widget title bars and the search
   header can be dragged; positions persist in settings. Per-monitor
   arrangement across monitor changes is not verified (one display available).

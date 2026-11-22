@@ -1,4 +1,6 @@
+pub mod batbox;
 pub mod calbox;
+pub mod clipbox;
 pub mod clock;
 pub mod devbox;
 pub mod feed;

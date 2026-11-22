@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 
 use crate::calbox::CalBoxSnapshot;
+use crate::clipbox::ClipBoxSnapshot;
 use crate::clockbox::{self, Zone};
 use crate::devbox::{DockerContainer, ListeningPort};
 use crate::gitbox::GitBoxSnapshot;
@@ -23,6 +24,7 @@ pub enum SearchProvider {
     Port,
     Time,
     Calendar,
+    Clipboard,
     OpenCode,
     Run,
     System,
@@ -42,6 +44,7 @@ impl SearchProvider {
             Self::Port => "port",
             Self::Time => "time",
             Self::Calendar => "cal",
+            Self::Clipboard => "clip",
             Self::OpenCode => "oc",
             Self::Run => "run",
             Self::System => "sys",
@@ -65,6 +68,7 @@ impl SearchProvider {
             Self::Port => "Ports and containers",
             Self::Time => "World clocks",
             Self::Calendar => "Calendar",
+            Self::Clipboard => "Clipboard",
             Self::OpenCode => "OpenCode sessions",
             Self::Run => "Builds",
             Self::System => "System",
@@ -79,10 +83,11 @@ impl SearchProvider {
         }
     }
 
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 15] = [
         Self::Port,
         Self::Time,
         Self::Calendar,
+        Self::Clipboard,
         Self::OpenCode,
         Self::Run,
         Self::System,
@@ -101,6 +106,7 @@ impl SearchProvider {
             Self::Port => "Dev",
             Self::Time => "Clocks",
             Self::Calendar => "Calendar",
+            Self::Clipboard => "Clipboard",
             Self::OpenCode => "OpenCode sessions",
             Self::Run => "Builds",
             Self::System => "System",
@@ -120,6 +126,7 @@ impl SearchProvider {
             "port" => Self::Port,
             "time" => Self::Time,
             "cal" => Self::Calendar,
+            "clip" => Self::Clipboard,
             "oc" => Self::OpenCode,
             "run" => Self::Run,
             "sys" => Self::System,
@@ -251,6 +258,7 @@ pub struct SearchSection {
 pub struct SearchInputs {
     pub weather: Option<WeatherSnapshot>,
     pub calbox: Option<CalBoxSnapshot>,
+    pub clipbox: Option<ClipBoxSnapshot>,
     pub git: Option<GitBoxSnapshot>,
     pub market: Option<MarketSnapshot>,
     pub opencode: Option<OpenCodeSnapshot>,
@@ -312,6 +320,7 @@ pub fn run(inputs: &SearchInputs, raw: &str, now: DateTime<Utc>) -> Vec<SearchSe
         SearchProvider::Port,
         SearchProvider::Time,
         SearchProvider::Calendar,
+        SearchProvider::Clipboard,
         SearchProvider::OpenCode,
         SearchProvider::Run,
         SearchProvider::System,
@@ -338,6 +347,7 @@ pub fn run(inputs: &SearchInputs, raw: &str, now: DateTime<Utc>) -> Vec<SearchSe
             SearchProvider::Port => dev(inputs),
             SearchProvider::Time => clocks(inputs, now),
             SearchProvider::Calendar => calendar(inputs),
+            SearchProvider::Clipboard => clips(inputs),
             SearchProvider::OpenCode => opencode(inputs),
             SearchProvider::Run => runs(inputs),
             SearchProvider::System => system(inputs),
@@ -361,6 +371,7 @@ fn group(results: Vec<SearchResult>, limit: usize) -> Vec<SearchSection> {
         SearchProvider::Port,
         SearchProvider::Time,
         SearchProvider::Calendar,
+        SearchProvider::Clipboard,
         SearchProvider::OpenCode,
         SearchProvider::Run,
         SearchProvider::System,
@@ -469,6 +480,28 @@ fn clocks(inputs: &SearchInputs, now: DateTime<Utc>) -> Vec<SearchResult> {
                 subtitle: format!("{time} · {day} · {offset}"),
                 score,
                 action: SearchAction::Copy(time),
+            })
+        })
+        .collect()
+}
+
+fn clips(inputs: &SearchInputs) -> Vec<SearchResult> {
+    let Some(snapshot) = &inputs.clipbox else {
+        return Vec::new();
+    };
+    let query = current_query();
+    snapshot
+        .items
+        .iter()
+        .filter_map(|item| {
+            let score = best_score(&query, &[&item.preview, &item.content, &item.kind])?;
+            Some(SearchResult {
+                id: item.id.clone(),
+                provider: SearchProvider::Clipboard,
+                title: item.preview.clone(),
+                subtitle: item.at.get(11..16).unwrap_or(&item.at).to_owned(),
+                score,
+                action: SearchAction::Copy(item.content.clone()),
             })
         })
         .collect()

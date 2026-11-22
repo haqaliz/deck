@@ -1,5 +1,7 @@
 pub mod autostart;
+pub mod batbox;
 pub mod calbox;
+pub mod clipbox;
 pub mod clockbox;
 pub mod credentials;
 pub mod devbox;
