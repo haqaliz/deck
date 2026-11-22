@@ -23,9 +23,10 @@ pub struct Settings {
     pub positions: BTreeMap<String, WindowPosition>,
     pub search_shortcut: Option<String>,
     pub search: SearchSettings,
-    /// Extra Azure DevOps accounts. The legacy `tasks.organization`/`project`
-    /// plus the `azure` token stay valid when this list is empty.
-    pub azure_accounts: Vec<AzureAccount>,
+    /// Named credential accounts. The old `azureAccounts` key is migrated by
+    /// the serde alias; `provider` defaults to azure for those entries.
+    #[serde(default, alias = "azureAccounts", alias = "azure_accounts")]
+    pub accounts: Vec<CredentialAccount>,
     pub livebox: LiveBoxSettings,
     pub calbox: CalBoxSettings,
     pub clipbox: ClipBoxSettings,
@@ -58,7 +59,7 @@ impl Default for Settings {
             positions: BTreeMap::new(),
             search_shortcut: None,
             search: SearchSettings::default(),
-            azure_accounts: Vec::new(),
+            accounts: Vec::new(),
             livebox: LiveBoxSettings::default(),
             calbox: CalBoxSettings::default(),
             clipbox: ClipBoxSettings::default(),
@@ -81,25 +82,60 @@ impl Default for Settings {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(default)]
-pub struct AzureAccount {
+pub struct CredentialAccount {
     /// Credential store id and the value stored in a widget's account field.
     pub id: String,
+    /// azure, github, elastic, grafana or opencode.
+    #[serde(default = "default_azure_provider")]
+    pub provider: String,
     pub label: String,
     pub organization: String,
     pub project: String,
+    pub server_url: String,
+}
+
+pub type AzureAccount = CredentialAccount;
+
+fn default_azure_provider() -> String {
+    "azure".into()
 }
 
 impl Settings {
+    pub fn account(&self, provider: &str, selected: &str) -> Option<&CredentialAccount> {
+        self.accounts
+            .iter()
+            .find(|account| account.id == selected && account.provider == provider)
+    }
+
     /// Resolves the selected Azure account, falling back to the legacy fields.
     pub fn azure_account(&self, selected: &str) -> (&str, &str, &str) {
-        if let Some(account) = self
-            .azure_accounts
-            .iter()
-            .find(|account| account.id == selected)
-        {
+        if let Some(account) = self.account("azure", selected) {
             (&account.id, &account.organization, &account.project)
         } else {
             ("azure", &self.tasks.organization, &self.tasks.project)
+        }
+    }
+
+    /// Token id plus provider-specific target fields for a widget selector.
+    pub fn selected_account(
+        &self,
+        provider: &str,
+        selected: &str,
+    ) -> (String, String, String, String) {
+        if let Some(account) = self.account(provider, selected) {
+            (
+                account.id.clone(),
+                account.organization.clone(),
+                account.project.clone(),
+                account.server_url.clone(),
+            )
+        } else {
+            (
+                provider.to_owned(),
+                String::new(),
+                String::new(),
+                String::new(),
+            )
         }
     }
 }
@@ -119,6 +155,7 @@ pub struct BatBoxSettings {
     pub size: WidgetSize,
     pub show_battery: bool,
     pub show_accessories: bool,
+    pub accessory_count: u8,
     pub low_percent: u8,
 }
 
@@ -129,6 +166,7 @@ impl Default for BatBoxSettings {
             size: WidgetSize::Medium,
             show_battery: true,
             show_accessories: true,
+            accessory_count: 4,
             low_percent: 20,
         }
     }
@@ -390,8 +428,10 @@ impl Default for GitBoxSettings {
 pub struct OpenBoxSettings {
     pub enabled: bool,
     pub size: WidgetSize,
+    /// Empty uses the `opencode` token; the account server URL wins when set.
+    pub account_id: String,
     /// Empty reads the local SQLite database; otherwise an `opencode serve`
-    /// base URL and the `opencode` credential are used.
+    /// base URL and the account/`opencode` credential are used.
     pub server_url: String,
     pub show_models: bool,
     pub show_tools: bool,
@@ -406,6 +446,7 @@ impl Default for OpenBoxSettings {
         Self {
             enabled: false,
             size: WidgetSize::Medium,
+            account_id: String::new(),
             server_url: String::new(),
             show_models: true,
             show_tools: false,
@@ -422,6 +463,8 @@ impl Default for OpenBoxSettings {
 pub struct ShipBoxSettings {
     pub enabled: bool,
     pub size: WidgetSize,
+    /// Empty uses the legacy `github` token.
+    pub github_account_id: String,
     /// "owner/repo" entries.
     pub repos: Vec<String>,
     pub run_count: u8,
@@ -433,6 +476,7 @@ impl Default for ShipBoxSettings {
         Self {
             enabled: false,
             size: WidgetSize::Medium,
+            github_account_id: String::new(),
             repos: Vec::new(),
             run_count: 4,
             show_list: true,
@@ -478,6 +522,8 @@ pub struct PrBoxSettings {
     pub size: WidgetSize,
     /// Empty uses the legacy Tasks organization/project and `azure` token.
     pub azure_account_id: String,
+    /// Empty uses the legacy `github` token.
+    pub github_account_id: String,
     pub pr_count: u8,
     pub show_list: bool,
     pub show_github: bool,
@@ -491,6 +537,7 @@ impl Default for PrBoxSettings {
             enabled: false,
             size: WidgetSize::Medium,
             azure_account_id: String::new(),
+            github_account_id: String::new(),
             pr_count: 6,
             show_list: true,
             show_github: true,
@@ -538,6 +585,8 @@ pub enum LogTextMode {
 pub struct LogBoxSettings {
     pub enabled: bool,
     pub size: WidgetSize,
+    /// Empty uses the legacy `elastic` token.
+    pub account_id: String,
     pub base_url: String,
     /// `prd`, `stg` or a full `logs-manifold-*` stream name.
     pub environment: String,
@@ -553,6 +602,7 @@ impl Default for LogBoxSettings {
         Self {
             enabled: false,
             size: WidgetSize::Medium,
+            account_id: String::new(),
             base_url: String::new(),
             environment: "logs-manifold-prd".into(),
             service: String::new(),
@@ -580,6 +630,8 @@ pub enum MetricBoxFace {
 pub struct MetricBoxSettings {
     pub enabled: bool,
     pub size: WidgetSize,
+    /// Empty uses the legacy `grafana` token.
+    pub account_id: String,
     pub base_url: String,
     pub face: MetricBoxFace,
     /// Empty means all hosts; used by the Host face.
@@ -599,6 +651,7 @@ impl Default for MetricBoxSettings {
         Self {
             enabled: false,
             size: WidgetSize::Medium,
+            account_id: String::new(),
             base_url: String::new(),
             face: MetricBoxFace::Fleet,
             host: String::new(),
@@ -780,6 +833,17 @@ mod tests {
     }
 
     #[test]
+    fn old_azure_accounts_migrate_into_the_generic_list() {
+        let parsed: Settings = serde_json::from_str(
+            r#"{"azure_accounts":[{"id":"azure:x","label":"Work","organization":"o","project":"p"}]}"#,
+        )
+        .expect("parse");
+        assert_eq!(parsed.accounts.len(), 1);
+        assert_eq!(parsed.accounts[0].provider, "azure");
+        assert_eq!(parsed.accounts[0].organization, "o");
+    }
+
+    #[test]
     fn azure_account_resolution_uses_the_selected_account_or_legacy_fields() {
         let mut settings = Settings::default();
         settings.tasks.organization = "legacy".into();
@@ -788,11 +852,13 @@ mod tests {
             settings.azure_account(""),
             ("azure", "legacy", "legacy-project")
         );
-        settings.azure_accounts.push(AzureAccount {
+        settings.accounts.push(CredentialAccount {
             id: "azure:work".into(),
+            provider: "azure".into(),
             label: "Work".into(),
             organization: "work-org".into(),
             project: "work-project".into(),
+            server_url: String::new(),
         });
         assert_eq!(
             settings.azure_account("azure:work"),

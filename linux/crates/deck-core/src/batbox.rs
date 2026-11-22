@@ -35,6 +35,7 @@ pub fn load() -> BatterySnapshot {
 
 pub fn read_from(root: &Path) -> std::io::Result<BatterySnapshot> {
     let mut batteries = Vec::new();
+    let mut accessories = Vec::new();
     let mut ac_online = None;
     let entries = match fs::read_dir(root) {
         Ok(entries) => entries,
@@ -52,7 +53,15 @@ pub fn read_from(root: &Path) -> std::io::Result<BatterySnapshot> {
             .unwrap_or_default();
         let kind = read_trim(&path.join("type")).unwrap_or_default();
         if kind.to_ascii_lowercase().contains("battery") {
-            if let Some(battery) = read_battery(&path, name) {
+            let scope = read_trim(&path.join("scope")).unwrap_or_default();
+            let is_accessory = scope.eq_ignore_ascii_case("Device")
+                || name.starts_with("hid-")
+                || name.starts_with("hidpp");
+            if is_accessory {
+                if let Some(accessory) = read_accessory(&path, name) {
+                    accessories.push(accessory);
+                }
+            } else if let Some(battery) = read_battery(&path, name) {
                 batteries.push(battery);
             }
         } else if matches!(kind.as_str(), "Mains" | "USB" | "USB_C") {
@@ -70,7 +79,7 @@ pub fn read_from(root: &Path) -> std::io::Result<BatterySnapshot> {
         written_at: chrono::Utc::now().to_rfc3339(),
         ac_online,
         batteries,
-        accessories: Vec::new(),
+        accessories,
     })
 }
 
@@ -81,6 +90,24 @@ fn empty() -> BatterySnapshot {
         batteries: Vec::new(),
         accessories: Vec::new(),
     }
+}
+
+fn read_accessory(path: &Path, name: String) -> Option<Accessory> {
+    let percent = read_number(&path.join("capacity"));
+    let model = read_trim(&path.join("model_name"))
+        .or_else(|| read_trim(&path.join("manufacturer")))
+        .unwrap_or(name);
+    let status = read_trim(&path.join("status")).unwrap_or_default();
+    let detail = if status.is_empty() {
+        "Bluetooth".into()
+    } else {
+        status
+    };
+    Some(Accessory {
+        name: model,
+        percent,
+        detail,
+    })
 }
 
 fn read_battery(path: &Path, name: String) -> Option<Battery> {
@@ -135,11 +162,19 @@ mod tests {
         fs::write(bat.join("power_now"), "6\n").expect("power");
         fs::write(ac.join("type"), "Mains\n").expect("ac type");
         fs::write(ac.join("online"), "0\n").expect("online");
+        let mouse = tmp.path().join("hid-aa-bb");
+        fs::create_dir_all(&mouse).expect("mouse");
+        fs::write(mouse.join("type"), "Battery\n").expect("mouse type");
+        fs::write(mouse.join("scope"), "Device\n").expect("scope");
+        fs::write(mouse.join("capacity"), "58\n").expect("mouse capacity");
+        fs::write(mouse.join("model_name"), "MX Master 3S\n").expect("model");
         let snapshot = read_from(tmp.path()).expect("snapshot");
         assert_eq!(snapshot.ac_online, Some(false));
         assert_eq!(snapshot.batteries.len(), 1);
         assert_eq!(snapshot.batteries[0].percent, 72.0);
         assert_eq!(snapshot.batteries[0].minutes_left, Some(360));
+        assert_eq!(snapshot.accessories[0].name, "MX Master 3S");
+        assert_eq!(snapshot.accessories[0].percent, Some(58.0));
     }
 
     #[test]
