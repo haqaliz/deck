@@ -5,7 +5,7 @@ sdk: org.gnome.Sdk
 command: deck-gui
 
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable//25.08
+  - org.freedesktop.Sdk.Extension.rust-stable
 
 finish-args:
   - --share=network

@@ -20,7 +20,7 @@ jobs:
           flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y --noninteractive flathub \
             org.gnome.Platform//49 org.gnome.Sdk//49 \
-            org.freedesktop.Sdk.Extension.rust-stable//25.08
+            org.freedesktop.Sdk.Extension.rust-stable
       - name: build flatpak
         run: |
           flatpak-builder --user --repo=repo --force-clean \
