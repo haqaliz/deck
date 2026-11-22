@@ -1,0 +1,84 @@
+app-id: io.github.haqaliz.deck
+runtime: org.gnome.Platform
+runtime-version: "49"
+sdk: org.gnome.Sdk
+command: deck-gui
+
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable//25.08
+
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.a11y.Bus
+
+modules:
+  - name: gtk4-layer-shell
+    buildsystem: meson
+    sources:
+      - type: archive
+        url: https://github.com/wmww/gtk4-layer-shell/archive/refs/tags/v1.0.4.tar.gz
+        sha256: 7fe327dc3740e4b6f5edfd855e23f84b1ac1ec6854b731047b95df7feb46498b
+
+  - name: wl-clipboard
+    buildsystem: meson
+    sources:
+      - type: archive
+        url: https://github.com/bugaevc/wl-clipboard/archive/refs/tags/v2.2.1.tar.gz
+        sha256: 6eb8081207fb5581d1d82c4bcd9587205a31a3d47bea3ebeb7f41aa1143783eb
+
+  - name: curl
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+      - --disable-ldap
+      - --disable-ldaps
+      - --disable-manual
+      - --with-openssl
+      - --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt
+    sources:
+      - type: archive
+        url: https://curl.se/download/curl-8.11.1.tar.xz
+        sha256: c7ca7db48b0909743eaef34250da02c19bc61d4f1dcedd6603f109409536ab56
+
+  - name: git
+    buildsystem: simple
+    build-commands:
+      - make configure
+      - ./configure --prefix=/app --with-curl --with-expat --with-openssl
+      - make -j"${FLATPAK_BUILDER_N_JOBS:-4}" NO_GETTEXT=YesPlease NO_PERL=YesPlease NO_TCLTK=YesPlease NO_PYTHON=YesPlease
+      - make install NO_GETTEXT=YesPlease NO_PERL=YesPlease NO_TCLTK=YesPlease NO_PYTHON=YesPlease
+    sources:
+      - type: archive
+        url: https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.47.1.tar.xz
+        sha256: f3d8f9bb23ae392374e91cd9d395970dabc5b9c5ee72f39884613cd84a6ed310
+
+  - name: deck
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin
+      env:
+        CARGO_HOME: /run/build/deck/cargo
+    build-commands:
+      - cargo build --release -p deck-gui -p deckd -p deck-cli
+      - install -Dm755 target/release/deck-gui /app/bin/deck-gui
+      - install -Dm755 target/release/deckd /app/bin/deckd
+      - install -Dm755 target/release/deck /app/bin/deck
+      - install -Dm644 packaging/io.github.haqaliz.deck.desktop /app/share/applications/io.github.haqaliz.deck.desktop
+      - for size in 16 24 32 48 64 128 256 512; do install -Dm644 "assets/icons/deck-${size}.png" "/app/share/icons/hicolor/${size}x${size}/apps/deck.png"; done
+      - install -Dm644 packaging/deckd.service /app/share/deck/deckd.service
+      - install -Dm644 io.github.haqaliz.deck.metainfo.xml /app/share/metainfo/io.github.haqaliz.deck.metainfo.xml
+    sources:
+      - type: dir
+        path: ../linux
+        skip:
+          - target
+          - dist
+      - type: file
+        path: io.github.haqaliz.deck.metainfo.xml

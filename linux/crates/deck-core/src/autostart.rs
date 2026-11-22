@@ -9,9 +9,12 @@ pub fn install(exec: &Path, paths: &Paths) -> Result<PathBuf, CoreError> {
     let autostart = autostart_dir(paths);
     fs::create_dir_all(&autostart)?;
     let desktop = autostart.join("deck.desktop");
+    let exec = match crate::platform::flatpak_id() {
+        Some(id) => format!("flatpak run {id}"),
+        None => exec.display().to_string(),
+    };
     let content = format!(
-        "[Desktop Entry]\nType=Application\nName=Deck\nComment=Desktop widgets, settings and search\nExec={}\nTerminal=false\nX-GNOME-Autostart-enabled=true\n",
-        exec.display()
+        "[Desktop Entry]\nType=Application\nName=Deck\nComment=Desktop widgets, settings and search\nExec={exec}\nTerminal=false\nX-GNOME-Autostart-enabled=true\n"
     );
     write_atomic(&desktop, content.as_bytes(), 0o644)?;
     Ok(desktop)
