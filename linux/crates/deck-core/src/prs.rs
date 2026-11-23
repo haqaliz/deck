@@ -358,7 +358,9 @@ pub fn fetch(sources: PrSources) -> Result<PrBoxSnapshot, FetchError> {
 
 fn azure_user_id(organization: &str, auth: &str) -> Result<String, FetchError> {
     let body = providers::get(
-        &format!("https://dev.azure.com/{organization}/_apis/connectionData?api-version=7.0"),
+        &format!(
+            "https://dev.azure.com/{organization}/_apis/connectionData?api-version=7.1-preview"
+        ),
         &[("Authorization", auth), ("Accept", "application/json")],
     )?;
     let json: Value = serde_json::from_str(&body).map_err(|_| FetchError::InvalidPayload)?;

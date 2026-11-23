@@ -87,10 +87,7 @@ pub fn build(
                     label.set_ellipsize(gtk::pango::EllipsizeMode::End);
                     line.append(&label);
                 } else {
-                    let link = gtk::LinkButton::with_label(&task.url, &text);
-                    link.add_css_class("link-row");
-                    link.set_halign(gtk::Align::Start);
-                    line.append(&link);
+                    widgets::link_row(&line, &text, &task.url);
                 }
                 body.append(&line);
             }

@@ -86,41 +86,90 @@ fn fleet(
     };
     let hosts = worst_first(&snapshot.hosts);
     for host in hosts.iter().take(limit) {
-        let (_, _, value) = widgets::split_row(body, &host.host);
-        let mut parts = Vec::new();
-        if settings.show_cpu {
-            parts.push(format!("C{:.0}", host.cpu.unwrap_or(0.0)));
-        }
-        if settings.show_ram {
-            parts.push(format!("R{:.0}", host.ram.unwrap_or(0.0)));
-        }
-        if size != WidgetSize::Small {
-            if settings.show_disk {
-                parts.push(format!("D{:.0}", host.disk.unwrap_or(0.0)));
-            }
-            if settings.show_gpu {
-                if let Some(gpu) = host.gpu_percent {
-                    parts.push(format!("G{gpu:.0}"));
-                }
-            }
-            if settings.show_power {
-                if let Some(watts) = host.total_watts() {
-                    parts.push(format!("{watts:.0}W"));
-                }
-            }
-        }
-        let color = if host.last_seen_seconds.unwrap_or(0.0) > 120.0 {
-            widgets::RED
-        } else {
-            "#8e8e93"
-        };
-        value.set_markup(&format!(
-            "<span foreground=\"{color}\">{}</span>",
-            parts.join("  ")
-        ));
+        body.append(&host_row(host, settings, size));
     }
     if snapshot.hosts.is_empty() {
         widgets::add_row(body, "No hosts returned");
+    }
+}
+
+fn host_row(
+    host: &deck_core::metricbox::MetricHost,
+    settings: &MetricBoxSettings,
+    size: WidgetSize,
+) -> gtk::Box {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+    let name = gtk::Label::new(Some(&host.host));
+    name.add_css_class("row-name");
+    name.set_width_chars(4);
+    name.set_xalign(0.0);
+    row.append(&name);
+    if host.last_seen_seconds.unwrap_or(0.0) > 120.0 {
+        let silent = gtk::Label::new(None);
+        silent.set_markup(&format!(
+            "<span foreground=\"{}\">silent {}</span>",
+            widgets::RED,
+            age(host.last_seen_seconds)
+        ));
+        row.append(&silent);
+        return row;
+    }
+    let mut groups = vec![
+        ("C", settings.show_cpu, host.cpu),
+        ("M", settings.show_ram, host.ram),
+    ];
+    if size != WidgetSize::Small {
+        groups.push(("D", settings.show_disk, host.disk));
+    }
+    if size == WidgetSize::Large && settings.show_gpu {
+        groups.push(("G", true, host.gpu_percent));
+    }
+    for (label, enabled, value) in groups {
+        if !enabled {
+            continue;
+        }
+        let group = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+        let letter = gtk::Label::new(Some(label));
+        letter.add_css_class("row-meta");
+        group.append(&letter);
+        group.append(&widgets::mini_bar(value, pressure_color(value)));
+        let percent = gtk::Label::new(None);
+        percent.set_markup(&format!(
+            "<span foreground=\"{}\">{:.0}%</span>",
+            pressure_color(value),
+            value.unwrap_or(0.0)
+        ));
+        group.append(&percent);
+        row.append(&group);
+    }
+    if size == WidgetSize::Large && settings.show_power {
+        if let Some(watts) = host.total_watts() {
+            let power = gtk::Label::new(Some(&format!("{watts:.0}W")));
+            power.add_css_class("row-meta");
+            row.append(&power);
+        }
+    }
+    row
+}
+
+fn pressure_color(value: Option<f64>) -> &'static str {
+    match value {
+        Some(value) if value >= 90.0 => widgets::RED,
+        Some(value) if value >= 70.0 => widgets::ORANGE,
+        _ => widgets::GREEN,
+    }
+}
+
+fn age(seconds: Option<f64>) -> String {
+    let seconds = seconds.unwrap_or(0.0);
+    if seconds < 60.0 {
+        format!("{seconds:.0}s")
+    } else if seconds < 3600.0 {
+        format!("{:.0}m", seconds / 60.0)
+    } else if seconds < 86_400.0 {
+        format!("{:.0}h", seconds / 3600.0)
+    } else {
+        format!("{:.0}d", seconds / 86_400.0)
     }
 }
 
@@ -156,7 +205,7 @@ fn host(body: &gtk::Box, snapshot: &MetricBoxSnapshot, settings: &MetricBoxSetti
             .map(|value| value.round() as i64)
             .collect();
         chart.set_draw_func(move |_, cr, width, height| {
-            widgets::draw_bars(cr, width, height, &values, false);
+            widgets::draw_trend_bars(cr, width, height, &values, widgets::GREEN);
         });
         body.append(&chart);
     }

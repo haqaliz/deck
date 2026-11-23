@@ -113,7 +113,7 @@ pub fn build(
                 .map(|point| point.count as i64)
                 .collect();
             chart.set_draw_func(move |_, cr, width, height| {
-                widgets::draw_bars(cr, width, height, &values, false);
+                widgets::draw_trend_bars(cr, width, height, &values, widgets::ORANGE);
             });
             body.append(&chart);
         }

@@ -258,6 +258,67 @@ pub fn draw_bars(
     }
 }
 
+/// A 22x3 capsule used for the MetricBox fleet percentages, matching the
+/// macOS widget's MiniBar.
+pub fn mini_bar(value: Option<f64>, color: &str) -> gtk::DrawingArea {
+    let bar = gtk::DrawingArea::new();
+    bar.set_size_request(22, 3);
+    bar.set_valign(gtk::Align::Center);
+    let fraction = value
+        .filter(|value| value.is_finite())
+        .unwrap_or(0.0)
+        .clamp(0.0, 100.0)
+        / 100.0;
+    let (red, green, blue) = parse_hex_color(color);
+    bar.set_draw_func(move |_, cr, width, height| {
+        let width = f64::from(width);
+        let height = f64::from(height);
+        cr.set_source_rgba(red, green, blue, 0.16);
+        cr.rectangle(0.0, 0.0, width, height);
+        let _ = cr.fill();
+        if fraction > 0.0 {
+            cr.set_source_rgb(red, green, blue);
+            cr.rectangle(0.0, 0.0, (width * fraction).max(1.0), height);
+            let _ = cr.fill();
+        }
+    });
+    bar
+}
+
+/// Accent-coloured trend bars with a faint zero line, matching the macOS
+/// LogTrendBars/MetricTrendBars.
+pub fn draw_trend_bars(
+    cr: &gtk::cairo::Context,
+    width: i32,
+    height: i32,
+    values: &[i64],
+    color: &str,
+) {
+    let width = width as f64;
+    let height = height as f64;
+    cr.set_operator(gtk::cairo::Operator::Clear);
+    cr.paint().ok();
+    cr.set_operator(gtk::cairo::Operator::Over);
+    if values.is_empty() {
+        return;
+    }
+    let (red, green, blue) = parse_hex_color(color);
+    let max = values.iter().copied().max().unwrap_or(0).max(1) as f64;
+    let slot = width / values.len() as f64;
+    let bar_width = (slot - 1.0).max(1.0);
+    for (index, value) in values.iter().enumerate() {
+        let bar = ((*value as f64 / max) * (height - 1.0)).max(if *value > 0 { 1.0 } else { 0.0 });
+        if *value == 0 {
+            cr.set_source_rgba(red, green, blue, 0.16);
+            cr.rectangle(index as f64 * slot, height - 1.0, bar_width, 1.0);
+        } else {
+            cr.set_source_rgba(red, green, blue, 0.72);
+            cr.rectangle(index as f64 * slot, height - 1.0 - bar, bar_width, bar);
+        }
+        let _ = cr.fill();
+    }
+}
+
 /// Shared Cairo chart. `max` clamps the scale; `None` scales to the history,
 /// which keeps low-traffic network charts readable.
 pub fn draw_chart(
