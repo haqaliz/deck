@@ -31,14 +31,21 @@ pub fn build(
         };
 
         let header = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-        let name = gtk::Label::new(None);
-        name.set_markup(&format!(
-            "<span foreground=\"#9a9aa1\">LOGBOX</span>  <span foreground=\"{}\">{}</span>",
-            widgets::BLUE,
-            snapshot.environment.to_uppercase()
-        ));
-        name.set_halign(gtk::Align::Start);
-        header.append(&name);
+        let environment = snapshot
+            .environment
+            .trim()
+            .trim_start_matches("logs-manifold-");
+        if !environment.is_empty() {
+            let name = gtk::Label::new(None);
+            name.add_css_class("row-meta");
+            name.set_markup(&format!(
+                "<span foreground=\"{}\">{}</span>",
+                widgets::BLUE,
+                environment.to_uppercase()
+            ));
+            name.set_halign(gtk::Align::Start);
+            header.append(&name);
+        }
         if let Some(at) = snapshot.last_error_at.as_deref() {
             let last = gtk::Label::new(Some(short_time(at)));
             last.add_css_class("row-meta");
@@ -46,7 +53,9 @@ pub fn build(
             last.set_xalign(1.0);
             header.append(&last);
         }
-        body.append(&header);
+        if header.first_child().is_some() {
+            body.append(&header);
+        }
 
         if feed_size == WidgetSize::Small {
             let summary = gtk::Box::new(gtk::Orientation::Horizontal, 14);
