@@ -25,8 +25,10 @@ fail() { echo "check-site: FAIL: $1" >&2; exit 1; }
 # Required copy.
 grep -Fq 'brew install --cask haqaliz/deck/deck' "$file" \
   || fail "missing the Homebrew install command"
-grep -Fq 'releases/latest' "$file" \
-  || fail "missing the latest-release download link"
+grep -Fq 'releases/tag/v1.65' "$file" \
+  || fail "missing the macOS download link"
+grep -Fq 'releases/tag/linux-v1.1.3' "$file" \
+  || fail "missing the Linux download link"
 grep -Fq 'xattr -dr com.apple.quarantine /Applications/Deck.app' "$file" \
   || fail "missing the quarantine-clearing command"
 grep -Fq 'before opening Deck' "$file" \
@@ -38,7 +40,7 @@ grep -Fq -- '--no-quarantine' "$file" \
 
 # Every widget must be named.
 for name in LiveBox OpenBox NetBox BatBox GitBox DevBox ClipBox WeatherBox \
-            ClockBox ShipBox TaskBox CalBox PRBox MarketBox; do
+            ClockBox ShipBox TaskBox CalBox PRBox MarketBox LogBox MetricBox; do
   grep -Fq "$name" "$file" || fail "missing widget name: $name"
 done
 
