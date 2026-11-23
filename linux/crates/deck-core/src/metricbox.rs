@@ -558,3 +558,82 @@ mod tests {
         assert_eq!(sorted[2].host, "calm");
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DashboardHit {
+    pub title: String,
+    pub url: String,
+    pub kind: String,
+}
+
+/// Grafana's dashboard search, used by the `metric` search prefix.
+pub fn search_dashboards(
+    base_url: &str,
+    token: &str,
+    text: &str,
+) -> Result<Vec<DashboardHit>, FetchError> {
+    let base = providers::normalize_base(base_url).ok_or(FetchError::NotConfigured)?;
+    if token.trim().is_empty() || text.trim().is_empty() {
+        return Err(FetchError::NotConfigured);
+    }
+    let query = encode_query(text);
+    let body = providers::get(
+        &format!("{base}/api/search?query={query}&limit=10&type=dash-db"),
+        &[
+            ("Authorization", &format!("Bearer {token}")),
+            ("Accept", "application/json"),
+        ],
+    )?;
+    parse_dashboards(&body).ok_or(FetchError::InvalidPayload)
+}
+
+fn parse_dashboards(body: &str) -> Option<Vec<DashboardHit>> {
+    let json: serde_json::Value = serde_json::from_str(body).ok()?;
+    Some(
+        json.as_array()?
+            .iter()
+            .filter_map(|dashboard| {
+                Some(DashboardHit {
+                    title: dashboard.get("title")?.as_str()?.to_owned(),
+                    url: dashboard
+                        .get("url")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("")
+                        .to_owned(),
+                    kind: dashboard
+                        .get("type")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("dashboard")
+                        .to_owned(),
+                })
+            })
+            .take(10)
+            .collect(),
+    )
+}
+
+fn encode_query(value: &str) -> String {
+    let mut out = String::new();
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') {
+            out.push(byte as char);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod search_tests {
+    use super::*;
+
+    #[test]
+    fn parses_grafana_dashboard_results() {
+        let body = r#"[{"title":"Node overview","url":"/d/abc/node","type":"dash-db"}]"#;
+        let hits = parse_dashboards(body).expect("hits");
+        assert_eq!(hits[0].title, "Node overview");
+        assert_eq!(hits[0].url, "/d/abc/node");
+        assert!(parse_dashboards("{}").is_none());
+    }
+}

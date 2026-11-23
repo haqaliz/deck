@@ -389,6 +389,7 @@ pub fn search_window(
     let task_blocked: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
     let pr_blocked: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
     let log_blocked: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
+    let metric_blocked: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
     let last_local: Rc<RefCell<Vec<search_core::SearchSection>>> =
         Rc::new(RefCell::new(Vec::new()));
     let (remote_tx, remote_rx) = mpsc::channel::<RemoteSearchMessage>();
@@ -402,6 +403,7 @@ pub fn search_window(
     let task_blocked_for_change = task_blocked.clone();
     let pr_blocked_for_change = pr_blocked.clone();
     let log_blocked_for_change = log_blocked.clone();
+    let metric_blocked_for_change = metric_blocked.clone();
     let local_for_change = last_local.clone();
     let tx_for_change = remote_tx.clone();
     entry.connect_changed(move |entry| {
@@ -418,6 +420,7 @@ pub fn search_window(
         let task_blocked = task_blocked_for_change.clone();
         let pr_blocked = pr_blocked_for_change.clone();
         let log_blocked = log_blocked_for_change.clone();
+        let metric_blocked = metric_blocked_for_change.clone();
         let local = local_for_change.clone();
         let tx = tx_for_change.clone();
         gtk::glib::timeout_add_local_once(Duration::from_millis(180), move || {
@@ -438,6 +441,7 @@ pub fn search_window(
                 task_blocked,
                 pr_blocked,
                 log_blocked,
+                metric_blocked,
                 local,
                 list,
                 actions,
@@ -453,6 +457,7 @@ pub fn search_window(
     let poll_task_blocked = task_blocked.clone();
     let poll_pr_blocked = pr_blocked.clone();
     let poll_log_blocked = log_blocked.clone();
+    let poll_metric_blocked = metric_blocked.clone();
     let poll_local = last_local.clone();
     let poll_list = list.clone();
     let poll_actions = actions.clone();
@@ -478,6 +483,8 @@ pub fn search_window(
                         poll_task_blocked.set(until);
                     } else if message.key.starts_with("log:") {
                         poll_log_blocked.set(until);
+                    } else if message.key.starts_with("metric:") {
+                        poll_metric_blocked.set(until);
                     } else {
                         poll_pr_blocked.set(until);
                     }
@@ -607,6 +614,10 @@ enum RemoteRequest {
         base: String,
         index: String,
     },
+    Metrics {
+        token_id: String,
+        base: String,
+    },
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -617,6 +628,7 @@ fn schedule_remote_search(
     task_blocked: Rc<Cell<Option<Instant>>>,
     pr_blocked: Rc<Cell<Option<Instant>>>,
     log_blocked: Rc<Cell<Option<Instant>>>,
+    metric_blocked: Rc<Cell<Option<Instant>>>,
     local: Rc<RefCell<Vec<search_core::SearchSection>>>,
     list: gtk::ListBox,
     actions: Rc<RefCell<Vec<Option<search_core::SearchAction>>>>,
@@ -683,6 +695,29 @@ fn schedule_remote_search(
                 project,
             }
         }
+        Some(search_core::SearchProvider::Metric) => {
+            let metric = settings.borrow().metricbox.clone();
+            let (token_id, _, _, server) = settings
+                .borrow()
+                .selected_account("grafana", &metric.account_id);
+            let base = if server.is_empty() {
+                metric.base_url.clone()
+            } else {
+                server
+            };
+            let enabled = metric.enabled
+                && !base.trim().is_empty()
+                && !settings
+                    .borrow()
+                    .search
+                    .disabled
+                    .iter()
+                    .any(|id| id == "metric");
+            if !enabled {
+                return;
+            }
+            RemoteRequest::Metrics { token_id, base }
+        }
         Some(search_core::SearchProvider::Log) => {
             let log = settings.borrow().logbox.clone();
             let enabled = log.enabled
@@ -715,6 +750,7 @@ fn schedule_remote_search(
         RemoteRequest::Tasks { .. } => task_blocked,
         RemoteRequest::Prs { .. } => pr_blocked,
         RemoteRequest::Logs { .. } => log_blocked,
+        RemoteRequest::Metrics { .. } => metric_blocked,
     };
     if let Some(until) = blocked.get() {
         if until > Instant::now() {
@@ -727,6 +763,7 @@ fn schedule_remote_search(
         }
         RemoteRequest::Prs { .. } => format!("pr:{}", query.text.to_lowercase()),
         RemoteRequest::Logs { .. } => format!("log:{}", query.text.to_lowercase()),
+        RemoteRequest::Metrics { .. } => format!("metric:{}", query.text.to_lowercase()),
     };
     if let Some(cached) = cache.borrow_mut().get(&key, Instant::now()) {
         if !cached.is_empty() {
@@ -755,6 +792,12 @@ fn schedule_remote_search(
                 deck_core::logbox::search_messages(&base, &token, &index, &text, 10)
                     .map(|hits| search_core::remote_log_results(&hits, &text, &base, &index))
             }),
+            RemoteRequest::Metrics { token_id, base } => {
+                providers::require_token(&paths, &token_id).and_then(|token| {
+                    deck_core::metricbox::search_dashboards(&base, &token, &text)
+                        .map(|hits| search_core::remote_metric_results(&hits, &text, &base))
+                })
+            }
             RemoteRequest::Prs {
                 github_token_id,
                 azure_token_id,
@@ -1010,6 +1053,26 @@ pub fn settings_window(
         let line = last.lines().next().unwrap_or("unknown error");
         surface.append(&caption(&format!("Last crash: {line}")));
     }
+    let update_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let check_update = gtk::Button::with_label("Check for updates");
+    let update_status = caption(&format!("Deck {}", env!("CARGO_PKG_VERSION")));
+    update_row.append(&check_update);
+    update_row.append(&update_status);
+    surface.append(&update_row);
+    let update_status_for_click = update_status.clone();
+    check_update.connect_clicked(move |_| {
+        let status = update_status_for_click.clone();
+        verify_async(&status, || match deck_core::update::latest() {
+            Ok(release) => {
+                if deck_core::update::is_newer(env!("CARGO_PKG_VERSION"), &release.tag) {
+                    format!("{} is available — {}", release.tag, release.url)
+                } else {
+                    format!("Deck {} is up to date", env!("CARGO_PKG_VERSION"))
+                }
+            }
+            Err(error) => format!("Update check failed: {}", error.message()),
+        });
+    });
 
     let search = page();
     search.add_css_class("deck-page-cards");

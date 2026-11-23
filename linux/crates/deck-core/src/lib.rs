@@ -26,6 +26,7 @@ pub mod shortcut;
 pub mod snapshot;
 pub mod socket;
 pub mod tasks;
+pub mod update;
 pub mod weather;
 
 pub use error::CoreError;
