@@ -28,7 +28,7 @@ pub fn apply_css() {
 }
 
 thread_local! {
-    static WIDGET_WINDOWS: RefCell<Vec<(String, gtk::ApplicationWindow)>> =
+    static WIDGET_WINDOWS: RefCell<Vec<(String, i32, gtk::ApplicationWindow)>> =
         const { RefCell::new(Vec::new()) };
 }
 
@@ -54,16 +54,46 @@ fn widget_enabled(settings: &Settings, title: &str) -> bool {
     }
 }
 
-/// Applies widget visibility immediately after a settings switch.
+/// Places the enabled widgets and applies visibility immediately after a
+/// settings switch. Hidden widgets do not reserve space in the flow.
 pub fn refresh_widget_visibility(settings: &Rc<RefCell<Settings>>) {
+    let monitors: Vec<gtk::gdk::Monitor> = gtk::gdk::Display::default()
+        .map(|display| {
+            let model = display.monitors();
+            (0..model.n_items())
+                .filter_map(|index| model.item(index))
+                .filter_map(|object| object.downcast::<gtk::gdk::Monitor>().ok())
+                .collect()
+        })
+        .unwrap_or_default();
     let current = settings.borrow();
+    let mut cursors = [48_i32; 3];
+    let mut column = 0_usize;
+    let mut monitor_index = 0_usize;
     WIDGET_WINDOWS.with(|windows| {
-        for (title, window) in windows.borrow().iter() {
-            if widget_enabled(&current, title) {
-                window.present();
-            } else {
+        for (title, height, window) in windows.borrow().iter() {
+            if !widget_enabled(&current, title) {
                 window.hide();
+                continue;
             }
+            if cursors[column] + height > 752 {
+                if column < 2 {
+                    column += 1;
+                } else if monitor_index + 1 < monitors.len() {
+                    monitor_index += 1;
+                    column = 0;
+                    cursors = [48_i32; 3];
+                }
+            }
+            let x = 24 + column as i32 * 332;
+            let y = cursors[column];
+            let saved = current.positions.get(title).copied();
+            let (x, y) = saved
+                .map(|position| (position.x, position.y))
+                .unwrap_or((x, y));
+            deck_platform::surface::place_on(window, monitors.get(monitor_index), x, y);
+            cursors[column] += height + 10;
+            window.present();
         }
     });
 }
@@ -155,53 +185,19 @@ pub fn widget_windows(
         ));
     }
 
-    // Flow placement: three 320px columns. A full column moves to the next
-    // monitor when one exists, so a multi-monitor desktop fills before it
-    // stacks; on a single monitor it keeps stacking. Placement is automatic
-    // and deterministic, so it survives restarts and monitor changes.
-    let monitors: Vec<gtk::gdk::Monitor> = gtk::gdk::Display::default()
-        .map(|display| {
-            let model = display.monitors();
-            (0..model.n_items())
-                .filter_map(|index| model.item(index))
-                .filter_map(|object| object.downcast::<gtk::gdk::Monitor>().ok())
-                .collect()
-        })
-        .unwrap_or_default();
+    // Flow placement is applied by the registry so disabled widgets do not
+    // reserve a column slot and toggling one immediately reflows the rest.
     let mut windows = Vec::new();
-    let mut cursors = [48_i32; 3];
-    let mut column = 0_usize;
-    let mut monitor_index = 0_usize;
+    WIDGET_WINDOWS.with(|registry| registry.borrow_mut().clear());
     for (window, height) in widgets {
-        if cursors[column] + height > 752 {
-            if column < 2 {
-                column += 1;
-            } else if monitor_index + 1 < monitors.len() {
-                monitor_index += 1;
-                column = 0;
-                cursors = [48_i32; 3];
-            }
-        }
-        let x = 24 + column as i32 * 332;
-        let y = cursors[column];
         let key = window
             .title()
             .map(|title| title.to_string())
             .unwrap_or_default();
-        let saved = settings.borrow().positions.get(&key).copied();
-        let (x, y) = saved
-            .map(|position| (position.x, position.y))
-            .unwrap_or((x, y));
-        deck_platform::surface::place_on(&window, monitors.get(monitor_index), x, y);
-        cursors[column] += height + 10;
-        if widget_enabled(&settings.borrow(), &key) {
-            window.present();
-        } else {
-            window.hide();
-        }
-        WIDGET_WINDOWS.with(|registry| registry.borrow_mut().push((key, window.clone())));
+        WIDGET_WINDOWS.with(|registry| registry.borrow_mut().push((key, height, window.clone())));
         windows.push(window);
     }
+    refresh_widget_visibility(&settings);
     windows
 }
 
