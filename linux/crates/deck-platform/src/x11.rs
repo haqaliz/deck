@@ -9,9 +9,52 @@ use std::thread;
 use std::time::Duration;
 
 use x11rb::connection::Connection;
-use x11rb::protocol::xproto::{AtomEnum, ConnectionExt as _, PropMode, Window};
+use x11rb::protocol::xproto::{AtomEnum, ConfigureWindowAux, ConnectionExt as _, PropMode, Window};
 use x11rb::rust_connection::RustConnection;
 use x11rb::wrapper::ConnectionExt as _;
+
+/// X11 has no layer shell, so centre the Spotlight panel on its monitor after
+/// the window manager has mapped it.
+pub fn center_overlay_window(title: String) {
+    thread::spawn(move || {
+        thread::sleep(Duration::from_millis(300));
+        let _ = center_overlay(&title);
+    });
+}
+
+fn center_overlay(title: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let (connection, screen) = x11rb::connect(None)?;
+    let root = connection.setup().roots[screen].root;
+    let geometry = connection.get_geometry(root)?.reply()?;
+    let pid = std::process::id();
+    let net_client_list = atom(&connection, "_NET_CLIENT_LIST")?;
+    let net_wm_pid = atom(&connection, "_NET_WM_PID")?;
+    let net_wm_name = atom(&connection, "_NET_WM_NAME")?;
+    let utf8_string = atom(&connection, "UTF8_STRING")?;
+    let windows = property_u32(&connection, root, net_client_list, AtomEnum::WINDOW.into())
+        .unwrap_or_default();
+    for window in windows {
+        let Some(window_pid) =
+            property_u32(&connection, window, net_wm_pid, AtomEnum::CARDINAL.into())
+                .and_then(|values| values.first().copied())
+        else {
+            continue;
+        };
+        if window_pid != pid {
+            continue;
+        }
+        if window_title(&connection, window, net_wm_name, utf8_string).as_deref() != Some(title) {
+            continue;
+        }
+        let window_geometry = connection.get_geometry(window)?.reply()?;
+        let x = (i32::from(geometry.width) - i32::from(window_geometry.width)).max(0) / 2;
+        let y =
+            ((i32::from(geometry.height) - i32::from(window_geometry.height)).max(0) / 4).max(24);
+        connection.configure_window(window, &ConfigureWindowAux::new().x(x).y(y))?;
+    }
+    connection.flush()?;
+    Ok(())
+}
 
 pub fn mark_desktop_window(title: String) {
     thread::spawn(move || {

@@ -134,6 +134,15 @@ pub fn place_on(
 
 /// Moves an already-mapped layer surface. No-op on X11/dashboard, where the
 /// window manager owns placement.
+/// Centres a normal overlay on X11, where the WM owns placement.
+pub fn center_overlay(window: &gtk::ApplicationWindow) {
+    if session() == SessionKind::X11 {
+        if let Some(title) = window.title() {
+            x11::center_overlay_window(title.to_string());
+        }
+    }
+}
+
 pub fn move_to(window: &gtk::ApplicationWindow, x: i32, y: i32) {
     if uses_layer_shell() {
         let (x, y) = clamp_position(window, x, y);
