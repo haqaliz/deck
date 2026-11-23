@@ -187,11 +187,8 @@ fn add_row(
         title.set_xalign(0.0);
         row.append(&title);
     } else {
-        let link = gtk::LinkButton::with_label(&event.url, &event.title);
-        link.add_css_class("link-row");
+        let link = widgets::link_row(&row, &event.title, &event.url);
         link.set_hexpand(true);
-        link.set_halign(gtk::Align::Start);
-        row.append(&link);
     }
     body.append(&row);
 }

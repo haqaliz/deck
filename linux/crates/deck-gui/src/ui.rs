@@ -27,12 +27,72 @@ pub fn apply_css() {
     }
 }
 
+thread_local! {
+    static WIDGET_WINDOWS: RefCell<Vec<(String, gtk::ApplicationWindow)>> =
+        const { RefCell::new(Vec::new()) };
+}
+
+fn widget_enabled(settings: &Settings, title: &str) -> bool {
+    match title {
+        "LiveBox" => settings.livebox.enabled,
+        "CalBox" => settings.calbox.enabled,
+        "ClipBox" => settings.clipbox.enabled,
+        "BatBox" => settings.batbox.enabled,
+        "NetBox" => settings.netbox.enabled,
+        "DevBox" => settings.devbox.enabled,
+        "Weather" => settings.weather.enabled,
+        "Clock" => settings.clock.enabled,
+        "Git" => settings.git.enabled,
+        "Market" => settings.market.enabled,
+        "Open" => settings.openbox.enabled,
+        "Ship" => settings.ship.enabled,
+        "Tasks" => settings.tasks.enabled,
+        "Pull requests" => settings.prs.enabled,
+        "Logs" => settings.logbox.enabled,
+        "Metrics" => settings.metricbox.enabled,
+        _ => true,
+    }
+}
+
+/// Applies widget visibility immediately after a settings switch.
+pub fn refresh_widget_visibility(settings: &Rc<RefCell<Settings>>) {
+    let current = settings.borrow();
+    WIDGET_WINDOWS.with(|windows| {
+        for (title, window) in windows.borrow().iter() {
+            if widget_enabled(&current, title) {
+                window.present();
+            } else {
+                window.hide();
+            }
+        }
+    });
+}
+
 pub fn widget_windows(
     app: &gtk::Application,
     settings: Rc<RefCell<Settings>>,
     paths: Paths,
 ) -> Vec<gtk::ApplicationWindow> {
-    let enabled = settings.borrow().clone();
+    // Build every widget once so the settings window can show and hide them
+    // without a restart. Visibility is applied after placement.
+    let mut build = settings.borrow().clone();
+    build.livebox.enabled = true;
+    build.calbox.enabled = true;
+    build.clipbox.enabled = true;
+    build.batbox.enabled = true;
+    build.netbox.enabled = true;
+    build.devbox.enabled = true;
+    build.weather.enabled = true;
+    build.clock.enabled = true;
+    build.git.enabled = true;
+    build.market.enabled = true;
+    build.openbox.enabled = true;
+    build.ship.enabled = true;
+    build.tasks.enabled = true;
+    build.prs.enabled = true;
+    build.logbox.enabled = true;
+    build.metricbox.enabled = true;
+    let enabled = build;
     let mut widgets: Vec<(gtk::ApplicationWindow, i32)> = Vec::new();
     if enabled.livebox.enabled {
         widgets.push(widgets::livebox::build(app, settings.clone()));
@@ -134,7 +194,12 @@ pub fn widget_windows(
             .unwrap_or((x, y));
         deck_platform::surface::place_on(&window, monitors.get(monitor_index), x, y);
         cursors[column] += height + 10;
-        window.present();
+        if widget_enabled(&settings.borrow(), &key) {
+            window.present();
+        } else {
+            window.hide();
+        }
+        WIDGET_WINDOWS.with(|registry| registry.borrow_mut().push((key, window.clone())));
         windows.push(window);
     }
     windows
@@ -3926,6 +3991,8 @@ fn toggle<F>(
         let mut current = settings.borrow_mut();
         apply(&mut current, switch.is_active());
         let _ = current.save(&paths);
+        drop(current);
+        refresh_widget_visibility(&settings);
     });
     row.append(&title);
     row.append(&switch);

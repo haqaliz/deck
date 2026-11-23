@@ -1356,7 +1356,7 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (v1.1.0 released 2026-11-23; L0-L17 done)
+### M12 — Linux & Raspberry Pi port (v1.1.1 released 2026-11-23; L0-L18 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the
@@ -1438,7 +1438,7 @@ Milestones (detail in
 - [x] **L8 — Hardening + v1** (2w): **v0.1.0 done 2026-11-20.** Panic/last-error
       handling, rate-limited status, schema migration, security pass, 30-minute
       Pi 4 idle sample, install/known-limitations docs, `.deb` + AppImage
-      release with SHA256 and tag `linux-v0.1.0`. v0.1.1 made widgets movable; v0.1.2 adds the labwc PCManFM always-on-bottom rule; v0.1.3 uses the macOS app icon across Linux; v0.1.4 adds the ARGB tray pixmap for AppImage hosts; v0.2.0 is the macOS visual-parity pass; v0.3.0 adds remote work-item/PR search with cache and 429 isolation, provider toggles, LiveBox per-core lines and colors, Ship discovery, PR provider/review controls, a Market live picker, OpenBox remote mode, KDE shortcuts and tag-triggered releases; v0.4.0 adds section-card settings, multi-account Azure credentials, remote log search, stock lookup, and verifies the wlroots/X11/keyring paths in containers; v0.5.0 adds CalBox over CalDAV; v0.5.1 makes widget dragging frame-coalesced and pointer-accurate; v0.6.0 adds CalBox calendar selection, ClipBox and BatBox; v0.6.1 fixes the BatBox battery-visibility toggle; v0.7.0 adds a self-contained Flatpak; v0.8.0 adds HID accessory batteries and named credential accounts; v1.0.0 freezes the 16-widget feature set; v1.1.0 adds a GitHub update check and remote Grafana dashboard search. The desktop matrix, Pi 5,
+      release with SHA256 and tag `linux-v0.1.0`. v0.1.1 made widgets movable; v0.1.2 adds the labwc PCManFM always-on-bottom rule; v0.1.3 uses the macOS app icon across Linux; v0.1.4 adds the ARGB tray pixmap for AppImage hosts; v0.2.0 is the macOS visual-parity pass; v0.3.0 adds remote work-item/PR search with cache and 429 isolation, provider toggles, LiveBox per-core lines and colors, Ship discovery, PR provider/review controls, a Market live picker, OpenBox remote mode, KDE shortcuts and tag-triggered releases; v0.4.0 adds section-card settings, multi-account Azure credentials, remote log search, stock lookup, and verifies the wlroots/X11/keyring paths in containers; v0.5.0 adds CalBox over CalDAV; v0.5.1 makes widget dragging frame-coalesced and pointer-accurate; v0.6.0 adds CalBox calendar selection, ClipBox and BatBox; v0.6.1 fixes the BatBox battery-visibility toggle; v0.7.0 adds a self-contained Flatpak; v0.8.0 adds HID accessory batteries and named credential accounts; v1.0.0 freezes the 16-widget feature set; v1.1.0 adds a GitHub update check and remote Grafana dashboard search; v1.1.1 makes widget toggles live and aligns the row/bar styling with the macOS widgets. The desktop matrix, Pi 5,
       keyrings and live API accounts remain explicitly untested. See
       [`docs/planning/linux-port/l8.md`](docs/planning/linux-port/l8.md).
 - [x] **L9 — macOS visual parity** (1w): **v0.2.0 done 2026-11-21.**

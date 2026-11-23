@@ -86,10 +86,7 @@ pub fn build(
                     label.set_halign(gtk::Align::Start);
                     line.append(&label);
                 } else {
-                    let link = gtk::LinkButton::with_label(&run.html_url, &title);
-                    link.add_css_class("link-row");
-                    link.set_halign(gtk::Align::Start);
-                    line.append(&link);
+                    widgets::link_row(&line, &title, &run.html_url);
                 }
                 let detail = gtk::Label::new(None);
                 detail.add_css_class("row-meta");

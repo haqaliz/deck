@@ -89,10 +89,7 @@ pub fn build(
                     label.set_ellipsize(gtk::pango::EllipsizeMode::End);
                     line.append(&label);
                 } else {
-                    let link = gtk::LinkButton::with_label(&row.url, &title);
-                    link.add_css_class("link-row");
-                    link.set_halign(gtk::Align::Start);
-                    line.append(&link);
+                    widgets::link_row(&line, &title, &row.url);
                 }
                 body.append(&line);
                 widgets::add_row(
