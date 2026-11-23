@@ -4,17 +4,18 @@
 
 # Deck
 
-**Fourteen small, beautiful macOS desktop widgets — one native app, no floating windows on your desktop — plus a quick-search panel.**
+**Sixteen small, beautiful desktop widgets for macOS and Linux — one native app, plus a quick-search panel.**
 
-Deck adds real WidgetKit widgets to your desktop: your machine, your network, your
-battery, your commits, your ports, your calendar, your tasks, your builds and your
-review queue — with
-native colors, corners and materials, at three sizes each.
+Deck adds real WidgetKit widgets to your Mac desktop and a native GTK4 app on
+Linux: your machine, your network, your battery, your commits, your ports, your
+calendar, your tasks, your builds and your review queue — with native colors,
+corners and materials, at three sizes each.
 
-[![Release](https://img.shields.io/github/v/release/haqaliz/deck?color=3fb950&label=release)](https://github.com/haqaliz/deck/releases/latest)
+[![macOS release](https://img.shields.io/badge/macOS-v1.65-3fb950)](https://github.com/haqaliz/deck/releases/tag/v1.65)
 [![CI](https://github.com/haqaliz/deck/actions/workflows/deck.yml/badge.svg)](https://github.com/haqaliz/deck/actions/workflows/deck.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-15%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/)
+[![Linux](https://img.shields.io/badge/Linux-1.1.3-FCC624?logo=linux&logoColor=black)](https://github.com/haqaliz/deck/releases/tag/linux-v1.1.3)
 [![Swift](https://img.shields.io/badge/Swift-5.10-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![WidgetKit](https://img.shields.io/badge/WidgetKit-native-0A84FF)](https://developer.apple.com/documentation/widgetkit)
 [![Downloads](https://img.shields.io/github/downloads/haqaliz/deck/total?color=3fb950&label=downloads)](https://github.com/haqaliz/deck/releases)
@@ -30,8 +31,10 @@ native colors, corners and materials, at three sizes each.
 
 <div align="center">
 
-<img src="docs/screenshots/A1.png" width="560" alt="Deck widgets" />
-<img src="docs/screenshots/A2.png" width="560" alt="Deck widgets" />
+<img src="docs/screenshots/A1.png" width="560" alt="Deck widgets on macOS" />
+<img src="docs/screenshots/A2.png" width="560" alt="Deck widgets on macOS" />
+
+<img src="docs/screenshots/L1.png" width="560" alt="Deck widgets on Linux" />
 
 <img src="docs/screenshots/A3.png" width="560" alt="Deck widgets" />
 <img src="docs/screenshots/A4.png" width="560" alt="Deck widgets" />
@@ -78,7 +81,8 @@ native colors, corners and materials, at three sizes each.
 | **LogBox** | Manifold logs from Elastic: error and warning counts, 24h error trend, worst service and top template; optional single-service and raw-message modes, with the environment list read from Elastic data streams and the service list loaded from the configured account; click a row to open Kibana with the same filter |
 | **MetricBox** | machines from Grafana: fleet health (CPU/RAM/disk per host, silent machines first), single-host detail with a 24h CPU sparkline, power and monthly cost, top agents, or firing alerts; the fleet columns and visible hosts are configurable, and the host list loads from the configured account; click through to the matching Grafana view |
 
-All sixteen come in **small / medium / large** sizes.
+All sixteen come in **small / medium / large** sizes in both the macOS and
+Linux apps.
 
 ## Install
 
@@ -92,9 +96,9 @@ open /Applications/Deck.app
 
 ### Download
 
-Grab `Deck-vX.Y.dmg` from the [latest release](https://github.com/haqaliz/deck/releases/latest),
-open it, and drag **Deck** to Applications. Then clear the quarantine flag once
-and launch:
+Grab the latest macOS `.dmg` from the
+[macOS release](https://github.com/haqaliz/deck/releases/tag/v1.65), open it, and
+drag **Deck** to Applications. Then clear the quarantine flag once and launch:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Deck.app
@@ -121,7 +125,33 @@ widgets you want. Each comes in small, medium and large.
 
 Verify a download against `SHA256SUMS.txt` on the release.
 
-### Build from source
+### Linux
+
+Deck also runs as a native GTK4 app on Linux desktops and Raspberry Pi 4/5.
+Pick the package for your machine from the
+[latest Linux release](https://github.com/haqaliz/deck/releases/tag/linux-v1.1.3):
+
+```bash
+# Debian / Ubuntu / Raspberry Pi OS (ARM64)
+sudo dpkg -i deck_1.1.3_arm64.deb
+
+# Any x86_64 desktop
+chmod +x deck_1.1.3_x86_64.AppImage
+./deck_1.1.3_x86_64.AppImage
+
+# Flatpak (x86_64)
+flatpak install --user deck_1.1.3_x86_64.flatpak
+```
+
+The Linux app has the same sixteen widgets, quick search and credential
+accounts. It uses layer-shell on wlroots compositors (Sway, labwc, Wayfire),
+a desktop window on X11/Openbox, and a normal window on GNOME/KDE Wayland.
+The widgets are app windows, not shell widgets: native KDE Plasma widgets and
+a GNOME Shell extension are not included yet. `deckd` runs the background
+fetches; `deck-gui` draws the widgets and settings. See
+[`linux/README.md`](linux/README.md) for the full Linux guide.
+
+### Build from source (macOS)
 
 Requires macOS 15+, Xcode 16+, and an Apple signing identity — a free Apple ID
 works, but ad-hoc and self-signed extensions are rejected by `pluginkit` and
@@ -306,23 +336,23 @@ to 12. Crypto and stock rows carry the change — and so does the USD row in
 
 ## Search
 
-Press **⌥Space** (changeable in the **Search** tab) for a floating search
-panel. Enter runs the top action (copy, or open in the browser); Cmd-Return
+Press **⌥Space** on macOS (changeable in the **Search** tab) or
+**Super+Space** on Linux for a floating search panel. Enter runs the top action (copy, or open in the browser); Cmd-Return
 copies a result's link; Esc closes it. Start a query with a prefix to search
 one source.
 
 | Prefix | Searches | Where it runs |
 |---|---|---|
 | *(none)* | local sources, builds and work items | — |
-| `clip` | ClipBox history (off by default) | this Mac |
-| `port` | listening ports, Docker containers | this Mac |
-| `time` | world clocks | this Mac |
-| `oc` | recent OpenCode sessions | this Mac |
-| `run` | recent GitHub Actions runs ShipBox holds | this Mac |
+| `clip` | ClipBox history (off by default) | this machine |
+| `port` | listening ports, Docker containers | this machine |
+| `time` | world clocks | this machine |
+| `oc` | recent OpenCode sessions | this machine |
+| `run` | recent GitHub Actions runs ShipBox holds | this machine |
 | `bug` `pbi` `epic` `feature` `task` `wi` | Azure DevOps work items, any age, by type (`wi` = every type) | dev.azure.com |
 | `pr` | pull requests you are involved in: GitHub and Azure DevOps | api.github.com, dev.azure.com |
-| `commit` | commit messages of any age in the repositories GitBox scans | this Mac |
-| `cal` | calendar events a year back and ahead (off by default) | this Mac |
+| `commit` | commit messages of any age in the repositories GitBox scans | this machine |
+| `cal` | calendar events a year back and ahead (off by default) | this machine |
 | `mkt` | coins and stocks by name or symbol | CoinGecko, Yahoo Finance |
 
 - Pull requests, commits and markets **only search after their prefix**: an
@@ -331,9 +361,9 @@ one source.
 - Network searches wait for a pause in typing, never send under 2 characters,
   cancel when you keep typing, and back off for a minute after a rate limit. A
   failing source shows its own one-line reason without touching the others.
-- Deck sits in the menu bar (Search, Settings…, Quit Deck). The shortcut only
-  works while Deck is running, so **General → Menu bar** has *Open Deck at
-  login* and *Keep Deck in the menu bar only*.
+- Deck sits in the macOS menu bar or the Linux tray (Search, Settings…, Quit
+  Deck). The shortcut only works while Deck is running, so **General → Menu
+  bar** has *Open Deck at login* and *Keep Deck in the menu bar only*.
 - Clipboard and calendar search are **off by default**: their text would appear
   in a panel that can be on screen while you share it. Turning calendar on asks
   macOS for access right there in Settings.
@@ -355,6 +385,9 @@ one source.
   (`io.github.haqaliz.deck.agent.processes`, configured interval, default 15s).
   ClipBox captures the pasteboard on each tick — consecutive copies within a
   minute collapse to the newest.
+- On Linux the same split is `deckd` (background fetches and snapshots) plus
+  `deck-gui` (the GTK4 windows and settings). The systemd user unit can keep
+  `deckd` running while the GUI is open or closed.
 - Everything refreshes on a ~60s cadence (WidgetKit throttles faster requests
   on macOS).
 
@@ -427,12 +460,15 @@ without one there is no host to ask. That same URL is what puts OpenBox in
 remote mode: no account means the local opencode database, an account with a
 server URL means that server.
 
-**Tokens** are stored in your **login keychain**, not in a file: one keychain
-item per account, written by the settings window and read by the background
-agent. `settings.json` keeps only the non-secret fields and stays
+**Tokens** are stored in your **login keychain** on macOS, not in a file: one
+keychain item per account, written by the settings window and read by the
+background agent. `settings.json` keeps only the non-secret fields and stays
 owner-readable (mode 0600). An older Deck that kept tokens in that file, or in
 the five per-widget slots that predated accounts, migrates them the first time
 you open the new version — nothing to re-paste.
+
+On Linux, Deck uses Secret Service when `secret-tool` is available; otherwise
+it keeps the same tokens in `~/.config/deck/credentials.json` with mode 0600.
 
 To be precise about what that buys: the tokens are no longer sitting in a
 plain-text file that backups, folder copies and sync tools pick up. It is
