@@ -947,6 +947,7 @@ pub fn toggle_search(window: &gtk::ApplicationWindow, entry: &gtk::Entry) {
         window.hide();
     } else {
         window.present();
+        deck_platform::surface::center_overlay(window);
         entry.grab_focus();
     }
 }
@@ -3147,10 +3148,12 @@ fn accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Settings>
         entry.set_hexpand(true);
         let save = gtk::Button::with_label("Save");
         let delete = gtk::Button::with_label("Delete");
+        let verify = gtk::Button::with_label("Verify");
         let remove = gtk::Button::with_label("Remove");
         row.append(&entry);
         row.append(&save);
         row.append(&delete);
+        row.append(&verify);
         row.append(&remove);
         page.append(&row);
         let status = caption("");
@@ -3186,6 +3189,40 @@ fn accounts_card(page: &gtk::Box, paths: &Paths, settings: &Rc<RefCell<Settings>
                 Ok(()) => status_for_delete.set_text("Deleted"),
                 Err(error) => status_for_delete.set_text(&format!("Could not delete: {error}")),
             }
+        });
+
+        let paths_for_verify = paths.clone();
+        let settings_for_verify = settings.clone();
+        let status_for_verify = status.clone();
+        let id_for_verify = id.clone();
+        let provider = account.provider.clone();
+        let organization = account.organization.clone();
+        let server_url = account.server_url.clone();
+        verify.connect_clicked(move |_| {
+            let current = settings_for_verify.borrow();
+            let base = if server_url.is_empty() {
+                match provider.as_str() {
+                    "elastic" => current.logbox.base_url.clone(),
+                    "grafana" => current.metricbox.base_url.clone(),
+                    "opencode" => current.openbox.server_url.clone(),
+                    _ => String::new(),
+                }
+            } else {
+                server_url.clone()
+            };
+            drop(current);
+            let paths = paths_for_verify.clone();
+            let id = id_for_verify.clone();
+            let provider = provider.clone();
+            let organization = organization.clone();
+            verify_async(&status_for_verify, move || match provider.as_str() {
+                "github" => verify_github_with(&paths, &id),
+                "azure" => verify_azure_with(&paths, &organization, &id),
+                "elastic" => verify_elastic_with(&paths, &base, &id),
+                "grafana" => verify_grafana_with(&paths, &base, &id),
+                "opencode" => verify_opencode_with(&paths, &base, &id),
+                _ => "Unknown provider".into(),
+            });
         });
 
         let paths_for_remove = paths.clone();
@@ -3448,10 +3485,14 @@ fn verify_caldav(paths: &Paths, server_url: &str, username: &str) -> String {
 }
 
 fn verify_opencode(paths: &Paths, server_url: &str) -> String {
+    verify_opencode_with(paths, server_url, "opencode")
+}
+
+fn verify_opencode_with(paths: &Paths, server_url: &str, token_id: &str) -> String {
     if server_url.trim().is_empty() {
         return "Set the OpenBox server URL first".into();
     }
-    let Ok(token) = providers::require_token(paths, "opencode") else {
+    let Ok(token) = providers::require_token(paths, token_id) else {
         return "No opencode token stored".into();
     };
     match deck_core::openbox::load_remote(server_url, &token) {
@@ -3464,7 +3505,11 @@ fn verify_opencode(paths: &Paths, server_url: &str) -> String {
 }
 
 fn verify_github(paths: &Paths) -> String {
-    let Ok(token) = providers::require_token(paths, "github") else {
+    verify_github_with(paths, "github")
+}
+
+fn verify_github_with(paths: &Paths, token_id: &str) -> String {
+    let Ok(token) = providers::require_token(paths, token_id) else {
         return "No GitHub token stored".into();
     };
     match providers::get(
@@ -3495,10 +3540,14 @@ fn verify_github(paths: &Paths) -> String {
 }
 
 fn verify_azure(paths: &Paths, organization: &str) -> String {
+    verify_azure_with(paths, organization, "azure")
+}
+
+fn verify_azure_with(paths: &Paths, organization: &str, token_id: &str) -> String {
     if organization.trim().is_empty() {
         return "Set the Tasks organization first".into();
     }
-    let Ok(token) = providers::require_token(paths, "azure") else {
+    let Ok(token) = providers::require_token(paths, token_id) else {
         return "No Azure PAT stored".into();
     };
     let auth = providers::basic_auth("", &token);
@@ -3530,10 +3579,14 @@ fn verify_azure(paths: &Paths, organization: &str) -> String {
 }
 
 fn verify_elastic(paths: &Paths, base: &str) -> String {
+    verify_elastic_with(paths, base, "elastic")
+}
+
+fn verify_elastic_with(paths: &Paths, base: &str, token_id: &str) -> String {
     let Some(base) = providers::normalize_base(base) else {
         return "Set the LogBox base URL first".into();
     };
-    let Ok(token) = providers::require_token(paths, "elastic") else {
+    let Ok(token) = providers::require_token(paths, token_id) else {
         return "No Elastic API key stored".into();
     };
     match providers::get(
@@ -3563,10 +3616,14 @@ fn verify_elastic(paths: &Paths, base: &str) -> String {
 }
 
 fn verify_grafana(paths: &Paths, base: &str) -> String {
+    verify_grafana_with(paths, base, "grafana")
+}
+
+fn verify_grafana_with(paths: &Paths, base: &str, token_id: &str) -> String {
     let Some(base) = providers::normalize_base(base) else {
         return "Set the MetricBox base URL first".into();
     };
-    let Ok(token) = providers::require_token(paths, "grafana") else {
+    let Ok(token) = providers::require_token(paths, token_id) else {
         return "No Grafana token stored".into();
     };
     match providers::get(
