@@ -11,7 +11,7 @@ use crate::gitbox::GitBoxSnapshot;
 use crate::livebox::ProcessSample;
 use crate::logbox::{self, LogBoxSnapshot};
 use crate::market::MarketSnapshot;
-use crate::metricbox::MetricBoxSnapshot;
+use crate::metricbox::{self, MetricBoxSnapshot};
 use crate::openbox::OpenCodeSnapshot;
 use crate::providers::FetchError;
 use crate::prs::{self, PrBoxSnapshot};
@@ -829,6 +829,32 @@ fn kibana_url(base: &str, index: &str, kql: &str) -> Option<String> {
     Some(format!(
         "{base}/{index}/app/discover#/?_g=(time:(from:now-15m,to:now))&_a=(query:(language:kuery,query:{query}))"
     ))
+}
+
+pub fn remote_metric_results(
+    hits: &[metricbox::DashboardHit],
+    text: &str,
+    base: &str,
+) -> Vec<SearchResult> {
+    let base = base.trim_end_matches('/');
+    hits.iter()
+        .filter_map(|hit| {
+            let score = best_score(text, &[&hit.title, &hit.kind])?;
+            let action = if hit.url.is_empty() {
+                SearchAction::Copy(hit.title.clone())
+            } else {
+                SearchAction::Open(format!("{base}{}", hit.url))
+            };
+            Some(SearchResult {
+                id: format!("metric:dashboard:{}", hit.url),
+                provider: SearchProvider::Metric,
+                title: hit.title.clone(),
+                subtitle: format!("Grafana · {}", hit.kind),
+                score,
+                action,
+            })
+        })
+        .collect()
 }
 
 pub fn remote_log_results(
