@@ -74,7 +74,7 @@ modules:
       - cargo build --release -p deck-gui -p deckd -p deck-cli
       - install -Dm755 target/release/deck-gui /app/bin/deck-gui
       - install -Dm755 target/release/deckd /app/bin/deckd
-      - install -Dm755 target/release/deck /app/bin/deck
+      - install -Dm755 target/release/deckctl /app/bin/deckctl
       - install -Dm644 packaging/io.github.haqaliz.deck.desktop /app/share/applications/io.github.haqaliz.deck.desktop
       - for size in 16 24 32 48 64 128 256 512; do install -Dm644 "assets/icons/deck-${size}.png" "/app/share/icons/hicolor/${size}x${size}/apps/deck.png"; done
       - install -Dm644 packaging/deckd.service /app/share/deck/deckd.service
