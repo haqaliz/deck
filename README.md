@@ -15,7 +15,7 @@ corners and materials, at three sizes each.
 [![CI](https://github.com/haqaliz/deck/actions/workflows/deck.yml/badge.svg)](https://github.com/haqaliz/deck/actions/workflows/deck.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-15%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/)
-[![Linux](https://img.shields.io/badge/Linux-1.1.3-FCC624?logo=linux&logoColor=black)](https://github.com/haqaliz/deck/releases/tag/linux-v1.1.3)
+[![Linux](https://img.shields.io/badge/Linux-1.1.4-FCC624?logo=linux&logoColor=black)](https://github.com/haqaliz/deck/releases/tag/linux-v1.1.4)
 [![Swift](https://img.shields.io/badge/Swift-5.10-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![WidgetKit](https://img.shields.io/badge/WidgetKit-native-0A84FF)](https://developer.apple.com/documentation/widgetkit)
 [![Downloads](https://img.shields.io/github/downloads/haqaliz/deck/total?color=3fb950&label=downloads)](https://github.com/haqaliz/deck/releases)
@@ -129,18 +129,25 @@ Verify a download against `SHA256SUMS.txt` on the release.
 
 Deck also runs as a native GTK4 app on Linux desktops and Raspberry Pi 4/5.
 Pick the package for your machine from the
-[latest Linux release](https://github.com/haqaliz/deck/releases/tag/linux-v1.1.3):
+[latest Linux release](https://github.com/haqaliz/deck/releases/tag/linux-v1.1.4):
 
 ```bash
-# Debian / Ubuntu / Raspberry Pi OS (ARM64)
-sudo dpkg -i deck_1.1.3_arm64.deb
+# Debian / Ubuntu / Raspberry Pi OS (ARM64) — apt repository
+curl -fsSL https://haqaliz.github.io/deck/apt/key.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/deck.gpg
+echo "deb [signed-by=/usr/share/keyrings/deck.gpg] https://haqaliz.github.io/deck/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/deck.list
+sudo apt update && sudo apt install deck-desktop
+
+# or install the .deb directly
+sudo dpkg -i deck-desktop_1.1.4_arm64.deb
 
 # Any x86_64 desktop
-chmod +x deck_1.1.3_x86_64.AppImage
-./deck_1.1.3_x86_64.AppImage
+chmod +x deck_1.1.4_x86_64.AppImage
+./deck_1.1.4_x86_64.AppImage
 
 # Flatpak (x86_64)
-flatpak install --user deck_1.1.3_x86_64.flatpak
+flatpak install --user deck_1.1.4_x86_64.flatpak
 ```
 
 The Linux app has the same sixteen widgets, quick search and credential

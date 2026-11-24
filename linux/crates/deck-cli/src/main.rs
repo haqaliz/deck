@@ -8,7 +8,7 @@ use deck_core::platform::detect_session;
 
 fn main() {
     if let Err(error) = run() {
-        eprintln!("deck: {error}");
+        eprintln!("deckctl: {error}");
         exit(1);
     }
 }
@@ -19,7 +19,7 @@ fn run() -> Result<(), deck_core::CoreError> {
 
     match args.first().map(String::as_str) {
         Some("--version") | Some("-V") => {
-            println!("deck {}", env!("CARGO_PKG_VERSION"));
+            println!("deckctl {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
         Some("--settings") => {
@@ -54,7 +54,7 @@ fn run() -> Result<(), deck_core::CoreError> {
                     let _ = writeln!(stream, "toggle-search");
                 }
                 Err(_) => {
-                    println!("deck: is not running; start deck-gui or enable autostart");
+                    println!("deckctl: is not running; start deck-gui or enable autostart");
                 }
             }
             Ok(())
@@ -70,7 +70,7 @@ fn run() -> Result<(), deck_core::CoreError> {
                 Some(id) => format!("flatpak run {id} --toggle-search"),
                 None => std::env::current_exe()
                     .map(|path| format!("{} --toggle-search", path.display()))
-                    .unwrap_or_else(|_| "deck --toggle-search".into()),
+                    .unwrap_or_else(|_| "deckctl --toggle-search".into()),
             };
             let _ = deck_core::shortcut::ensure_labwc_desktop_rule();
             let desktop = std::env::var("XDG_CURRENT_DESKTOP")
@@ -80,11 +80,11 @@ fn run() -> Result<(), deck_core::CoreError> {
             if desktop.contains("gnome") {
                 match deck_core::gnome::install(&command) {
                     Ok(()) => {
-                        println!("deck: installed Super+Space as a GNOME custom shortcut");
+                        println!("deckctl: installed Super+Space as a GNOME custom shortcut");
                         Ok(())
                     }
                     Err(error) => {
-                        eprintln!("deck: GNOME shortcut install failed: {error}");
+                        eprintln!("deckctl: GNOME shortcut install failed: {error}");
                         exit(1);
                     }
                 }
@@ -92,13 +92,13 @@ fn run() -> Result<(), deck_core::CoreError> {
                 match deck_core::shortcut::install_kde_shortcut(&command, key) {
                     Ok(path) => {
                         println!(
-                            "deck: installed Deck Search in KDE ({}); log out or restart Plasma to activate it",
+                            "deckctl: installed Deck Search in KDE ({}); log out or restart Plasma to activate it",
                             path.display()
                         );
                         Ok(())
                     }
                     Err(error) => {
-                        eprintln!("deck: KDE shortcut install failed: {error}");
+                        eprintln!("deckctl: KDE shortcut install failed: {error}");
                         exit(1);
                     }
                 }
@@ -111,16 +111,16 @@ fn run() -> Result<(), deck_core::CoreError> {
             {
                 match deck_core::shortcut::install_labwc_shortcut(&command, key) {
                     Ok(path) => {
-                        println!("deck: installed {key} in {}", path.display());
+                        println!("deckctl: installed {key} in {}", path.display());
                         Ok(())
                     }
                     Err(error) => {
-                        eprintln!("deck: shortcut install failed: {error}");
+                        eprintln!("deckctl: shortcut install failed: {error}");
                         exit(1);
                     }
                 }
             } else {
-                println!("deck: no automatic installer for this desktop.");
+                println!("deckctl: no automatic installer for this desktop.");
                 println!("Bind `{command}` to your chosen shortcut:");
                 if desktop.contains("kde") {
                     println!(
@@ -143,25 +143,25 @@ fn run() -> Result<(), deck_core::CoreError> {
             if desktop.contains("kde") {
                 match deck_core::shortcut::remove_kde_shortcut() {
                     Ok(Some(path)) => {
-                        println!("deck: removed the KDE shortcut {}", path.display());
+                        println!("deckctl: removed the KDE shortcut {}", path.display());
                         return Ok(());
                     }
                     Ok(None) => {
-                        println!("deck: no KDE shortcut was installed");
+                        println!("deckctl: no KDE shortcut was installed");
                         return Ok(());
                     }
                     Err(error) => {
-                        eprintln!("deck: KDE shortcut removal failed: {error}");
+                        eprintln!("deckctl: KDE shortcut removal failed: {error}");
                         exit(1);
                     }
                 }
             }
             if desktop.contains("gnome") {
                 match deck_core::gnome::remove() {
-                    Ok(true) => println!("deck: removed the GNOME shortcut"),
-                    Ok(false) => println!("deck: no GNOME shortcut was installed"),
+                    Ok(true) => println!("deckctl: removed the GNOME shortcut"),
+                    Ok(false) => println!("deckctl: no GNOME shortcut was installed"),
                     Err(error) => {
-                        eprintln!("deck: GNOME shortcut removal failed: {error}");
+                        eprintln!("deckctl: GNOME shortcut removal failed: {error}");
                         exit(1);
                     }
                 }
@@ -169,15 +169,18 @@ fn run() -> Result<(), deck_core::CoreError> {
             }
             match deck_core::shortcut::remove_labwc_shortcut() {
                 Ok(Some(path)) => {
-                    println!("deck: removed the search shortcut from {}", path.display());
+                    println!(
+                        "deckctl: removed the search shortcut from {}",
+                        path.display()
+                    );
                     Ok(())
                 }
                 Ok(None) => {
-                    println!("deck: no Deck shortcut was installed");
+                    println!("deckctl: no Deck shortcut was installed");
                     Ok(())
                 }
                 Err(error) => {
-                    eprintln!("deck: shortcut removal failed: {error}");
+                    eprintln!("deckctl: shortcut removal failed: {error}");
                     exit(1);
                 }
             }
@@ -186,7 +189,7 @@ fn run() -> Result<(), deck_core::CoreError> {
             let once = args.iter().any(|arg| arg == "--once");
             if once {
                 let path = deckd::run_once(&paths)?;
-                println!("deck: wrote {}", path.display());
+                println!("deckctl: wrote {}", path.display());
             } else {
                 deckd::run_forever(&paths, Duration::from_secs(60))?;
             }
@@ -194,16 +197,16 @@ fn run() -> Result<(), deck_core::CoreError> {
         }
         Some("--help") | Some("-h") | None => {
             println!(
-                "deck [--version] [--settings] [--toggle-search] \
+                "deckctl [--version] [--settings] [--toggle-search] \
                  [--install-shortcut [--key KEY]] [--remove-shortcut] \
                  [--check-credentials] [--daemon [--once]]"
             );
             Ok(())
         }
         Some(other) => {
-            eprintln!("deck: unknown argument: {other}");
+            eprintln!("deckctl: unknown argument: {other}");
             eprintln!(
-                "deck [--version] [--settings] [--toggle-search] \
+                "deckctl [--version] [--settings] [--toggle-search] \
                  [--install-shortcut [--key KEY]] [--remove-shortcut] \
                  [--check-credentials] [--daemon [--once]]"
             );

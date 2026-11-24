@@ -28,8 +28,8 @@ jobs:
         with:
           name: deck-deb-arm64
           path: |
-            linux/dist/deck_*_arm64.deb
-            linux/dist/deck_*_arm64.deb.sha256
+            linux/dist/deck-desktop_*_arm64.deb
+            linux/dist/deck-desktop_*_arm64.deb.sha256
 
   release:
     needs: arm64

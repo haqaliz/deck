@@ -1,4 +1,4 @@
-Package: deck
+Package: deck-desktop
 Version: @VERSION@
 Section: utils
 Priority: optional
