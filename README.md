@@ -150,7 +150,8 @@ chmod +x deck_1.1.4_x86_64.AppImage
 flatpak install --user deck_1.1.4_x86_64.flatpak
 ```
 
-The Linux app has the same sixteen widgets, quick search and credential
+The apt repository is ARM64 only for now; x86_64 desktops use the AppImage or
+Flatpak. The Linux app has the same sixteen widgets, quick search and credential
 accounts. It uses layer-shell on wlroots compositors (Sway, labwc, Wayfire),
 a desktop window on X11/Openbox, and a normal window on GNOME/KDE Wayland.
 The widgets are app windows, not shell widgets: native KDE Plasma widgets and

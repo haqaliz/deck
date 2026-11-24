@@ -23,7 +23,7 @@
         <button class="copy" type="button" data-copy="brew install --cask haqaliz/deck/deck" aria-label="Copy the Homebrew command">Copy</button>
       </div>
     </div>
-    <p class="fine">Free and open source · macOS 15+ · Linux · Apple&nbsp;silicon, Intel, ARM64 &amp; x86_64</p>
+    <p class="fine">Free and open source · macOS 15+ · Linux (apt · AppImage · Flatpak) · Apple&nbsp;silicon, Intel, ARM64 &amp; x86_64</p>
   </div>
 </header>
 
@@ -101,8 +101,12 @@
         <div class="route">
           <h3>Linux</h3>
           <p>Signed apt repository for ARM64, plus direct .deb, AppImage and Flatpak. Same sixteen widgets and search.</p>
+          <pre class="apt"><code>curl -fsSL https://haqaliz.github.io/deck/apt/key.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/deck.gpg
+echo "deb [signed-by=/usr/share/keyrings/deck.gpg] https://haqaliz.github.io/deck/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/deck.list
+sudo apt update && sudo apt install deck-desktop</code></pre>
           <a class="btn" href="https://github.com/haqaliz/deck/releases/tag/linux-v1.1.4">Download for Linux</a>
-          <p class="fine">Add the repo key, then <code>sudo apt install deck-desktop</code>. The direct .deb also works.</p>
         </div>
       </div>
 

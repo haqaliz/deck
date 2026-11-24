@@ -283,6 +283,21 @@ kbd {
   box-shadow: var(--shadow);
 }
 
+
+pre.apt {
+  margin: 0 0 1em;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--code-bg);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+
 .route h3 { margin: 0 0 0.5em; font-size: 1.1rem; }
 .route p { margin: 0 0 1em; color: var(--muted); }
 
