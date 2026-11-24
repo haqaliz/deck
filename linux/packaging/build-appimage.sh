@@ -7,7 +7,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 linux="$(cd "$here/.." && pwd)"
 cd "$linux"
 
-version="${VERSION:-1.1.3}"
+version="${VERSION:-1.1.4}"
 tools="$linux/dist/appimage-tools"
 appdir="$linux/dist/AppDir"
 mkdir -p "$tools" "$linux/dist"
@@ -33,7 +33,7 @@ mkdir -p "$appdir/usr/bin" "$appdir/usr/share/applications" \
     "$appdir/usr/share/icons/hicolor/scalable/apps" \
     "$appdir/usr/share/icons/hicolor/256x256/apps"
 install -m0755 target/release/deck-gui "$appdir/usr/bin/deck-gui"
-install -m0755 target/release/deck "$appdir/usr/bin/deck"
+install -m0755 target/release/deckctl "$appdir/usr/bin/deckctl"
 install -m0755 target/release/deckd "$appdir/usr/bin/deckd"
 install -m0644 "$here/io.github.haqaliz.deck.desktop" \
     "$appdir/usr/share/applications/io.github.haqaliz.deck.desktop"

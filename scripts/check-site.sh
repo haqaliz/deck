@@ -27,8 +27,10 @@ grep -Fq 'brew install --cask haqaliz/deck/deck' "$file" \
   || fail "missing the Homebrew install command"
 grep -Fq 'releases/tag/v1.65' "$file" \
   || fail "missing the macOS download link"
-grep -Fq 'releases/tag/linux-v1.1.3' "$file" \
+grep -Fq 'releases/tag/linux-v1.1.4' "$file" \
   || fail "missing the Linux download link"
+grep -Fq 'sudo apt install deck-desktop' "$file" \
+  || fail "missing the Linux apt install command"
 grep -Fq 'xattr -dr com.apple.quarantine /Applications/Deck.app' "$file" \
   || fail "missing the quarantine-clearing command"
 grep -Fq 'before opening Deck' "$file" \

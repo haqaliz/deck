@@ -2,7 +2,7 @@
 
 Rust + GTK4 implementation, planned in
 [`docs/planning/linux-port/`](../../docs/planning/linux-port/). This tree is at
-**v1.1.3 (L20)**: core, snapshot contract, credentials, daemon, CLI, the GTK4
+**v1.1.4 (L21)**: core, snapshot contract, credentials, daemon, CLI, the GTK4
 shell, all 13 v1 widgets plus CalBox, ClipBox and BatBox, the search panel, the Pi `.deb` and the desktop
 AppImage. Pi OS labwc is the verified target; KDE/GNOME/wlroots/X11 are coded
 but not claimed as tested. Network fetches use the system `curl`; OpenBox uses
@@ -10,11 +10,26 @@ bundled SQLite.
 
 ## Install on Raspberry Pi OS
 
+The signed apt repository is the preferred route on ARM64:
+
 ```bash
-sudo dpkg -i deck_1.1.3_arm64.deb
-deck-gui                 # starts the widgets, tray and socket
-deck --install-shortcut  # labwc W-Space, GNOME Super+Space, or printed snippet
+curl -fsSL https://haqaliz.github.io/deck/apt/key.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/deck.gpg
+echo "deb [signed-by=/usr/share/keyrings/deck.gpg] https://haqaliz.github.io/deck/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/deck.list
+sudo apt update && sudo apt install deck-desktop
 ```
+
+Or install the release `.deb` directly:
+
+```bash
+sudo dpkg -i deck-desktop_1.1.4_arm64.deb
+deck-gui                 # starts the widgets, tray and socket
+deckctl --install-shortcut  # labwc W-Space, GNOME Super+Space, or printed snippet
+```
+
+The apt repository is ARM64 only for now; x86_64 desktops use the AppImage or
+Flatpak bundle.
 
 Autostart is controlled by the General page. The optional background sampler:
 
@@ -22,15 +37,15 @@ Autostart is controlled by the General page. The optional background sampler:
 systemctl --user enable --now deckd
 ```
 
-Uninstall with `sudo dpkg -r deck`. User settings in `~/.config/deck` and
+Uninstall with `sudo apt remove deck-desktop` or `sudo dpkg -r deck-desktop`. User settings in `~/.config/deck` and
 snapshots in `~/.local/share/deck` are kept; remove the shortcut first with
-`deck --remove-shortcut`. The package recommends `libsecret-tools`; without a
+`deckctl --remove-shortcut`. The package recommends `libsecret-tools`; without a
 keyring, tokens live in the 0600 fallback file and Settings shows the warning.
 
 ## First run
 
 1. Start `deck-gui` (or log out/in after enabling autostart). The tray menu has
-   Search, Settings and Quit; `deck --toggle-search` and the installed
+   Search, Settings and Quit; `deckctl --toggle-search` and the installed
    shortcut open the panel.
 2. Drag a widget's title (or the search panel's header) to move it; positions
    are saved and restored on the next start. On labwc, Deck adds a marked
@@ -71,7 +86,7 @@ maintains.
 
 ## AppImage
 
-The CI artifact `deck_1.1.3_x86_64.AppImage` bundles GTK4,
+The CI artifact `deck_1.1.4_x86_64.AppImage` bundles GTK4,
 gtk4-layer-shell and the X11/font/Wayland libraries. Make it executable and
 run it; if FUSE 2 is unavailable, use `--appimage-extract-and-run`. It was
 smoke-tested under Xvfb with software rendering; a clean physical desktop
@@ -80,8 +95,8 @@ remains a known-limitations item.
 ## Packaging
 
 ```bash
-VERSION=1.1.3 bash packaging/build-deb.sh       # arm64 .deb on the Pi
-VERSION=1.1.3 bash packaging/build-appimage.sh  # x86_64 AppImage on a GTK4 desktop
+VERSION=1.1.4 bash packaging/build-deb.sh       # arm64 .deb on the Pi
+VERSION=1.1.4 bash packaging/build-appimage.sh  # x86_64 AppImage on a GTK4 desktop
 ```
 
 ## Build and test
@@ -112,7 +127,7 @@ crates/deck-platform  layer-shell/default surfaces and session decision
 crates/deckd          background sampler / systemd user service; fetches every
                       enabled widget on a 60s tick
 crates/deck-gui       GTK4 shell, widget surface, settings, tray and search
-crates/deck-cli       `deck` command, socket control and shortcut install
+crates/deck-cli       `deckctl` command, socket control and shortcut install
 assets                Deck CSS and icons
 contracts             snapshot v1 schema and shared payload fixtures
 packaging             systemd unit and autostart entry

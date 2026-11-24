@@ -294,21 +294,21 @@ mod tests {
     #[test]
     fn inserts_a_marked_binding_before_the_keyboard_close() {
         let xml = "<openbox_config><keyboard></keyboard></openbox_config>";
-        let updated = apply_shortcut(xml, "deck --toggle-search", "W-Space").expect("insert");
+        let updated = apply_shortcut(xml, "deckctl --toggle-search", "W-Space").expect("insert");
         assert!(updated.contains(MARKER_START));
         assert!(updated.contains("key=\"W-Space\""));
-        assert!(updated.contains("deck --toggle-search"));
+        assert!(updated.contains("deckctl --toggle-search"));
         assert!(updated.ends_with("</keyboard></openbox_config>"));
     }
 
     #[test]
     fn replaces_an_existing_binding_without_duplicating_it() {
         let xml = "<openbox_config><keyboard></keyboard></openbox_config>";
-        let once = apply_shortcut(xml, "deck --toggle-search", "W-Space").expect("first");
+        let once = apply_shortcut(xml, "deckctl --toggle-search", "W-Space").expect("first");
         let twice =
-            apply_shortcut(&once, "/usr/bin/deck --toggle-search", "A-F12").expect("second");
+            apply_shortcut(&once, "/usr/bin/deckctl --toggle-search", "A-F12").expect("second");
         assert_eq!(twice.matches(MARKER_START).count(), 1);
-        assert!(twice.contains("/usr/bin/deck --toggle-search"));
+        assert!(twice.contains("/usr/bin/deckctl --toggle-search"));
         assert!(twice.contains("A-F12"));
         assert!(!twice.contains("W-Space"));
     }
@@ -358,8 +358,8 @@ mod tests {
 
     #[test]
     fn kde_entry_and_key_are_well_formed() {
-        let entry = kde_desktop_entry("/usr/bin/deck --toggle-search");
-        assert!(entry.contains("Exec=/usr/bin/deck --toggle-search"));
+        let entry = kde_desktop_entry("/usr/bin/deckctl --toggle-search");
+        assert!(entry.contains("Exec=/usr/bin/deckctl --toggle-search"));
         assert!(entry.contains("NoDisplay=true"));
         assert_eq!(kde_key("W-Space"), "Meta+Space");
         assert_eq!(kde_key("C-A-F12"), "Ctrl+Alt+F12");

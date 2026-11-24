@@ -1356,7 +1356,7 @@ rename breaks links, not queries; Grafana dashboards use `${DS}` variables, so
 the widget queries datasources directly and only uses dashboard UIDs for
 links; the 24h log aggregation is the slow path and must not run every 60s.
 
-### M12 — Linux & Raspberry Pi port (v1.1.3 released 2026-11-24; L0-L20 done)
+### M12 — Linux & Raspberry Pi port (v1.1.4 released 2026-11-24; L0-L21 done)
 
 A second native app, not a port of the macOS codebase. The macOS app stays
 Swift/SwiftUI/WidgetKit; Linux gets a Rust + GTK4 implementation and shares the

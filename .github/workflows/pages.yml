@@ -22,9 +22,12 @@ on:
       - "site/**"
       - "scripts/stage-site.sh"
       - "scripts/check-site.sh"
+      - "scripts/build-apt-repo.sh"
       - "docs/screenshots/**"
       - "docs/deck.svg"
       - ".github/workflows/pages.yml"
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -43,12 +46,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Stage the site
         run: scripts/stage-site.sh
 
       - name: Check the install copy
         run: scripts/check-site.sh
+
+      - name: Install apt repository tooling
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq apt-utils gnupg
+
+      - name: Build signed apt repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: scripts/build-apt-repo.sh .site-build/apt
 
       - uses: actions/configure-pages@v5
 
